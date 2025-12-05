@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "snapraidConfigs": [
+    {
+      "name": "Default",
+      "path": "/etc/snapraid.conf",
+      "enabled": true
+    }
+  ],
+  "backend": {
+    "host": "localhost",
+    "port": 3001
+  },
+  "logs": {
+    "maxHistoryEntries": 50
+  }
+}

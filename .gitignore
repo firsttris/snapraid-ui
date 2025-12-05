@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+.vscode/
+.idea/
+config.json
+backend/.deno/
+frontend/.output/
+frontend/.vinxi/
