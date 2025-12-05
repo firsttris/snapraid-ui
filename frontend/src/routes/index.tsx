@@ -17,6 +17,7 @@ function Dashboard() {
   const [isRunning, setIsRunning] = useState(false)
   const [currentCommand, setCurrentCommand] = useState<string>('')
   const [showConfigManager, setShowConfigManager] = useState(false)
+  const [showConfigDropdown, setShowConfigDropdown] = useState(false)
   const outputRef = useRef<HTMLDivElement>(null)
 
   // Load config on mount
@@ -130,24 +131,55 @@ function Dashboard() {
               </button>
             </div>
             <div className="relative">
-              <select
-                value={selectedConfig}
-                onChange={(e) => setSelectedConfig(e.target.value)}
-                className="block w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 bg-white text-gray-900 font-medium transition-all appearance-none cursor-pointer"
+              <button
+                onClick={() => !isRunning && setShowConfigDropdown(!showConfigDropdown)}
                 disabled={isRunning}
+                className="block w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 bg-white text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <option value="" className="text-gray-500">Select a configuration...</option>
-                {config?.snapraidConfigs.filter(c => c.enabled).map((cfg) => (
-                  <option key={cfg.path} value={cfg.path} className="text-gray-900">
-                    {cfg.name} — {cfg.path}
-                  </option>
-                ))}
-              </select>
+                {selectedConfig ? (
+                  <span className="text-gray-900 font-medium">
+                    {config?.snapraidConfigs.find(c => c.path === selectedConfig)?.name} 
+                    <span className="text-gray-500 font-normal"> — {selectedConfig}</span>
+                  </span>
+                ) : (
+                  <span className="text-gray-500">Select a configuration...</span>
+                )}
+              </button>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-5 h-5 transition-transform ${showConfigDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
+              
+              {/* Custom Dropdown Menu */}
+              {showConfigDropdown && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowConfigDropdown(false)} />
+                  <div className="absolute z-20 mt-2 w-full bg-white rounded-lg shadow-xl border border-gray-200 py-1 max-h-60 overflow-auto">
+                    {config?.snapraidConfigs.filter(c => c.enabled).length === 0 ? (
+                      <div className="px-4 py-3 text-gray-500 text-sm text-center">
+                        No configurations available
+                      </div>
+                    ) : (
+                      config?.snapraidConfigs.filter(c => c.enabled).map((cfg) => (
+                        <button
+                          key={cfg.path}
+                          onClick={() => {
+                            setSelectedConfig(cfg.path)
+                            setShowConfigDropdown(false)
+                          }}
+                          className={`w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors ${
+                            selectedConfig === cfg.path ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                          }`}
+                        >
+                          <div className="font-medium">{cfg.name}</div>
+                          <div className="text-sm text-gray-500 font-mono mt-0.5">{cfg.path}</div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
             </div>
             {!selectedConfig && (
               <p className="mt-3 text-sm text-gray-500 flex items-center gap-2">
