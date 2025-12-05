@@ -59,6 +59,47 @@ export class ApiClient {
   }
 
   /**
+   * Add a new SnapRAID config
+   */
+  async addConfig(name: string, path: string, enabled: boolean = true): Promise<AppConfig> {
+    const response = await fetch(`${API_BASE}/api/config/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, path, enabled }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to add config');
+    }
+    const result = await response.json();
+    return result.config;
+  }
+
+  /**
+   * Remove a SnapRAID config
+   */
+  async removeConfig(path: string): Promise<AppConfig> {
+    const response = await fetch(`${API_BASE}/api/config/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+    if (!response.ok) throw new Error('Failed to remove config');
+    const result = await response.json();
+    return result.config;
+  }
+
+  /**
+   * Browse filesystem for .conf files
+   */
+  async browseFilesystem(path?: string): Promise<{ path: string; entries: Array<{ name: string; isDirectory: boolean; path: string }> }> {
+    const url = path ? `${API_BASE}/api/filesystem/browse?path=${encodeURIComponent(path)}` : `${API_BASE}/api/filesystem/browse`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to browse filesystem');
+    return response.json();
+  }
+
+  /**
    * Connect to WebSocket for live updates
    */
   connectWebSocket(handlers: {

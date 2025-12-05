@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useRef } from 'react'
 import { apiClient } from '../lib/api-client'
 import type { AppConfig, ParsedSnapRaidConfig, SnapRaidStatus, SnapRaidCommand } from '../types'
+import { ConfigManager } from '../components/ConfigManager'
 
 export const Route = createFileRoute('/')({
   component: Dashboard,
@@ -15,6 +16,7 @@ function Dashboard() {
   const [output, setOutput] = useState<string>('')
   const [isRunning, setIsRunning] = useState(false)
   const [currentCommand, setCurrentCommand] = useState<string>('')
+  const [showConfigManager, setShowConfigManager] = useState(false)
   const outputRef = useRef<HTMLDivElement>(null)
 
   // Load config on mount
@@ -115,7 +117,15 @@ function Dashboard() {
         {/* Config Selection */}
         <div className="px-4 py-6 sm:px-0">
           <div className="bg-white shadow rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Configuration</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Configuration</h2>
+              <button
+                onClick={() => setShowConfigManager(!showConfigManager)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+              >
+                {showConfigManager ? 'Hide' : 'Manage Configs'}
+              </button>
+            </div>
             <select
               value={selectedConfig}
               onChange={(e) => setSelectedConfig(e.target.value)}
@@ -130,6 +140,16 @@ function Dashboard() {
               ))}
             </select>
           </div>
+
+          {/* Config Manager */}
+          {showConfigManager && config && (
+            <div className="mb-6">
+              <ConfigManager 
+                config={config.snapraidConfigs} 
+                onConfigsChanged={loadConfig}
+              />
+            </div>
+          )}
 
           {/* Dashboard Cards */}
           {parsedConfig && (
