@@ -1,11 +1,11 @@
-import type { AppConfig, ParsedSnapRaidConfig, SnapRaidCommand, CommandOutput } from './types';
+import { AppConfig, CommandOutput, ParsedSnapRaidConfig, SnapRaidCommand } from "@/types";
+
 
 const API_BASE = 'http://localhost:3001';
 const WS_URL = 'ws://localhost:3001/ws';
 
 export class ApiClient {
   private ws: WebSocket | null = null;
-  private wsHandlers = new Map<string, (data: any) => void>();
 
   /**
    * Get app configuration
