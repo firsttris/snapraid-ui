@@ -1,7 +1,7 @@
 {
   "tasks": {
-    "dev": "deno run --allow-net --allow-read --allow-run --allow-env --watch src/main.ts",
-    "start": "deno run --allow-net --allow-read --allow-run --allow-env src/main.ts"
+    "dev": "deno run --allow-net --allow-read --allow-write --allow-run --allow-env --watch src/main.ts",
+    "start": "deno run --allow-net --allow-read --allow-write --allow-run --allow-env src/main.ts"
   },
   "imports": {
     "@std/path": "jsr:@std/path@^1.0.8",

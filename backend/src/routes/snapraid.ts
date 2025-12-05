@@ -96,4 +96,34 @@ snapraid.get("/history", (c) => {
   return c.json(commandHistory);
 });
 
+// POST /api/snapraid/validate - Validate SnapRAID config
+snapraid.post("/validate", async (c) => {
+  const { configPath } = await c.req.json();
+
+  if (!configPath) {
+    return c.json({ error: "Missing configPath" }, 400);
+  }
+
+  try {
+    // Run snapraid status to validate the config
+    // We only care about whether it succeeds or fails, not the actual status output
+    const command = new Deno.Command("snapraid", {
+      args: ["-c", configPath, "status"],
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const { code, stderr } = await command.output();
+    const errorOutput = new TextDecoder().decode(stderr);
+
+    return c.json({
+      valid: code === 0,
+      exitCode: code,
+      output: code === 0 ? "Configuration is valid!" : errorOutput,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 export default snapraid;

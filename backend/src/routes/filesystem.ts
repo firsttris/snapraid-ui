@@ -33,4 +33,36 @@ filesystem.get("/browse", async (c) => {
   }
 });
 
+// GET /api/filesystem/read - Read file content
+filesystem.get("/read", async (c) => {
+  const filePath = c.req.query("path");
+
+  if (!filePath) {
+    return c.json({ error: "Missing path parameter" }, 400);
+  }
+
+  try {
+    const content = await Deno.readTextFile(filePath);
+    return c.json({ content });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// POST /api/filesystem/write - Write file content
+filesystem.post("/write", async (c) => {
+  const { path, content } = await c.req.json();
+
+  if (!path || content === undefined) {
+    return c.json({ error: "Missing path or content" }, 400);
+  }
+
+  try {
+    await Deno.writeTextFile(path, content);
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 export default filesystem;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { apiClient } from '../lib/api-client'
 import type { SnapRaidConfig } from '../types'
+import { ConfigEditor } from './ConfigEditor'
 
 interface FileBrowserProps {
   onSelect: (path: string) => void
@@ -110,6 +111,7 @@ interface ConfigManagerProps {
 export function ConfigManager({ config, onConfigsChanged, onClose }: ConfigManagerProps) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [showFileBrowser, setShowFileBrowser] = useState(false)
+  const [editingConfig, setEditingConfig] = useState<{ path: string; name: string } | null>(null)
   const [newConfigName, setNewConfigName] = useState('')
   const [newConfigPath, setNewConfigPath] = useState('')
   const [error, setError] = useState('')
@@ -265,15 +267,26 @@ export function ConfigManager({ config, onConfigsChanged, onClose }: ConfigManag
                     </div>
                     <div className="text-sm text-gray-500 font-mono truncate">{cfg.path}</div>
                   </div>
-                  <button
-                    onClick={() => handleRemoveConfig(cfg.path)}
-                    className="ml-4 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Remove
-                  </button>
+                  <div className="flex items-center gap-2 ml-4">
+                    <button
+                      onClick={() => setEditingConfig({ path: cfg.path, name: cfg.name })}
+                      className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleRemoveConfig(cfg.path)}
+                      className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Remove
+                    </button>
+                  </div>
                 </div>
               ))
             )}
@@ -288,6 +301,17 @@ export function ConfigManager({ config, onConfigsChanged, onClose }: ConfigManag
             setShowFileBrowser(false)
           }}
           onClose={() => setShowFileBrowser(false)}
+        />
+      )}
+
+      {editingConfig && (
+        <ConfigEditor
+          configPath={editingConfig.path}
+          configName={editingConfig.name}
+          onClose={() => setEditingConfig(null)}
+          onSaved={() => {
+            onConfigsChanged()
+          }}
         />
       )}
     </div>

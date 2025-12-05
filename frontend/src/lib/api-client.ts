@@ -100,6 +100,41 @@ export class ApiClient {
   }
 
   /**
+   * Read file content
+   */
+  async readFile(path: string): Promise<string> {
+    const response = await fetch(`${API_BASE}/api/filesystem/read?path=${encodeURIComponent(path)}`);
+    if (!response.ok) throw new Error('Failed to read file');
+    const result = await response.json();
+    return result.content;
+  }
+
+  /**
+   * Write file content
+   */
+  async writeFile(path: string, content: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/api/filesystem/write`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, content }),
+    });
+    if (!response.ok) throw new Error('Failed to write file');
+  }
+
+  /**
+   * Validate SnapRAID config
+   */
+  async validateConfig(configPath: string): Promise<{ valid: boolean; exitCode: number; output: string }> {
+    const response = await fetch(`${API_BASE}/api/snapraid/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ configPath }),
+    });
+    if (!response.ok) throw new Error('Failed to validate config');
+    return response.json();
+  }
+
+  /**
    * Connect to WebSocket for live updates
    */
   connectWebSocket(handlers: {
