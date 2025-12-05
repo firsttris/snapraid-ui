@@ -116,39 +116,56 @@ function Dashboard() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         {/* Config Selection */}
         <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <div className="bg-white shadow-lg rounded-xl p-6 mb-6 border border-gray-100">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Configuration</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Active Configuration</h2>
               <button
-                onClick={() => setShowConfigManager(!showConfigManager)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                onClick={() => setShowConfigManager(true)}
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-sm font-medium flex items-center gap-2"
               >
-                {showConfigManager ? 'Hide' : 'Manage Configs'}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                Manage Configs
               </button>
             </div>
-            <select
-              value={selectedConfig}
-              onChange={(e) => setSelectedConfig(e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              disabled={isRunning}
-            >
-              <option value="">Select a config...</option>
-              {config?.snapraidConfigs.filter(c => c.enabled).map((cfg) => (
-                <option key={cfg.path} value={cfg.path}>
-                  {cfg.name} ({cfg.path})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={selectedConfig}
+                onChange={(e) => setSelectedConfig(e.target.value)}
+                className="block w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 bg-white text-gray-900 font-medium transition-all appearance-none cursor-pointer"
+                disabled={isRunning}
+              >
+                <option value="" className="text-gray-500">Select a configuration...</option>
+                {config?.snapraidConfigs.filter(c => c.enabled).map((cfg) => (
+                  <option key={cfg.path} value={cfg.path} className="text-gray-900">
+                    {cfg.name} — {cfg.path}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+            {!selectedConfig && (
+              <p className="mt-3 text-sm text-gray-500 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                Please select a configuration to begin
+              </p>
+            )}
           </div>
 
-          {/* Config Manager */}
+          {/* Config Manager Modal */}
           {showConfigManager && config && (
-            <div className="mb-6">
-              <ConfigManager 
-                config={config.snapraidConfigs} 
-                onConfigsChanged={loadConfig}
-              />
-            </div>
+            <ConfigManager 
+              config={config.snapraidConfigs} 
+              onConfigsChanged={loadConfig}
+              onClose={() => setShowConfigManager(false)}
+            />
           )}
 
           {/* Dashboard Cards */}
