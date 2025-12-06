@@ -126,6 +126,60 @@ let globalValue = initialValue;
 - Keep components focused and small
 - Use composition over inheritance
 
+### Props Colocation & Avoiding Props Drilling
+**ALWAYS prefer moving state and queries into child components instead of passing them as props.**
+
+```typescript
+// ❌ Bad - Props drilling
+function ParentPage() {
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const { data, isLoading, refetch } = useData();
+  const mutation = useMutation();
+  
+  return (
+    <ChildComponent 
+      data={data}
+      isLoading={isLoading}
+      filter={filter}
+      onFilterChange={setFilter}
+      search={search}
+      onSearchChange={setSearch}
+      onRefresh={refetch}
+      onAction={mutation.mutate}
+    />
+  );
+}
+
+// ✅ Good - State and queries colocated in child
+function ParentPage() {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  
+  return <ChildComponent selectedId={selectedId} onSelect={setSelectedId} />;
+}
+
+function ChildComponent({ selectedId, onSelect }) {
+  // State and queries live here where they're actually used
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const { data, isLoading, refetch } = useData();
+  const mutation = useMutation();
+  
+  const handleAction = () => {
+    mutation.mutate(selectedId);
+  };
+  
+  // ... use state locally
+}
+```
+
+**Rules for props:**
+- Only pass props that are needed for coordination between components
+- If data is only used in one component tree, fetch it there
+- If state is only needed in one component, keep it there
+- Parent components should be thin orchestrators, not data managers
+- Aim for 1-3 props per component, not 10+
+
 ### State Updates
 ```typescript
 // ✅ Good - Immutable

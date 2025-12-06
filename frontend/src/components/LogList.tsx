@@ -1,35 +1,49 @@
-import type { LogFile, SnapRaidCommand } from '@shared/types'
+import { useState } from 'react'
+import type { SnapRaidCommand } from '@shared/types'
 import { LogFilters } from './LogFilters'
 import { LogListItem } from './LogListItem'
+import { useLogs, useDeleteLog, useRotateLogs } from '../hooks/queries'
 import * as m from '../paraglide/messages'
 
 interface LogListProps {
-  logs: LogFile[]
-  isLoading: boolean
   selectedLog: string | null
-  searchTerm: string
-  onSearchChange: (value: string) => void
-  filterCommand: SnapRaidCommand | 'all'
-  onFilterChange: (value: SnapRaidCommand | 'all') => void
   onSelectLog: (filename: string) => void
-  onDeleteLog: (filename: string) => void
-  onRefresh: () => void
-  onRotate: () => void
 }
 
-export const LogList = ({
-  logs,
-  isLoading,
-  selectedLog,
-  searchTerm,
-  onSearchChange,
-  filterCommand,
-  onFilterChange,
-  onSelectLog,
-  onDeleteLog,
-  onRefresh,
-  onRotate,
-}: LogListProps) => {
+export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
+  const [filterCommand, setFilterCommand] = useState<SnapRaidCommand | 'all'>('all')
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const { data: logs = [], isLoading, refetch } = useLogs()
+  const deleteLogMutation = useDeleteLog()
+  const rotateLogsMutation = useRotateLogs()
+
+  const handleDeleteLog = (filename: string) => {
+    if (!confirm(`Delete log file ${filename}?`)) return
+
+    deleteLogMutation.mutate(filename, {
+      onSuccess: () => {
+        if (selectedLog === filename) {
+          onSelectLog(null as any)
+        }
+      },
+      onError: (error) => {
+        alert(`Failed to delete log: ${error}`)
+      }
+    })
+  }
+
+  const handleRotateLogs = () => {
+    rotateLogsMutation.mutate(undefined, {
+      onSuccess: (result) => {
+        alert(`Deleted ${result.deleted} old log file(s)`)
+      },
+      onError: (error) => {
+        alert(`Failed to rotate logs: ${error}`)
+      }
+    })
+  }
+
   const filteredLogs = logs.filter(log => {
     const matchesCommand = filterCommand === 'all' || log.command === filterCommand
     const matchesSearch = log.filename.toLowerCase().includes(searchTerm.toLowerCase())
@@ -45,13 +59,13 @@ export const LogList = ({
           </h2>
           <div className="flex gap-2">
             <button
-              onClick={onRefresh}
+              onClick={() => refetch()}
               className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium"
             >
               {m.log_list_refresh()}
             </button>
             <button
-              onClick={onRotate}
+              onClick={handleRotateLogs}
               className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all text-sm font-medium"
             >
               {m.log_list_clean_old()}
@@ -61,9 +75,9 @@ export const LogList = ({
 
         <LogFilters
           searchTerm={searchTerm}
-          onSearchChange={onSearchChange}
+          onSearchChange={setSearchTerm}
           filterCommand={filterCommand}
-          onFilterChange={onFilterChange}
+          onFilterChange={setFilterCommand}
         />
       </div>
 
@@ -80,7 +94,7 @@ export const LogList = ({
                 log={log}
                 isSelected={selectedLog === log.filename}
                 onSelect={onSelectLog}
-                onDelete={onDeleteLog}
+                onDelete={handleDeleteLog}
               />
             ))}
           </div>
