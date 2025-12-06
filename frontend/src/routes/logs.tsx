@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useLogs, useLogContent, useDeleteLog, useRotateLogs } from '../lib/api-client'
+import { useLogs, useLogContent, useDeleteLog, useRotateLogs } from '../hooks/queries'
 import { LogList } from '../components/LogList'
 import { LogViewer } from '../components/LogViewer'
 import type { SnapRaidCommand } from '@shared/types'

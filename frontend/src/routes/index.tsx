@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useCallback } from 'react'
-import { useConfig, useSnapRaidConfig, useCurrentJob, useExecuteCommand } from '../lib/api-client'
+import { useConfig, useSnapRaidConfig, useCurrentJob, useExecuteCommand } from '../hooks/queries'
 import type { SnapRaidCommand } from '@shared/types'
 import { ConfigManager } from '../components/ConfigManager'
 import { ConfigSelector } from '../components/ConfigSelector'

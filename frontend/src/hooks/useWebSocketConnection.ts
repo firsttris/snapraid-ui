@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { connectWebSocket } from '../lib/api-client'
+import { connectWebSocket } from '../lib/api/websocket'
 import type { SnapRaidStatus } from '@shared/types'
 
 interface WebSocketState {

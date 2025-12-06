@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useFilesystem } from '../lib/api-client'
+import { useFilesystem } from '../hooks/queries'
 
 interface DirectoryBrowserProps {
   onSelect: (path: string) => void

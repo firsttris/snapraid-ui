@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useFilesystem, useAddConfig, useRemoveConfig } from '../lib/api-client'
+import { useFilesystem, useAddConfig, useRemoveConfig } from '../hooks/queries'
 import type { SnapRaidConfig } from '@shared/types'
 import { ConfigEditor } from './ConfigEditor'
 

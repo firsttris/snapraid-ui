@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSnapRaidConfig, useAddDataDisk, useRemoveDisk, useAddParityDisk, useAddExclude, useRemoveExclude } from '../lib/api-client'
+import { useSnapRaidConfig, useAddDataDisk, useRemoveDisk, useAddParityDisk, useAddExclude, useRemoveExclude } from '../hooks/queries'
 import { ParityDiskSection } from './ParityDiskSection'
 import { DataDiskSection } from './DataDiskSection'
 import { ExcludePatternSection } from './ExcludePatternSection'

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { validateConfig, useFileContent, useWriteFile } from '../lib/api-client'
+import { validateConfig } from '../lib/api/snapraid'
+import { useFileContent, useWriteFile } from '../hooks/queries'
 import { DiskManager } from './DiskManager'
 
 interface ConfigEditorProps {
