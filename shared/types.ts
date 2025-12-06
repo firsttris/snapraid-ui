@@ -63,7 +63,7 @@ export interface CommandOutput {
   exitCode: number | null;
 }
 
-export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff' | 'fix' | 'check' | 'pool' | 'smart' | 'probe' | 'up' | 'down';
+export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff' | 'fix' | 'check' | 'pool' | 'smart' | 'probe' | 'up' | 'down' | 'devices' | 'list';
 
 export interface LogFile {
   filename: string;
@@ -158,4 +158,36 @@ export interface Schedule {
 
 export interface ScheduleConfig {
   schedules: Schedule[];
+}
+
+// Device types (from snapraid devices command)
+export interface DeviceInfo {
+  majorMinor: string;      // e.g., "259:0"
+  device: string;          // e.g., "/dev/nvme0n1"
+  partMajorMinor: string;  // e.g., "259:2"
+  partition: string;       // e.g., "/dev/nvme0n1p2"
+  diskName: string;        // e.g., "test1" or "parity"
+}
+
+export interface DevicesReport {
+  devices: DeviceInfo[];
+  timestamp: string;       // ISO string
+  rawOutput: string;
+}
+
+// File list types (from snapraid list command)
+export interface SnapRaidFileInfo {
+  size: number;            // File size in bytes
+  date: string;            // Date in format "2025/12/01"
+  time: string;            // Time in format "07:54"
+  name: string;            // File path/name
+}
+
+export interface ListReport {
+  files: SnapRaidFileInfo[];
+  totalFiles: number;
+  totalSize: number;       // Total size in bytes
+  totalLinks: number;
+  timestamp: string;       // ISO string
+  rawOutput: string;
 }

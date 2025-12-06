@@ -1,4 +1,4 @@
-import type { SnapRaidCommand, CommandOutput, SnapRaidStatus, RunningJob } from "@shared/types.ts";
+import type { SnapRaidCommand, CommandOutput, SnapRaidStatus, RunningJob, DevicesReport, DeviceInfo, ListReport, SnapRaidFileInfo } from "@shared/types.ts";
 import { LogManager } from "./log-manager.ts";
 
 export class SnapRaidRunner {
@@ -256,5 +256,146 @@ export class SnapRaidRunner {
     }
 
     return status;
+  }
+
+  /**
+   * Parse devices output
+   * Format: "259:0   /dev/nvme0n1    259:2   /dev/nvme0n1p2  test1"
+   */
+  static parseDevicesOutput(output: string): DeviceInfo[] {
+    const devices: DeviceInfo[] = [];
+    const lines = output.split('\n');
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('Loading') || trimmed.startsWith('Listing')) {
+        continue;
+      }
+
+      // Split by whitespace and parse device info
+      const parts = trimmed.split(/\s+/);
+      if (parts.length >= 5) {
+        devices.push({
+          majorMinor: parts[0],
+          device: parts[1],
+          partMajorMinor: parts[2],
+          partition: parts[3],
+          diskName: parts.slice(4).join(' '),
+        });
+      }
+    }
+
+    return devices;
+  }
+
+  /**
+   * Parse list output
+   * Format: "       76849 2025/12/01 07:54 filename.xlsx"
+   */
+  static parseListOutput(output: string): { files: SnapRaidFileInfo[], totalFiles: number, totalSize: number, totalLinks: number } {
+    const files: SnapRaidFileInfo[] = [];
+    const lines = output.split('\n');
+    let totalFiles = 0;
+    let totalSize = 0;
+    let totalLinks = 0;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Skip header/footer lines
+      if (!trimmed || 
+          trimmed.startsWith('Loading') || 
+          trimmed.startsWith('Listing') ||
+          trimmed.startsWith('files, for') ||
+          trimmed.startsWith('links')) {
+        continue;
+      }
+
+      // Parse summary lines
+      const filesMatch = trimmed.match(/^(\d+)\s+files?,\s+for\s+(\d+(?:\.\d+)?)\s+([KMGT]?B)/);
+      if (filesMatch) {
+        totalFiles = parseInt(filesMatch[1], 10);
+        continue;
+      }
+
+      const linksMatch = trimmed.match(/^(\d+)\s+links?/);
+      if (linksMatch) {
+        totalLinks = parseInt(linksMatch[1], 10);
+        continue;
+      }
+
+      // Parse file lines: size date time path
+      // Match format: spaces, number, spaces, date, spaces, time, spaces, filename
+      const fileMatch = trimmed.match(/^(\d+)\s+(\d{4}\/\d{2}\/\d{2})\s+(\d{2}:\d{2})\s+(.+)$/);
+      if (fileMatch) {
+        const size = parseInt(fileMatch[1], 10);
+        files.push({
+          size,
+          date: fileMatch[2],
+          time: fileMatch[3],
+          name: fileMatch[4],
+        });
+        totalSize += size;
+      }
+    }
+
+    return { files, totalFiles, totalSize, totalLinks };
+  }
+
+  /**
+   * Run devices command
+   */
+  async runDevices(configPath: string): Promise<DevicesReport> {
+    const cmd = new Deno.Command("snapraid", {
+      args: ["devices", "-c", configPath],
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const { stdout, stderr } = await cmd.output();
+    const output = new TextDecoder().decode(stdout);
+    const error = new TextDecoder().decode(stderr);
+
+    if (error) {
+      console.error("Devices command stderr:", error);
+    }
+
+    const devices = SnapRaidRunner.parseDevicesOutput(output);
+
+    return {
+      devices,
+      timestamp: new Date().toISOString(),
+      rawOutput: output,
+    };
+  }
+
+  /**
+   * Run list command
+   */
+  async runList(configPath: string): Promise<ListReport> {
+    const cmd = new Deno.Command("snapraid", {
+      args: ["list", "-c", configPath],
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const { stdout, stderr } = await cmd.output();
+    const output = new TextDecoder().decode(stdout);
+    const error = new TextDecoder().decode(stderr);
+
+    if (error) {
+      console.error("List command stderr:", error);
+    }
+
+    const { files, totalFiles, totalSize, totalLinks } = SnapRaidRunner.parseListOutput(output);
+
+    return {
+      files,
+      totalFiles,
+      totalSize,
+      totalLinks,
+      timestamp: new Date().toISOString(),
+      rawOutput: output,
+    };
   }
 }

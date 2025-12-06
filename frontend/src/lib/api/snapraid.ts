@@ -1,4 +1,4 @@
-import type { ParsedSnapRaidConfig, SnapRaidCommand, CommandOutput, RunningJob, SmartReport, ProbeReport } from "@shared/types";
+import type { ParsedSnapRaidConfig, SnapRaidCommand, CommandOutput, RunningJob, SmartReport, ProbeReport, DevicesReport, ListReport } from "@shared/types";
 import { API_BASE } from "./constants";
 
 /**
@@ -207,6 +207,30 @@ export const spinDown = async (configPath: string, disks?: string[]): Promise<{ 
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to spin down disks');
+  }
+  return response.json();
+}
+
+/**
+ * Get device information
+ */
+export const getDevices = async (configPath: string): Promise<DevicesReport> => {
+  const response = await fetch(`${API_BASE}/api/snapraid/devices?path=${encodeURIComponent(configPath)}`);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to get device information');
+  }
+  return response.json();
+}
+
+/**
+ * Get file list from SnapRAID
+ */
+export const getFileList = async (configPath: string): Promise<ListReport> => {
+  const response = await fetch(`${API_BASE}/api/snapraid/list?path=${encodeURIComponent(configPath)}`);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to get file list');
   }
   return response.json();
 }

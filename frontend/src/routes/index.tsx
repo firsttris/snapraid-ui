@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useCallback } from 'react'
 import { useConfig, useSnapRaidConfig, useCurrentJob, useExecuteCommand } from '../hooks/queries'
-import type { SnapRaidCommand } from '@shared/types'
+import type { SnapRaidCommand, DevicesReport, ListReport } from '@shared/types'
 import { ConfigManager } from '../components/ConfigManager'
 import { ConfigSelector } from '../components/ConfigSelector'
 import { DashboardCards } from '../components/DashboardCards'
@@ -10,8 +10,10 @@ import { OutputConsole } from '../components/OutputConsole'
 import { UndeleteDialog } from '../components/UndeleteDialog'
 import { SmartMonitor } from '../components/SmartMonitor'
 import { DiskPowerControl } from '../components/DiskPowerControl'
+import { DeviceList } from '../components/DeviceList'
+import { FileListViewer } from '../components/FileListViewer'
 import { useWebSocketConnection } from '../hooks/useWebSocketConnection'
-import { getSmart, probe, spinUp, spinDown } from '../lib/api/snapraid'
+import { getSmart, probe, spinUp, spinDown, getDevices, getFileList } from '../lib/api/snapraid'
 
 export const Route = createFileRoute('/')({
   component: Dashboard,
@@ -22,6 +24,12 @@ function Dashboard() {
   const [showConfigManager, setShowConfigManager] = useState(false)
   const [showUndeleteDialog, setShowUndeleteDialog] = useState(false)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'smart' | 'power'>('dashboard')
+  const [showDevicesModal, setShowDevicesModal] = useState(false)
+  const [showFileListModal, setShowFileListModal] = useState(false)
+  const [devicesData, setDevicesData] = useState<DevicesReport | null>(null)
+  const [fileListData, setFileListData] = useState<ListReport | null>(null)
+  const [isLoadingDevices, setIsLoadingDevices] = useState(false)
+  const [isLoadingFileList, setIsLoadingFileList] = useState(false)
 
   // TanStack Query hooks
   const { data: config, refetch: refetchConfig } = useConfig()
@@ -53,9 +61,39 @@ function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentJob])
 
-  const executeCommand = useCallback((command: SnapRaidCommand) => {
+  const executeCommand = useCallback(async (command: SnapRaidCommand) => {
     if (!selectedConfig || wsState.isRunning) return
     
+    // Handle devices and list commands differently
+    if (command === 'devices') {
+      setIsLoadingDevices(true)
+      setShowDevicesModal(true)
+      try {
+        const data = await getDevices(selectedConfig)
+        setDevicesData(data)
+      } catch (error) {
+        console.error('Failed to get devices:', error)
+      } finally {
+        setIsLoadingDevices(false)
+      }
+      return
+    }
+    
+    if (command === 'list') {
+      setIsLoadingFileList(true)
+      setShowFileListModal(true)
+      try {
+        const data = await getFileList(selectedConfig)
+        setFileListData(data)
+      } catch (error) {
+        console.error('Failed to get file list:', error)
+      } finally {
+        setIsLoadingFileList(false)
+      }
+      return
+    }
+    
+    // Regular commands
     wsState.setIsRunning(true)
     wsState.clearOutput()
     wsState.setCurrentCommand(command)
@@ -183,6 +221,25 @@ function Dashboard() {
                   dataDisk={parsedConfig.data}
                   onExecute={handleUndelete}
                   onClose={() => setShowUndeleteDialog(false)}
+                />
+              )}
+
+              {showDevicesModal && (
+                <DeviceList
+                  devices={devicesData?.devices || []}
+                  isLoading={isLoadingDevices}
+                  onClose={() => setShowDevicesModal(false)}
+                />
+              )}
+
+              {showFileListModal && (
+                <FileListViewer
+                  files={fileListData?.files || []}
+                  totalFiles={fileListData?.totalFiles || 0}
+                  totalSize={fileListData?.totalSize || 0}
+                  totalLinks={fileListData?.totalLinks || 0}
+                  isLoading={isLoadingFileList}
+                  onClose={() => setShowFileListModal(false)}
                 />
               )}
 

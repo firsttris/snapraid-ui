@@ -785,4 +785,36 @@ function parseProbeOutput(output: string) {
   return disks;
 }
 
+// GET /api/snapraid/devices - Get device information
+snapraid.get("/devices", async (c) => {
+  const configPath = c.req.query("path");
+  
+  if (!configPath) {
+    return c.json({ error: "Missing path parameter" }, 400);
+  }
+
+  try {
+    const result = await runner.runDevices(configPath);
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// GET /api/snapraid/list - Get file list
+snapraid.get("/list", async (c) => {
+  const configPath = c.req.query("path");
+  
+  if (!configPath) {
+    return c.json({ error: "Missing path parameter" }, 400);
+  }
+
+  try {
+    const result = await runner.runList(configPath);
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 export default snapraid;
