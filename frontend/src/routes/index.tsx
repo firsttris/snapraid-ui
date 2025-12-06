@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useCallback } from 'react'
-import { useConfig, useSnapRaidConfig, useCurrentJob, useExecuteCommand } from '../hooks/queries'
+import { useConfig, useSnapRaidConfig, useCurrentJob, useStatus, useExecuteCommand } from '../hooks/queries'
 import type { SnapRaidCommand, DevicesReport, ListReport, CheckReport, DiffReport } from '@shared/types'
 import { ConfigManager } from '../components/ConfigManager'
 import { ConfigSelector } from '../components/ConfigSelector'
@@ -14,6 +14,7 @@ import { DeviceList } from '../components/DeviceList'
 import { FileListViewer } from '../components/FileListViewer'
 import { CheckViewer } from '../components/CheckViewer'
 import { DiffViewer } from '../components/DiffViewer'
+import { StatusModal } from '../components/StatusModal'
 import { useWebSocketConnection } from '../hooks/useWebSocketConnection'
 import { getSmart, probe, spinUp, spinDown, getDevices, getFileList, getCheck, getDiff } from '../lib/api/snapraid'
 
@@ -25,6 +26,7 @@ function Dashboard() {
   const [selectedConfig, setSelectedConfig] = useState<string>('')
   const [showConfigManager, setShowConfigManager] = useState(false)
   const [showUndeleteDialog, setShowUndeleteDialog] = useState(false)
+  const [showStatusModal, setShowStatusModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'smart' | 'power'>('dashboard')
   const [showDevicesModal, setShowDevicesModal] = useState(false)
   const [showFileListModal, setShowFileListModal] = useState(false)
@@ -43,6 +45,7 @@ function Dashboard() {
   const { data: config, refetch: refetchConfig } = useConfig()
   const { data: parsedConfig } = useSnapRaidConfig(selectedConfig)
   const { data: currentJob, refetch: refetchCurrentJob } = useCurrentJob()
+  const { data: statusData, refetch: refetchStatus } = useStatus(selectedConfig, { enabled: false })
   const executeCommandMutation = useExecuteCommand()
 
   // WebSocket connection hook
@@ -71,6 +74,13 @@ function Dashboard() {
 
   const executeCommand = useCallback(async (command: SnapRaidCommand) => {
     if (!selectedConfig || wsState.isRunning) return
+    
+    // Handle status command with modal
+    if (command === 'status') {
+      setShowStatusModal(true)
+      await refetchStatus()
+      return
+    }
     
     // Handle devices and list commands differently
     if (command === 'devices') {
@@ -140,7 +150,7 @@ function Dashboard() {
         wsState.setIsRunning(false)
       }
     })
-  }, [selectedConfig, wsState, executeCommandMutation])
+  }, [selectedConfig, wsState, executeCommandMutation, refetchStatus])
 
   const handleUndelete = useCallback((mode: 'all-missing' | 'directory-missing' | 'specific', path?: string, diskFilter?: string) => {
     if (!selectedConfig || wsState.isRunning) return
@@ -241,7 +251,6 @@ function Dashboard() {
             <>
               <DashboardCards 
                 parsedConfig={parsedConfig} 
-                status={wsState.status} 
               />
 
               <CommandPanel
@@ -304,6 +313,14 @@ function Dashboard() {
                   restoredFiles={diffData?.restoredFiles || 0}
                   isLoading={isLoadingDiff}
                   onClose={() => setShowDiffModal(false)}
+                />
+              )}
+
+              {showStatusModal && statusData && (
+                <StatusModal
+                  status={statusData.status}
+                  onClose={() => setShowStatusModal(false)}
+                  onRefresh={refetchStatus}
                 />
               )}
 

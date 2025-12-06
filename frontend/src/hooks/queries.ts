@@ -1,4 +1,4 @@
-import type { AppConfig, ParsedSnapRaidConfig, SnapRaidCommand, RunningJob, LogFile, Schedule } from "@shared/types";
+import type { AppConfig, ParsedSnapRaidConfig, SnapRaidCommand, RunningJob, LogFile, Schedule, SnapRaidStatus } from "@shared/types";
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions, type UseMutationOptions } from '@tanstack/react-query';
 import {
   getConfig,
@@ -10,6 +10,7 @@ import {
   parseSnapRaidConfig,
   executeCommand,
   getCurrentJob,
+  getStatus,
   addDataDisk,
   addParityDisk,
   removeDisk,
@@ -38,6 +39,7 @@ export const queryKeys = {
   config: ['config'] as const,
   snapraidConfig: (path: string) => ['snapraid-config', path] as const,
   currentJob: ['current-job'] as const,
+  status: ['status'] as const,
   logs: ['logs'] as const,
   logContent: (filename: string) => ['log-content', filename] as const,
   filesystem: (path: string | undefined, filter: 'conf' | 'directories') => ['filesystem', path, filter] as const,
@@ -71,6 +73,14 @@ export const useCurrentJob = (options?: Omit<UseQueryOptions<RunningJob | null>,
   return useQuery({
     queryKey: queryKeys.currentJob,
     queryFn: getCurrentJob,
+    ...options,
+  });
+}
+
+export const useStatus = (configPath?: string, options?: Omit<UseQueryOptions<{ status: SnapRaidStatus; timestamp: string; exitCode: number | null }>, 'queryKey' | 'queryFn'>) => {
+  return useQuery({
+    queryKey: [...queryKeys.status, configPath],
+    queryFn: () => getStatus(configPath),
     ...options,
   });
 }

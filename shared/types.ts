@@ -36,6 +36,22 @@ export interface DiskInfo {
   type: 'data' | 'parity';
 }
 
+export interface DiskStatusInfo {
+  name: string;
+  files: number;
+  fragmentedFiles: number;
+  excessFragments: number;
+  wastedGB: number;
+  usedGB: number;
+  freeGB: number;
+  usePercent: number;
+}
+
+export interface ScrubHistoryPoint {
+  daysAgo: number;
+  percentage: number;
+}
+
 export interface SnapRaidStatus {
   hasErrors: boolean;
   parityUpToDate: boolean;
@@ -50,9 +66,16 @@ export interface SnapRaidStatus {
   scrubPercentage?: number; // % of array that is scrubbed
   syncInProgress?: boolean;
   oldestScrubDays?: number; // Days since oldest block was scrubbed
+  medianScrubDays?: number; // Median days since scrubbed
+  newestScrubDays?: number; // Newest days since scrubbed
   fragmentedFiles?: number;
   wastedGB?: number;
   freeSpaceGB?: number; // Free space in GB
+  totalFiles?: number;
+  totalUsedGB?: number;
+  totalFreeGB?: number;
+  disks?: DiskStatusInfo[]; // Individual disk stats
+  scrubHistory?: ScrubHistoryPoint[]; // Scrub history chart data
   rawOutput: string;
 }
 

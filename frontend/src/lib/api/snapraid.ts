@@ -41,6 +41,18 @@ export const getCurrentJob = async (): Promise<RunningJob | null> => {
 }
 
 /**
+ * Get parsed status from last status command
+ */
+export const getStatus = async (configPath?: string): Promise<{ status: any; timestamp: string; exitCode: number | null }> => {
+  const url = configPath 
+    ? `${API_BASE}/api/snapraid/status?path=${encodeURIComponent(configPath)}`
+    : `${API_BASE}/api/snapraid/status`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Failed to fetch status');
+  return response.json();
+}
+
+/**
  * Validate SnapRAID config
  */
 export const validateConfig = async (configPath: string): Promise<{ valid: boolean; exitCode: number; output: string }> => {
