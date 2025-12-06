@@ -7,11 +7,11 @@ import { LogManager } from "./log-manager.ts";
 import { setLogManager } from "./routes/logs.ts";
 import { createScheduler } from "./scheduler.ts";
 import { setScheduler } from "./routes/schedules.ts";
-import configRoutes from "./routes/config.ts";
-import filesystemRoutes from "./routes/filesystem.ts";
-import snapraidRoutes from "./routes/snapraid.ts";
-import logsRoutes from "./routes/logs.ts";
-import schedulesRoutes from "./routes/schedules.ts";
+import { configRoutes } from "./routes/config.ts";
+import { filesystemRoutes } from "./routes/filesystem.ts";
+import { snapraidRoutes } from "./routes/snapraid.ts";
+import { logsRoutes } from "./routes/logs.ts";
+import { schedulesRoutes } from "./routes/schedules.ts";
 
 const app = new Hono();
 

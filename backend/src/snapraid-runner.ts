@@ -1,4 +1,4 @@
-import type { SnapRaidCommand, CommandOutput, SnapRaidStatus, RunningJob, DevicesReport, DeviceInfo, ListReport, SnapRaidFileInfo, CheckReport, CheckFileInfo, DiffReport, DiffFileInfo, DiskStatusInfo, ScrubHistoryPoint } from "@shared/types.ts";
+import type { SnapRaidCommand, CommandOutput, SnapRaidStatus, RunningJob, DevicesReport, DeviceInfo, ListReport, SnapRaidFileInfo, CheckReport, CheckFileInfo, DiffReport, DiffFileInfo, DiskStatusInfo, ScrubHistoryPoint, SmartDiskInfo, ProbeDiskInfo } from "@shared/types.ts";
 import { LogManager } from "./log-manager.ts";
 
 export class SnapRaidRunner {
@@ -48,6 +48,46 @@ export class SnapRaidRunner {
   }
 
   /**
+   * Create stream reader closure
+   */
+  private createStreamReader = (
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    decoder: TextDecoder,
+    onOutput: (chunk: string) => void
+  ) => async (): Promise<string> => {
+    const chunks: string[] = [];
+    for await (const value of this.readStream(reader)) {
+      const chunk = decoder.decode(value);
+      chunks.push(chunk);
+      onOutput(chunk);
+    }
+    return chunks.join("");
+  };
+
+  /**
+   * Read both stdout and stderr streams
+   */
+  private readProcessStreams = async (
+    process: Deno.ChildProcess,
+    onOutput: (chunk: string) => void
+  ): Promise<string> => {
+    const decoder = new TextDecoder();
+    const [stdoutContent, stderrContent] = await Promise.all([
+      this.createStreamReader(process.stdout.getReader(), decoder, onOutput)(),
+      this.createStreamReader(process.stderr.getReader(), decoder, onOutput)(),
+    ]);
+    return stdoutContent + stderrContent;
+  };
+
+  /**
+   * Cleanup after process completion
+   */
+  private cleanupProcess = (processId: string): void => {
+    this.processes.delete(processId);
+    this.currentJob = null;
+  };
+
+  /**
    * Execute a SnapRAID command and stream output
    */
   async executeCommand(
@@ -57,18 +97,16 @@ export class SnapRaidRunner {
     additionalArgs: string[] = []
   ): Promise<CommandOutput> {
     const processId = `${command}-${Date.now()}`;
-    
-    // Add log file if log manager is configured
     const logPath = this.logManager ? await this.prepareLogPath(command) : undefined;
-    
     const args = this.buildCommandArgs(command, configPath, additionalArgs, logPath);
+    const timestamp = new Date().toISOString();
+    
     console.log(`Executing: snapraid ${args.join(" ")}`);
 
-    // Set current job
     this.currentJob = {
       command,
       configPath,
-      startTime: new Date().toISOString(),
+      startTime: timestamp,
       processId,
     };
 
@@ -81,34 +119,10 @@ export class SnapRaidRunner {
     const process = cmd.spawn();
     this.processes.set(processId, process);
 
-    let fullOutput = "";
-    const timestamp = new Date().toISOString();
-
     try {
-      const decoder = new TextDecoder();
-      
-      // Create stream readers as closures
-      const createStreamReader = (reader: ReadableStreamDefaultReader<Uint8Array>) => 
-        async () => {
-          const chunks: string[] = [];
-          for await (const value of this.readStream(reader)) {
-            const chunk = decoder.decode(value);
-            chunks.push(chunk);
-            onOutput(chunk);
-          }
-          return chunks.join("");
-        };
-
-      const [stdoutContent, stderrContent] = await Promise.all([
-        createStreamReader(process.stdout.getReader())(),
-        createStreamReader(process.stderr.getReader())(),
-      ]);
-      
-      fullOutput = stdoutContent + stderrContent;
-
+      const fullOutput = await this.readProcessStreams(process, onOutput);
       const status = await process.status;
-      this.processes.delete(processId);
-      this.currentJob = null; // Clear current job
+      this.cleanupProcess(processId);
 
       return {
         command: `snapraid ${args.join(" ")}`,
@@ -117,8 +131,7 @@ export class SnapRaidRunner {
         exitCode: status.code,
       };
     } catch (error) {
-      this.processes.delete(processId);
-      this.currentJob = null; // Clear current job on error
+      this.cleanupProcess(processId);
       throw error;
     }
   }
@@ -145,304 +158,347 @@ export class SnapRaidRunner {
   }
 
   /**
-   * Parse SnapRAID status/diff output
+   * Check if output has errors
    */
-  static parseStatusOutput(output: string): SnapRaidStatus {
-    const status: SnapRaidStatus = {
-      hasErrors: false,
-      parityUpToDate: false,
-      newFiles: 0,
-      modifiedFiles: 0,
-      deletedFiles: 0,
-      disks: [],
-      scrubHistory: [],
-      rawOutput: output,
-    };
+  private static hasErrors = (output: string): boolean => {
+    if (output.includes("No error detected")) return false;
+    return output.toLowerCase().includes("error") || 
+           output.toLowerCase().includes("warning") ||
+           output.includes("bad blocks");
+  };
 
-    // Check for errors - but "No error detected" means OK
-    if (output.includes("No error detected")) {
-      status.hasErrors = false;
-    } else {
-      status.hasErrors = output.toLowerCase().includes("error") || 
-                         output.toLowerCase().includes("warning") ||
-                         output.includes("bad blocks");
-    }
-
-    // Parse "status" command specific info
-    // Check if sync is in progress
-    status.syncInProgress = output.includes("sync is in progress") && !output.includes("No sync is in progress");
-
-    // Parse scrub percentage: "100% of the array is not scrubbed" or "50% of the array is scrubbed"
-    // Note: "X% of the array is not scrubbed" means (100-X)% IS scrubbed
+  /**
+   * Parse scrub percentage from output
+   */
+  private static parseScrubPercentage = (output: string): number | undefined => {
     const notScrubbed = output.match(/(\d+)%\s+of\s+the\s+array\s+is\s+not\s+scrubbed/i);
     if (notScrubbed) {
       const notScrubbedPercent = parseInt(notScrubbed[1], 10);
-      status.scrubPercentage = 100 - notScrubbedPercent;
-    } else {
-      const isScrubbed = output.match(/(\d+)%\s+of\s+the\s+array\s+is\s+scrubbed/i);
-      if (isScrubbed) {
-        status.scrubPercentage = parseInt(isScrubbed[1], 10);
-      }
+      return 100 - notScrubbedPercent;
     }
+    
+    const isScrubbed = output.match(/(\d+)%\s+of\s+the\s+array\s+is\s+scrubbed/i);
+    return isScrubbed ? parseInt(isScrubbed[1], 10) : undefined;
+  };
 
-    // Parse scrub age details: "The oldest block was scrubbed 5 days ago, the median 3, the newest 0."
+  /**
+   * Parse scrub age details
+   */
+  private static parseScrubAge = (output: string): Pick<SnapRaidStatus, 'oldestScrubDays' | 'medianScrubDays' | 'newestScrubDays'> => {
     const scrubAgeMatch = output.match(/oldest block was scrubbed (\d+) days? ago,?\s+the median (\d+),?\s+the newest (\d+)/i);
     if (scrubAgeMatch) {
-      status.oldestScrubDays = parseInt(scrubAgeMatch[1], 10);
-      status.medianScrubDays = parseInt(scrubAgeMatch[2], 10);
-      status.newestScrubDays = parseInt(scrubAgeMatch[3], 10);
-    } else {
-      // Fallback to just oldest
-      const oldestScrub = output.match(/oldest block was scrubbed (\d+) days? ago/i);
-      if (oldestScrub) {
-        status.oldestScrubDays = parseInt(oldestScrub[1], 10);
-      }
+      return {
+        oldestScrubDays: parseInt(scrubAgeMatch[1], 10),
+        medianScrubDays: parseInt(scrubAgeMatch[2], 10),
+        newestScrubDays: parseInt(scrubAgeMatch[3], 10),
+      };
     }
-
-    // Parse individual disk rows from status table
-    // Table format:
-    //    Files Fragmented Excess  Wasted  Used    Free  Use Name
-    //             Files  Fragments  GB      GB      GB
-    //       13       0       0   502.5       0     209   0% test1
-    //        0       0       0       -       0       -   -  test2
-    //  --------------------------------------------------------------------------
-    //       13       0       0   502.5       0     209   0%
-    const lines = output.split('\n');
-    let inTable = false;
     
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      
+    const oldestScrub = output.match(/oldest block was scrubbed (\d+) days? ago/i);
+    return oldestScrub ? { oldestScrubDays: parseInt(oldestScrub[1], 10) } : {};
+  };
+
+  /**
+   * Parse a single disk row from status table
+   */
+  private static parseDiskRow = (line: string): DiskStatusInfo | null => {
+    const cols = line.trim().split(/\s+/);
+    if (cols.length < 8) return null;
+
+    return {
+      name: cols.slice(7).join(' '),
+      files: parseInt(cols[0], 10) || 0,
+      fragmentedFiles: parseInt(cols[1], 10) || 0,
+      excessFragments: parseInt(cols[2], 10) || 0,
+      wastedGB: cols[3] === '-' ? 0 : parseFloat(cols[3]) || 0,
+      usedGB: cols[4] === '-' ? 0 : parseFloat(cols[4]) || 0,
+      freeGB: cols[5] === '-' ? 0 : parseFloat(cols[5]) || 0,
+      usePercent: cols[6] === '-' ? 0 : parseInt(cols[6], 10) || 0,
+    };
+  };
+
+  /**
+   * Parse total line from status table
+   */
+  private static parseTotalLine = (line: string): Partial<SnapRaidStatus> => {
+    const totalCols = line.trim().split(/\s+/);
+    if (totalCols.length < 7) return {};
+
+    return {
+      totalFiles: parseInt(totalCols[0], 10) || 0,
+      fragmentedFiles: parseInt(totalCols[1], 10) || 0,
+      wastedGB: parseFloat(totalCols[3]) || 0,
+      totalUsedGB: parseFloat(totalCols[4]) || 0,
+      totalFreeGB: parseFloat(totalCols[5]) || 0,
+    };
+  };
+
+  /**
+   * Parse disk table from status output
+   */
+  private static parseDiskTable = (lines: string[]): { disks: DiskStatusInfo[], totals: Partial<SnapRaidStatus> } => {
+    const disks: DiskStatusInfo[] = [];
+    const result = lines.reduce((acc, line, index) => {
       // Detect table header
       if (line.includes('Files') && line.includes('Fragmented') && line.includes('Wasted')) {
-        inTable = true;
-        i++; // Skip the "Files Fragments" subheader
-        continue;
+        return { ...acc, inTable: true, skipNext: true };
       }
       
-      // Detect table end (separator line)
+      // Skip subheader
+      if (acc.skipNext) {
+        return { ...acc, skipNext: false };
+      }
+      
+      // Detect table end
       if (line.match(/^ *-{10,} *$/)) {
-        inTable = false;
-        // The line after separator is the total
-        if (i + 1 < lines.length) {
-          const totalLine = lines[i + 1].trim();
-          const totalCols = totalLine.split(/\s+/);
-          if (totalCols.length >= 7) {
-            status.totalFiles = parseInt(totalCols[0], 10) || 0;
-            status.fragmentedFiles = parseInt(totalCols[1], 10) || 0;
-            status.wastedGB = parseFloat(totalCols[3]) || 0;
-            status.totalUsedGB = parseFloat(totalCols[4]) || 0;
-            status.totalFreeGB = parseFloat(totalCols[5]) || 0;
-          }
-        }
-        continue;
+        const totalLine = lines[index + 1];
+        const totals = totalLine ? this.parseTotalLine(totalLine) : {};
+        return { ...acc, inTable: false, totals };
       }
       
       // Parse disk rows
-      if (inTable && line.trim()) {
-        // Format: "      13       0       0   502.5       0     209   0% test1"
-        const cols = line.trim().split(/\s+/);
-        if (cols.length >= 8) {
-          const diskInfo: DiskStatusInfo = {
-            name: cols.slice(7).join(' '), // Everything after % is the disk name
-            files: parseInt(cols[0], 10) || 0,
-            fragmentedFiles: parseInt(cols[1], 10) || 0,
-            excessFragments: parseInt(cols[2], 10) || 0,
-            wastedGB: cols[3] === '-' ? 0 : parseFloat(cols[3]) || 0,
-            usedGB: cols[4] === '-' ? 0 : parseFloat(cols[4]) || 0,
-            freeGB: cols[5] === '-' ? 0 : parseFloat(cols[5]) || 0,
-            usePercent: cols[6] === '-' ? 0 : parseInt(cols[6], 10) || 0,
-          };
-          status.disks!.push(diskInfo);
-        }
-      }
-    }
-
-    // Parse scrub history chart
-    // Format (ASCII art):
-    // 94%|o                                                                     
-    //    |o                                                                     
-    // ...
-    //  0%|o_____o______________________________________________________________o
-    //     0                    days ago of the last scrub/sync                 0
-    const chartLines: string[] = [];
-    let foundChartStart = false;
-    
-    for (const line of lines) {
-      // Detect chart lines (start with percentage or spaces followed by |)
-      if (line.match(/^\s*\d+%\|/) || (foundChartStart && line.match(/^\s+\|/))) {
-        chartLines.push(line);
-        foundChartStart = true;
-      } else if (foundChartStart && line.match(/^\s+\d+\s+days ago/)) {
-        // End of chart
-        break;
-      } else if (foundChartStart) {
-        // End of chart
-        break;
-      }
-    }
-    
-    // Parse chart data points
-    if (chartLines.length > 0) {
-      const scrubHistory: ScrubHistoryPoint[] = [];
-      
-      for (const chartLine of chartLines) {
-        const percentMatch = chartLine.match(/^\s*(\d+)%\|/);
-        if (percentMatch) {
-          const percentage = parseInt(percentMatch[1], 10);
-          
-          // Extract position of 'o' markers (representing data points)
-          const positions: number[] = [];
-          for (let i = 0; i < chartLine.length; i++) {
-            if (chartLine[i] === 'o') {
-              positions.push(i);
-            }
-          }
-          
-          // Map positions to approximate days ago (0 to max days)
-          // The chart is roughly 70 chars wide, 0 days at left, max at right
-          const chartWidth = 70;
-          const maxDays = status.oldestScrubDays || 30;
-          
-          for (const pos of positions) {
-            const relativePos = (pos - chartLine.indexOf('|') - 1) / chartWidth;
-            const daysAgo = Math.round(relativePos * maxDays);
-            scrubHistory.push({ daysAgo, percentage });
-          }
+      if (acc.inTable && line.trim()) {
+        const diskInfo = this.parseDiskRow(line);
+        if (diskInfo) {
+          disks.push(diskInfo);
         }
       }
       
-      status.scrubHistory = scrubHistory;
-    }
+      return acc;
+    }, { inTable: false, skipNext: false, totals: {} } as { inTable: boolean, skipNext: boolean, totals: Partial<SnapRaidStatus> });
 
-    // Legacy fallback for backward compatibility
+    return { disks, totals: result.totals };
+  };
+
+  /**
+   * Parse diff statistics
+   */
+  private static parseDiffStats = (lines: string[]): Partial<SnapRaidStatus> => {
+    const diffStats = lines.reduce((acc, line) => {
+      const match = line.match(/^\s*(\d+)\s+(equal|added|removed|updated|moved|copied|restored)/);
+      return match ? { ...acc, [match[2]]: parseInt(match[1], 10) } : acc;
+    }, {} as Record<string, number>);
+
+    if (Object.keys(diffStats).length === 0) return {};
+
+    return {
+      equalFiles: diffStats.equal || 0,
+      newFiles: diffStats.added || 0,
+      deletedFiles: diffStats.removed || 0,
+      modifiedFiles: diffStats.updated || 0,
+      movedFiles: diffStats.moved || 0,
+      copiedFiles: diffStats.copied || 0,
+      restoredFiles: diffStats.restored || 0,
+    };
+  };
+
+  /**
+   * Parse scrub history chart
+   */
+  private static parseScrubHistory = (lines: string[], oldestScrubDays?: number): ScrubHistoryPoint[] => {
+    const chartLines = lines.reduce((acc, line) => {
+      if (line.match(/^\s*\d+%\|/) || (acc.foundStart && line.match(/^\s+\|/))) {
+        return { foundStart: true, lines: [...acc.lines, line] };
+      }
+      if (acc.foundStart && (line.match(/^\s+\d+\s+days ago/) || !line.trim())) {
+        return { ...acc, foundStart: false };
+      }
+      return acc;
+    }, { foundStart: false, lines: [] as string[] });
+
+    if (chartLines.lines.length === 0) return [];
+
+    const CHART_WIDTH = 70;
+    const maxDays = oldestScrubDays || 30;
+
+    return chartLines.lines.flatMap(chartLine => {
+      const percentMatch = chartLine.match(/^\s*(\d+)%\|/);
+      if (!percentMatch) return [];
+
+      const percentage = parseInt(percentMatch[1], 10);
+      const pipeIndex = chartLine.indexOf('|');
+      
+      return [...chartLine].reduce((positions, char, index) => {
+        if (char !== 'o') return positions;
+        const relativePos = (index - pipeIndex - 1) / CHART_WIDTH;
+        const daysAgo = Math.round(relativePos * maxDays);
+        return [...positions, { daysAgo, percentage }];
+      }, [] as ScrubHistoryPoint[]);
+    });
+  };
+
+  /**
+   * Check if parity is up to date
+   */
+  private static isParityUpToDate = (output: string, syncInProgress: boolean): boolean => 
+    (output.includes("No error detected") && !syncInProgress) ||
+    output.includes("Everything OK") ||
+    output.includes("Nothing to do") ||
+    output.includes("No differences") ||
+    (output.includes("equal") && !output.match(/(\d+)\s+(added|removed|updated)/i));
+
+  /**
+   * Parse SnapRAID status/diff output
+   */
+  static parseStatusOutput(output: string): SnapRaidStatus {
+    const lines = output.split('\n');
+    const syncInProgress = output.includes("sync is in progress") && !output.includes("No sync is in progress");
+    
+    const { disks, totals } = this.parseDiskTable(lines);
+    const diffStats = this.parseDiffStats(lines);
+    const scrubAge = this.parseScrubAge(output);
+    const scrubPercentage = this.parseScrubPercentage(output);
+    const scrubHistory = this.parseScrubHistory(lines, scrubAge.oldestScrubDays);
+
+    const status: SnapRaidStatus = {
+      hasErrors: this.hasErrors(output),
+      parityUpToDate: this.isParityUpToDate(output, syncInProgress),
+      newFiles: 0,
+      modifiedFiles: 0,
+      deletedFiles: 0,
+      disks,
+      scrubHistory,
+      rawOutput: output,
+      syncInProgress,
+      scrubPercentage,
+      ...scrubAge,
+      ...totals,
+      ...diffStats,
+    };
+
+    // Legacy fallback
     if (!status.freeSpaceGB && status.totalFreeGB) {
       status.freeSpaceGB = status.totalFreeGB;
-    }
-
-    // Check parity status
-    // For "status" command: check if no errors and no sync in progress
-    // For "diff" command: check if no differences
-    status.parityUpToDate = (output.includes("No error detected") && !status.syncInProgress) ||
-                            output.includes("Everything OK") ||
-                            output.includes("Nothing to do") ||
-                            output.includes("No differences") ||
-                            (output.includes("equal") && !output.match(/(\d+)\s+(added|removed|updated)/i));
-
-    // Parse "diff" command output
-    // Format:
-    //       11 equal
-    //        1 added
-    //        1 removed
-    //        0 updated
-    //        0 moved
-    //        0 copied
-    //        1 restored
-    const diffStats: Record<string, number> = {};
-    for (const line of lines) {
-      const match = line.match(/^\s*(\d+)\s+(equal|added|removed|updated|moved|copied|restored)/);
-      if (match) {
-        diffStats[match[2]] = parseInt(match[1], 10);
-      }
-    }
-
-    // If we found diff stats, use them
-    if (Object.keys(diffStats).length > 0) {
-      status.equalFiles = diffStats.equal || 0;
-      status.newFiles = diffStats.added || 0;
-      status.deletedFiles = diffStats.removed || 0;
-      status.modifiedFiles = diffStats.updated || 0;
-      status.movedFiles = diffStats.moved || 0;
-      status.copiedFiles = diffStats.copied || 0;
-      status.restoredFiles = diffStats.restored || 0;
     }
 
     return status;
   }
 
   /**
+   * Check if line should be skipped
+   */
+  private static shouldSkipLine = (line: string, prefixes: string[]): boolean => {
+    const trimmed = line.trim();
+    return !trimmed || prefixes.some(prefix => trimmed.startsWith(prefix));
+  };
+
+  /**
    * Parse devices output
    * Format: "259:0   /dev/nvme0n1    259:2   /dev/nvme0n1p2  test1"
    */
   static parseDevicesOutput(output: string): DeviceInfo[] {
-    const devices: DeviceInfo[] = [];
-    const lines = output.split('\n');
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('Loading') || trimmed.startsWith('Listing')) {
-        continue;
-      }
-
-      // Split by whitespace and parse device info
-      const parts = trimmed.split(/\s+/);
-      if (parts.length >= 5) {
-        devices.push({
+    const skipPrefixes = ['Loading', 'Listing'];
+    
+    return output.split('\n')
+      .filter(line => !this.shouldSkipLine(line, skipPrefixes))
+      .map(line => {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length < 5) return null;
+        
+        return {
           majorMinor: parts[0],
           device: parts[1],
           partMajorMinor: parts[2],
           partition: parts[3],
           diskName: parts.slice(4).join(' '),
-        });
-      }
-    }
-
-    return devices;
+        };
+      })
+      .filter((device): device is DeviceInfo => device !== null);
   }
+
+  /**
+   * Parse file line from list output
+   */
+  private static parseFileListLine = (line: string): SnapRaidFileInfo | null => {
+    const fileMatch = line.trim().match(/^(\d+)\s+(\d{4}\/\d{2}\/\d{2})\s+(\d{2}:\d{2})\s+(.+)$/);
+    if (!fileMatch) return null;
+
+    return {
+      size: parseInt(fileMatch[1], 10),
+      date: fileMatch[2],
+      time: fileMatch[3],
+      name: fileMatch[4],
+    };
+  };
+
+  /**
+   * Parse summary information from list output
+   */
+  private static parseListSummary = (lines: string[]): { totalFiles: number, totalLinks: number } => {
+    const filesLine = lines.find(line => line.trim().match(/^\d+\s+files?,\s+for\s+\d+/));
+    const linksLine = lines.find(line => line.trim().match(/^\d+\s+links?/));
+
+    const filesMatch = filesLine?.trim().match(/^(\d+)\s+files?/);
+    const linksMatch = linksLine?.trim().match(/^(\d+)\s+links?/);
+
+    return {
+      totalFiles: filesMatch ? parseInt(filesMatch[1], 10) : 0,
+      totalLinks: linksMatch ? parseInt(linksMatch[1], 10) : 0,
+    };
+  };
 
   /**
    * Parse list output
    * Format: "       76849 2025/12/01 07:54 filename.xlsx"
    */
   static parseListOutput(output: string): { files: SnapRaidFileInfo[], totalFiles: number, totalSize: number, totalLinks: number } {
-    const files: SnapRaidFileInfo[] = [];
     const lines = output.split('\n');
-    let totalFiles = 0;
-    let totalSize = 0;
-    let totalLinks = 0;
+    const skipPrefixes = ['Loading', 'Listing', 'files, for', 'links'];
+    
+    const files = lines
+      .filter(line => !this.shouldSkipLine(line, skipPrefixes))
+      .map(line => this.parseFileListLine(line))
+      .filter((file): file is SnapRaidFileInfo => file !== null);
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      
-      // Skip header/footer lines
-      if (!trimmed || 
-          trimmed.startsWith('Loading') || 
-          trimmed.startsWith('Listing') ||
-          trimmed.startsWith('files, for') ||
-          trimmed.startsWith('links')) {
-        continue;
-      }
-
-      // Parse summary lines
-      const filesMatch = trimmed.match(/^(\d+)\s+files?,\s+for\s+(\d+(?:\.\d+)?)\s+([KMGT]?B)/);
-      if (filesMatch) {
-        totalFiles = parseInt(filesMatch[1], 10);
-        continue;
-      }
-
-      const linksMatch = trimmed.match(/^(\d+)\s+links?/);
-      if (linksMatch) {
-        totalLinks = parseInt(linksMatch[1], 10);
-        continue;
-      }
-
-      // Parse file lines: size date time path
-      // Match format: spaces, number, spaces, date, spaces, time, spaces, filename
-      const fileMatch = trimmed.match(/^(\d+)\s+(\d{4}\/\d{2}\/\d{2})\s+(\d{2}:\d{2})\s+(.+)$/);
-      if (fileMatch) {
-        const size = parseInt(fileMatch[1], 10);
-        files.push({
-          size,
-          date: fileMatch[2],
-          time: fileMatch[3],
-          name: fileMatch[4],
-        });
-        totalSize += size;
-      }
-    }
+    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+    const { totalFiles, totalLinks } = this.parseListSummary(lines);
 
     return { files, totalFiles, totalSize, totalLinks };
   }
+
+  /**
+   * Parse missing file error from check output
+   */
+  private static parseMissingFile = (line: string, nextLine: string | undefined): CheckFileInfo | null => {
+    const missingMatch = line.trim().match(/^Missing file '(.+)'\.$/);
+    if (!missingMatch) return null;
+
+    const filePath = missingMatch[1];
+    const errorType = nextLine?.trim().startsWith('recoverable ') || nextLine?.trim().startsWith('unrecoverable ')
+      ? nextLine.trim().split(/\s+/)[0]
+      : 'Missing file';
+
+    return {
+      status: 'ERROR',
+      name: filePath,
+      error: errorType,
+    };
+  };
+
+  /**
+   * Parse check error line
+   */
+  private static parseCheckError = (line: string): CheckFileInfo | null => {
+    const trimmed = line.trim();
+    
+    if (trimmed.includes('rehash')) {
+      return {
+        status: 'REHASH',
+        name: trimmed,
+        error: 'Needs rehashing',
+      };
+    }
+
+    if (trimmed.toLowerCase().includes('error') && !trimmed.includes('errors')) {
+      return {
+        status: 'ERROR',
+        name: trimmed,
+        error: 'Check error',
+      };
+    }
+
+    return null;
+  };
 
   /**
    * Parse check output
@@ -455,103 +511,100 @@ export class SnapRaidRunner {
    *        0 unrecoverable errors
    */
   static parseCheckOutput(output: string): { files: CheckFileInfo[], totalFiles: number, errorCount: number, rehashCount: number, okCount: number } {
-    const files: CheckFileInfo[] = [];
     const lines = output.split('\n');
-    let errorCount = 0;
-    let rehashCount = 0;
-    let okCount = 0;
-    let totalFiles = 0;
-    const seenFiles = new Set<string>(); // Track files we've already seen to avoid duplicates
+    const skipPrefixes = ['Self test', 'Loading', 'Searching', 'Using', 'Initializing', 'Selecting', 'Checking', 'WARNING'];
+    const seenFiles = new Set<string>();
 
-    for (let i = 0; i < lines.length; i++) {
-      const trimmed = lines[i].trim();
+    const { files } = lines.reduce((acc, line, index) => {
+      const trimmed = line.trim();
       
-      // Skip header/progress lines
-      if (!trimmed || 
-          trimmed.startsWith('Self test') ||
-          trimmed.startsWith('Loading') || 
-          trimmed.startsWith('Searching') ||
-          trimmed.startsWith('Using') ||
-          trimmed.startsWith('Initializing') ||
-          trimmed.startsWith('Selecting') ||
-          trimmed.startsWith('Checking') ||
-          trimmed.startsWith('WARNING') ||
-          trimmed.includes('% completed')) {
-        continue;
+      // Skip lines
+      if (!trimmed || skipPrefixes.some(prefix => trimmed.startsWith(prefix)) || trimmed.includes('% completed')) {
+        return acc;
       }
 
-      // Parse error summary line: "1 errors"
-      const errorsMatch = trimmed.match(/^(\d+)\s+errors?$/);
-      if (errorsMatch) {
-        // Use the summary line as the authoritative error count
-        errorCount = parseInt(errorsMatch[1], 10);
-        continue;
+      // Skip summary/error count lines
+      if (trimmed.match(/^(\d+\s+(errors?|unrecoverable errors))$/)) {
+        return acc;
       }
 
-      // Parse unrecoverable errors: "0 unrecoverable errors"
-      if (trimmed.includes('unrecoverable errors')) {
-        continue;
+      // Parse missing file
+      const missingFile = this.parseMissingFile(line, lines[index + 1]);
+      if (missingFile && !seenFiles.has(missingFile.name)) {
+        seenFiles.add(missingFile.name);
+        return { 
+          files: [...acc.files, missingFile], 
+          processedIndices: new Set([...acc.processedIndices, index + 1])
+        };
       }
 
-      // Parse missing file: "Missing file '/path/to/file.log'."
-      const missingMatch = trimmed.match(/^Missing file '(.+)'\.$/);
-      if (missingMatch) {
-        const filePath = missingMatch[1];
-        
-        // Skip if we've already seen this file (avoid duplicates from stdout/stderr)
-        if (seenFiles.has(filePath)) {
-          continue;
-        }
-        seenFiles.add(filePath);
-        
-        // Check next line for recoverable/unrecoverable status
-        let errorType = 'Missing file';
-        if (i + 1 < lines.length) {
-          const nextLine = lines[i + 1].trim();
-          if (nextLine.startsWith('recoverable ') || nextLine.startsWith('unrecoverable ')) {
-            errorType = nextLine.split(/\s+/)[0];
-            i++; // Skip next line as we've processed it
-          }
-        }
-        
-        files.push({
-          status: 'ERROR',
-          name: filePath,
-          error: errorType,
-        });
-        totalFiles++;
-        continue;
+      // Skip if this line was already processed as next line of missing file
+      if (acc.processedIndices.has(index)) {
+        return acc;
       }
 
-      // Parse files that need rehashing
-      if (trimmed.includes('rehash')) {
-        files.push({
-          status: 'REHASH',
-          name: trimmed,
-          error: 'Needs rehashing',
-        });
-        rehashCount++;
-        totalFiles++;
-        continue;
+      // Parse other errors
+      const errorFile = this.parseCheckError(line);
+      if (errorFile) {
+        return { ...acc, files: [...acc.files, errorFile] };
       }
 
-      // Parse other error patterns
-      if (trimmed.toLowerCase().includes('error') && !trimmed.includes('errors')) {
-        files.push({
-          status: 'ERROR',
-          name: trimmed,
-          error: 'Check error',
-        });
-        totalFiles++;
-      }
-    }
+      return acc;
+    }, { files: [] as CheckFileInfo[], processedIndices: new Set<number>() });
 
-    // Calculate OK count
-    okCount = totalFiles - errorCount - rehashCount;
-    if (okCount < 0) okCount = 0;
+    // Parse error count from summary
+    const errorLine = lines.find(line => line.trim().match(/^\d+\s+errors?$/));
+    const errorMatch = errorLine?.trim().match(/^(\d+)\s+errors?$/);
+    const errorCount = errorMatch ? parseInt(errorMatch[1], 10) : 0;
+
+    const rehashCount = files.filter(f => f.status === 'REHASH').length;
+    const totalFiles = files.length;
+    const okCount = Math.max(0, totalFiles - errorCount - rehashCount);
 
     return { files, totalFiles, errorCount, rehashCount, okCount };
   }
+
+  /**
+   * Parse diff status type
+   */
+  private static parseDiffStatus = (statusStr: string): DiffFileInfo['status'] => {
+    const statusMap: Record<string, DiffFileInfo['status']> = {
+      'add': 'added',
+      'rem': 'removed',
+      'remove': 'removed',
+      'upd': 'updated',
+      'update': 'updated',
+      'updated': 'updated',
+      'move': 'moved',
+      'moved': 'moved',
+      'copy': 'copied',
+      'copied': 'copied',
+      'rest': 'restored',
+      'restore': 'restored',
+    };
+    return statusMap[statusStr] || 'equal';
+  };
+
+  /**
+   * Parse diff summary line
+   */
+  private static parseDiffSummaryLine = (line: string): { type: string, count: number } | null => {
+    const match = line.trim().match(/^\s*(\d+)\s+(equal|added|removed|updated|moved|copied|restored)/);
+    return match ? { type: match[2], count: parseInt(match[1], 10) } : null;
+  };
+
+  /**
+   * Parse individual diff file entry
+   */
+  private static parseDiffFileLine = (line: string): DiffFileInfo | null => {
+    const fileMatch = line.trim().match(/^(add|rem|remove|upd|update|updated|move|moved|copy|copied|rest|restore)\s+(.+)$/);
+    if (!fileMatch) return null;
+
+    return {
+      status: this.parseDiffStatus(fileMatch[1]),
+      name: fileMatch[2],
+    };
+  };
 
   static parseDiffOutput(output: string): { 
     files: DiffFileInfo[], 
@@ -564,133 +617,83 @@ export class SnapRaidRunner {
     copiedFiles: number,
     restoredFiles: number
   } {
-    const files: DiffFileInfo[] = [];
     const lines = output.split('\n');
-    let equalFiles = 0;
-    let newFiles = 0;
-    let modifiedFiles = 0;
-    let deletedFiles = 0;
-    let movedFiles = 0;
-    let copiedFiles = 0;
-    let restoredFiles = 0;
+    const skipPrefixes = ['Self test', 'Loading', 'Comparing', 'Scanning', 'Using', 'Saving'];
 
-    for (const line of lines) {
+    const { summary, files } = lines.reduce((acc, line) => {
       const trimmed = line.trim();
       
-      // Skip header/progress lines
-      if (!trimmed || 
-          trimmed.startsWith('Self test') ||
-          trimmed.startsWith('Loading') || 
-          trimmed.startsWith('Comparing') ||
-          trimmed.startsWith('Scanning') ||
-          trimmed.startsWith('Using') ||
-          trimmed.startsWith('Saving') ||
-          trimmed.includes('% completed')) {
-        continue;
+      // Skip lines
+      if (!trimmed || skipPrefixes.some(prefix => trimmed.startsWith(prefix)) || trimmed.includes('% completed')) {
+        return acc;
       }
 
-      // Parse summary lines: "   1234 equal"
-      const equalMatch = trimmed.match(/^\s*(\d+)\s+equal/);
-      if (equalMatch) {
-        equalFiles = parseInt(equalMatch[1], 10);
-        continue;
+      // Parse summary lines
+      const summaryLine = this.parseDiffSummaryLine(line);
+      if (summaryLine) {
+        return { ...acc, summary: { ...acc.summary, [summaryLine.type]: summaryLine.count } };
       }
 
-      const addedMatch = trimmed.match(/^\s*(\d+)\s+added/);
-      if (addedMatch) {
-        newFiles = parseInt(addedMatch[1], 10);
-        continue;
+      // Parse file entries
+      const fileLine = this.parseDiffFileLine(line);
+      if (fileLine) {
+        return { ...acc, files: [...acc.files, fileLine] };
       }
 
-      const removedMatch = trimmed.match(/^\s*(\d+)\s+removed/);
-      if (removedMatch) {
-        deletedFiles = parseInt(removedMatch[1], 10);
-        continue;
-      }
+      return acc;
+    }, { summary: {} as Record<string, number>, files: [] as DiffFileInfo[] });
 
-      const updatedMatch = trimmed.match(/^\s*(\d+)\s+updated/);
-      if (updatedMatch) {
-        modifiedFiles = parseInt(updatedMatch[1], 10);
-        continue;
-      }
-
-      const movedMatch = trimmed.match(/^\s*(\d+)\s+moved/);
-      if (movedMatch) {
-        movedFiles = parseInt(movedMatch[1], 10);
-        continue;
-      }
-
-      const copiedMatch = trimmed.match(/^\s*(\d+)\s+copied/);
-      if (copiedMatch) {
-        copiedFiles = parseInt(copiedMatch[1], 10);
-        continue;
-      }
-
-      const restoredMatch = trimmed.match(/^\s*(\d+)\s+restored/);
-      if (restoredMatch) {
-        restoredFiles = parseInt(restoredMatch[1], 10);
-        continue;
-      }
-
-      // Parse individual file entries
-      // Format can be: "add file.txt" or "upd file.txt" or "restore file.txt" or "remove file.txt" etc.
-      const fileMatch = trimmed.match(/^(add|rem|remove|upd|update|updated|move|moved|copy|copied|rest|restore)\s+(.+)$/);
-      if (fileMatch) {
-        const status = fileMatch[1];
-        const fileName = fileMatch[2];
-        
-        let mappedStatus: DiffFileInfo['status'] = 'equal';
-        switch (status) {
-          case 'add': mappedStatus = 'added'; break;
-          case 'rem': 
-          case 'remove': mappedStatus = 'removed'; break;
-          case 'upd': 
-          case 'update':
-          case 'updated': mappedStatus = 'updated'; break;
-          case 'move': 
-          case 'moved': mappedStatus = 'moved'; break;
-          case 'copy': 
-          case 'copied': mappedStatus = 'copied'; break;
-          case 'rest': 
-          case 'restore': mappedStatus = 'restored'; break;
-        }
-        
-        files.push({
-          status: mappedStatus,
-          name: fileName,
-        });
-      }
-    }
-
+    const equalFiles = summary.equal || 0;
+    const newFiles = summary.added || 0;
+    const deletedFiles = summary.removed || 0;
+    const modifiedFiles = summary.updated || 0;
+    const movedFiles = summary.moved || 0;
+    const copiedFiles = summary.copied || 0;
+    const restoredFiles = summary.restored || 0;
     const totalFiles = equalFiles + newFiles + modifiedFiles + deletedFiles + movedFiles + copiedFiles + restoredFiles;
 
     return { files, totalFiles, equalFiles, newFiles, modifiedFiles, deletedFiles, movedFiles, copiedFiles, restoredFiles };
   }
 
   /**
-   * Run devices command
+   * Execute snapraid command with given args
    */
-  async runDevices(configPath: string): Promise<DevicesReport> {
+  private executeSnapraidCommand = async (args: string[]): Promise<{ stdout: string, stderr: string }> => {
     const cmd = new Deno.Command("snapraid", {
-      args: ["devices", "-c", configPath],
+      args,
       stdout: "piped",
       stderr: "piped",
     });
 
     const { stdout, stderr } = await cmd.output();
-    const output = new TextDecoder().decode(stdout);
-    const error = new TextDecoder().decode(stderr);
+    const decoder = new TextDecoder();
+    
+    return {
+      stdout: decoder.decode(stdout),
+      stderr: decoder.decode(stderr),
+    };
+  };
 
-    if (error) {
-      console.error("Devices command stderr:", error);
+  /**
+   * Log stderr if present
+   */
+  private logStderr = (commandName: string, stderr: string): void => {
+    if (stderr) {
+      console.log(`${commandName} command stderr:`, stderr);
     }
+  };
 
-    const devices = SnapRaidRunner.parseDevicesOutput(output);
+  /**
+   * Run devices command
+   */
+  async runDevices(configPath: string): Promise<DevicesReport> {
+    const { stdout, stderr } = await this.executeSnapraidCommand(["devices", "-c", configPath]);
+    this.logStderr("Devices", stderr);
 
     return {
-      devices,
+      devices: SnapRaidRunner.parseDevicesOutput(stdout),
       timestamp: new Date().toISOString(),
-      rawOutput: output,
+      rawOutput: stdout,
     };
   }
 
@@ -698,21 +701,10 @@ export class SnapRaidRunner {
    * Run list command
    */
   async runList(configPath: string): Promise<ListReport> {
-    const cmd = new Deno.Command("snapraid", {
-      args: ["list", "-c", configPath],
-      stdout: "piped",
-      stderr: "piped",
-    });
+    const { stdout, stderr } = await this.executeSnapraidCommand(["list", "-c", configPath]);
+    this.logStderr("List", stderr);
 
-    const { stdout, stderr } = await cmd.output();
-    const output = new TextDecoder().decode(stdout);
-    const error = new TextDecoder().decode(stderr);
-
-    if (error) {
-      console.error("List command stderr:", error);
-    }
-
-    const { files, totalFiles, totalSize, totalLinks } = SnapRaidRunner.parseListOutput(output);
+    const { files, totalFiles, totalSize, totalLinks } = SnapRaidRunner.parseListOutput(stdout);
 
     return {
       files,
@@ -720,7 +712,7 @@ export class SnapRaidRunner {
       totalSize,
       totalLinks,
       timestamp: new Date().toISOString(),
-      rawOutput: output,
+      rawOutput: stdout,
     };
   }
 
@@ -728,23 +720,10 @@ export class SnapRaidRunner {
    * Run check command
    */
   async runCheck(configPath: string): Promise<CheckReport> {
-    const cmd = new Deno.Command("snapraid", {
-      args: ["check", "-c", configPath],
-      stdout: "piped",
-      stderr: "piped",
-    });
+    const { stdout, stderr } = await this.executeSnapraidCommand(["check", "-c", configPath]);
+    this.logStderr("Check", stderr);
 
-    const { stdout, stderr } = await cmd.output();
-    const stdoutText = new TextDecoder().decode(stdout);
-    const stderrText = new TextDecoder().decode(stderr);
-
-    // Combine stdout and stderr for parsing, as errors can appear in either
-    const output = stdoutText + '\n' + stderrText;
-
-    if (stderrText) {
-      console.log("Check command stderr:", stderrText);
-    }
-
+    const output = stdout + '\n' + stderr;
     const { files, totalFiles, errorCount, rehashCount, okCount } = SnapRaidRunner.parseCheckOutput(output);
     
     console.log("Check parsed results:", { files, totalFiles, errorCount, rehashCount, okCount });
@@ -761,23 +740,10 @@ export class SnapRaidRunner {
   }
 
   async runDiff(configPath: string): Promise<DiffReport> {
-    const cmd = new Deno.Command("snapraid", {
-      args: ["diff", "-c", configPath],
-      stdout: "piped",
-      stderr: "piped",
-    });
+    const { stdout, stderr } = await this.executeSnapraidCommand(["diff", "-c", configPath]);
+    this.logStderr("Diff", stderr);
 
-    const { stdout, stderr } = await cmd.output();
-    const stdoutText = new TextDecoder().decode(stdout);
-    const stderrText = new TextDecoder().decode(stderr);
-
-    // Combine stdout and stderr for parsing
-    const output = stdoutText + '\n' + stderrText;
-
-    if (stderrText) {
-      console.log("Diff command stderr:", stderrText);
-    }
-
+    const output = stdout + '\n' + stderr;
     const { files, totalFiles, equalFiles, newFiles, modifiedFiles, deletedFiles, movedFiles, copiedFiles, restoredFiles } = 
       SnapRaidRunner.parseDiffOutput(output);
     
@@ -796,5 +762,124 @@ export class SnapRaidRunner {
       timestamp: new Date().toISOString(),
       rawOutput: output,
     };
+  }
+
+  /**
+   * Parse disk status from SMART output line
+   */
+  private static parseSmartStatus = (line: string): SmartDiskInfo['status'] | null => {
+    const statuses: SmartDiskInfo['status'][] = ['FAIL', 'PREFAIL', 'LOGFAIL', 'LOGERR', 'SELFERR'];
+    const found = statuses.find(status => line.includes(status));
+    return found || null;
+  };
+
+  /**
+   * Parse SMART attribute from line
+   */
+  private static parseSmartAttribute = (line: string, currentDisk: Partial<SmartDiskInfo>): void => {
+    const tempMatch = line.match(/Temperature.*?(\d+)\s*°?C/i);
+    if (tempMatch) {
+      currentDisk.temperature = parseInt(tempMatch[1]);
+      return;
+    }
+
+    const hoursMatch = line.match(/Power[_\s]On[_\s]Hours.*?(\d+)/i);
+    if (hoursMatch) {
+      currentDisk.powerOnHours = parseInt(hoursMatch[1]);
+      return;
+    }
+
+    const probMatch = line.match(/probability.*?(\d+\.?\d*)%/i);
+    if (probMatch) {
+      currentDisk.failureProbability = parseFloat(probMatch[1]);
+      return;
+    }
+
+    const modelMatch = line.match(/Device Model:\s*(.+)/i);
+    if (modelMatch) {
+      currentDisk.model = modelMatch[1].trim();
+      return;
+    }
+
+    const serialMatch = line.match(/Serial Number:\s*(.+)/i);
+    if (serialMatch) {
+      currentDisk.serial = serialMatch[1].trim();
+      return;
+    }
+
+    const sizeMatch = line.match(/User Capacity:\s*(.+)/i);
+    if (sizeMatch) {
+      currentDisk.size = sizeMatch[1].trim();
+    }
+  };
+
+  /**
+   * Parse SMART output
+   */
+  static parseSmartOutput(output: string): SmartDiskInfo[] {
+    const lines = output.split('\n');
+    const disks: SmartDiskInfo[] = [];
+    
+    const result = lines.reduce<{ currentDisk: Partial<SmartDiskInfo> | null }>((acc, line) => {
+      const trimmed = line.trim();
+      
+      // Empty line - save current disk
+      if (trimmed === '' && acc.currentDisk !== null) {
+        disks.push(acc.currentDisk as SmartDiskInfo);
+        return { currentDisk: null };
+      }
+
+      // Match disk header
+      const diskMatch = trimmed.match(/^(\S+)\s+(.+)$/);
+      if (diskMatch && !trimmed.includes(':') && acc.currentDisk === null) {
+        return {
+          currentDisk: {
+            name: diskMatch[1],
+            device: diskMatch[2],
+            status: 'UNKNOWN' as const,
+          },
+        };
+      }
+
+      if (acc.currentDisk) {
+        // Check status
+        const status = this.parseSmartStatus(trimmed);
+        if (status) {
+          acc.currentDisk.status = status;
+        } else if (acc.currentDisk.status === 'UNKNOWN' && trimmed.includes('/dev/')) {
+          acc.currentDisk.status = 'OK';
+        }
+
+        // Parse attributes
+        this.parseSmartAttribute(trimmed, acc.currentDisk);
+      }
+
+      return acc;
+    }, { currentDisk: null });
+
+    // Add last disk if exists
+    if (result.currentDisk !== null) {
+      disks.push(result.currentDisk as SmartDiskInfo);
+    }
+
+    return disks;
+  }
+
+  /**
+   * Parse probe output
+   */
+  static parseProbeOutput(output: string): ProbeDiskInfo[] {
+    return output.split('\n')
+      .map(line => {
+        const match = line.trim().match(/^(\S+)\s+(\S+)\s+(Standby|Active|Idle)/i);
+        if (!match) return null;
+
+        return {
+          name: match[1],
+          device: match[2],
+          status: match[3] as ProbeDiskInfo['status'],
+        };
+      })
+      .filter((disk): disk is ProbeDiskInfo => disk !== null);
   }
 }

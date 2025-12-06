@@ -538,7 +538,7 @@ snapraid.get("/smart", async (c) => {
     }
 
     // Parse SMART output
-    const disks = parseSmartOutput(output);
+    const disks = SnapRaidRunner.parseSmartOutput(output);
 
     return c.json({
       disks,
@@ -590,7 +590,7 @@ snapraid.get("/probe", async (c) => {
     }
 
     // Parse probe output
-    const disks = parseProbeOutput(output);
+    const disks = SnapRaidRunner.parseProbeOutput(output);
 
     return c.json({
       disks,
@@ -704,130 +704,6 @@ snapraid.post("/down", async (c) => {
   }
 });
 
-// Helper function to parse SMART output
-function parseSmartOutput(output: string) {
-  const disks: Array<{
-    name: string;
-    device: string;
-    status: string;
-    temperature?: number;
-    powerOnHours?: number;
-    failureProbability?: number;
-    model?: string;
-    serial?: string;
-    size?: string;
-  }> = [];
-
-  const lines = output.split('\n');
-  let currentDisk: any = null;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    
-    // Match disk header lines like "d1 /dev/sda"
-    const diskMatch = trimmed.match(/^(\S+)\s+(.+)$/);
-    if (diskMatch && !trimmed.includes(':') && currentDisk === null) {
-      currentDisk = {
-        name: diskMatch[1],
-        device: diskMatch[2],
-        status: 'UNKNOWN',
-      };
-      continue;
-    }
-
-    // Status indicators
-    if (trimmed.includes('FAIL')) {
-      if (currentDisk) currentDisk.status = 'FAIL';
-    } else if (trimmed.includes('PREFAIL')) {
-      if (currentDisk) currentDisk.status = 'PREFAIL';
-    } else if (trimmed.includes('LOGFAIL')) {
-      if (currentDisk) currentDisk.status = 'LOGFAIL';
-    } else if (trimmed.includes('LOGERR')) {
-      if (currentDisk) currentDisk.status = 'LOGERR';
-    } else if (trimmed.includes('SELFERR')) {
-      if (currentDisk) currentDisk.status = 'SELFERR';
-    } else if (currentDisk && currentDisk.status === 'UNKNOWN' && trimmed.includes('/dev/')) {
-      currentDisk.status = 'OK';
-    }
-
-    // Temperature
-    const tempMatch = trimmed.match(/Temperature.*?(\d+)\s*°?C/i);
-    if (tempMatch && currentDisk) {
-      currentDisk.temperature = parseInt(tempMatch[1]);
-    }
-
-    // Power on hours
-    const hoursMatch = trimmed.match(/Power[_\s]On[_\s]Hours.*?(\d+)/i);
-    if (hoursMatch && currentDisk) {
-      currentDisk.powerOnHours = parseInt(hoursMatch[1]);
-    }
-
-    // Failure probability (if present in verbose mode)
-    const probMatch = trimmed.match(/probability.*?(\d+\.?\d*)%/i);
-    if (probMatch && currentDisk) {
-      currentDisk.failureProbability = parseFloat(probMatch[1]);
-    }
-
-    // Model
-    const modelMatch = trimmed.match(/Device Model:\s*(.+)/i);
-    if (modelMatch && currentDisk) {
-      currentDisk.model = modelMatch[1].trim();
-    }
-
-    // Serial
-    const serialMatch = trimmed.match(/Serial Number:\s*(.+)/i);
-    if (serialMatch && currentDisk) {
-      currentDisk.serial = serialMatch[1].trim();
-    }
-
-    // Size
-    const sizeMatch = trimmed.match(/User Capacity:\s*(.+)/i);
-    if (sizeMatch && currentDisk) {
-      currentDisk.size = sizeMatch[1].trim();
-    }
-
-    // Empty line or new disk section - save current disk
-    if (trimmed === '' && currentDisk !== null) {
-      disks.push(currentDisk);
-      currentDisk = null;
-    }
-  }
-
-  // Add last disk if exists
-  if (currentDisk !== null) {
-    disks.push(currentDisk);
-  }
-
-  return disks;
-}
-
-// Helper function to parse probe output
-function parseProbeOutput(output: string) {
-  const disks: Array<{
-    name: string;
-    device: string;
-    status: string;
-  }> = [];
-
-  const lines = output.split('\n');
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    
-    // Match lines like "d1 /dev/sda Standby" or "parity /dev/sdb Active"
-    const match = trimmed.match(/^(\S+)\s+(\S+)\s+(Standby|Active|Idle)/i);
-    if (match) {
-      disks.push({
-        name: match[1],
-        device: match[2],
-        status: match[3],
-      });
-    }
-  }
-
-  return disks;
-}
-
 // GET /api/snapraid/devices - Get device information
 snapraid.get("/devices", async (c) => {
   const configPath = c.req.query("path");
@@ -892,4 +768,4 @@ snapraid.get("/diff", async (c) => {
   }
 });
 
-export default snapraid;
+export { snapraid as snapraidRoutes };

@@ -253,3 +253,23 @@ export interface CheckReport {
   timestamp: string;       // ISO string
   rawOutput: string;
 }
+
+// SMART disk info (from snapraid smart command)
+export interface SmartDiskInfo {
+  name: string;
+  device: string;
+  status: 'OK' | 'UNKNOWN' | 'FAIL' | 'PREFAIL' | 'LOGFAIL' | 'LOGERR' | 'SELFERR';
+  temperature?: number;
+  powerOnHours?: number;
+  failureProbability?: number;
+  model?: string;
+  serial?: string;
+  size?: string;
+}
+
+// Probe disk info (from snapraid probe command)
+export interface ProbeDiskInfo {
+  name: string;
+  device: string;
+  status: 'Standby' | 'Active' | 'Idle';
+}

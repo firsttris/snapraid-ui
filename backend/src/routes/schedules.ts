@@ -150,4 +150,4 @@ schedules.get("/next-runs", (c) => {
   return c.json(result);
 });
 
-export default schedules;
+export { schedules as schedulesRoutes };

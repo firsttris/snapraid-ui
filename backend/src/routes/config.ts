@@ -54,4 +54,4 @@ config.post("/remove", async (c) => {
   return c.json({ success: true, config: appConfig });
 });
 
-export default config;
+export { config as configRoutes };

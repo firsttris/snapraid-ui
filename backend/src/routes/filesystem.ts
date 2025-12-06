@@ -69,4 +69,4 @@ filesystem.post("/write", async (c) => {
   }
 });
 
-export default filesystem;
+export { filesystem as filesystemRoutes };

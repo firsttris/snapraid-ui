@@ -78,4 +78,4 @@ logs.post("/rotate", async (c) => {
   }
 });
 
-export default logs;
+export { logs as logsRoutes };
