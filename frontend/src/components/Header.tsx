@@ -7,6 +7,7 @@ import {
   FileText,
   X,
   Languages,
+  Calendar,
 } from 'lucide-react'
 import * as m from '../paraglide/messages'
 import { getLocale, setLocale } from '../paraglide/runtime'
@@ -91,6 +92,19 @@ export const Header = () => {
           >
             <FileText size={20} />
             <span className="font-medium">{m.logs()}</span>
+          </Link>
+
+          <Link
+            to="/schedules"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
+            activeProps={{
+              className:
+                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
+            }}
+          >
+            <Calendar size={20} />
+            <span className="font-medium">{m.schedules()}</span>
           </Link>
         </nav>
       </aside>

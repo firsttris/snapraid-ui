@@ -5,10 +5,13 @@ import { broadcast, handleWebSocketUpgrade } from "./websocket.ts";
 import { setBroadcast } from "./routes/snapraid.ts";
 import { LogManager } from "./log-manager.ts";
 import { setLogManager } from "./routes/logs.ts";
+import { createScheduler } from "./scheduler.ts";
+import { setScheduler } from "./routes/schedules.ts";
 import configRoutes from "./routes/config.ts";
 import filesystemRoutes from "./routes/filesystem.ts";
 import snapraidRoutes from "./routes/snapraid.ts";
 import logsRoutes from "./routes/logs.ts";
+import schedulesRoutes from "./routes/schedules.ts";
 
 const app = new Hono();
 
@@ -25,6 +28,7 @@ app.route("/api/config", configRoutes);
 app.route("/api/filesystem", filesystemRoutes);
 app.route("/api/snapraid", snapraidRoutes);
 app.route("/api/logs", logsRoutes);
+app.route("/api/schedules", schedulesRoutes);
 
 // Health check
 app.get("/", (c) => {
@@ -51,8 +55,34 @@ const main = async (): Promise<void> => {
   setLogManager(logManager, config);
 
   // Set log manager for snapraid runner
-  const { setRunnerLogManager } = await import("./routes/snapraid.ts");
+  const { setRunnerLogManager, getRunner } = await import("./routes/snapraid.ts");
   setRunnerLogManager(logManager);
+
+  // Initialize scheduler
+  const schedulesConfigPath = "./schedules.json";
+  const runner = getRunner();
+  const scheduler = createScheduler(schedulesConfigPath, runner);
+  
+  // Set output callback for scheduled jobs
+  scheduler.setOutputCallback((scheduleId, chunk) => {
+    broadcast({
+      type: "output",
+      command: "scheduled",
+      chunk: `[Schedule: ${scheduleId}] ${chunk}`,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Load schedules
+  try {
+    await scheduler.loadSchedules();
+    console.log(`📅 Scheduler initialized`);
+  } catch (error) {
+    console.error("Failed to initialize scheduler:", error);
+  }
+
+  // Inject scheduler into routes
+  setScheduler(scheduler);
 
   // Perform initial log rotation
   const deleted = await logManager.rotateLogs(

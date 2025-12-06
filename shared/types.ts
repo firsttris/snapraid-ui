@@ -140,3 +140,22 @@ export interface ProbeReport {
   timestamp: string; // ISO string
   rawOutput: string;
 }
+
+// Scheduling types
+export interface Schedule {
+  id: string;
+  name: string;
+  command: SnapRaidCommand;
+  configPath: string;
+  args?: string[];
+  cronExpression: string; // Cron syntax: "0 2 * * *" = daily at 2 AM
+  enabled: boolean;
+  lastRun?: string; // ISO string
+  nextRun?: string; // ISO string
+  createdAt: string; // ISO string
+  updatedAt: string; // ISO string
+}
+
+export interface ScheduleConfig {
+  schedules: Schedule[];
+}

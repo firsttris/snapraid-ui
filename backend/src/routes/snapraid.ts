@@ -23,6 +23,10 @@ export const setRunnerLogManager = (logManager: LogManager): void => {
   runner.setLogManager(logManager);
 };
 
+export const getRunner = (): SnapRaidRunner => {
+  return runner;
+};
+
 // GET /api/snapraid/parse - Parse SnapRAID config
 snapraid.get("/parse", async (c) => {
   const configPath = c.req.query("path");

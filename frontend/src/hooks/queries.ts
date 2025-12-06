@@ -1,4 +1,4 @@
-import type { AppConfig, ParsedSnapRaidConfig, SnapRaidCommand, RunningJob, LogFile } from "@shared/types";
+import type { AppConfig, ParsedSnapRaidConfig, SnapRaidCommand, RunningJob, LogFile, Schedule } from "@shared/types";
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions, type UseMutationOptions } from '@tanstack/react-query';
 import {
   getConfig,
@@ -28,6 +28,7 @@ import {
   deleteLog,
   rotateLogs,
 } from '../lib/api/logs';
+import { schedulesApi } from '../lib/api/schedules';
 
 // ====================
 // Query Keys
@@ -41,6 +42,8 @@ export const queryKeys = {
   logContent: (filename: string) => ['log-content', filename] as const,
   filesystem: (path: string | undefined, filter: 'conf' | 'directories') => ['filesystem', path, filter] as const,
   fileContent: (path: string) => ['file-content', path] as const,
+  schedules: ['schedules'] as const,
+  schedule: (id: string) => ['schedule', id] as const,
 };
 
 // ====================
@@ -268,3 +271,74 @@ export const useRotateLogs = (options?: UseMutationOptions<{ deleted: number }, 
     ...options,
   });
 }
+
+// ====================
+// Schedules Queries
+// ====================
+
+export const useSchedules = (options?: Omit<UseQueryOptions<Schedule[]>, 'queryKey' | 'queryFn'>) => {
+  return useQuery({
+    queryKey: queryKeys.schedules,
+    queryFn: schedulesApi.getAll,
+    ...options,
+  });
+}
+
+export const useSchedule = (id: string | undefined, options?: Omit<UseQueryOptions<Schedule>, 'queryKey' | 'queryFn'>) => {
+  return useQuery({
+    queryKey: queryKeys.schedule(id!),
+    queryFn: () => schedulesApi.getById(id!),
+    enabled: !!id,
+    ...options,
+  });
+}
+
+// ====================
+// Schedules Mutations
+// ====================
+
+export const useCreateSchedule = (options?: UseMutationOptions<Schedule, Error, Omit<Schedule, 'id' | 'createdAt' | 'updatedAt' | 'lastRun' | 'nextRun'>>) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: schedulesApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedules });
+    },
+    ...options,
+  });
+}
+
+export const useUpdateSchedule = (options?: UseMutationOptions<Schedule, Error, { id: string; updates: Partial<Omit<Schedule, 'id' | 'createdAt'>> }>) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, updates }) => schedulesApi.update(id, updates),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedules });
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedule(variables.id) });
+    },
+    ...options,
+  });
+}
+
+export const useDeleteSchedule = (options?: UseMutationOptions<void, Error, string>) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: schedulesApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedules });
+    },
+    ...options,
+  });
+}
+
+export const useToggleSchedule = (options?: UseMutationOptions<Schedule, Error, string>) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: schedulesApi.toggle,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedules });
+    },
+    ...options,
+  });
+}
+
