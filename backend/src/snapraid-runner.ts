@@ -1,4 +1,4 @@
-import type { SnapRaidCommand, CommandOutput, SnapRaidStatus, RunningJob, DevicesReport, DeviceInfo, ListReport, SnapRaidFileInfo, CheckReport, CheckFileInfo, DiffReport, DiffFileInfo } from "@shared/types.ts";
+import type { SnapRaidCommand, CommandOutput, SnapRaidStatus, RunningJob, DevicesReport, DeviceInfo, ListReport, SnapRaidFileInfo, CheckReport, CheckFileInfo, DiffReport, DiffFileInfo, DiskStatusInfo, ScrubHistoryPoint } from "@shared/types.ts";
 import { LogManager } from "./log-manager.ts";
 
 export class SnapRaidRunner {
@@ -154,6 +154,8 @@ export class SnapRaidRunner {
       newFiles: 0,
       modifiedFiles: 0,
       deletedFiles: 0,
+      disks: [],
+      scrubHistory: [],
       rawOutput: output,
     };
 
@@ -183,38 +185,139 @@ export class SnapRaidRunner {
       }
     }
 
-    // Parse oldest scrub: "The oldest block was scrubbed 5 days ago"
-    const oldestScrub = output.match(/oldest block was scrubbed (\d+) days? ago/i);
-    if (oldestScrub) {
-      status.oldestScrubDays = parseInt(oldestScrub[1], 10);
+    // Parse scrub age details: "The oldest block was scrubbed 5 days ago, the median 3, the newest 0."
+    const scrubAgeMatch = output.match(/oldest block was scrubbed (\d+) days? ago,?\s+the median (\d+),?\s+the newest (\d+)/i);
+    if (scrubAgeMatch) {
+      status.oldestScrubDays = parseInt(scrubAgeMatch[1], 10);
+      status.medianScrubDays = parseInt(scrubAgeMatch[2], 10);
+      status.newestScrubDays = parseInt(scrubAgeMatch[3], 10);
+    } else {
+      // Fallback to just oldest
+      const oldestScrub = output.match(/oldest block was scrubbed (\d+) days? ago/i);
+      if (oldestScrub) {
+        status.oldestScrubDays = parseInt(oldestScrub[1], 10);
+      }
     }
 
-    // Parse status table: extract total row (after separator line)
+    // Parse individual disk rows from status table
     // Table format:
     //    Files Fragmented Excess  Wasted  Used    Free  Use Name
     //             Files  Fragments  GB      GB      GB
     //       13       0       0   502.5       0     209   0% test1
+    //        0       0       0       -       0       -   -  test2
     //  --------------------------------------------------------------------------
     //       13       0       0   502.5       0     209   0%
-    const totalRowMatch = output.match(/^ *-{10,} *$/m);
-    if (totalRowMatch) {
-      const totalRowIndex = totalRowMatch.index! + totalRowMatch[0].length;
-      const remainingOutput = output.slice(totalRowIndex);
-      const totalLine = remainingOutput.split('\n')[1]; // First line after separator
+    const lines = output.split('\n');
+    let inTable = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       
-      if (totalLine) {
-        // Parse columns: Files FragmentedFiles ExcessFragments WastedGB UsedGB FreeGB Use%
-        const columns = totalLine.trim().split(/\s+/);
-        if (columns.length >= 7) {
-          const fragmentedFiles = parseInt(columns[1], 10);
-          const wastedGB = parseFloat(columns[3]);
-          const freeGB = parseFloat(columns[5]);
-          
-          if (!isNaN(fragmentedFiles)) status.fragmentedFiles = fragmentedFiles;
-          if (!isNaN(wastedGB)) status.wastedGB = wastedGB;
-          if (!isNaN(freeGB)) status.freeSpaceGB = freeGB;
+      // Detect table header
+      if (line.includes('Files') && line.includes('Fragmented') && line.includes('Wasted')) {
+        inTable = true;
+        i++; // Skip the "Files Fragments" subheader
+        continue;
+      }
+      
+      // Detect table end (separator line)
+      if (line.match(/^ *-{10,} *$/)) {
+        inTable = false;
+        // The line after separator is the total
+        if (i + 1 < lines.length) {
+          const totalLine = lines[i + 1].trim();
+          const totalCols = totalLine.split(/\s+/);
+          if (totalCols.length >= 7) {
+            status.totalFiles = parseInt(totalCols[0], 10) || 0;
+            status.fragmentedFiles = parseInt(totalCols[1], 10) || 0;
+            status.wastedGB = parseFloat(totalCols[3]) || 0;
+            status.totalUsedGB = parseFloat(totalCols[4]) || 0;
+            status.totalFreeGB = parseFloat(totalCols[5]) || 0;
+          }
+        }
+        continue;
+      }
+      
+      // Parse disk rows
+      if (inTable && line.trim()) {
+        // Format: "      13       0       0   502.5       0     209   0% test1"
+        const cols = line.trim().split(/\s+/);
+        if (cols.length >= 8) {
+          const diskInfo: DiskStatusInfo = {
+            name: cols.slice(7).join(' '), // Everything after % is the disk name
+            files: parseInt(cols[0], 10) || 0,
+            fragmentedFiles: parseInt(cols[1], 10) || 0,
+            excessFragments: parseInt(cols[2], 10) || 0,
+            wastedGB: cols[3] === '-' ? 0 : parseFloat(cols[3]) || 0,
+            usedGB: cols[4] === '-' ? 0 : parseFloat(cols[4]) || 0,
+            freeGB: cols[5] === '-' ? 0 : parseFloat(cols[5]) || 0,
+            usePercent: cols[6] === '-' ? 0 : parseInt(cols[6], 10) || 0,
+          };
+          status.disks!.push(diskInfo);
         }
       }
+    }
+
+    // Parse scrub history chart
+    // Format (ASCII art):
+    // 94%|o                                                                     
+    //    |o                                                                     
+    // ...
+    //  0%|o_____o______________________________________________________________o
+    //     0                    days ago of the last scrub/sync                 0
+    const chartLines: string[] = [];
+    let foundChartStart = false;
+    
+    for (const line of lines) {
+      // Detect chart lines (start with percentage or spaces followed by |)
+      if (line.match(/^\s*\d+%\|/) || (foundChartStart && line.match(/^\s+\|/))) {
+        chartLines.push(line);
+        foundChartStart = true;
+      } else if (foundChartStart && line.match(/^\s+\d+\s+days ago/)) {
+        // End of chart
+        break;
+      } else if (foundChartStart) {
+        // End of chart
+        break;
+      }
+    }
+    
+    // Parse chart data points
+    if (chartLines.length > 0) {
+      const scrubHistory: ScrubHistoryPoint[] = [];
+      
+      for (const chartLine of chartLines) {
+        const percentMatch = chartLine.match(/^\s*(\d+)%\|/);
+        if (percentMatch) {
+          const percentage = parseInt(percentMatch[1], 10);
+          
+          // Extract position of 'o' markers (representing data points)
+          const positions: number[] = [];
+          for (let i = 0; i < chartLine.length; i++) {
+            if (chartLine[i] === 'o') {
+              positions.push(i);
+            }
+          }
+          
+          // Map positions to approximate days ago (0 to max days)
+          // The chart is roughly 70 chars wide, 0 days at left, max at right
+          const chartWidth = 70;
+          const maxDays = status.oldestScrubDays || 30;
+          
+          for (const pos of positions) {
+            const relativePos = (pos - chartLine.indexOf('|') - 1) / chartWidth;
+            const daysAgo = Math.round(relativePos * maxDays);
+            scrubHistory.push({ daysAgo, percentage });
+          }
+        }
+      }
+      
+      status.scrubHistory = scrubHistory;
+    }
+
+    // Legacy fallback for backward compatibility
+    if (!status.freeSpaceGB && status.totalFreeGB) {
+      status.freeSpaceGB = status.totalFreeGB;
     }
 
     // Check parity status
@@ -236,7 +339,6 @@ export class SnapRaidRunner {
     //        0 copied
     //        1 restored
     const diffStats: Record<string, number> = {};
-    const lines = output.split('\n');
     for (const line of lines) {
       const match = line.match(/^\s*(\d+)\s+(equal|added|removed|updated|moved|copied|restored)/);
       if (match) {

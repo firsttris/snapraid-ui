@@ -113,6 +113,49 @@ snapraid.get("/history", (c) => {
   return c.json(commandHistory);
 });
 
+// GET /api/snapraid/status - Get parsed status from last status command or execute new one
+snapraid.get("/status", async (c) => {
+  const configPath = c.req.query("path");
+  
+  // If no config path provided, try to get from last status in history
+  if (!configPath) {
+    const lastStatus = commandHistory.find(cmd => cmd.command === 'status');
+    
+    if (!lastStatus) {
+      return c.json({ error: "No status command found in history. Please provide 'path' query parameter to execute status." }, 400);
+    }
+
+    const parsedStatus = SnapRaidRunner.parseStatusOutput(lastStatus.output);
+    return c.json({
+      status: parsedStatus,
+      timestamp: lastStatus.timestamp,
+      exitCode: lastStatus.exitCode,
+    });
+  }
+
+  // Execute new status command
+  try {
+    const cmd = new Deno.Command("snapraid", {
+      args: ["-c", configPath, "status"],
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const { code, stdout, stderr } = await cmd.output();
+    const output = new TextDecoder().decode(code === 0 ? stdout : stderr);
+    const parsedStatus = SnapRaidRunner.parseStatusOutput(output);
+    
+    return c.json({
+      status: parsedStatus,
+      timestamp: new Date().toISOString(),
+      exitCode: code,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+
 // POST /api/snapraid/validate - Validate SnapRAID config
 snapraid.post("/validate", async (c) => {
   const { configPath } = await c.req.json();
