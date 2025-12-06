@@ -46,3 +46,10 @@ export interface CommandOutput {
 }
 
 export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff';
+
+export interface RunningJob {
+  command: SnapRaidCommand;
+  configPath: string;
+  startTime: Date;
+  processId: string;
+}

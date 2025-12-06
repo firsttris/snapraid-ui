@@ -32,6 +32,12 @@ snapraid.get("/parse", async (c) => {
   }
 });
 
+// GET /api/snapraid/current-job - Get current running job
+snapraid.get("/current-job", (c) => {
+  const currentJob = runner.getCurrentJob();
+  return c.json(currentJob);
+});
+
 // POST /api/snapraid/execute - Execute SnapRAID command
 snapraid.post("/execute", async (c) => {
   const { command, configPath, args = [] } = await c.req.json();

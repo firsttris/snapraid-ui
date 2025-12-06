@@ -1,7 +1,8 @@
-import type { SnapRaidCommand, CommandOutput, SnapRaidStatus } from "./types.ts";
+import type { SnapRaidCommand, CommandOutput, SnapRaidStatus, RunningJob } from "./types.ts";
 
 export class SnapRaidRunner {
   private processes = new Map<string, Deno.ChildProcess>();
+  private currentJob: RunningJob | null = null;
 
   /**
    * Execute a SnapRAID command and stream output
@@ -16,6 +17,14 @@ export class SnapRaidRunner {
     const args = [command, "-c", configPath, ...additionalArgs];
     
     console.log(`Executing: snapraid ${args.join(" ")}`);
+
+    // Set current job
+    this.currentJob = {
+      command,
+      configPath,
+      startTime: new Date(),
+      processId,
+    };
 
     const cmd = new Deno.Command("snapraid", {
       args,
@@ -64,6 +73,7 @@ export class SnapRaidRunner {
 
       const status = await process.status;
       this.processes.delete(processId);
+      this.currentJob = null; // Clear current job
 
       return {
         command: `snapraid ${args.join(" ")}`,
@@ -73,6 +83,7 @@ export class SnapRaidRunner {
       };
     } catch (error) {
       this.processes.delete(processId);
+      this.currentJob = null; // Clear current job on error
       throw error;
     }
   }
@@ -85,9 +96,17 @@ export class SnapRaidRunner {
     if (process) {
       process.kill("SIGTERM");
       this.processes.delete(processId);
+      this.currentJob = null; // Clear current job
       return true;
     }
     return false;
+  }
+
+  /**
+   * Get current running job
+   */
+  getCurrentJob(): RunningJob | null {
+    return this.currentJob;
   }
 
   /**

@@ -23,6 +23,7 @@ function Dashboard() {
   // Load config on mount
   useEffect(() => {
     loadConfig()
+    checkRunningJob()
     
     // Connect WebSocket
     apiClient.connectWebSocket({
@@ -76,6 +77,20 @@ function Dashboard() {
       }
     } catch (error) {
       console.error('Failed to load config:', error)
+    }
+  }
+
+  async function checkRunningJob() {
+    try {
+      const runningJob = await apiClient.getCurrentJob()
+      if (runningJob) {
+        setIsRunning(true)
+        setCurrentCommand(runningJob.command)
+        setSelectedConfig(runningJob.configPath)
+        setOutput(prev => prev + `\n[Reconnected to running job: ${runningJob.command}]\n`)
+      }
+    } catch (error) {
+      console.error('Failed to check running job:', error)
     }
   }
 

@@ -47,6 +47,13 @@ export interface CommandOutput {
 
 export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff';
 
+export interface RunningJob {
+  command: SnapRaidCommand;
+  configPath: string;
+  startTime: string;
+  processId: string;
+}
+
 export interface WSMessage {
   type: 'output' | 'complete' | 'error' | 'status';
   command?: string;

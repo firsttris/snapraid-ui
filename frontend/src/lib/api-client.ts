@@ -1,4 +1,4 @@
-import { AppConfig, CommandOutput, ParsedSnapRaidConfig, SnapRaidCommand } from "@/types";
+import { AppConfig, CommandOutput, ParsedSnapRaidConfig, SnapRaidCommand, RunningJob } from "@/types";
 
 
 const API_BASE = 'http://localhost:3001';
@@ -55,6 +55,15 @@ export class ApiClient {
   async getHistory(): Promise<CommandOutput[]> {
     const response = await fetch(`${API_BASE}/api/history`);
     if (!response.ok) throw new Error('Failed to fetch history');
+    return response.json();
+  }
+
+  /**
+   * Get current running job
+   */
+  async getCurrentJob(): Promise<RunningJob | null> {
+    const response = await fetch(`${API_BASE}/api/snapraid/current-job`);
+    if (!response.ok) throw new Error('Failed to fetch current job');
     return response.json();
   }
 
