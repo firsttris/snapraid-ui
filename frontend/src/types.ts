@@ -20,6 +20,7 @@ export interface ParsedSnapRaidConfig {
   parity: string[];
   content: string[];
   data: Record<string, string>;
+  exclude: string[];
 }
 
 export interface DiskInfo {

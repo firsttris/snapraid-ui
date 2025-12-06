@@ -11,5 +11,8 @@
   "compilerOptions": {
     "lib": ["deno.window", "deno.unstable"],
     "strict": true
-  }
+  },
+  "exclude": [
+    "../frontend"
+  ]
 }
