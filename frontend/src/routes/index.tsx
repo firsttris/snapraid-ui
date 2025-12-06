@@ -64,7 +64,7 @@ function Dashboard() {
     })
   }, [selectedConfig, wsState, executeCommandMutation])
 
-  const handleUndelete = useCallback((mode: 'all-missing' | 'directory-missing' | 'specific', path?: string) => {
+  const handleUndelete = useCallback((mode: 'all-missing' | 'directory-missing' | 'specific', path?: string, diskFilter?: string) => {
     if (!selectedConfig || wsState.isRunning) return
     
     wsState.setIsRunning(true)
@@ -74,6 +74,11 @@ function Dashboard() {
     
     // Build arguments based on mode
     const args: string[] = []
+    
+    // Add disk filter if specified (for recovery scenarios)
+    if (diskFilter?.trim()) {
+      args.push('-d', diskFilter.trim())
+    }
     
     if (mode === 'all-missing') {
       args.push('-m')
