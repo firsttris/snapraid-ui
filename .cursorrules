@@ -1,0 +1,290 @@
+# SnapRAID UI - Coding Standards & AI Instructions
+
+## Project Overview
+Full-stack SnapRAID management interface with Deno backend and React (TanStack) frontend.
+
+## Tech Stack
+
+### Backend
+- **Runtime**: Deno 2.x (not Node.js!)
+- **Framework**: Hono (lightweight web framework)
+- **WebSockets**: Native Deno WebSocket API
+- **File System**: Deno native APIs (`Deno.readTextFile`, `Deno.writeTextFile`, etc.)
+- **Path handling**: `@std/path` from Deno standard library
+- **Process management**: `Deno.Command` for spawning SnapRAID processes
+
+### Frontend
+- **Framework**: React 18+
+- **Router**: TanStack Router (file-based routing)
+- **Query**: TanStack Query for data fetching and caching
+- **Build tool**: Vite
+- **Styling**: Tailwind CSS (utility-first)
+- **Linting**: Biome (not ESLint/Prettier)
+- **Type checking**: TypeScript strict mode
+
+### Shared
+- **Language**: TypeScript throughout
+- **Types**: Shared types in `/shared/types.ts`
+- **API**: REST endpoints + WebSocket for real-time updates
+
+### External Dependencies
+- SnapRAID CLI (system dependency)
+- Modern browser with WebSocket support
+
+## Core Principles
+
+### Functional Programming First
+- **NO `let` statements** - Always use `const`
+- **Prefer immutability** - Use spread operators, array methods
+- **Arrow functions only** - No `function` keyword except for React components when needed
+- **Pure functions** - Avoid side effects where possible
+- **Declarative over imperative** - Use `map`, `filter`, `reduce` instead of loops
+
+### Array Operations
+```typescript
+// ✅ Good - Functional
+const filtered = items.filter(item => item.active);
+const mapped = items.map(item => ({ ...item, processed: true }));
+const found = items.find(item => item.id === targetId);
+
+// ❌ Bad - Imperative
+let result = [];
+for (let i = 0; i < items.length; i++) {
+  if (items[i].active) result.push(items[i]);
+}
+```
+
+### Immutable Updates
+```typescript
+// ✅ Good - Immutable
+const updated = [...items.slice(0, index), newItem, ...items.slice(index + 1)];
+const modified = items.filter(item => item.id !== removeId);
+
+// ❌ Bad - Mutation
+items.splice(index, 1, newItem);
+items = items.filter(...);
+```
+
+## TypeScript Standards
+
+### Type Safety
+- Always use explicit types for function parameters
+- Use `type` for union types, objects
+- Use `interface` only for extendable contracts
+- Never use `any` - use `unknown` if type is truly unknown
+- Enable strict mode
+
+### Async/Await
+```typescript
+// ✅ Good
+const result = await fetchData();
+const items = await Promise.all(promises);
+
+// ❌ Bad
+fetchData().then(result => ...);
+```
+
+## Backend (Deno)
+
+### File Organization
+- Keep route handlers pure and simple
+- Extract business logic into utility functions
+- Use functional composition for complex operations
+- Class methods should be arrow functions when possible
+
+### Error Handling
+```typescript
+// ✅ Good
+try {
+  const data = await operation();
+  return c.json(data);
+} catch (error) {
+  return c.json({ error: String(error) }, 500);
+}
+```
+
+### State Management
+```typescript
+// ✅ Good - Encapsulated mutable state
+const state = {
+  value: initialValue,
+};
+
+export const updateState = (newValue: Type): void => {
+  state.value = newValue;
+};
+
+// ❌ Bad - Global let
+let globalValue = initialValue;
+```
+
+## Frontend (React + TanStack)
+
+### Component Structure
+- Functional components only
+- Custom hooks for reusable logic
+- Keep components focused and small
+- Use composition over inheritance
+
+### State Updates
+```typescript
+// ✅ Good - Immutable
+setState(prev => ({ ...prev, field: newValue }));
+setItems(prev => [...prev, newItem]);
+setItems(prev => prev.filter(item => item.id !== removeId));
+
+// ❌ Bad - Mutation
+const newState = state;
+newState.field = newValue;
+setState(newState);
+```
+
+### Hooks
+- Extract complex logic into custom hooks
+- Use `useMemo` and `useCallback` appropriately
+- Follow React hooks rules strictly
+
+## Code Style
+
+### Naming Conventions
+- **Files**: `kebab-case.ts`, `PascalCase.tsx` for components
+- **Variables/Functions**: `camelCase`
+- **Types/Interfaces**: `PascalCase`
+- **Constants**: `UPPER_SNAKE_CASE` for true constants
+
+### Function Declarations
+```typescript
+// ✅ Good - Arrow functions
+export const handleSubmit = async (data: FormData): Promise<void> => {
+  // ...
+};
+
+const processItems = (items: Item[]): ProcessedItem[] => 
+  items.map(item => ({ ...item, processed: true }));
+
+// ❌ Bad - Function keyword
+export function handleSubmit(data: FormData) {
+  // ...
+}
+```
+
+### Conditional Logic
+```typescript
+// ✅ Good - Ternary or functional
+const value = condition ? trueValue : falseValue;
+const filtered = items.filter(item => item.active);
+
+// ✅ Good - Early return
+const process = (data: Data | null): Result => {
+  if (!data) return defaultResult;
+  return transformData(data);
+};
+
+// ❌ Avoid - Nested if/else when possible
+if (condition) {
+  // ...
+} else if (otherCondition) {
+  // ...
+} else {
+  // ...
+}
+```
+
+## Imports
+
+### Import Order
+1. External libraries (React, Hono, etc.)
+2. Internal utilities/helpers
+3. Types (use `type` keyword)
+4. Relative imports
+
+```typescript
+import { Hono } from "hono";
+import { join } from "@std/path";
+import { ConfigParser } from "../config-parser.ts";
+import type { AppConfig, LogFile } from "@shared/types.ts";
+```
+
+## Testing
+
+### Write Testable Code
+- Pure functions are easier to test
+- Avoid global state
+- Use dependency injection
+- Mock external dependencies
+
+## Performance
+
+### Optimization Patterns
+- Use `Promise.all()` for parallel async operations
+- Avoid unnecessary re-renders in React
+- Memoize expensive computations
+- Use streaming for large data
+
+```typescript
+// ✅ Good - Parallel
+const [data1, data2] = await Promise.all([fetch1(), fetch2()]);
+
+// ❌ Bad - Sequential
+const data1 = await fetch1();
+const data2 = await fetch2();
+```
+
+## Common Patterns
+
+### Config File Parsing
+Use `reduce` for accumulating parsed data from lines
+
+### Stream Processing
+Use async generators for reading streams
+
+### Error Messages
+Always convert errors to strings: `String(error)`
+
+### File Operations
+Use Deno's built-in APIs with proper error handling
+
+## Documentation
+
+### Code Comments
+- Use JSDoc for public APIs
+- Explain "why" not "what"
+- Keep comments up to date
+- Prefer self-documenting code
+
+### Function Documentation
+```typescript
+/**
+ * Parse SnapRAID config file and extract disk information
+ * @param configPath - Absolute path to the config file
+ * @returns Parsed configuration object
+ */
+export const parseConfig = async (configPath: string): Promise<Config> => {
+  // ...
+};
+```
+
+## Anti-Patterns to Avoid
+
+❌ Mutating arrays/objects in place
+❌ Using `let` when `const` would work
+❌ Traditional for/while loops when array methods exist
+❌ Callback hell - use async/await
+❌ Magic numbers/strings - use named constants
+❌ Deep nesting - extract functions
+❌ God functions - keep functions small and focused
+❌ Mixing concerns - separate business logic from UI
+
+## Git Commits
+
+- Use conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`
+- Keep commits focused and atomic
+- Write clear, descriptive messages in German or English
+
+## Additional Notes
+
+- Prioritize readability over cleverness
+- If you need to explain it, it's too complex
+- Refactor when you see duplication
+- Performance matters, but readable code matters more
+- When in doubt, choose the functional approach
