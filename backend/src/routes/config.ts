@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { ConfigParser } from "../config-parser.ts";
-import { join } from "@std/path";
 
 const config = new Hono();
 

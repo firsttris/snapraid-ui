@@ -1,5 +1,5 @@
 import { join } from "@std/path";
-import type { AppConfig, ParsedSnapRaidConfig } from "./types.ts";
+import type { AppConfig, ParsedSnapRaidConfig } from "@shared/types.ts";
 
 export class ConfigParser {
   /**

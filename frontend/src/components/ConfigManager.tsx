@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import { apiClient } from '../lib/api-client'
-import type { SnapRaidConfig } from '../types'
+import { useState } from 'react'
+import { useFilesystem, useAddConfig, useRemoveConfig } from '../lib/api-client'
+import type { SnapRaidConfig } from '@shared/types'
 import { ConfigEditor } from './ConfigEditor'
 
 interface FileBrowserProps {
@@ -10,44 +10,15 @@ interface FileBrowserProps {
 
 export function FileBrowser({ onSelect, onClose }: FileBrowserProps) {
   const [currentPath, setCurrentPath] = useState<string>('')
-  const [entries, setEntries] = useState<Array<{ name: string; isDirectory: boolean; path: string }>>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string>('')
-
-  useEffect(() => {
-    const abortController = new AbortController()
-    let isCancelled = false
-
-    loadDirectory(currentPath, isCancelled)
-
-    return () => {
-      isCancelled = true
-      abortController.abort()
-    }
-  }, [currentPath])
-
-  async function loadDirectory(path?: string, isCancelled?: boolean) {
-    setLoading(true)
-    setError('')
-    try {
-      const result = await apiClient.browseFilesystem(path)
-      if (!isCancelled) {
-        setCurrentPath(result.path)
-        setEntries(result.entries)
-      }
-    } catch (err) {
-      if (!isCancelled) {
-        setError(String(err))
-      }
-    } finally {
-      if (!isCancelled) {
-        setLoading(false)
-      }
-    }
-  }
+  
+  // Use TanStack Query hook
+  const { data, isLoading: loading, error } = useFilesystem(currentPath, 'conf')
+  
+  const entries = data?.entries || []
+  const actualPath = data?.path || currentPath
 
   function goUp() {
-    const parts = currentPath.split('/').filter(Boolean)
+    const parts = actualPath.split('/').filter(Boolean)
     parts.pop()
     setCurrentPath('/' + parts.join('/'))
   }
@@ -69,20 +40,20 @@ export function FileBrowser({ onSelect, onClose }: FileBrowserProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={goUp}
-              disabled={currentPath === '/'}
+              disabled={actualPath === '/'}
               className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               ↑ Up
             </button>
             <div className="flex-1 text-sm text-gray-600 font-mono">
-              {currentPath || '/'}
+              {actualPath || '/'}
             </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
           {loading && <div className="text-center text-gray-500">Loading...</div>}
-          {error && <div className="text-red-600 text-sm">{error}</div>}
+          {error && <div className="text-red-600 text-sm">{String(error)}</div>}
           
           {!loading && !error && entries.length === 0 && (
             <div className="text-center text-gray-500">No .conf files or directories found</div>
@@ -130,33 +101,44 @@ export function ConfigManager({ config, onConfigsChanged, onClose }: ConfigManag
   const [newConfigPath, setNewConfigPath] = useState('')
   const [error, setError] = useState('')
 
+  // TanStack Query mutations
+  const addConfigMutation = useAddConfig()
+  const removeConfigMutation = useRemoveConfig()
+
   async function handleAddConfig() {
     if (!newConfigName.trim() || !newConfigPath.trim()) {
       setError('Name and path are required')
       return
     }
 
-    try {
-      await apiClient.addConfig(newConfigName, newConfigPath, true)
-      setNewConfigName('')
-      setNewConfigPath('')
-      setShowAddForm(false)
-      setError('')
-      onConfigsChanged()
-    } catch (err) {
-      setError(String(err))
-    }
+    addConfigMutation.mutate(
+      { name: newConfigName, path: newConfigPath, enabled: true },
+      {
+        onSuccess: () => {
+          setNewConfigName('')
+          setNewConfigPath('')
+          setShowAddForm(false)
+          setError('')
+          onConfigsChanged()
+        },
+        onError: (err) => {
+          setError(String(err))
+        }
+      }
+    )
   }
 
   async function handleRemoveConfig(path: string) {
     if (!confirm('Are you sure you want to remove this config?')) return
 
-    try {
-      await apiClient.removeConfig(path)
-      onConfigsChanged()
-    } catch (err) {
-      setError(String(err))
-    }
+    removeConfigMutation.mutate(path, {
+      onSuccess: () => {
+        onConfigsChanged()
+      },
+      onError: (err) => {
+        setError(String(err))
+      }
+    })
   }
 
   return (

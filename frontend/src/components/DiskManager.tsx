@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react'
-import { apiClient } from '../lib/api-client'
-import type { ParsedSnapRaidConfig } from '../types'
+import { useState } from 'react'
+import { useSnapRaidConfig, useAddDataDisk, useRemoveDisk, useAddParityDisk, useAddExclude, useRemoveExclude } from '../lib/api-client'
 import { ParityDiskSection } from './ParityDiskSection'
 import { DataDiskSection } from './DataDiskSection'
 import { ExcludePatternSection } from './ExcludePatternSection'
@@ -11,112 +10,99 @@ interface DiskManagerProps {
 }
 
 export function DiskManager({ configPath, onUpdate }: DiskManagerProps) {
-  const [config, setConfig] = useState<ParsedSnapRaidConfig | null>(null)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
 
-  useEffect(() => {
-    const abortController = new AbortController()
-    let isCancelled = false
-
-    loadConfig(isCancelled)
-
-    return () => {
-      isCancelled = true
-      abortController.abort()
-    }
-  }, [configPath])
-
-  async function loadConfig(isCancelled?: boolean) {
-    setLoading(true)
-    setError('')
-    try {
-      const parsed = await apiClient.parseSnapRaidConfig(configPath)
-      if (!isCancelled) {
-        setConfig(parsed)
-      }
-    } catch (err) {
-      if (!isCancelled) {
-        setError(String(err))
-      }
-    } finally {
-      if (!isCancelled) {
-        setLoading(false)
-      }
-    }
-  }
+  // TanStack Query hooks
+  const { data: config, isLoading: loading } = useSnapRaidConfig(configPath)
+  const addDataDiskMutation = useAddDataDisk()
+  const removeDiskMutation = useRemoveDisk()
+  const addParityDiskMutation = useAddParityDisk()
+  const addExcludeMutation = useAddExclude()
+  const removeExcludeMutation = useRemoveExclude()
 
   // Handler functions for child components
   async function handleAddDataDisk(name: string, path: string) {
     setError('')
-    try {
-      const updated = await apiClient.addDataDisk(configPath, name, path)
-      setConfig(updated)
-      onUpdate?.()
-    } catch (err) {
-      setError(String(err))
-      throw err
-    }
+    addDataDiskMutation.mutate(
+      { configPath, diskName: name, diskPath: path },
+      {
+        onSuccess: () => onUpdate?.(),
+        onError: (err) => {
+          setError(String(err))
+          throw err
+        }
+      }
+    )
   }
 
   async function handleRemoveDataDisk(diskName: string) {
     setError('')
-    try {
-      const updated = await apiClient.removeDisk(configPath, diskName, 'data')
-      setConfig(updated)
-      onUpdate?.()
-    } catch (err) {
-      setError(String(err))
-      throw err
-    }
+    removeDiskMutation.mutate(
+      { configPath, diskName, diskType: 'data' },
+      {
+        onSuccess: () => onUpdate?.(),
+        onError: (err) => {
+          setError(String(err))
+          throw err
+        }
+      }
+    )
   }
 
   async function handleAddParity(fullPath: string) {
     setError('')
-    try {
-      const updated = await apiClient.addParityDisk(configPath, fullPath)
-      setConfig(updated)
-      onUpdate?.()
-    } catch (err) {
-      setError(String(err))
-      throw err
-    }
+    addParityDiskMutation.mutate(
+      { configPath, parityPath: fullPath },
+      {
+        onSuccess: () => onUpdate?.(),
+        onError: (err) => {
+          setError(String(err))
+          throw err
+        }
+      }
+    )
   }
 
   async function handleRemoveParity() {
     setError('')
-    try {
-      const updated = await apiClient.removeDisk(configPath, null, 'parity')
-      setConfig(updated)
-      onUpdate?.()
-    } catch (err) {
-      setError(String(err))
-      throw err
-    }
+    removeDiskMutation.mutate(
+      { configPath, diskName: null, diskType: 'parity' },
+      {
+        onSuccess: () => onUpdate?.(),
+        onError: (err) => {
+          setError(String(err))
+          throw err
+        }
+      }
+    )
   }
 
   async function handleAddExclude(pattern: string) {
     setError('')
-    try {
-      const updated = await apiClient.addExclude(configPath, pattern)
-      setConfig(updated)
-      onUpdate?.()
-    } catch (err) {
-      setError(String(err))
-      throw err
-    }
+    addExcludeMutation.mutate(
+      { configPath, pattern },
+      {
+        onSuccess: () => onUpdate?.(),
+        onError: (err) => {
+          setError(String(err))
+          throw err
+        }
+      }
+    )
   }
 
   async function handleRemoveExclude(pattern: string) {
     setError('')
-    try {
-      const updated = await apiClient.removeExclude(configPath, pattern)
-      setConfig(updated)
-      onUpdate?.()
-    } catch (err) {
-      setError(String(err))
-      throw err
-    }
+    removeExcludeMutation.mutate(
+      { configPath, pattern },
+      {
+        onSuccess: () => onUpdate?.(),
+        onError: (err) => {
+          setError(String(err))
+          throw err
+        }
+      }
+    )
   }
 
   if (loading) {

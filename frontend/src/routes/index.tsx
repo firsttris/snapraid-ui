@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useRef } from 'react'
-import { apiClient } from '../lib/api-client'
-import type { AppConfig, ParsedSnapRaidConfig, SnapRaidStatus, SnapRaidCommand } from '../types'
+import { apiClient, useConfig, useSnapRaidConfig, useCurrentJob, useExecuteCommand } from '../lib/api-client'
+import type { SnapRaidStatus, SnapRaidCommand } from '@shared/types'
 import { ConfigManager } from '../components/ConfigManager'
 
 export const Route = createFileRoute('/')({
@@ -9,24 +9,24 @@ export const Route = createFileRoute('/')({
 })
 
 function Dashboard() {
-  const [config, setConfig] = useState<AppConfig | null>(null)
   const [selectedConfig, setSelectedConfig] = useState<string>('')
-  const [parsedConfig, setParsedConfig] = useState<ParsedSnapRaidConfig | null>(null)
   const [status, setStatus] = useState<SnapRaidStatus | null>(null)
   const [output, setOutput] = useState<string>('')
   const [isRunning, setIsRunning] = useState(false)
   const [currentCommand, setCurrentCommand] = useState<string>('')
   const [showConfigManager, setShowConfigManager] = useState(false)
   const [showConfigDropdown, setShowConfigDropdown] = useState(false)
+  const [hasReconnected, setHasReconnected] = useState(false) // Track if we've already reconnected
   const outputRef = useRef<HTMLDivElement>(null)
 
-  // Load config on mount and setup WebSocket message handlers
+  // TanStack Query hooks
+  const { data: config, refetch: refetchConfig } = useConfig()
+  const { data: parsedConfig } = useSnapRaidConfig(selectedConfig)
+  const { data: currentJob, refetch: refetchCurrentJob } = useCurrentJob()
+  const executeCommandMutation = useExecuteCommand()
+
+  // Setup WebSocket message handlers
   useEffect(() => {
-    loadConfig()
-    checkRunningJob()
-    
-    // Reconnect WebSocket with handlers for this component
-    // (WebSocket is already connected at root level)
     apiClient.connectWebSocket({
       onOutput: (chunk: string, command: string) => {
         setOutput(prev => prev + chunk)
@@ -36,18 +36,21 @@ function Dashboard() {
         setIsRunning(false)
         setCurrentCommand('')
         console.log(`Command ${command} completed with exit code ${exitCode}`)
+        // Invalidate currentJob query to reflect that no job is running
+        refetchCurrentJob()
       },
       onError: (error: string) => {
         setIsRunning(false)
         setCurrentCommand('')
         setOutput(prev => prev + `\n\nError: ${error}`)
+        // Invalidate currentJob query to reflect that no job is running
+        refetchCurrentJob()
       },
       onStatus: (newStatus: any) => {
         setStatus(newStatus)
       },
     })
-    // Don't disconnect on unmount - let root handle lifecycle
-  }, [])
+  }, [refetchCurrentJob])
 
   // Auto-scroll output
   useEffect(() => {
@@ -56,62 +59,30 @@ function Dashboard() {
     }
   }, [output])
 
-  // Load selected config when changed
+  // Select first enabled config on mount
   useEffect(() => {
-    if (!selectedConfig) return
-    
-    const abortController = new AbortController()
-    let isCancelled = false
-
-    loadSnapRaidConfig(selectedConfig).catch(err => {
-      if (!isCancelled) {
-        console.error('Failed to parse SnapRAID config:', err)
-      }
-    })
-
-    return () => {
-      isCancelled = true
-      abortController.abort()
-    }
-  }, [selectedConfig])
-
-  async function loadConfig() {
-    try {
-      const cfg = await apiClient.getConfig()
-      setConfig(cfg)
-      
-      // Select first enabled config
-      const firstEnabled = cfg.snapraidConfigs.find(c => c.enabled)
+    if (config && !selectedConfig) {
+      const firstEnabled = config.snapraidConfigs.find(c => c.enabled)
       if (firstEnabled) {
         setSelectedConfig(firstEnabled.path)
       }
-    } catch (error) {
-      console.error('Failed to load config:', error)
     }
-  }
+  }, [config, selectedConfig])
 
-  async function checkRunningJob() {
-    try {
-      const runningJob = await apiClient.getCurrentJob()
-      if (runningJob) {
-        setIsRunning(true)
-        setCurrentCommand(runningJob.command)
-        setSelectedConfig(runningJob.configPath)
-        setOutput(prev => prev + `\n[Reconnected to running job: ${runningJob.command}]\n`)
-      }
-    } catch (error) {
-      console.error('Failed to check running job:', error)
+  // Check for running job on mount (only once)
+  useEffect(() => {
+    if (currentJob && !hasReconnected) {
+      setIsRunning(true)
+      setCurrentCommand(currentJob.command)
+      setSelectedConfig(currentJob.configPath)
+      setOutput(prev => prev + `\n[Reconnected to running job: ${currentJob.command}]\n`)
+      setHasReconnected(true)
+    } else if (!currentJob && hasReconnected) {
+      // Job was running but is now finished
+      setIsRunning(false)
+      setCurrentCommand('')
     }
-  }
-
-  async function loadSnapRaidConfig(path: string) {
-    try {
-      const parsed = await apiClient.parseSnapRaidConfig(path)
-      setParsedConfig(parsed)
-    } catch (error) {
-      console.error('Failed to parse SnapRAID config:', error)
-    }
-  }
+  }, [currentJob, hasReconnected])
 
   async function executeCommand(command: SnapRaidCommand) {
     if (!selectedConfig || isRunning) return
@@ -120,12 +91,12 @@ function Dashboard() {
     setOutput('')
     setCurrentCommand(command)
     
-    try {
-      await apiClient.executeCommand(command, selectedConfig)
-    } catch (error) {
-      console.error('Failed to execute command:', error)
-      setIsRunning(false)
-    }
+    executeCommandMutation.mutate({ command, configPath: selectedConfig }, {
+      onError: (error) => {
+        console.error('Failed to execute command:', error)
+        setIsRunning(false)
+      }
+    })
   }
 
   const dataDiskCount = parsedConfig ? Object.keys(parsedConfig.data).length : 0
@@ -220,7 +191,7 @@ function Dashboard() {
           {showConfigManager && config && (
             <ConfigManager 
               config={config.snapraidConfigs} 
-              onConfigsChanged={loadConfig}
+              onConfigsChanged={refetchConfig}
               onClose={() => setShowConfigManager(false)}
             />
           )}

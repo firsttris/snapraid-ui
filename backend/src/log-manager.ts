@@ -1,14 +1,6 @@
-import { join } from "jsr:@std/path";
-import { expandGlob } from "jsr:@std/fs";
-import type { SnapRaidCommand } from "./types.ts";
-
-export interface LogFile {
-  filename: string;
-  path: string;
-  command: SnapRaidCommand;
-  timestamp: Date;
-  size: number;
-}
+import { join } from "@std/path";
+import { expandGlob } from "@std/fs";
+import type { SnapRaidCommand, LogFile } from "@shared/types.ts";
 
 export class LogManager {
   constructor(private logDirectory: string) {}
@@ -79,7 +71,7 @@ export class LogManager {
             filename,
             path: entry.path,
             command: command as SnapRaidCommand,
-            timestamp: new Date(year, month, day, hour, minute, second),
+            timestamp: new Date(year, month, day, hour, minute, second).toISOString(),
             size: stat.size,
           });
         }
@@ -91,7 +83,7 @@ export class LogManager {
     }
 
     // Sort by timestamp descending (newest first)
-    return logs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
 
   /**
@@ -123,7 +115,7 @@ export class LogManager {
         // Delete if exceeds max files count
         (maxFiles > 0 && logs.indexOf(log) >= maxFiles) ||
         // Delete if older than max age
-        (maxAge > 0 && now - log.timestamp.getTime() > maxAgeMs);
+        (maxAge > 0 && now - new Date(log.timestamp).getTime() > maxAgeMs);
 
       if (shouldDelete) {
         try {

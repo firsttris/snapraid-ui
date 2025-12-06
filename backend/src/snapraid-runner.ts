@@ -1,4 +1,4 @@
-import type { SnapRaidCommand, CommandOutput, SnapRaidStatus, RunningJob } from "./types.ts";
+import type { SnapRaidCommand, CommandOutput, SnapRaidStatus, RunningJob } from "@shared/types.ts";
 import { LogManager } from "./log-manager.ts";
 
 export class SnapRaidRunner {
@@ -39,7 +39,7 @@ export class SnapRaidRunner {
     this.currentJob = {
       command,
       configPath,
-      startTime: new Date(),
+      startTime: new Date().toISOString(),
       processId,
     };
 
@@ -53,7 +53,7 @@ export class SnapRaidRunner {
     this.processes.set(processId, process);
 
     let fullOutput = "";
-    const timestamp = new Date();
+    const timestamp = new Date().toISOString();
 
     try {
       // Stream stdout

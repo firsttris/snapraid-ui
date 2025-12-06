@@ -1,76 +1,51 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
-import { apiClient } from '../lib/api-client'
-import type { LogFile, SnapRaidCommand } from '../types'
+import { useState } from 'react'
+import { useLogs, useLogContent, useDeleteLog, useRotateLogs } from '../lib/api-client'
+import type { SnapRaidCommand } from '@shared/types'
 
 export const Route = createFileRoute('/logs')({
   component: LogsPage,
 })
 
 function LogsPage() {
-  const [logs, setLogs] = useState<LogFile[]>([])
-  const [loading, setLoading] = useState(true)
   const [selectedLog, setSelectedLog] = useState<string | null>(null)
-  const [logContent, setLogContent] = useState<string>('')
-  const [loadingContent, setLoadingContent] = useState(false)
   const [filterCommand, setFilterCommand] = useState<SnapRaidCommand | 'all'>('all')
   const [searchTerm, setSearchTerm] = useState('')
 
-  useEffect(() => {
-    loadLogs()
-  }, [])
-
-  async function loadLogs() {
-    setLoading(true)
-    try {
-      const logFiles = await apiClient.getLogs()
-      setLogs(logFiles)
-    } catch (error) {
-      console.error('Failed to load logs:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // TanStack Query hooks
+  const { data: logs = [], isLoading: loading, refetch: refetchLogs } = useLogs()
+  const { data: logContent = '', isLoading: loadingContent } = useLogContent(selectedLog ?? undefined)
+  const deleteLogMutation = useDeleteLog()
+  const rotateLogsMutation = useRotateLogs()
 
   async function viewLog(filename: string) {
     setSelectedLog(filename)
-    setLoadingContent(true)
-    try {
-      const content = await apiClient.getLogContent(filename)
-      setLogContent(content)
-    } catch (error) {
-      console.error('Failed to load log content:', error)
-      setLogContent(`Error loading log: ${error}`)
-    } finally {
-      setLoadingContent(false)
-    }
   }
 
   async function deleteLog(filename: string) {
     if (!confirm(`Delete log file ${filename}?`)) return
 
-    try {
-      await apiClient.deleteLog(filename)
-      setLogs(logs.filter(log => log.filename !== filename))
-      if (selectedLog === filename) {
-        setSelectedLog(null)
-        setLogContent('')
+    deleteLogMutation.mutate(filename, {
+      onSuccess: () => {
+        if (selectedLog === filename) {
+          setSelectedLog(null)
+        }
+      },
+      onError: (error) => {
+        alert(`Failed to delete log: ${error}`)
       }
-    } catch (error) {
-      console.error('Failed to delete log:', error)
-      alert(`Failed to delete log: ${error}`)
-    }
+    })
   }
 
   async function rotateLogs() {
-    try {
-      const result = await apiClient.rotateLogs()
-      alert(`Deleted ${result.deleted} old log file(s)`)
-      await loadLogs()
-    } catch (error) {
-      console.error('Failed to rotate logs:', error)
-      alert(`Failed to rotate logs: ${error}`)
-    }
+    rotateLogsMutation.mutate(undefined, {
+      onSuccess: (result) => {
+        alert(`Deleted ${result.deleted} old log file(s)`)
+      },
+      onError: (error) => {
+        alert(`Failed to rotate logs: ${error}`)
+      }
+    })
   }
 
   function downloadLog(filename: string) {
@@ -120,7 +95,7 @@ function LogsPage() {
                   </h2>
                   <div className="flex gap-2">
                     <button
-                      onClick={loadLogs}
+                      onClick={() => refetchLogs()}
                       className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium"
                     >
                       Refresh

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { apiClient } from '../lib/api-client'
+import { apiClient, useFileContent, useWriteFile } from '../lib/api-client'
 import { DiskManager } from './DiskManager'
 
 interface ConfigEditorProps {
@@ -65,8 +65,6 @@ function escapeHtml(text: string): string {
 export function ConfigEditor({ configPath, configName, onClose, onSaved }: ConfigEditorProps) {
   const [content, setContent] = useState<string>('')
   const [originalContent, setOriginalContent] = useState<string>('')
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [validating, setValidating] = useState(false)
   const [error, setError] = useState<string>('')
   const [validationResult, setValidationResult] = useState<{ valid: boolean; output: string } | null>(null)
@@ -75,9 +73,17 @@ export function ConfigEditor({ configPath, configName, onClose, onSaved }: Confi
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const highlightRef = useRef<HTMLDivElement>(null)
 
+  // TanStack Query hooks
+  const { data: fileContent, isLoading: loading, refetch: refetchFile } = useFileContent(configPath)
+  const writeFileMutation = useWriteFile()
+
+  // Initialize content when file is loaded
   useEffect(() => {
-    loadFile()
-  }, [configPath])
+    if (fileContent !== undefined) {
+      setContent(fileContent)
+      setOriginalContent(fileContent)
+    }
+  }, [fileContent])
 
   useEffect(() => {
     setHasChanges(content !== originalContent)
@@ -102,39 +108,27 @@ export function ConfigEditor({ configPath, configName, onClose, onSaved }: Confi
     }
   }, [viewMode])
 
-  async function loadFile() {
-    setLoading(true)
-    setError('')
-    try {
-      const fileContent = await apiClient.readFile(configPath)
-      setContent(fileContent)
-      setOriginalContent(fileContent)
-    } catch (err) {
-      setError(String(err))
-    } finally {
-      setLoading(false)
-    }
-  }
-
   function handleDiskUpdate() {
     // Reload the file content when disks are updated
-    loadFile()
+    refetchFile()
   }
 
   async function handleSave() {
-    setSaving(true)
     setError('')
-    try {
-      await apiClient.writeFile(configPath, content)
-      setOriginalContent(content)
-      onSaved?.()
-      // Auto-validate after save
-      await handleValidate()
-    } catch (err) {
-      setError(String(err))
-    } finally {
-      setSaving(false)
-    }
+    writeFileMutation.mutate(
+      { path: configPath, content },
+      {
+        onSuccess: () => {
+          setOriginalContent(content)
+          onSaved?.()
+          // Auto-validate after save
+          handleValidate()
+        },
+        onError: (err) => {
+          setError(String(err))
+        }
+      }
+    )
   }
 
   async function handleValidate() {
@@ -315,10 +309,10 @@ export function ConfigEditor({ configPath, configName, onClose, onSaved }: Confi
             {viewMode === 'text' && (
               <button
                 onClick={handleSave}
-                disabled={!hasChanges || saving || loading}
+                disabled={!hasChanges || writeFileMutation.isPending || loading}
                 className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {saving ? (
+                {writeFileMutation.isPending ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                     Saving...

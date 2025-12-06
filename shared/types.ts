@@ -1,3 +1,6 @@
+// Shared types between frontend and backend
+// Single source of truth for all type definitions
+
 export interface SnapRaidConfig {
   name: string;
   path: string;
@@ -44,15 +47,42 @@ export interface SnapRaidStatus {
 export interface CommandOutput {
   command: string;
   output: string;
-  timestamp: Date;
+  timestamp: string; // ISO string for JSON serialization
   exitCode: number | null;
 }
 
 export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff';
 
+export interface LogFile {
+  filename: string;
+  path: string;
+  command: SnapRaidCommand;
+  timestamp: string; // ISO string
+  size: number;
+}
+
 export interface RunningJob {
   command: SnapRaidCommand;
   configPath: string;
-  startTime: Date;
+  startTime: string; // ISO string
   processId: string;
+}
+
+// WebSocket message types
+export interface WSMessage {
+  type: 'output' | 'complete' | 'error' | 'status';
+  command?: string;
+  chunk?: string;
+  exitCode?: number;
+  timestamp?: string;
+  error?: string;
+  status?: SnapRaidStatus;
+}
+
+// Filesystem types
+export interface FileSystemEntry {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  size?: number;
 }

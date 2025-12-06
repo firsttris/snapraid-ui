@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { ConfigParser } from "../config-parser.ts";
 import { SnapRaidRunner } from "../snapraid-runner.ts";
 import type { LogManager } from "../log-manager.ts";
-import type { CommandOutput } from "../types.ts";
+import type { CommandOutput } from "@shared/types.ts";
 
 const snapraid = new Hono();
 
@@ -78,7 +78,7 @@ snapraid.post("/execute", async (c) => {
         type: "complete",
         command,
         exitCode: result.exitCode,
-        timestamp: result.timestamp.toISOString(),
+        timestamp: result.timestamp,
       });
 
       // Parse status if it was a status command

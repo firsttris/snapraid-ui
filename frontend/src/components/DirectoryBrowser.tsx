@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { apiClient } from '../lib/api-client'
+import { useState } from 'react'
+import { useFilesystem } from '../lib/api-client'
 
 interface DirectoryBrowserProps {
   onSelect: (path: string) => void
@@ -10,50 +10,21 @@ interface DirectoryBrowserProps {
 
 export function DirectoryBrowser({ onSelect, onClose, title = 'Select Directory', currentValue }: DirectoryBrowserProps) {
   const [currentPath, setCurrentPath] = useState<string>(currentValue || '')
-  const [entries, setEntries] = useState<Array<{ name: string; isDirectory: boolean; path: string }>>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string>('')
-
-  useEffect(() => {
-    const abortController = new AbortController()
-    let isCancelled = false
-
-    loadDirectory(currentPath, isCancelled)
-
-    return () => {
-      isCancelled = true
-      abortController.abort()
-    }
-  }, [currentPath])
-
-  async function loadDirectory(path?: string, isCancelled?: boolean) {
-    setLoading(true)
-    setError('')
-    try {
-      const result = await apiClient.browseFilesystem(path, 'directories')
-      if (!isCancelled) {
-        setCurrentPath(result.path)
-        setEntries(result.entries)
-      }
-    } catch (err) {
-      if (!isCancelled) {
-        setError(String(err))
-      }
-    } finally {
-      if (!isCancelled) {
-        setLoading(false)
-      }
-    }
-  }
+  
+  // TanStack Query hook
+  const { data, isLoading: loading, error } = useFilesystem(currentPath, 'directories')
+  
+  const entries = data?.entries || []
+  const actualPath = data?.path || currentPath
 
   function goUp() {
-    const parts = currentPath.split('/').filter(Boolean)
+    const parts = actualPath.split('/').filter(Boolean)
     parts.pop()
     setCurrentPath('/' + parts.join('/'))
   }
 
   function handleSelect() {
-    onSelect(currentPath)
+    onSelect(actualPath)
   }
 
   return (
@@ -73,20 +44,20 @@ export function DirectoryBrowser({ onSelect, onClose, title = 'Select Directory'
           <div className="flex items-center gap-2">
             <button
               onClick={goUp}
-              disabled={currentPath === '/'}
+              disabled={actualPath === '/'}
               className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               ↑ Up
             </button>
             <div className="flex-1 text-sm text-gray-600 font-mono">
-              {currentPath || '/'}
+              {actualPath || '/'}
             </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
           {loading && <div className="text-center text-gray-500">Loading...</div>}
-          {error && <div className="text-red-600 text-sm">{error}</div>}
+          {error && <div className="text-red-600 text-sm">{String(error)}</div>}
           
           {!loading && !error && entries.length === 0 && (
             <div className="text-center text-gray-500">No directories found</div>
@@ -108,7 +79,7 @@ export function DirectoryBrowser({ onSelect, onClose, title = 'Select Directory'
 
         <div className="p-4 border-t bg-gray-50 flex justify-between items-center">
           <div className="text-sm text-gray-600">
-            Selected: <span className="font-mono">{currentPath || '/'}</span>
+            Selected: <span className="font-mono">{actualPath || '/'}</span>
           </div>
           <div className="flex gap-2">
             <button

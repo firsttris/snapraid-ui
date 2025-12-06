@@ -1,4 +1,5 @@
-import { AppConfig, CommandOutput, ParsedSnapRaidConfig, SnapRaidCommand, RunningJob, LogFile } from "@/types";
+import type { AppConfig, CommandOutput, ParsedSnapRaidConfig, SnapRaidCommand, RunningJob, LogFile } from "@shared/types";
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 
 const API_BASE = 'http://localhost:3001';
@@ -374,3 +375,216 @@ export class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+
+// ====================
+// React Query Hooks
+// ====================
+
+// Query Keys
+export const queryKeys = {
+  config: ['config'] as const,
+  snapraidConfig: (path: string) => ['snapraid-config', path] as const,
+  currentJob: ['current-job'] as const,
+  logs: ['logs'] as const,
+  logContent: (filename: string) => ['log-content', filename] as const,
+  filesystem: (path: string | undefined, filter: 'conf' | 'directories') => ['filesystem', path, filter] as const,
+  fileContent: (path: string) => ['file-content', path] as const,
+};
+
+// Config Queries
+export function useConfig(options?: Omit<UseQueryOptions<AppConfig>, 'queryKey' | 'queryFn'>) {
+  return useQuery({
+    queryKey: queryKeys.config,
+    queryFn: () => apiClient.getConfig(),
+    ...options,
+  });
+}
+
+export function useSnapRaidConfig(path: string | undefined, options?: Omit<UseQueryOptions<ParsedSnapRaidConfig>, 'queryKey' | 'queryFn'>) {
+  return useQuery({
+    queryKey: queryKeys.snapraidConfig(path!),
+    queryFn: () => apiClient.parseSnapRaidConfig(path!),
+    enabled: !!path,
+    ...options,
+  });
+}
+
+export function useCurrentJob(options?: Omit<UseQueryOptions<RunningJob | null>, 'queryKey' | 'queryFn'>) {
+  return useQuery({
+    queryKey: queryKeys.currentJob,
+    queryFn: () => apiClient.getCurrentJob(),
+    ...options,
+  });
+}
+
+// Logs Queries
+export function useLogs(options?: Omit<UseQueryOptions<LogFile[]>, 'queryKey' | 'queryFn'>) {
+  return useQuery({
+    queryKey: queryKeys.logs,
+    queryFn: () => apiClient.getLogs(),
+    ...options,
+  });
+}
+
+export function useLogContent(filename: string | undefined, options?: Omit<UseQueryOptions<string>, 'queryKey' | 'queryFn'>) {
+  return useQuery({
+    queryKey: queryKeys.logContent(filename!),
+    queryFn: () => apiClient.getLogContent(filename!),
+    enabled: !!filename,
+    ...options,
+  });
+}
+
+// Filesystem Queries
+export function useFilesystem(path: string | undefined, filter: 'conf' | 'directories' = 'conf', options?: Omit<UseQueryOptions<{ path: string; entries: Array<{ name: string; isDirectory: boolean; path: string }> }>, 'queryKey' | 'queryFn'>) {
+  return useQuery({
+    queryKey: queryKeys.filesystem(path, filter),
+    queryFn: () => apiClient.browseFilesystem(path, filter),
+    ...options,
+  });
+}
+
+export function useFileContent(path: string | undefined, options?: Omit<UseQueryOptions<string>, 'queryKey' | 'queryFn'>) {
+  return useQuery({
+    queryKey: queryKeys.fileContent(path!),
+    queryFn: () => apiClient.readFile(path!),
+    enabled: !!path,
+    ...options,
+  });
+}
+
+// Config Mutations
+export function useSaveConfig(options?: UseMutationOptions<void, Error, AppConfig>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (config: AppConfig) => apiClient.saveConfig(config),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.config });
+    },
+    ...options,
+  });
+}
+
+export function useAddConfig(options?: UseMutationOptions<AppConfig, Error, { name: string; path: string; enabled?: boolean }>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ name, path, enabled = true }) => apiClient.addConfig(name, path, enabled),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.config });
+    },
+    ...options,
+  });
+}
+
+export function useRemoveConfig(options?: UseMutationOptions<AppConfig, Error, string>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (path: string) => apiClient.removeConfig(path),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.config });
+    },
+    ...options,
+  });
+}
+
+// SnapRAID Mutations
+export function useExecuteCommand(options?: UseMutationOptions<void, Error, { command: SnapRaidCommand; configPath: string; args?: string[] }>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ command, configPath, args = [] }) => apiClient.executeCommand(command, configPath, args),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentJob });
+    },
+    ...options,
+  });
+}
+
+export function useAddDataDisk(options?: UseMutationOptions<ParsedSnapRaidConfig, Error, { configPath: string; diskName: string; diskPath: string }>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ configPath, diskName, diskPath }) => apiClient.addDataDisk(configPath, diskName, diskPath),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.snapraidConfig(variables.configPath) });
+    },
+    ...options,
+  });
+}
+
+export function useAddParityDisk(options?: UseMutationOptions<ParsedSnapRaidConfig, Error, { configPath: string; parityPath: string }>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ configPath, parityPath }) => apiClient.addParityDisk(configPath, parityPath),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.snapraidConfig(variables.configPath) });
+    },
+    ...options,
+  });
+}
+
+export function useRemoveDisk(options?: UseMutationOptions<ParsedSnapRaidConfig, Error, { configPath: string; diskName: string | null; diskType: 'data' | 'parity' }>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ configPath, diskName, diskType }) => apiClient.removeDisk(configPath, diskName, diskType),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.snapraidConfig(variables.configPath) });
+    },
+    ...options,
+  });
+}
+
+export function useAddExclude(options?: UseMutationOptions<ParsedSnapRaidConfig, Error, { configPath: string; pattern: string }>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ configPath, pattern }) => apiClient.addExclude(configPath, pattern),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.snapraidConfig(variables.configPath) });
+    },
+    ...options,
+  });
+}
+
+export function useRemoveExclude(options?: UseMutationOptions<ParsedSnapRaidConfig, Error, { configPath: string; pattern: string }>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ configPath, pattern }) => apiClient.removeExclude(configPath, pattern),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.snapraidConfig(variables.configPath) });
+    },
+    ...options,
+  });
+}
+
+export function useWriteFile(options?: UseMutationOptions<void, Error, { path: string; content: string }>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ path, content }) => apiClient.writeFile(path, content),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.fileContent(variables.path) });
+    },
+    ...options,
+  });
+}
+
+// Logs Mutations
+export function useDeleteLog(options?: UseMutationOptions<void, Error, string>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (filename: string) => apiClient.deleteLog(filename),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.logs });
+    },
+    ...options,
+  });
+}
+
+export function useRotateLogs(options?: UseMutationOptions<{ deleted: number }, Error, void>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.rotateLogs(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.logs });
+    },
+    ...options,
+  });
+}
+
