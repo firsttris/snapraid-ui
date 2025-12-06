@@ -6,17 +6,30 @@ const filesystem = new Hono();
 // GET /api/filesystem/browse - Browse directories for .conf files
 filesystem.get("/browse", async (c) => {
   const dirPath = c.req.query("path") || Deno.env.get("HOME") || "/";
+  const filterType = c.req.query("filter") || "conf"; // "conf" or "directories"
 
   try {
     const entries = [];
     for await (const entry of Deno.readDir(dirPath)) {
-      // Only show .conf files and directories
-      if (entry.isDirectory || entry.name.endsWith(".conf")) {
-        entries.push({
-          name: entry.name,
-          isDirectory: entry.isDirectory,
-          path: join(dirPath, entry.name),
-        });
+      // Filter based on type
+      if (filterType === "directories") {
+        // Show only directories for directory browsing
+        if (entry.isDirectory) {
+          entries.push({
+            name: entry.name,
+            isDirectory: true,
+            path: join(dirPath, entry.name),
+          });
+        }
+      } else {
+        // Show .conf files and directories (original behavior)
+        if (entry.isDirectory || entry.name.endsWith(".conf")) {
+          entries.push({
+            name: entry.name,
+            isDirectory: entry.isDirectory,
+            path: join(dirPath, entry.name),
+          });
+        }
       }
     }
 

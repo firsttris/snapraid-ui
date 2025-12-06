@@ -92,8 +92,11 @@ export class ApiClient {
   /**
    * Browse filesystem for .conf files
    */
-  async browseFilesystem(path?: string): Promise<{ path: string; entries: Array<{ name: string; isDirectory: boolean; path: string }> }> {
-    const url = path ? `${API_BASE}/api/filesystem/browse?path=${encodeURIComponent(path)}` : `${API_BASE}/api/filesystem/browse`;
+  async browseFilesystem(path?: string, filter: 'conf' | 'directories' = 'conf'): Promise<{ path: string; entries: Array<{ name: string; isDirectory: boolean; path: string }> }> {
+    let url = `${API_BASE}/api/filesystem/browse?filter=${filter}`;
+    if (path) {
+      url += `&path=${encodeURIComponent(path)}`;
+    }
     const response = await fetch(url);
     if (!response.ok) throw new Error('Failed to browse filesystem');
     return response.json();
@@ -132,6 +135,91 @@ export class ApiClient {
     });
     if (!response.ok) throw new Error('Failed to validate config');
     return response.json();
+  }
+
+  /**
+   * Add a data disk to SnapRAID config
+   */
+  async addDataDisk(configPath: string, diskName: string, diskPath: string): Promise<ParsedSnapRaidConfig> {
+    const response = await fetch(`${API_BASE}/api/snapraid/add-data-disk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ configPath, diskName, diskPath }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to add data disk');
+    }
+    const result = await response.json();
+    return result.config;
+  }
+
+  /**
+   * Add a parity disk to SnapRAID config
+   */
+  async addParityDisk(configPath: string, parityPath: string): Promise<ParsedSnapRaidConfig> {
+    const response = await fetch(`${API_BASE}/api/snapraid/add-parity-disk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ configPath, parityPath }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to add parity disk');
+    }
+    const result = await response.json();
+    return result.config;
+  }
+
+  /**
+   * Remove a disk from SnapRAID config
+   */
+  async removeDisk(configPath: string, diskName: string | null, diskType: 'data' | 'parity'): Promise<ParsedSnapRaidConfig> {
+    const response = await fetch(`${API_BASE}/api/snapraid/remove-disk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ configPath, diskName, diskType }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to remove disk');
+    }
+    const result = await response.json();
+    return result.config;
+  }
+
+  /**
+   * Add an exclude pattern to SnapRAID config
+   */
+  async addExclude(configPath: string, pattern: string): Promise<ParsedSnapRaidConfig> {
+    const response = await fetch(`${API_BASE}/api/snapraid/add-exclude`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ configPath, pattern }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to add exclude pattern');
+    }
+    const result = await response.json();
+    return result.config;
+  }
+
+  /**
+   * Remove an exclude pattern from SnapRAID config
+   */
+  async removeExclude(configPath: string, pattern: string): Promise<ParsedSnapRaidConfig> {
+    const response = await fetch(`${API_BASE}/api/snapraid/remove-exclude`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ configPath, pattern }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to remove exclude pattern');
+    }
+    const result = await response.json();
+    return result.config;
   }
 
   /**

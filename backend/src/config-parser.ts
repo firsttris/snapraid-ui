@@ -15,6 +15,7 @@ export class ConfigParser {
       parity: [],
       content: [],
       data: {},
+      exclude: [],
     };
 
     for (const line of lines) {
@@ -43,6 +44,12 @@ export class ConfigParser {
           const diskPath = parts.slice(1).join(" ");
           config.data[diskName] = diskPath;
         }
+      }
+      
+      // Parse exclude lines (e.g., "exclude *.bak")
+      else if (trimmed.startsWith("exclude ")) {
+        const pattern = trimmed.substring(8).trim();
+        config.exclude.push(pattern);
       }
     }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { apiClient } from '../lib/api-client'
+import { DiskManager } from './DiskManager'
 
 interface ConfigEditorProps {
   configPath: string
@@ -70,6 +71,7 @@ export function ConfigEditor({ configPath, configName, onClose, onSaved }: Confi
   const [error, setError] = useState<string>('')
   const [validationResult, setValidationResult] = useState<{ valid: boolean; output: string } | null>(null)
   const [hasChanges, setHasChanges] = useState(false)
+  const [viewMode, setViewMode] = useState<'text' | 'visual'>('visual')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const highlightRef = useRef<HTMLDivElement>(null)
 
@@ -101,6 +103,11 @@ export function ConfigEditor({ configPath, configName, onClose, onSaved }: Confi
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleDiskUpdate() {
+    // Reload the file content when disks are updated
+    loadFile()
   }
 
   async function handleSave() {
@@ -151,14 +158,39 @@ export function ConfigEditor({ configPath, configName, onClose, onSaved }: Confi
             <h2 className="text-2xl font-semibold text-gray-900">Edit Configuration</h2>
             <p className="text-sm text-gray-600 mt-1 font-mono">{configName} — {configPath}</p>
           </div>
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-4">
+            {/* View Mode Toggle */}
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('visual')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'visual'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Visual Editor
+              </button>
+              <button
+                onClick={() => setViewMode('text')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'text'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Text Editor
+              </button>
+            </div>
+            <button
+              onClick={handleClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -201,6 +233,10 @@ export function ConfigEditor({ configPath, configName, onClose, onSaved }: Confi
           {loading ? (
             <div className="flex-1 flex items-center justify-center text-gray-500">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          ) : viewMode === 'visual' ? (
+            <div className="flex-1 overflow-y-auto">
+              <DiskManager configPath={configPath} onUpdate={handleDiskUpdate} />
             </div>
           ) : (
             <div className="flex-1 flex flex-col overflow-hidden min-h-0">
@@ -265,25 +301,27 @@ export function ConfigEditor({ configPath, configName, onClose, onSaved }: Confi
             >
               Cancel
             </button>
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges || saving || loading}
-              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                  </svg>
-                  Save Changes
-                </>
-              )}
-            </button>
+            {viewMode === 'text' && (
+              <button
+                onClick={handleSave}
+                disabled={!hasChanges || saving || loading}
+                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    Save Changes
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
