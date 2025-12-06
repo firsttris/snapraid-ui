@@ -171,13 +171,16 @@ export class SnapRaidRunner {
     status.syncInProgress = output.includes("sync is in progress") && !output.includes("No sync is in progress");
 
     // Parse scrub percentage: "100% of the array is not scrubbed" or "50% of the array is scrubbed"
-    const notScrubbed = output.match(/(\d+)%\s+of the array is not scrubbed/i);
+    // Note: "X% of the array is not scrubbed" means (100-X)% IS scrubbed
+    const notScrubbed = output.match(/(\d+)%\s+of\s+the\s+array\s+is\s+not\s+scrubbed/i);
     if (notScrubbed) {
-      status.scrubPercentage = 100 - parseInt(notScrubbed[1], 10);
-    }
-    const isScrubbed = output.match(/(\d+)%\s+of the array is scrubbed/i);
-    if (isScrubbed) {
-      status.scrubPercentage = parseInt(isScrubbed[1], 10);
+      const notScrubbedPercent = parseInt(notScrubbed[1], 10);
+      status.scrubPercentage = 100 - notScrubbedPercent;
+    } else {
+      const isScrubbed = output.match(/(\d+)%\s+of\s+the\s+array\s+is\s+scrubbed/i);
+      if (isScrubbed) {
+        status.scrubPercentage = parseInt(isScrubbed[1], 10);
+      }
     }
 
     // Parse oldest scrub: "The oldest block was scrubbed 5 days ago"
@@ -186,16 +189,32 @@ export class SnapRaidRunner {
       status.oldestScrubDays = parseInt(oldestScrub[1], 10);
     }
 
-    // Parse fragmented files from status table
-    const fragmentMatch = output.match(/Fragmented[\s\S]*?Files[\s\S]*?(\d+)/);
-    if (fragmentMatch) {
-      status.fragmentedFiles = parseInt(fragmentMatch[1], 10);
-    }
-
-    // Parse wasted space
-    const wastedMatch = output.match(/Wasted[\s\S]*?GB[\s\S]*?([\d.]+)/);
-    if (wastedMatch) {
-      status.wastedGB = parseFloat(wastedMatch[1]);
+    // Parse status table: extract total row (after separator line)
+    // Table format:
+    //    Files Fragmented Excess  Wasted  Used    Free  Use Name
+    //             Files  Fragments  GB      GB      GB
+    //       13       0       0   502.5       0     209   0% test1
+    //  --------------------------------------------------------------------------
+    //       13       0       0   502.5       0     209   0%
+    const totalRowMatch = output.match(/^ *-{10,} *$/m);
+    if (totalRowMatch) {
+      const totalRowIndex = totalRowMatch.index! + totalRowMatch[0].length;
+      const remainingOutput = output.slice(totalRowIndex);
+      const totalLine = remainingOutput.split('\n')[1]; // First line after separator
+      
+      if (totalLine) {
+        // Parse columns: Files FragmentedFiles ExcessFragments WastedGB UsedGB FreeGB Use%
+        const columns = totalLine.trim().split(/\s+/);
+        if (columns.length >= 7) {
+          const fragmentedFiles = parseInt(columns[1], 10);
+          const wastedGB = parseFloat(columns[3]);
+          const freeGB = parseFloat(columns[5]);
+          
+          if (!isNaN(fragmentedFiles)) status.fragmentedFiles = fragmentedFiles;
+          if (!isNaN(wastedGB)) status.wastedGB = wastedGB;
+          if (!isNaN(freeGB)) status.freeSpaceGB = freeGB;
+        }
+      }
     }
 
     // Check parity status
@@ -208,24 +227,33 @@ export class SnapRaidRunner {
                             (output.includes("equal") && !output.match(/(\d+)\s+(added|removed|updated)/i));
 
     // Parse "diff" command output
-    // Example: "5 equal, 3 added, 2 removed, 1 updated"
-    const summaryMatch = output.match(/(\d+)\s+equal.*?(\d+)\s+added.*?(\d+)\s+removed.*?(\d+)\s+updated/is);
-    if (summaryMatch) {
-      status.newFiles = parseInt(summaryMatch[2], 10);
-      status.deletedFiles = parseInt(summaryMatch[3], 10);
-      status.modifiedFiles = parseInt(summaryMatch[4], 10);
-      return status;
+    // Format:
+    //       11 equal
+    //        1 added
+    //        1 removed
+    //        0 updated
+    //        0 moved
+    //        0 copied
+    //        1 restored
+    const diffStats: Record<string, number> = {};
+    const lines = output.split('\n');
+    for (const line of lines) {
+      const match = line.match(/^\s*(\d+)\s+(equal|added|removed|updated|moved|copied|restored)/);
+      if (match) {
+        diffStats[match[2]] = parseInt(match[1], 10);
+      }
     }
 
-    // Alternative parsing for individual lines (diff command)
-    const addedMatch = output.match(/(\d+)\s+(added|new)/i);
-    if (addedMatch) status.newFiles = parseInt(addedMatch[1], 10);
-
-    const updatedMatch = output.match(/(\d+)\s+(updated|modified|changed)/i);
-    if (updatedMatch) status.modifiedFiles = parseInt(updatedMatch[1], 10);
-
-    const removedMatch = output.match(/(\d+)\s+(removed|deleted)/i);
-    if (removedMatch) status.deletedFiles = parseInt(removedMatch[1], 10);
+    // If we found diff stats, use them
+    if (Object.keys(diffStats).length > 0) {
+      status.equalFiles = diffStats.equal || 0;
+      status.newFiles = diffStats.added || 0;
+      status.deletedFiles = diffStats.removed || 0;
+      status.modifiedFiles = diffStats.updated || 0;
+      status.movedFiles = diffStats.moved || 0;
+      status.copiedFiles = diffStats.copied || 0;
+      status.restoredFiles = diffStats.restored || 0;
+    }
 
     return status;
   }
