@@ -47,43 +47,57 @@ export class LogManager {
    */
   async listLogs(): Promise<LogFile[]> {
     const expandedPath = this.expandPath(this.logDirectory);
-    const logs: LogFile[] = [];
 
     try {
+      const entries: Array<{ name: string; path: string }> = [];
       for await (const entry of expandGlob(`${expandedPath}/*.log`)) {
-        if (!entry.isFile) continue;
-
-        const filename = entry.name;
-        const stat = await Deno.stat(entry.path);
-
-        // Parse filename: <command>-YYYYMMDD-HHMMSS.log
-        const match = filename.match(/^([\w-]+)-(\d{8})-(\d{6})\.log$/);
-        if (match) {
-          const [, command, dateStr, timeStr] = match;
-          const year = parseInt(dateStr.slice(0, 4));
-          const month = parseInt(dateStr.slice(4, 6)) - 1;
-          const day = parseInt(dateStr.slice(6, 8));
-          const hour = parseInt(timeStr.slice(0, 2));
-          const minute = parseInt(timeStr.slice(2, 4));
-          const second = parseInt(timeStr.slice(4, 6));
-
-          logs.push({
-            filename,
-            path: entry.path,
-            command: command as SnapRaidCommand,
-            timestamp: new Date(year, month, day, hour, minute, second).toISOString(),
-            size: stat.size,
-          });
+        if (entry.isFile) {
+          entries.push({ name: entry.name, path: entry.path });
         }
       }
-    } catch (error) {
-      if (!(error instanceof Deno.errors.NotFound)) {
-        throw error;
-      }
-    }
 
-    // Sort by timestamp descending (newest first)
-    return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      const logs = await Promise.all(
+        entries.map(async ({ name: filename, path }) => {
+          const stat = await Deno.stat(path);
+          const match = filename.match(/^([\w-]+)-(\d{8})-(\d{6})\.log$/);
+          
+          if (!match) return null;
+          
+          const [, command, dateStr, timeStr] = match;
+          const timestamp = this.parseLogTimestamp(dateStr, timeStr);
+          
+          return {
+            filename,
+            path,
+            command: command as SnapRaidCommand,
+            timestamp,
+            size: stat.size,
+          };
+        })
+      );
+
+      return logs
+        .filter((log): log is LogFile => log !== null)
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    } catch (error) {
+      if (error instanceof Deno.errors.NotFound) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Parse timestamp from log filename parts
+   */
+  private parseLogTimestamp(dateStr: string, timeStr: string): string {
+    const year = parseInt(dateStr.slice(0, 4));
+    const month = parseInt(dateStr.slice(4, 6)) - 1;
+    const day = parseInt(dateStr.slice(6, 8));
+    const hour = parseInt(timeStr.slice(0, 2));
+    const minute = parseInt(timeStr.slice(2, 4));
+    const second = parseInt(timeStr.slice(4, 6));
+    return new Date(year, month, day, hour, minute, second).toISOString();
   }
 
   /**
@@ -108,26 +122,25 @@ export class LogManager {
     const logs = await this.listLogs();
     const now = Date.now();
     const maxAgeMs = maxAge * 24 * 60 * 60 * 1000; // days to milliseconds
-    let deleted = 0;
 
-    for (const log of logs) {
-      const shouldDelete =
-        // Delete if exceeds max files count
-        (maxFiles > 0 && logs.indexOf(log) >= maxFiles) ||
-        // Delete if older than max age
-        (maxAge > 0 && now - new Date(log.timestamp).getTime() > maxAgeMs);
+    const logsToDelete = logs.filter((log, index) => 
+      (maxFiles > 0 && index >= maxFiles) ||
+      (maxAge > 0 && now - new Date(log.timestamp).getTime() > maxAgeMs)
+    );
 
-      if (shouldDelete) {
+    const deleteResults = await Promise.all(
+      logsToDelete.map(async (log) => {
         try {
           await Deno.remove(log.path);
-          deleted++;
+          return true;
         } catch (error) {
           console.error(`Failed to delete log file ${log.filename}:`, error);
+          return false;
         }
-      }
-    }
+      })
+    );
 
-    return deleted;
+    return deleteResults.filter(result => result).length;
   }
 
   /**

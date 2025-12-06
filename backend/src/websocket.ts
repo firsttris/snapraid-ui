@@ -1,16 +1,16 @@
 // WebSocket connection management
 const wsClients = new Set<WebSocket>();
 
-export function broadcast(message: unknown) {
+export const broadcast = (message: unknown): void => {
   const data = JSON.stringify(message);
   wsClients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(data);
     }
   });
-}
+};
 
-export function handleWebSocketUpgrade(req: Request): Response {
+export const handleWebSocketUpgrade = (req: Request): Response => {
   if (req.headers.get("upgrade") !== "websocket") {
     return new Response("Expected WebSocket", { status: 400 });
   }

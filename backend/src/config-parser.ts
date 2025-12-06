@@ -11,49 +11,50 @@ export class ConfigParser {
     const content = await Deno.readTextFile(configPath);
     const lines = content.split("\n");
 
-    const config: ParsedSnapRaidConfig = {
-      parity: [],
-      content: [],
-      data: {},
-      exclude: [],
-    };
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      
-      // Skip comments and empty lines
-      if (trimmed.startsWith("#") || trimmed === "") continue;
-
-      // Parse parity lines (e.g., "parity /mnt/parity1/snapraid.parity")
-      if (trimmed.startsWith("parity ")) {
-        const path = trimmed.substring(7).trim();
-        config.parity.push(path);
-      }
-      
-      // Parse content lines (e.g., "content /var/snapraid/snapraid.content")
-      else if (trimmed.startsWith("content ")) {
-        const path = trimmed.substring(8).trim();
-        config.content.push(path);
-      }
-      
-      // Parse data lines (e.g., "data d1 /mnt/disk1")
-      else if (trimmed.startsWith("data ")) {
-        const parts = trimmed.substring(5).trim().split(/\s+/);
-        if (parts.length >= 2) {
-          const diskName = parts[0];
-          const diskPath = parts.slice(1).join(" ");
-          config.data[diskName] = diskPath;
+    return lines
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith("#"))
+      .reduce<ParsedSnapRaidConfig>((config, line) => {
+        if (line.startsWith("parity ")) {
+          return {
+            ...config,
+            parity: [...config.parity, line.substring(7).trim()],
+          };
         }
-      }
-      
-      // Parse exclude lines (e.g., "exclude *.bak")
-      else if (trimmed.startsWith("exclude ")) {
-        const pattern = trimmed.substring(8).trim();
-        config.exclude.push(pattern);
-      }
-    }
-
-    return config;
+        
+        if (line.startsWith("content ")) {
+          return {
+            ...config,
+            content: [...config.content, line.substring(8).trim()],
+          };
+        }
+        
+        if (line.startsWith("data ")) {
+          const parts = line.substring(5).trim().split(/\s+/);
+          if (parts.length >= 2) {
+            const diskName = parts[0];
+            const diskPath = parts.slice(1).join(" ");
+            return {
+              ...config,
+              data: { ...config.data, [diskName]: diskPath },
+            };
+          }
+        }
+        
+        if (line.startsWith("exclude ")) {
+          return {
+            ...config,
+            exclude: [...config.exclude, line.substring(8).trim()],
+          };
+        }
+        
+        return config;
+      }, {
+        parity: [],
+        content: [],
+        data: {},
+        exclude: [],
+      });
   }
 
   /**
@@ -84,6 +85,9 @@ export class ConfigParser {
         },
         logs: {
           maxHistoryEntries: 50,
+          directory: "~/.snapraid-ui/logs",
+          maxFiles: 100,
+          maxAge: 30,
         },
       };
     }

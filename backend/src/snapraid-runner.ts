@@ -14,6 +14,40 @@ export class SnapRaidRunner {
   }
 
   /**
+   * Prepare log path and ensure directory exists
+   */
+  private async prepareLogPath(command: SnapRaidCommand): Promise<string> {
+    if (!this.logManager) throw new Error("Log manager not configured");
+    await this.logManager.ensureLogDirectory();
+    return this.logManager.getLogPath(command);
+  }
+
+  /**
+   * Build command arguments functionally
+   */
+  private buildCommandArgs(
+    command: SnapRaidCommand,
+    configPath: string,
+    additionalArgs: string[],
+    logPath?: string
+  ): string[] {
+    const baseArgs = [command, "-c", configPath];
+    const logArgs = logPath ? ["-l", logPath] : [];
+    return [...baseArgs, ...logArgs, ...additionalArgs];
+  }
+
+  /**
+   * Async generator for reading stream chunks
+   */
+  private async *readStream(reader: ReadableStreamDefaultReader<Uint8Array>): AsyncGenerator<Uint8Array> {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      yield value;
+    }
+  }
+
+  /**
    * Execute a SnapRAID command and stream output
    */
   async executeCommand(
@@ -23,16 +57,11 @@ export class SnapRaidRunner {
     additionalArgs: string[] = []
   ): Promise<CommandOutput> {
     const processId = `${command}-${Date.now()}`;
-    let args = [command, "-c", configPath, ...additionalArgs];
     
     // Add log file if log manager is configured
-    let logPath: string | undefined;
-    if (this.logManager) {
-      await this.logManager.ensureLogDirectory();
-      logPath = this.logManager.getLogPath(command);
-      args = [command, "-c", configPath, "-l", logPath, ...additionalArgs];
-    }
+    const logPath = this.logManager ? await this.prepareLogPath(command) : undefined;
     
+    const args = this.buildCommandArgs(command, configPath, additionalArgs, logPath);
     console.log(`Executing: snapraid ${args.join(" ")}`);
 
     // Set current job
@@ -56,37 +85,26 @@ export class SnapRaidRunner {
     const timestamp = new Date().toISOString();
 
     try {
-      // Stream stdout
-      const stdoutReader = process.stdout.getReader();
-      const stderrReader = process.stderr.getReader();
       const decoder = new TextDecoder();
+      
+      // Create stream readers as closures
+      const createStreamReader = (reader: ReadableStreamDefaultReader<Uint8Array>) => 
+        async () => {
+          const chunks: string[] = [];
+          for await (const value of this.readStream(reader)) {
+            const chunk = decoder.decode(value);
+            chunks.push(chunk);
+            onOutput(chunk);
+          }
+          return chunks.join("");
+        };
 
-      // Read stdout
-      const readStdout = async () => {
-        while (true) {
-          const { done, value } = await stdoutReader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          fullOutput += chunk;
-          onOutput(chunk);
-        }
-      };
-
-      // Read stderr
-      const readStderr = async () => {
-        while (true) {
-          const { done, value } = await stderrReader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          fullOutput += chunk;
-          onOutput(chunk);
-        }
-      };
-
-      // Wait for both streams
-      await Promise.all([readStdout(), readStderr()]);
+      const [stdoutContent, stderrContent] = await Promise.all([
+        createStreamReader(process.stdout.getReader())(),
+        createStreamReader(process.stderr.getReader())(),
+      ]);
+      
+      fullOutput = stdoutContent + stderrContent;
 
       const status = await process.status;
       this.processes.delete(processId);

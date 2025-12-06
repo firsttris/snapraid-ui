@@ -11,30 +11,21 @@ filesystem.get("/browse", async (c) => {
   try {
     const entries = [];
     for await (const entry of Deno.readDir(dirPath)) {
-      // Filter based on type
-      if (filterType === "directories") {
-        // Show only directories for directory browsing
-        if (entry.isDirectory) {
-          entries.push({
-            name: entry.name,
-            isDirectory: true,
-            path: join(dirPath, entry.name),
-          });
-        }
-      } else {
-        // Show .conf files and directories (original behavior)
-        if (entry.isDirectory || entry.name.endsWith(".conf")) {
-          entries.push({
-            name: entry.name,
-            isDirectory: entry.isDirectory,
-            path: join(dirPath, entry.name),
-          });
-        }
+      const shouldInclude = filterType === "directories"
+        ? entry.isDirectory
+        : entry.isDirectory || entry.name.endsWith(".conf");
+      
+      if (shouldInclude) {
+        entries.push({
+          name: entry.name,
+          isDirectory: entry.isDirectory,
+          path: join(dirPath, entry.name),
+        });
       }
     }
 
     // Sort: directories first, then files, alphabetically
-    entries.sort((a, b) => {
+    const sortedEntries = entries.sort((a, b) => {
       if (a.isDirectory && !b.isDirectory) return -1;
       if (!a.isDirectory && b.isDirectory) return 1;
       return a.name.localeCompare(b.name);

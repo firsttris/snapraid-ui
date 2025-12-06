@@ -35,7 +35,8 @@ app.get("/", (c) => {
 app.notFound((c) => {
   return c.json({ error: "Not Found" }, 404);
 });
-async function main() {
+
+const main = async (): Promise<void> => {
   const config = await ConfigParser.loadAppConfig();
   const { host, port } = config.backend;
 
@@ -70,6 +71,6 @@ async function main() {
     port,
     handler: app.fetch,
   });
-}
+};
 
 main();

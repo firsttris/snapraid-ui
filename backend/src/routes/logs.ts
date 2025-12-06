@@ -5,22 +5,24 @@ import type { AppConfig } from "@shared/types.ts";
 const logs = new Hono();
 
 // Will be injected from main
-let logManager: LogManager | null = null;
-let appConfig: AppConfig | null = null;
+const state = {
+  logManager: null as LogManager | null,
+  appConfig: null as AppConfig | null,
+};
 
-export function setLogManager(manager: LogManager, config: AppConfig) {
-  logManager = manager;
-  appConfig = config;
+export const setLogManager = (manager: LogManager, config: AppConfig): void => {
+  state.logManager = manager;
+  state.appConfig = config;
 }
 
 // GET /api/logs - List all log files
 logs.get("/", async (c) => {
-  if (!logManager) {
+  if (!state.logManager) {
     return c.json({ error: "Log manager not initialized" }, 500);
   }
 
   try {
-    const logFiles = await logManager.listLogs();
+    const logFiles = await state.logManager.listLogs();
     return c.json(logFiles);
   } catch (error) {
     return c.json({ error: String(error) }, 500);
@@ -29,14 +31,14 @@ logs.get("/", async (c) => {
 
 // GET /api/logs/:filename - Get log file content
 logs.get("/:filename", async (c) => {
-  if (!logManager) {
+  if (!state.logManager) {
     return c.json({ error: "Log manager not initialized" }, 500);
   }
 
   const filename = c.req.param("filename");
 
   try {
-    const content = await logManager.readLog(filename);
+    const content = await state.logManager.readLog(filename);
     return c.text(content);
   } catch (error) {
     return c.json({ error: String(error) }, 404);
@@ -45,14 +47,14 @@ logs.get("/:filename", async (c) => {
 
 // DELETE /api/logs/:filename - Delete log file
 logs.delete("/:filename", async (c) => {
-  if (!logManager) {
+  if (!state.logManager) {
     return c.json({ error: "Log manager not initialized" }, 500);
   }
 
   const filename = c.req.param("filename");
 
   try {
-    await logManager.deleteLog(filename);
+    await state.logManager.deleteLog(filename);
     return c.json({ success: true });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
@@ -61,14 +63,14 @@ logs.delete("/:filename", async (c) => {
 
 // POST /api/logs/rotate - Manually trigger log rotation
 logs.post("/rotate", async (c) => {
-  if (!logManager || !appConfig) {
+  if (!state.logManager || !state.appConfig) {
     return c.json({ error: "Log manager not initialized" }, 500);
   }
 
   try {
-    const deleted = await logManager.rotateLogs(
-      appConfig.logs.maxFiles,
-      appConfig.logs.maxAge
+    const deleted = await state.logManager.rotateLogs(
+      state.appConfig.logs.maxFiles,
+      state.appConfig.logs.maxAge
     );
     return c.json({ success: true, deleted });
   } catch (error) {

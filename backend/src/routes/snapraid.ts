@@ -11,15 +11,17 @@ const commandHistory: CommandOutput[] = [];
 const MAX_HISTORY = 50;
 
 // Broadcast function will be injected
-let broadcastFn: (message: unknown) => void = () => {};
+const state = {
+  broadcastFn: (() => {}) as (message: unknown) => void,
+};
 
-export function setBroadcast(fn: (message: unknown) => void) {
-  broadcastFn = fn;
-}
+export const setBroadcast = (fn: (message: unknown) => void): void => {
+  state.broadcastFn = fn;
+};
 
-export function setRunnerLogManager(logManager: LogManager) {
+export const setRunnerLogManager = (logManager: LogManager): void => {
   runner.setLogManager(logManager);
-}
+};
 
 // GET /api/snapraid/parse - Parse SnapRAID config
 snapraid.get("/parse", async (c) => {
@@ -57,7 +59,7 @@ snapraid.post("/execute", async (c) => {
       command,
       configPath,
       (chunk) => {
-        broadcastFn({
+        state.broadcastFn({
           type: "output",
           command,
           chunk,
@@ -74,7 +76,7 @@ snapraid.post("/execute", async (c) => {
       }
 
       // Send completion message
-      broadcastFn({
+      state.broadcastFn({
         type: "complete",
         command,
         exitCode: result.exitCode,
@@ -84,14 +86,14 @@ snapraid.post("/execute", async (c) => {
       // Parse status if it was a status command
       if (command === "status") {
         const status = SnapRaidRunner.parseStatusOutput(result.output);
-        broadcastFn({
+        state.broadcastFn({
           type: "status",
           status,
         });
       }
     })
     .catch((error) => {
-      broadcastFn({
+      state.broadcastFn({
         type: "error",
         command,
         error: String(error),
@@ -147,67 +149,58 @@ snapraid.post("/add-data-disk", async (c) => {
 
   try {
     // Read the config file
-    let content = await Deno.readTextFile(configPath);
+    const content = await Deno.readTextFile(configPath);
     
     // Check if disk name already exists
     const lines = content.split("\n");
-    const diskExists = lines.some(line => {
-      const trimmed = line.trim();
-      return trimmed.startsWith(`data ${diskName} `);
-    });
+    const diskExists = lines.some(line => line.trim().startsWith(`data ${diskName} `));
 
     if (diskExists) {
       return c.json({ error: `Disk name '${diskName}' already exists` }, 400);
     }
 
-    // Find position to insert: after last data+content block, but before exclude lines
-    let insertIndex = -1;
-    let firstExcludeIndex = -1;
+    // Find position to insert functionally
+    const findInsertIndex = (lns: string[]): number => {
+      const lastDataContentIndex = lns
+        .map((line, i) => ({ line: line.trim(), index: i }))
+        .reverse()
+        .find(({ line }) => line.startsWith("data ") || line.startsWith("content "))
+        ?.index;
+      
+      const firstExcludeIndex = lns
+        .map((line, i) => ({ line: line.trim(), index: i }))
+        .find(({ line }) => line.startsWith("exclude "))
+        ?.index;
+      
+      if (lastDataContentIndex !== undefined) return lastDataContentIndex + 1;
+      if (firstExcludeIndex !== undefined) return firstExcludeIndex;
+      
+      const lastParityIndex = lns
+        .map((line, i) => ({ line: line.trim(), index: i }))
+        .reverse()
+        .find(({ line }) => line.startsWith("parity "))
+        ?.index;
+      
+      return lastParityIndex !== undefined ? lastParityIndex + 1 : lns.length;
+    };
 
-    // Find the last data line and first exclude line
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const trimmed = lines[i].trim();
-      if (trimmed.startsWith("data ") || trimmed.startsWith("content ")) {
-        if (insertIndex === -1) {
-          insertIndex = i + 1;
-        }
-      }
-      if (trimmed.startsWith("exclude ") && firstExcludeIndex === -1) {
-        firstExcludeIndex = i;
-      }
-    }
-
-    // If we found exclude lines but no data/content, insert before exclude
-    if (insertIndex === -1 && firstExcludeIndex !== -1) {
-      insertIndex = firstExcludeIndex;
-    }
-
-    // If still not found, look for parity lines
-    if (insertIndex === -1) {
-      for (let i = lines.length - 1; i >= 0; i--) {
-        const trimmed = lines[i].trim();
-        if (trimmed.startsWith("parity ")) {
-          insertIndex = i + 1;
-          break;
-        }
-      }
-    }
-
-    // Default to end of file
-    if (insertIndex === -1) {
-      insertIndex = lines.length;
-    }
+    const insertIndex = findInsertIndex(lines);
 
     // Insert data line followed immediately by content line, then empty line
     const newDataLine = `data ${diskName} ${diskPath}`;
     const contentPath = `${diskPath}/.snapraid.content`;
     const newContentLine = `content ${contentPath}`;
     
-    lines.splice(insertIndex, 0, "", newDataLine, newContentLine);
+    const updatedLines = [
+      ...lines.slice(0, insertIndex),
+      "",
+      newDataLine,
+      newContentLine,
+      ...lines.slice(insertIndex),
+    ];
 
     // Write back to file
-    content = lines.join("\n");
-    await Deno.writeTextFile(configPath, content);
+    await Deno.writeTextFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
     const parsed = await ConfigParser.parseSnapRaidConfig(configPath);
@@ -232,38 +225,38 @@ snapraid.post("/add-parity-disk", async (c) => {
 
   try {
     // Read the config file
-    let content = await Deno.readTextFile(configPath);
+    const content = await Deno.readTextFile(configPath);
     const lines = content.split("\n");
 
     // Find the last parity line or a good position to insert
-    let insertIndex = -1;
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const trimmed = lines[i].trim();
-      if (trimmed.startsWith("parity ")) {
-        insertIndex = i + 1;
-        break;
-      }
-    }
+    const findParityInsertIndex = (lns: string[]): number => {
+      const lastParityIndex = lns
+        .map((line, i) => ({ line: line.trim(), index: i }))
+        .reverse()
+        .find(({ line }) => line.startsWith("parity "))
+        ?.index;
+      
+      if (lastParityIndex !== undefined) return lastParityIndex + 1;
+      
+      const firstNonCommentIndex = lns
+        .map((line, i) => ({ line: line.trim(), index: i }))
+        .find(({ line }) => line !== "" && !line.startsWith("#"))
+        ?.index;
+      
+      return firstNonCommentIndex ?? 0;
+    };
 
-    // If no parity line found, insert at the beginning (after comments if any)
-    if (insertIndex === -1) {
-      for (let i = 0; i < lines.length; i++) {
-        const trimmed = lines[i].trim();
-        if (trimmed !== "" && !trimmed.startsWith("#")) {
-          insertIndex = i;
-          break;
-        }
-      }
-      if (insertIndex === -1) insertIndex = 0;
-    }
-
-    // Insert the new parity line
+    const insertIndex = findParityInsertIndex(lines);
     const newLine = `parity ${parityPath}`;
-    lines.splice(insertIndex, 0, newLine);
+    
+    const updatedLines = [
+      ...lines.slice(0, insertIndex),
+      newLine,
+      ...lines.slice(insertIndex),
+    ];
 
     // Write back to file
-    content = lines.join("\n");
-    await Deno.writeTextFile(configPath, content);
+    await Deno.writeTextFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
     const parsed = await ConfigParser.parseSnapRaidConfig(configPath);
@@ -283,46 +276,40 @@ snapraid.post("/remove-disk", async (c) => {
 
   try {
     // Read the config file
-    let content = await Deno.readTextFile(configPath);
-    let lines = content.split("\n");
+    const content = await Deno.readTextFile(configPath);
+    const lines = content.split("\n");
 
-    // Remove the disk line and associated content file
-    if (diskType === "data") {
-      // First, find the data disk path to identify associated content file
-      let diskPath: string | null = null;
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith(`data ${diskName} `)) {
-          diskPath = trimmed.substring(`data ${diskName} `.length).trim();
-          break;
-        }
-      }
+    const updatedLines = (() => {
+      if (diskType === "data") {
+        // Find the data disk path to identify associated content file
+        const diskPath = lines
+          .map(line => line.trim())
+          .find(line => line.startsWith(`data ${diskName} `))
+          ?.substring(`data ${diskName} `.length)
+          .trim();
 
-      // Remove the data line
-      lines = lines.filter(line => {
-        const trimmed = line.trim();
-        return !trimmed.startsWith(`data ${diskName} `);
-      });
-
-      // Remove the associated content file if found
-      if (diskPath) {
-        const contentPath = `${diskPath}/.snapraid.content`;
-        lines = lines.filter(line => {
+        // Remove the data line and associated content file
+        const contentPath = diskPath ? `${diskPath}/.snapraid.content` : null;
+        return lines.filter(line => {
           const trimmed = line.trim();
-          return !trimmed.startsWith(`content ${contentPath}`);
+          return !trimmed.startsWith(`data ${diskName} `) &&
+                 !(contentPath && trimmed.startsWith(`content ${contentPath}`));
         });
       }
-    } else if (diskType === "parity") {
-      // Remove the first parity line found
-      const parityIndex = lines.findIndex(line => line.trim().startsWith("parity "));
-      if (parityIndex !== -1) {
-        lines.splice(parityIndex, 1);
+      
+      if (diskType === "parity") {
+        // Remove the first parity line found
+        const parityIndex = lines.findIndex(line => line.trim().startsWith("parity "));
+        return parityIndex !== -1
+          ? [...lines.slice(0, parityIndex), ...lines.slice(parityIndex + 1)]
+          : lines;
       }
-    }
+      
+      return lines;
+    })();
 
     // Write back to file
-    content = lines.join("\n");
-    await Deno.writeTextFile(configPath, content);
+    await Deno.writeTextFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
     const parsed = await ConfigParser.parseSnapRaidConfig(configPath);
@@ -342,52 +329,46 @@ snapraid.post("/add-exclude", async (c) => {
 
   try {
     // Read the config file
-    let content = await Deno.readTextFile(configPath);
+    const content = await Deno.readTextFile(configPath);
     const lines = content.split("\n");
 
     // Check if pattern already exists
-    const patternExists = lines.some(line => {
-      const trimmed = line.trim();
-      return trimmed === `exclude ${pattern}`;
-    });
+    const patternExists = lines.some(line => line.trim() === `exclude ${pattern}`);
 
     if (patternExists) {
       return c.json({ error: `Pattern '${pattern}' already exists` }, 400);
     }
 
     // Find the last exclude line or a good position to insert
-    let insertIndex = -1;
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const trimmed = lines[i].trim();
-      if (trimmed.startsWith("exclude ")) {
-        insertIndex = i + 1;
-        break;
-      }
-    }
+    const findExcludeInsertIndex = (lns: string[]): number => {
+      const lastExcludeIndex = lns
+        .map((line, i) => ({ line: line.trim(), index: i }))
+        .reverse()
+        .find(({ line }) => line.startsWith("exclude "))
+        ?.index;
+      
+      if (lastExcludeIndex !== undefined) return lastExcludeIndex + 1;
+      
+      const lastDataIndex = lns
+        .map((line, i) => ({ line: line.trim(), index: i }))
+        .reverse()
+        .find(({ line }) => line.startsWith("data "))
+        ?.index;
+      
+      return lastDataIndex !== undefined ? lastDataIndex + 1 : lns.length;
+    };
 
-    // If no exclude line found, insert after data lines
-    if (insertIndex === -1) {
-      for (let i = lines.length - 1; i >= 0; i--) {
-        const trimmed = lines[i].trim();
-        if (trimmed.startsWith("data ")) {
-          insertIndex = i + 1;
-          break;
-        }
-      }
-    }
-
-    // If still not found, insert at the end
-    if (insertIndex === -1) {
-      insertIndex = lines.length;
-    }
-
-    // Insert the new exclude line
+    const insertIndex = findExcludeInsertIndex(lines);
     const newLine = `exclude ${pattern}`;
-    lines.splice(insertIndex, 0, newLine);
+    
+    const updatedLines = [
+      ...lines.slice(0, insertIndex),
+      newLine,
+      ...lines.slice(insertIndex),
+    ];
 
     // Write back to file
-    content = lines.join("\n");
-    await Deno.writeTextFile(configPath, content);
+    await Deno.writeTextFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
     const parsed = await ConfigParser.parseSnapRaidConfig(configPath);
@@ -407,18 +388,14 @@ snapraid.post("/remove-exclude", async (c) => {
 
   try {
     // Read the config file
-    let content = await Deno.readTextFile(configPath);
-    let lines = content.split("\n");
+    const content = await Deno.readTextFile(configPath);
+    const lines = content.split("\n");
 
     // Remove the exclude line
-    lines = lines.filter(line => {
-      const trimmed = line.trim();
-      return trimmed !== `exclude ${pattern}`;
-    });
+    const updatedLines = lines.filter(line => line.trim() !== `exclude ${pattern}`);
 
     // Write back to file
-    content = lines.join("\n");
-    await Deno.writeTextFile(configPath, content);
+    await Deno.writeTextFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
     const parsed = await ConfigParser.parseSnapRaidConfig(configPath);
