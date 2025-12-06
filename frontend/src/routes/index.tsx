@@ -20,35 +20,33 @@ function Dashboard() {
   const [showConfigDropdown, setShowConfigDropdown] = useState(false)
   const outputRef = useRef<HTMLDivElement>(null)
 
-  // Load config on mount
+  // Load config on mount and setup WebSocket message handlers
   useEffect(() => {
     loadConfig()
     checkRunningJob()
     
-    // Connect WebSocket
+    // Reconnect WebSocket with handlers for this component
+    // (WebSocket is already connected at root level)
     apiClient.connectWebSocket({
-      onOutput: (chunk, command) => {
+      onOutput: (chunk: string, command: string) => {
         setOutput(prev => prev + chunk)
         setCurrentCommand(command)
       },
-      onComplete: (command, exitCode) => {
+      onComplete: (command: string, exitCode: number) => {
         setIsRunning(false)
         setCurrentCommand('')
         console.log(`Command ${command} completed with exit code ${exitCode}`)
       },
-      onError: (error, command) => {
+      onError: (error: string) => {
         setIsRunning(false)
         setCurrentCommand('')
         setOutput(prev => prev + `\n\nError: ${error}`)
       },
-      onStatus: (newStatus) => {
+      onStatus: (newStatus: any) => {
         setStatus(newStatus)
       },
     })
-
-    return () => {
-      apiClient.disconnectWebSocket()
-    }
+    // Don't disconnect on unmount - let root handle lifecycle
   }, [])
 
   // Auto-scroll output
@@ -60,8 +58,20 @@ function Dashboard() {
 
   // Load selected config when changed
   useEffect(() => {
-    if (selectedConfig) {
-      loadSnapRaidConfig(selectedConfig)
+    if (!selectedConfig) return
+    
+    const abortController = new AbortController()
+    let isCancelled = false
+
+    loadSnapRaidConfig(selectedConfig).catch(err => {
+      if (!isCancelled) {
+        console.error('Failed to parse SnapRAID config:', err)
+      }
+    })
+
+    return () => {
+      isCancelled = true
+      abortController.abort()
     }
   }, [selectedConfig])
 

@@ -8,6 +8,12 @@ export class ApiClient {
   private ws: WebSocket | null = null;
   private reconnectTimeout: number | null = null;
   private shouldReconnect = true;
+  private handlers: {
+    onOutput?: (chunk: string, command: string) => void;
+    onComplete?: (command: string, exitCode: number) => void;
+    onError?: (error: string, command: string) => void;
+    onStatus?: (status: any) => void;
+  } = {};
 
   /**
    * Get app configuration
@@ -242,13 +248,26 @@ export class ApiClient {
     onError?: (error: string, command: string) => void;
     onStatus?: (status: any) => void;
   }): void {
+    // Update handlers
+    this.handlers = handlers;
+
+    // If already connected, just update handlers and return
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      return;
+    }
+
+    // If connecting, wait for it
+    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+      return;
+    }
+
     // Clear any pending reconnection
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
     }
 
-    // Close existing connection if any
+    // Close existing connection if any (shouldn't happen with above checks)
     if (this.ws) {
       this.shouldReconnect = false;
       this.ws.close();
@@ -267,16 +286,16 @@ export class ApiClient {
       
       switch (message.type) {
         case 'output':
-          handlers.onOutput?.(message.chunk, message.command);
+          this.handlers.onOutput?.(message.chunk, message.command);
           break;
         case 'complete':
-          handlers.onComplete?.(message.command, message.exitCode);
+          this.handlers.onComplete?.(message.command, message.exitCode);
           break;
         case 'error':
-          handlers.onError?.(message.error, message.command);
+          this.handlers.onError?.(message.error, message.command);
           break;
         case 'status':
-          handlers.onStatus?.(message.status);
+          this.handlers.onStatus?.(message.status);
           break;
       }
     };
@@ -291,7 +310,7 @@ export class ApiClient {
       if (this.shouldReconnect) {
         this.reconnectTimeout = setTimeout(() => {
           console.log('Attempting to reconnect WebSocket...');
-          this.connectWebSocket(handlers);
+          this.connectWebSocket(this.handlers);
         }, 3000);
       }
     };

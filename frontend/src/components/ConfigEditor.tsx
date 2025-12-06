@@ -91,6 +91,17 @@ export function ConfigEditor({ configPath, configName, onClose, onSaved }: Confi
     }
   }
 
+  // Add scroll event listener with cleanup
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.addEventListener('scroll', handleScroll)
+      return () => {
+        textarea.removeEventListener('scroll', handleScroll)
+      }
+    }
+  }, [viewMode])
+
   async function loadFile() {
     setLoading(true)
     setError('')

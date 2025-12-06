@@ -16,19 +16,33 @@ export function DiskManager({ configPath, onUpdate }: DiskManagerProps) {
   const [error, setError] = useState<string>('')
 
   useEffect(() => {
-    loadConfig()
+    const abortController = new AbortController()
+    let isCancelled = false
+
+    loadConfig(isCancelled)
+
+    return () => {
+      isCancelled = true
+      abortController.abort()
+    }
   }, [configPath])
 
-  async function loadConfig() {
+  async function loadConfig(isCancelled?: boolean) {
     setLoading(true)
     setError('')
     try {
       const parsed = await apiClient.parseSnapRaidConfig(configPath)
-      setConfig(parsed)
+      if (!isCancelled) {
+        setConfig(parsed)
+      }
     } catch (err) {
-      setError(String(err))
+      if (!isCancelled) {
+        setError(String(err))
+      }
     } finally {
-      setLoading(false)
+      if (!isCancelled) {
+        setLoading(false)
+      }
     }
   }
 

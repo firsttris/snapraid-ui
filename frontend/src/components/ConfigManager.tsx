@@ -15,20 +15,34 @@ export function FileBrowser({ onSelect, onClose }: FileBrowserProps) {
   const [error, setError] = useState<string>('')
 
   useEffect(() => {
-    loadDirectory(currentPath)
+    const abortController = new AbortController()
+    let isCancelled = false
+
+    loadDirectory(currentPath, isCancelled)
+
+    return () => {
+      isCancelled = true
+      abortController.abort()
+    }
   }, [currentPath])
 
-  async function loadDirectory(path?: string) {
+  async function loadDirectory(path?: string, isCancelled?: boolean) {
     setLoading(true)
     setError('')
     try {
       const result = await apiClient.browseFilesystem(path)
-      setCurrentPath(result.path)
-      setEntries(result.entries)
+      if (!isCancelled) {
+        setCurrentPath(result.path)
+        setEntries(result.entries)
+      }
     } catch (err) {
-      setError(String(err))
+      if (!isCancelled) {
+        setError(String(err))
+      }
     } finally {
-      setLoading(false)
+      if (!isCancelled) {
+        setLoading(false)
+      }
     }
   }
 

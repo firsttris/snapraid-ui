@@ -64,7 +64,6 @@ async function main() {
 
   console.log(`🚀 Starting SnapRAID Backend on http://${host}:${port}`);
   console.log(`📝 Logs directory: ${config.logs.directory}`);
-  console.log(`🚀 Starting SnapRAID Backend on http://${host}:${port}`);
 
   Deno.serve({
     hostname: host,

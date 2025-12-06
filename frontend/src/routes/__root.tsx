@@ -1,12 +1,23 @@
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
+import { HeadContent, Scripts, createRootRoute, Link } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import { useEffect } from 'react'
+import { apiClient } from '../lib/api-client'
 
 import Header from '../components/Header'
 
 import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
+  notFoundComponent: () => (
+    <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>404</h1>
+      <p style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>Page not found</p>
+      <Link to="/" style={{ color: '#0066cc', textDecoration: 'underline' }}>
+        Go back home
+      </Link>
+    </div>
+  ),
   head: () => ({
     meta: [
       {
@@ -32,6 +43,16 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  // Initialize WebSocket once at root level to persist across route changes
+  useEffect(() => {
+    // Connect with empty handlers - individual routes will update them
+    apiClient.connectWebSocket({})
+
+    return () => {
+      apiClient.disconnectWebSocket()
+    }
+  }, [])
+
   return (
     <html lang="en">
       <head>
