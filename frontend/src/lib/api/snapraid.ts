@@ -1,4 +1,4 @@
-import type { ParsedSnapRaidConfig, SnapRaidCommand, CommandOutput, RunningJob } from "@shared/types";
+import type { ParsedSnapRaidConfig, SnapRaidCommand, CommandOutput, RunningJob, SmartReport, ProbeReport } from "@shared/types";
 import { API_BASE } from "./constants";
 
 /**
@@ -153,4 +153,60 @@ export const setPool = async (configPath: string, poolPath: string | undefined):
   }
   const result = await response.json();
   return result.config;
+}
+
+/**
+ * Get SMART report for all disks
+ */
+export const getSmart = async (configPath: string): Promise<SmartReport> => {
+  const response = await fetch(`${API_BASE}/api/snapraid/smart?path=${encodeURIComponent(configPath)}`);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to get SMART report');
+  }
+  return response.json();
+}
+
+/**
+ * Get power status of all disks (probe)
+ */
+export const probe = async (configPath: string): Promise<ProbeReport> => {
+  const response = await fetch(`${API_BASE}/api/snapraid/probe?path=${encodeURIComponent(configPath)}`);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to probe disk status');
+  }
+  return response.json();
+}
+
+/**
+ * Spin up disks
+ */
+export const spinUp = async (configPath: string, disks?: string[]): Promise<{ success: boolean; message: string; output: string }> => {
+  const response = await fetch(`${API_BASE}/api/snapraid/up`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configPath, disks }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to spin up disks');
+  }
+  return response.json();
+}
+
+/**
+ * Spin down disks
+ */
+export const spinDown = async (configPath: string, disks?: string[]): Promise<{ success: boolean; message: string; output: string }> => {
+  const response = await fetch(`${API_BASE}/api/snapraid/down`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configPath, disks }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to spin down disks');
+  }
+  return response.json();
 }

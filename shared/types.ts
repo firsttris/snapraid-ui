@@ -52,7 +52,7 @@ export interface CommandOutput {
   exitCode: number | null;
 }
 
-export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff' | 'fix' | 'check' | 'pool';
+export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff' | 'fix' | 'check' | 'pool' | 'smart' | 'probe' | 'up' | 'down';
 
 export interface LogFile {
   filename: string;
@@ -86,4 +86,46 @@ export interface FileSystemEntry {
   path: string;
   isDirectory: boolean;
   size?: number;
+}
+
+// SMART & Disk Management types
+export interface SmartDiskInfo {
+  name: string;
+  device: string;
+  status: 'OK' | 'FAIL' | 'PREFAIL' | 'LOGFAIL' | 'LOGERR' | 'SELFERR' | 'UNKNOWN';
+  temperature?: number;
+  powerOnHours?: number;
+  failureProbability?: number; // Percentage 0-100
+  model?: string;
+  serial?: string;
+  size?: string;
+  attributes?: SmartAttribute[];
+}
+
+export interface SmartAttribute {
+  id: number;
+  name: string;
+  value: number;
+  worst: number;
+  threshold: number;
+  raw: string;
+  flag: string;
+}
+
+export interface DiskPowerStatus {
+  name: string;
+  device: string;
+  status: 'Active' | 'Standby' | 'Idle' | 'Unknown';
+}
+
+export interface SmartReport {
+  disks: SmartDiskInfo[];
+  timestamp: string; // ISO string
+  rawOutput: string;
+}
+
+export interface ProbeReport {
+  disks: DiskPowerStatus[];
+  timestamp: string; // ISO string
+  rawOutput: string;
 }

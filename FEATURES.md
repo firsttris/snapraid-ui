@@ -13,11 +13,16 @@
 - [ ] Status-Anzeige des letzten Sync
 
 ### 2. Snapraid Kommandos-Ausführung
-- [ ] `snapraid status` ausführen
-- [ ] `snapraid sync` mit Fortschrittsanzeige
-- [ ] `snapraid scrub` ausführen
-- [ ] `snapraid diff` anzeigen
-- [ ] Kommandos können abgebrochen werden
+- [x] `snapraid status` ausführen
+- [x] `snapraid sync` mit Fortschrittsanzeige
+- [x] `snapraid scrub` ausführen
+- [x] `snapraid diff` anzeigen
+- [x] `snapraid pool` ausführen
+- [x] `snapraid smart` - SMART-Report aller Disks
+- [x] `snapraid probe` - Power-Status der Disks
+- [x] `snapraid up` - Disks hochfahren
+- [x] `snapraid down` - Disks herunterfahren
+- [x] Kommandos können abgebrochen werden
 
 ### 3. Output/Log-Anzeige
 - [ ] Live-Output während Kommando-Ausführung
@@ -27,6 +32,21 @@
 ---
 
 ## Phase 2: Erweiterte Features
+
+### 4. SMART & Disk Management ✅ FERTIG
+- [x] SMART-Report aller Disks mit Ausfallwahrscheinlichkeit
+- [x] Temperatur-Monitoring mit farbcodierter Warnung
+- [x] Power-Status der Disks (Standby/Active) anzeigen
+- [x] Disks hochfahren (Spin Up)
+- [x] Disks herunterfahren (Spin Down)
+- [x] Kritische Disk-Warnungen
+- [x] SMART-Attribute detailliert anzeigen
+- [x] Individuelle oder alle Disks steuern
+
+### 5. Pooling ✅ FERTIG
+- [x] Pool-Verzeichnis konfigurieren
+- [x] `snapraid pool` Befehl ausführen
+- [x] Symbolische Links für virtuelle Ansicht erstellen
 
 ### 6. Automation & Scheduler
 - [ ] Automatische Sync-Jobs konfigurieren

@@ -464,4 +464,321 @@ snapraid.post("/set-pool", async (c) => {
   }
 });
 
+// GET /api/snapraid/smart - Get SMART report for all disks
+snapraid.get("/smart", async (c) => {
+  const configPath = c.req.query("path");
+  
+  if (!configPath) {
+    return c.json({ error: "Missing path parameter" }, 400);
+  }
+
+  try {
+    const command = new Deno.Command("snapraid", {
+      args: ["-c", configPath, "smart"],
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const { code, stdout, stderr } = await command.output();
+    const output = new TextDecoder().decode(stdout);
+    const errorOutput = new TextDecoder().decode(stderr);
+
+    if (code !== 0) {
+      return c.json({ 
+        error: errorOutput || "Failed to get SMART report",
+        exitCode: code 
+      }, 500);
+    }
+
+    // Parse SMART output
+    const disks = parseSmartOutput(output);
+
+    return c.json({
+      disks,
+      timestamp: new Date().toISOString(),
+      rawOutput: output,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// GET /api/snapraid/probe - Get power status of all disks
+snapraid.get("/probe", async (c) => {
+  const configPath = c.req.query("path");
+  
+  if (!configPath) {
+    return c.json({ error: "Missing path parameter" }, 400);
+  }
+
+  try {
+    const command = new Deno.Command("snapraid", {
+      args: ["-c", configPath, "probe"],
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const { code, stdout, stderr } = await command.output();
+    const output = new TextDecoder().decode(stdout);
+    const errorOutput = new TextDecoder().decode(stderr);
+
+    // Check if probe is unsupported - can be in stdout, stderr, or both
+    // SnapRAID sometimes returns exit code 0 even when probe fails!
+    const combinedOutput = output + "\n" + errorOutput;
+    if (combinedOutput.includes("unsupported") || combinedOutput.includes("Probe is unsupported")) {
+      return c.json({ 
+        error: "Probe command is not supported on this platform. This is common with NVMe drives or certain disk controllers.",
+        unsupported: true,
+        exitCode: code,
+        rawOutput: combinedOutput.trim()
+      }, 400);
+    }
+
+    if (code !== 0) {
+      return c.json({ 
+        error: errorOutput || "Failed to probe disk status",
+        exitCode: code,
+        rawOutput: combinedOutput.trim()
+      }, 500);
+    }
+
+    // Parse probe output
+    const disks = parseProbeOutput(output);
+
+    return c.json({
+      disks,
+      timestamp: new Date().toISOString(),
+      rawOutput: output,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// POST /api/snapraid/up - Spin up all disks
+snapraid.post("/up", async (c) => {
+  const { configPath, disks } = await c.req.json();
+
+  if (!configPath) {
+    return c.json({ error: "Missing configPath" }, 400);
+  }
+
+  try {
+    const args = ["-c", configPath];
+    
+    // Add disk filters if specific disks are requested
+    if (disks && Array.isArray(disks) && disks.length > 0) {
+      for (const disk of disks) {
+        args.push("-d", disk);
+      }
+    }
+    
+    args.push("up");
+
+    const command = new Deno.Command("snapraid", {
+      args,
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const { code, stdout, stderr } = await command.output();
+    const output = new TextDecoder().decode(stdout);
+    const errorOutput = new TextDecoder().decode(stderr);
+
+    if (code !== 0) {
+      return c.json({ 
+        error: errorOutput || "Failed to spin up disks",
+        exitCode: code,
+        output 
+      }, 500);
+    }
+
+    return c.json({
+      success: true,
+      message: disks && disks.length > 0 
+        ? `Spun up disks: ${disks.join(', ')}` 
+        : "Spun up all disks",
+      output,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// POST /api/snapraid/down - Spin down all disks
+snapraid.post("/down", async (c) => {
+  const { configPath, disks } = await c.req.json();
+
+  if (!configPath) {
+    return c.json({ error: "Missing configPath" }, 400);
+  }
+
+  try {
+    const args = ["-c", configPath];
+    
+    // Add disk filters if specific disks are requested
+    if (disks && Array.isArray(disks) && disks.length > 0) {
+      for (const disk of disks) {
+        args.push("-d", disk);
+      }
+    }
+    
+    args.push("down");
+
+    const command = new Deno.Command("snapraid", {
+      args,
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const { code, stdout, stderr } = await command.output();
+    const output = new TextDecoder().decode(stdout);
+    const errorOutput = new TextDecoder().decode(stderr);
+
+    if (code !== 0) {
+      return c.json({ 
+        error: errorOutput || "Failed to spin down disks",
+        exitCode: code,
+        output 
+      }, 500);
+    }
+
+    return c.json({
+      success: true,
+      message: disks && disks.length > 0 
+        ? `Spun down disks: ${disks.join(', ')}` 
+        : "Spun down all disks",
+      output,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// Helper function to parse SMART output
+function parseSmartOutput(output: string) {
+  const disks: Array<{
+    name: string;
+    device: string;
+    status: string;
+    temperature?: number;
+    powerOnHours?: number;
+    failureProbability?: number;
+    model?: string;
+    serial?: string;
+    size?: string;
+  }> = [];
+
+  const lines = output.split('\n');
+  let currentDisk: any = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    
+    // Match disk header lines like "d1 /dev/sda"
+    const diskMatch = trimmed.match(/^(\S+)\s+(.+)$/);
+    if (diskMatch && !trimmed.includes(':') && currentDisk === null) {
+      currentDisk = {
+        name: diskMatch[1],
+        device: diskMatch[2],
+        status: 'UNKNOWN',
+      };
+      continue;
+    }
+
+    // Status indicators
+    if (trimmed.includes('FAIL')) {
+      if (currentDisk) currentDisk.status = 'FAIL';
+    } else if (trimmed.includes('PREFAIL')) {
+      if (currentDisk) currentDisk.status = 'PREFAIL';
+    } else if (trimmed.includes('LOGFAIL')) {
+      if (currentDisk) currentDisk.status = 'LOGFAIL';
+    } else if (trimmed.includes('LOGERR')) {
+      if (currentDisk) currentDisk.status = 'LOGERR';
+    } else if (trimmed.includes('SELFERR')) {
+      if (currentDisk) currentDisk.status = 'SELFERR';
+    } else if (currentDisk && currentDisk.status === 'UNKNOWN' && trimmed.includes('/dev/')) {
+      currentDisk.status = 'OK';
+    }
+
+    // Temperature
+    const tempMatch = trimmed.match(/Temperature.*?(\d+)\s*°?C/i);
+    if (tempMatch && currentDisk) {
+      currentDisk.temperature = parseInt(tempMatch[1]);
+    }
+
+    // Power on hours
+    const hoursMatch = trimmed.match(/Power[_\s]On[_\s]Hours.*?(\d+)/i);
+    if (hoursMatch && currentDisk) {
+      currentDisk.powerOnHours = parseInt(hoursMatch[1]);
+    }
+
+    // Failure probability (if present in verbose mode)
+    const probMatch = trimmed.match(/probability.*?(\d+\.?\d*)%/i);
+    if (probMatch && currentDisk) {
+      currentDisk.failureProbability = parseFloat(probMatch[1]);
+    }
+
+    // Model
+    const modelMatch = trimmed.match(/Device Model:\s*(.+)/i);
+    if (modelMatch && currentDisk) {
+      currentDisk.model = modelMatch[1].trim();
+    }
+
+    // Serial
+    const serialMatch = trimmed.match(/Serial Number:\s*(.+)/i);
+    if (serialMatch && currentDisk) {
+      currentDisk.serial = serialMatch[1].trim();
+    }
+
+    // Size
+    const sizeMatch = trimmed.match(/User Capacity:\s*(.+)/i);
+    if (sizeMatch && currentDisk) {
+      currentDisk.size = sizeMatch[1].trim();
+    }
+
+    // Empty line or new disk section - save current disk
+    if (trimmed === '' && currentDisk !== null) {
+      disks.push(currentDisk);
+      currentDisk = null;
+    }
+  }
+
+  // Add last disk if exists
+  if (currentDisk !== null) {
+    disks.push(currentDisk);
+  }
+
+  return disks;
+}
+
+// Helper function to parse probe output
+function parseProbeOutput(output: string) {
+  const disks: Array<{
+    name: string;
+    device: string;
+    status: string;
+  }> = [];
+
+  const lines = output.split('\n');
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    
+    // Match lines like "d1 /dev/sda Standby" or "parity /dev/sdb Active"
+    const match = trimmed.match(/^(\S+)\s+(\S+)\s+(Standby|Active|Idle)/i);
+    if (match) {
+      disks.push({
+        name: match[1],
+        device: match[2],
+        status: match[3],
+      });
+    }
+  }
+
+  return disks;
+}
+
 export default snapraid;

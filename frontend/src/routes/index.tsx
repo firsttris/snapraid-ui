@@ -8,7 +8,10 @@ import { DashboardCards } from '../components/DashboardCards'
 import { CommandPanel } from '../components/CommandPanel'
 import { OutputConsole } from '../components/OutputConsole'
 import { UndeleteDialog } from '../components/UndeleteDialog'
+import { SmartMonitor } from '../components/SmartMonitor'
+import { DiskPowerControl } from '../components/DiskPowerControl'
 import { useWebSocketConnection } from '../hooks/useWebSocketConnection'
+import { getSmart, probe, spinUp, spinDown } from '../lib/api/snapraid'
 
 export const Route = createFileRoute('/')({
   component: Dashboard,
@@ -18,6 +21,7 @@ function Dashboard() {
   const [selectedConfig, setSelectedConfig] = useState<string>('')
   const [showConfigManager, setShowConfigManager] = useState(false)
   const [showUndeleteDialog, setShowUndeleteDialog] = useState(false)
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'smart' | 'power'>('dashboard')
 
   // TanStack Query hooks
   const { data: config, refetch: refetchConfig } = useConfig()
@@ -122,28 +126,96 @@ function Dashboard() {
             />
           )}
 
-          <DashboardCards 
-            parsedConfig={parsedConfig} 
-            status={wsState.status} 
-          />
+          {/* Tab Navigation */}
+          <div className="mb-6 border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'dashboard'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                📊 Dashboard
+              </button>
+              <button
+                onClick={() => setActiveTab('smart')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'smart'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                🔍 SMART Monitor
+              </button>
+              <button
+                onClick={() => setActiveTab('power')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'power'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                ⚡ Disk Power
+              </button>
+            </nav>
+          </div>
 
-          <CommandPanel
-            onExecute={executeCommand}
-            onUndelete={() => setShowUndeleteDialog(true)}
-            disabled={!selectedConfig}
-            isRunning={wsState.isRunning}
-            currentCommand={wsState.currentCommand}
-          />
+          {/* Dashboard Tab */}
+          {activeTab === 'dashboard' && (
+            <>
+              <DashboardCards 
+                parsedConfig={parsedConfig} 
+                status={wsState.status} 
+              />
 
-          {showUndeleteDialog && parsedConfig && (
-            <UndeleteDialog
-              dataDisk={parsedConfig.data}
-              onExecute={handleUndelete}
-              onClose={() => setShowUndeleteDialog(false)}
+              <CommandPanel
+                onExecute={executeCommand}
+                onUndelete={() => setShowUndeleteDialog(true)}
+                disabled={!selectedConfig}
+                isRunning={wsState.isRunning}
+                currentCommand={wsState.currentCommand}
+              />
+
+              {showUndeleteDialog && parsedConfig && (
+                <UndeleteDialog
+                  dataDisk={parsedConfig.data}
+                  onExecute={handleUndelete}
+                  onClose={() => setShowUndeleteDialog(false)}
+                />
+              )}
+
+              <OutputConsole output={wsState.output} />
+            </>
+          )}
+
+          {/* SMART Monitor Tab */}
+          {activeTab === 'smart' && selectedConfig && (
+            <SmartMonitor
+              configPath={selectedConfig}
+              onRefresh={() => getSmart(selectedConfig)}
             />
           )}
 
-          <OutputConsole output={wsState.output} />
+          {/* Disk Power Control Tab */}
+          {activeTab === 'power' && selectedConfig && (
+            <DiskPowerControl
+              configPath={selectedConfig}
+              onProbe={() => probe(selectedConfig)}
+              onSpinUp={(disks) => spinUp(selectedConfig, disks)}
+              onSpinDown={(disks) => spinDown(selectedConfig, disks)}
+            />
+          )}
+
+          {/* Show message when no config is selected */}
+          {!selectedConfig && (activeTab === 'smart' || activeTab === 'power') && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+              <p className="text-yellow-800 font-medium">
+                Please select a SnapRAID configuration to use this feature
+              </p>
+            </div>
+          )}
         </div>
       </main>
     </div>
