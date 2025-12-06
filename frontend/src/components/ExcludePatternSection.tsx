@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import * as m from '../paraglide/messages'
 
 interface ExcludePatternSectionProps {
   exclude: string[]
@@ -14,7 +15,7 @@ export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatte
 
   const handleAddExclude = async () => {
     if (!newExcludePattern.trim()) {
-      setError('Exclude pattern is required')
+      setError(m.exclude_pattern_pattern_required())
       return
     }
 
@@ -32,7 +33,7 @@ export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatte
   }
 
   const handleRemoveExclude = async (pattern: string) => {
-    if (!confirm(`Are you sure you want to remove exclude pattern '${pattern}'?`)) return
+    if (!confirm(m.exclude_pattern_confirm_remove({ pattern }))) return
 
     setError('')
     try {
@@ -49,13 +50,13 @@ export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatte
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
           </svg>
-          Exclude Patterns ({exclude.length})
+          {m.exclude_pattern_title()} ({exclude.length})
         </h3>
         <button
           onClick={() => setShowAddExclude(!showAddExclude)}
           className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 transition-colors"
         >
-          + Add Exclude
+          + {m.exclude_pattern_add_pattern()}
         </button>
       </div>
 
@@ -68,14 +69,14 @@ export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatte
       {showAddExclude && (
         <div className="mb-3 p-3 bg-white rounded border border-orange-300">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Exclude Pattern
-            <span className="text-xs text-gray-500 ml-2">(e.g., *.bak, /tmp/*, Thumbs.db)</span>
+            {m.exclude_pattern_label()}
+            <span className="text-xs text-gray-500 ml-2">({m.exclude_pattern_hint()})</span>
           </label>
           <input
             type="text"
             value={newExcludePattern}
             onChange={(e) => setNewExcludePattern(e.target.value)}
-            placeholder="*.bak"
+            placeholder={m.exclude_pattern_pattern_placeholder()}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
           />
           <div className="flex gap-2 mt-2">
@@ -84,7 +85,7 @@ export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatte
               disabled={addingExclude}
               className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50 text-sm"
             >
-              {addingExclude ? 'Adding...' : 'Add'}
+              {addingExclude ? `${m.common_adding()}` : m.common_add()}
             </button>
             <button
               onClick={() => {
@@ -94,7 +95,7 @@ export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatte
               }}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
             >
-              Cancel
+              {m.common_cancel()}
             </button>
           </div>
         </div>
@@ -102,7 +103,7 @@ export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatte
 
       <div className="space-y-2">
         {exclude.length === 0 ? (
-          <div className="text-sm text-orange-600 italic">No exclude patterns configured</div>
+          <div className="text-sm text-orange-600 italic">{m.exclude_pattern_no_patterns()}</div>
         ) : (
           exclude.map((pattern, index) => (
             <div key={index} className="flex justify-between items-center bg-white p-3 rounded border border-orange-200">
@@ -111,7 +112,7 @@ export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatte
                 onClick={() => handleRemoveExclude(pattern)}
                 className="ml-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
               >
-                Remove
+                {m.common_remove()}
               </button>
             </div>
           ))

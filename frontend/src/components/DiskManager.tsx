@@ -3,6 +3,7 @@ import { useSnapRaidConfig, useAddDataDisk, useRemoveDisk, useAddParityDisk, use
 import { ParityDiskSection } from './ParityDiskSection'
 import { DataDiskSection } from './DataDiskSection'
 import { ExcludePatternSection } from './ExcludePatternSection'
+import * as m from '../paraglide/messages'
 
 interface DiskManagerProps {
   configPath: string
@@ -108,7 +109,7 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
   if (loading) {
     return (
       <div className="p-4 bg-gray-50 rounded-lg">
-        <div className="text-gray-600">Loading disk configuration...</div>
+        <div className="text-gray-600">{m.disk_manager_loading()}</div>
       </div>
     )
   }
@@ -116,7 +117,7 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
   if (!config) {
     return (
       <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-        <div className="text-red-600">Failed to load disk configuration</div>
+        <div className="text-red-600">{m.disk_manager_load_failed()}</div>
       </div>
     )
   }

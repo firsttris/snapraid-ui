@@ -1,4 +1,5 @@
 import type { SnapRaidCommand } from '@shared/types'
+import * as m from '../paraglide/messages'
 
 interface LogFiltersProps {
   searchTerm: string
@@ -12,7 +13,7 @@ export const LogFilters = ({ searchTerm, onSearchChange, filterCommand, onFilter
     <div className="space-y-3">
       <input
         type="text"
-        placeholder="Search logs..."
+        placeholder={m.log_filters_search_placeholder()}
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -29,7 +30,7 @@ export const LogFilters = ({ searchTerm, onSearchChange, filterCommand, onFilter
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            {cmd === 'all' ? 'All' : cmd}
+            {cmd === 'all' ? m.log_filters_all() : cmd}
           </button>
         ))}
       </div>

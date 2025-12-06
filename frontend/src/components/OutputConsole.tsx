@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import * as m from '../paraglide/messages'
 
 interface OutputConsoleProps {
   output: string
@@ -16,12 +17,12 @@ export const OutputConsole = ({ output }: OutputConsoleProps) => {
 
   return (
     <div className="bg-white shadow rounded-lg p-6">
-      <h2 className="text-xl font-semibold mb-4">Output</h2>
+      <h2 className="text-xl font-semibold mb-4">{m.output_console_title()}</h2>
       <div
         ref={outputRef}
         className="bg-black text-green-400 p-4 rounded font-mono text-sm h-96 overflow-y-auto whitespace-pre-wrap"
       >
-        {output || 'No output yet. Run a command to see results.'}
+        {output || m.output_console_no_output()}
       </div>
     </div>
   )

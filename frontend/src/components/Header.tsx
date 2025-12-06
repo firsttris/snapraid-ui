@@ -6,10 +6,20 @@ import {
   Menu,
   FileText,
   X,
+  Languages,
 } from 'lucide-react'
+import * as m from '../paraglide/messages'
+import { getLocale, setLocale } from '../paraglide/runtime'
 
 export const Header = () => {
   const [isOpen, setIsOpen] = useState(false)
+  const currentLocale = getLocale()
+
+  const toggleLocale = () => {
+    const newLocale = currentLocale === 'en' ? 'de' : 'en'
+    setLocale(newLocale)
+    window.location.reload()
+  }
 
   return (
     <>
@@ -30,6 +40,14 @@ export const Header = () => {
             />
           </Link>
         </h1>
+        <button
+          onClick={toggleLocale}
+          className="ml-auto p-2 hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2"
+          aria-label="Switch language"
+        >
+          <Languages size={20} />
+          <span className="text-sm font-medium">{currentLocale.toUpperCase()}</span>
+        </button>
       </header>
 
       <aside
@@ -38,7 +56,7 @@ export const Header = () => {
         }`}
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h2 className="text-xl font-bold">Navigation</h2>
+          <h2 className="text-xl font-bold">{m.navigation()}</h2>
           <button
             onClick={() => setIsOpen(false)}
             className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
@@ -59,7 +77,7 @@ export const Header = () => {
             }}
           >
             <Home size={20} />
-            <span className="font-medium">Home</span>
+            <span className="font-medium">{m.home()}</span>
           </Link>
 
           <Link
@@ -72,7 +90,7 @@ export const Header = () => {
             }}
           >
             <FileText size={20} />
-            <span className="font-medium">Logs</span>
+            <span className="font-medium">{m.logs()}</span>
           </Link>
         </nav>
       </aside>

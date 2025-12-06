@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useFilesystem } from '../hooks/queries'
+import * as m from '../paraglide/messages'
 
 interface DirectoryBrowserProps {
   onSelect: (path: string) => void
@@ -8,7 +9,7 @@ interface DirectoryBrowserProps {
   currentValue?: string
 }
 
-export const DirectoryBrowser = ({ onSelect, onClose, title = 'Select Directory', currentValue }: DirectoryBrowserProps) => {
+export const DirectoryBrowser = ({ onSelect, onClose, title, currentValue }: DirectoryBrowserProps) => {
   const [currentPath, setCurrentPath] = useState<string>(currentValue || '')
   
   // TanStack Query hook
@@ -47,7 +48,7 @@ export const DirectoryBrowser = ({ onSelect, onClose, title = 'Select Directory'
               disabled={actualPath === '/'}
               className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              ↑ Up
+              ↑ {m.common_up()}
             </button>
             <div className="flex-1 text-sm text-gray-600 font-mono">
               {actualPath || '/'}
@@ -56,11 +57,11 @@ export const DirectoryBrowser = ({ onSelect, onClose, title = 'Select Directory'
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
-          {loading && <div className="text-center text-gray-500">Loading...</div>}
+          {loading && <div className="text-center text-gray-500">{m.common_loading()}</div>}
           {error && <div className="text-red-600 text-sm">{String(error)}</div>}
           
           {!loading && !error && entries.length === 0 && (
-            <div className="text-center text-gray-500">No directories found</div>
+            <div className="text-center text-gray-500">{m.directory_browser_no_directories()}</div>
           )}
 
           <div className="space-y-1">
@@ -79,20 +80,20 @@ export const DirectoryBrowser = ({ onSelect, onClose, title = 'Select Directory'
 
         <div className="p-4 border-t bg-gray-50 flex justify-between items-center">
           <div className="text-sm text-gray-600">
-            Selected: <span className="font-mono">{actualPath || '/'}</span>
+            {m.common_selected()}: <span className="font-mono">{actualPath || '/'}</span>
           </div>
           <div className="flex gap-2">
             <button
               onClick={onClose}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
             >
-              Cancel
+              {m.common_cancel()}
             </button>
             <button
               onClick={handleSelect}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
-              Select
+              {m.common_select()}
             </button>
           </div>
         </div>

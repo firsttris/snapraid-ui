@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { DirectoryBrowser } from './DirectoryBrowser'
+import * as m from '../paraglide/messages'
 
 interface DataDiskSectionProps {
   data: Record<string, string>
@@ -17,7 +18,7 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
 
   const handleAddDataDisk = async () => {
     if (!newDataDiskName.trim() || !newDataDiskPath.trim()) {
-      setError('Disk name and path are required')
+      setError(m.data_disk_name_and_path_required())
       return
     }
 
@@ -36,7 +37,7 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
   }
 
   const handleRemoveDisk = async (diskName: string) => {
-    if (!confirm(`Are you sure you want to remove data disk '${diskName}'?`)) return
+    if (!confirm(m.data_disk_confirm_remove({ diskName }))) return
 
     setError('')
     try {
@@ -53,13 +54,13 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
           </svg>
-          Data Disks ({Object.keys(data).length})
+          {m.data_disk_title()} ({Object.keys(data).length})
         </h3>
         <button
           onClick={() => setShowAddDataDisk(!showAddDataDisk)}
           className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
         >
-          + Add Data Disk
+          + {m.data_disk_add_disk()}
         </button>
       </div>
 
@@ -73,31 +74,31 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
         <div className="mb-3 p-3 bg-white rounded border border-green-300">
           <div className="grid grid-cols-2 gap-3 mb-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Disk Name</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{m.data_disk_name_label()}</label>
               <input
                 type="text"
                 value={newDataDiskName}
                 onChange={(e) => setNewDataDiskName(e.target.value)}
-                placeholder="d1, disk1, etc."
+                placeholder={m.data_disk_name_placeholder()}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Disk Path</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{m.data_disk_path_label()}</label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={newDataDiskPath}
                   onChange={(e) => setNewDataDiskPath(e.target.value)}
-                  placeholder="/mnt/disk1"
+                  placeholder={m.data_disk_path_placeholder()}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono text-sm"
                 />
                 <button
                   onClick={() => setShowDataDiskBrowser(true)}
                   className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
-                  title="Browse directories"
+                  title={m.data_disk_browse()}
                 >
-                  📁 Browse
+                  📁 {m.config_manager_browse()}
                 </button>
               </div>
             </div>
@@ -108,7 +109,7 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
               disabled={addingDataDisk}
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm"
             >
-              {addingDataDisk ? 'Adding...' : 'Add'}
+              {addingDataDisk ? `${m.common_add()}...` : m.common_add()}
             </button>
             <button
               onClick={() => {
@@ -119,7 +120,7 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
               }}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
             >
-              Cancel
+              {m.common_cancel()}
             </button>
           </div>
         </div>
@@ -127,7 +128,7 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
 
       <div className="space-y-2">
         {Object.keys(data).length === 0 ? (
-          <div className="text-sm text-green-600 italic">No data disks configured</div>
+          <div className="text-sm text-green-600 italic">{m.data_disk_no_disks()}</div>
         ) : (
           Object.entries(data).map(([name, path]) => (
             <div key={name} className="flex justify-between items-center bg-white p-3 rounded border border-green-200">
@@ -139,7 +140,7 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
                 onClick={() => handleRemoveDisk(name)}
                 className="ml-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
               >
-                Remove
+                {m.common_remove()}
               </button>
             </div>
           ))
@@ -148,7 +149,7 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
 
       {showDataDiskBrowser && (
         <DirectoryBrowser
-          title="Select Data Disk Directory"
+          title={m.data_disk_select_directory()}
           currentValue={newDataDiskPath}
           onSelect={(path) => {
             setNewDataDiskPath(path)

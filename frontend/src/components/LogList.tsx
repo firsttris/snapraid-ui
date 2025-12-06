@@ -1,6 +1,7 @@
 import type { LogFile, SnapRaidCommand } from '@shared/types'
 import { LogFilters } from './LogFilters'
 import { LogListItem } from './LogListItem'
+import * as m from '../paraglide/messages'
 
 interface LogListProps {
   logs: LogFile[]
@@ -40,20 +41,20 @@ export const LogList = ({
       <div className="p-6 border-b border-gray-200">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-900">
-            All Logs ({filteredLogs.length})
+            {m.log_list_title()} ({filteredLogs.length})
           </h2>
           <div className="flex gap-2">
             <button
               onClick={onRefresh}
               className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium"
             >
-              Refresh
+              {m.log_list_refresh()}
             </button>
             <button
               onClick={onRotate}
               className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all text-sm font-medium"
             >
-              Clean Old
+              {m.log_list_clean_old()}
             </button>
           </div>
         </div>
@@ -68,9 +69,9 @@ export const LogList = ({
 
       <div className="overflow-auto max-h-[calc(100vh-300px)]">
         {isLoading ? (
-          <div className="p-6 text-center text-gray-500">Loading logs...</div>
+          <div className="p-6 text-center text-gray-500">{m.log_list_loading()}</div>
         ) : filteredLogs.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">No logs found</div>
+          <div className="p-6 text-center text-gray-500">{m.log_list_no_logs()}</div>
         ) : (
           <div className="divide-y divide-gray-200">
             {filteredLogs.map(log => (
