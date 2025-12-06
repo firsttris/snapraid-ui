@@ -2,25 +2,45 @@ import { join } from "@std/path";
 import { expandGlob } from "@std/fs";
 import type { SnapRaidCommand, LogFile } from "@shared/types.ts";
 
-export class LogManager {
-  constructor(private logDirectory: string) {}
+export interface LogManager {
+  ensureLogDirectory(): Promise<void>;
+  getLogPath(command: SnapRaidCommand): string;
+  listLogs(): Promise<LogFile[]>;
+  readLog(filename: string): Promise<string>;
+  rotateLogs(maxFiles: number, maxAge: number): Promise<number>;
+  deleteLog(filename: string): Promise<void>;
+}
 
-  /**
-   * Expand ~ to home directory
-   */
-  private expandPath(path: string): string {
-    if (path.startsWith("~/")) {
-      const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
-      return join(home, path.slice(2));
-    }
-    return path;
+/**
+ * Expand ~ to home directory
+ */
+const expandPath = (path: string): string => {
+  if (path.startsWith("~/")) {
+    const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
+    return join(home, path.slice(2));
   }
+  return path;
+};
 
+/**
+ * Parse timestamp from log filename parts
+ */
+const parseLogTimestamp = (dateStr: string, timeStr: string): string => {
+  const year = parseInt(dateStr.slice(0, 4));
+  const month = parseInt(dateStr.slice(4, 6)) - 1;
+  const day = parseInt(dateStr.slice(6, 8));
+  const hour = parseInt(timeStr.slice(0, 2));
+  const minute = parseInt(timeStr.slice(2, 4));
+  const second = parseInt(timeStr.slice(4, 6));
+  return new Date(year, month, day, hour, minute, second).toISOString();
+};
+
+export const createLogManager = (logDirectory: string): LogManager => {
   /**
    * Ensure log directory exists
    */
-  async ensureLogDirectory(): Promise<void> {
-    const expandedPath = this.expandPath(this.logDirectory);
+  const ensureLogDirectory = async (): Promise<void> => {
+    const expandedPath = expandPath(logDirectory);
     try {
       await Deno.mkdir(expandedPath, { recursive: true });
     } catch (error) {
@@ -28,25 +48,25 @@ export class LogManager {
         throw error;
       }
     }
-  }
+  };
 
   /**
    * Generate log file path for a command
    * Format: <command>-YYYYMMDD-HHMMSS.log
    */
-  getLogPath(command: SnapRaidCommand): string {
+  const getLogPath = (command: SnapRaidCommand): string => {
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
     const timeStr = now.toISOString().slice(11, 19).replace(/:/g, "");
     const filename = `${command}-${dateStr}-${timeStr}.log`;
-    return join(this.expandPath(this.logDirectory), filename);
-  }
+    return join(expandPath(logDirectory), filename);
+  };
 
   /**
    * List all log files
    */
-  async listLogs(): Promise<LogFile[]> {
-    const expandedPath = this.expandPath(this.logDirectory);
+  const listLogs = async (): Promise<LogFile[]> => {
+    const expandedPath = expandPath(logDirectory);
 
     try {
       const entries: Array<{ name: string; path: string }> = [];
@@ -64,7 +84,7 @@ export class LogManager {
           if (!match) return null;
           
           const [, command, dateStr, timeStr] = match;
-          const timestamp = this.parseLogTimestamp(dateStr, timeStr);
+          const timestamp = parseLogTimestamp(dateStr, timeStr);
           
           return {
             filename,
@@ -85,26 +105,13 @@ export class LogManager {
       }
       throw error;
     }
-  }
-
-  /**
-   * Parse timestamp from log filename parts
-   */
-  private parseLogTimestamp(dateStr: string, timeStr: string): string {
-    const year = parseInt(dateStr.slice(0, 4));
-    const month = parseInt(dateStr.slice(4, 6)) - 1;
-    const day = parseInt(dateStr.slice(6, 8));
-    const hour = parseInt(timeStr.slice(0, 2));
-    const minute = parseInt(timeStr.slice(2, 4));
-    const second = parseInt(timeStr.slice(4, 6));
-    return new Date(year, month, day, hour, minute, second).toISOString();
-  }
+  };
 
   /**
    * Read log file content
    */
-  async readLog(filename: string): Promise<string> {
-    const logPath = join(this.expandPath(this.logDirectory), filename);
+  const readLog = async (filename: string): Promise<string> => {
+    const logPath = join(expandPath(logDirectory), filename);
     try {
       return await Deno.readTextFile(logPath);
     } catch (error) {
@@ -113,13 +120,13 @@ export class LogManager {
       }
       throw error;
     }
-  }
+  };
 
   /**
    * Delete old log files based on maxFiles and maxAge
    */
-  async rotateLogs(maxFiles: number, maxAge: number): Promise<number> {
-    const logs = await this.listLogs();
+  const rotateLogs = async (maxFiles: number, maxAge: number): Promise<number> => {
+    const logs = await listLogs();
     const now = Date.now();
     const maxAgeMs = maxAge * 24 * 60 * 60 * 1000; // days to milliseconds
 
@@ -141,13 +148,13 @@ export class LogManager {
     );
 
     return deleteResults.filter(result => result).length;
-  }
+  };
 
   /**
    * Delete a specific log file
    */
-  async deleteLog(filename: string): Promise<void> {
-    const logPath = join(this.expandPath(this.logDirectory), filename);
+  const deleteLog = async (filename: string): Promise<void> => {
+    const logPath = join(expandPath(logDirectory), filename);
     try {
       await Deno.remove(logPath);
     } catch (error) {
@@ -156,5 +163,14 @@ export class LogManager {
       }
       throw error;
     }
-  }
+  };
+
+  return {
+    ensureLogDirectory,
+    getLogPath,
+    listLogs,
+    readLog,
+    rotateLogs,
+    deleteLog,
+  };
 }

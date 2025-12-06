@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { ConfigParser } from "./config-parser.ts";
+import { loadAppConfig } from "./config-parser.ts";
 import { broadcast, handleWebSocketUpgrade } from "./websocket.ts";
 import { setBroadcast } from "./routes/snapraid.ts";
-import { LogManager } from "./log-manager.ts";
+import { createLogManager } from "./log-manager.ts";
 import { setLogManager } from "./routes/logs.ts";
 import { createScheduler } from "./scheduler.ts";
 import { setScheduler } from "./routes/schedules.ts";
@@ -41,11 +41,11 @@ app.notFound((c) => {
 });
 
 const main = async (): Promise<void> => {
-  const config = await ConfigParser.loadAppConfig();
+  const config = await loadAppConfig();
   const { host, port } = config.backend;
 
   // Initialize log manager
-  const logManager = new LogManager(config.logs.directory);
+  const logManager = createLogManager(config.logs.directory);
   await logManager.ensureLogDirectory();
 
   // Inject broadcast function into snapraid routes

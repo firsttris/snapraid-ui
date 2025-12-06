@@ -1,18 +1,18 @@
 import { Hono } from "hono";
-import { ConfigParser } from "../config-parser.ts";
+import { loadAppConfig, saveAppConfig } from "../config-parser.ts";
 
 const config = new Hono();
 
 // GET /api/config - Load app config
 config.get("/", async (c) => {
-  const appConfig = await ConfigParser.loadAppConfig();
+  const appConfig = await loadAppConfig();
   return c.json(appConfig);
 });
 
 // POST /api/config - Save app config
 config.post("/", async (c) => {
   const body = await c.req.json();
-  await ConfigParser.saveAppConfig(body);
+  await saveAppConfig(body);
   return c.json({ success: true });
 });
 
@@ -24,7 +24,7 @@ config.post("/add", async (c) => {
     return c.json({ error: "Missing name or path" }, 400);
   }
 
-  const appConfig = await ConfigParser.loadAppConfig();
+  const appConfig = await loadAppConfig();
 
   // Check if path already exists
   if (appConfig.snapraidConfigs.some((cfg) => cfg.path === path)) {
@@ -32,7 +32,7 @@ config.post("/add", async (c) => {
   }
 
   appConfig.snapraidConfigs.push({ name, path, enabled });
-  await ConfigParser.saveAppConfig(appConfig);
+  await saveAppConfig(appConfig);
 
   return c.json({ success: true, config: appConfig });
 });
@@ -45,11 +45,11 @@ config.post("/remove", async (c) => {
     return c.json({ error: "Missing path" }, 400);
   }
 
-  const appConfig = await ConfigParser.loadAppConfig();
+  const appConfig = await loadAppConfig();
   appConfig.snapraidConfigs = appConfig.snapraidConfigs.filter(
     (cfg) => cfg.path !== path
   );
-  await ConfigParser.saveAppConfig(appConfig);
+  await saveAppConfig(appConfig);
 
   return c.json({ success: true, config: appConfig });
 });

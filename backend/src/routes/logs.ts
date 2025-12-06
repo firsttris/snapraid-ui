@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { LogManager } from "../log-manager.ts";
+import type { LogManager } from "../log-manager.ts";
 import type { AppConfig } from "@shared/types.ts";
 
 const logs = new Hono();

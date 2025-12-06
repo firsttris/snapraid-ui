@@ -119,7 +119,7 @@ schedules.post("/:id/toggle", async (c) => {
   const id = c.req.param("id");
 
   try {
-    const schedule = state.scheduler.getSchedule(id);
+    const schedule = await state.scheduler.getSchedule(id);
     if (!schedule) {
       return c.json({ error: "Schedule not found" }, 404);
     }

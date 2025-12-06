@@ -1,12 +1,13 @@
 import { Hono } from "hono";
-import { ConfigParser } from "../config-parser.ts";
-import { SnapRaidRunner } from "../snapraid-runner.ts";
+import { parseSnapRaidConfig } from "../config-parser.ts";
+import { createSnapRaidRunner, parseStatusOutput, type SnapRaidRunner } from "../snapraid-runner.ts";
 import type { LogManager } from "../log-manager.ts";
 import type { CommandOutput } from "@shared/types.ts";
+import { parseProbeOutput, parseSmartOutput } from "../parsers/output-parsers.ts";
 
 const snapraid = new Hono();
 
-const runner = new SnapRaidRunner();
+const runner = createSnapRaidRunner();
 const commandHistory: CommandOutput[] = [];
 const MAX_HISTORY = 50;
 
@@ -36,7 +37,7 @@ snapraid.get("/parse", async (c) => {
   }
 
   try {
-    const parsed = await ConfigParser.parseSnapRaidConfig(configPath);
+    const parsed = await parseSnapRaidConfig(configPath);
     return c.json(parsed);
   } catch (error) {
     return c.json({ error: String(error) }, 500);
@@ -58,21 +59,22 @@ snapraid.post("/execute", async (c) => {
   }
 
   // Execute command and stream output via WebSocket
-  runner
-    .executeCommand(
-      command,
-      configPath,
-      (chunk) => {
-        state.broadcastFn({
-          type: "output",
-          command,
-          chunk,
-          timestamp: new Date().toISOString(),
-        });
-      },
-      args
-    )
-    .then((result) => {
+  (async () => {
+    try {
+      const result = await runner.executeCommand(
+        command,
+        configPath,
+        (chunk) => {
+          state.broadcastFn({
+            type: "output",
+            command,
+            chunk,
+            timestamp: new Date().toISOString(),
+          });
+        },
+        args
+      );
+
       // Add to history
       commandHistory.unshift(result);
       if (commandHistory.length > MAX_HISTORY) {
@@ -89,21 +91,21 @@ snapraid.post("/execute", async (c) => {
 
       // Parse status if it was a status or diff command
       if (command === "status" || command === "diff") {
-        const status = SnapRaidRunner.parseStatusOutput(result.output);
+        const status = parseStatusOutput(result.output);
         state.broadcastFn({
           type: "status",
           status,
         });
       }
-    })
-    .catch((error) => {
+    } catch (error) {
       state.broadcastFn({
         type: "error",
         command,
         error: String(error),
         timestamp: new Date().toISOString(),
       });
-    });
+    }
+  })();
 
   return c.json({ success: true, message: "Command started" });
 });
@@ -125,7 +127,7 @@ snapraid.get("/status", async (c) => {
       return c.json({ error: "No status command found in history. Please provide 'path' query parameter to execute status." }, 400);
     }
 
-    const parsedStatus = SnapRaidRunner.parseStatusOutput(lastStatus.output);
+    const parsedStatus = parseStatusOutput(lastStatus.output);
     return c.json({
       status: parsedStatus,
       timestamp: lastStatus.timestamp,
@@ -143,7 +145,7 @@ snapraid.get("/status", async (c) => {
 
     const { code, stdout, stderr } = await cmd.output();
     const output = new TextDecoder().decode(code === 0 ? stdout : stderr);
-    const parsedStatus = SnapRaidRunner.parseStatusOutput(output);
+    const parsedStatus = parseStatusOutput(output);
     
     return c.json({
       status: parsedStatus,
@@ -538,7 +540,7 @@ snapraid.get("/smart", async (c) => {
     }
 
     // Parse SMART output
-    const disks = SnapRaidRunner.parseSmartOutput(output);
+    const disks = parseSmartOutput(output);
 
     return c.json({
       disks,
@@ -590,7 +592,7 @@ snapraid.get("/probe", async (c) => {
     }
 
     // Parse probe output
-    const disks = SnapRaidRunner.parseProbeOutput(output);
+    const disks = parseProbeOutput(output);
 
     return c.json({
       disks,

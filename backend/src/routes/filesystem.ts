@@ -24,13 +24,6 @@ filesystem.get("/browse", async (c) => {
       }
     }
 
-    // Sort: directories first, then files, alphabetically
-    const sortedEntries = entries.sort((a, b) => {
-      if (a.isDirectory && !b.isDirectory) return -1;
-      if (!a.isDirectory && b.isDirectory) return 1;
-      return a.name.localeCompare(b.name);
-    });
-
     return c.json({ path: dirPath, entries });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
