@@ -7,7 +7,7 @@ const WS_URL = 'ws://localhost:3001/ws';
 
 export class ApiClient {
   private ws: WebSocket | null = null;
-  private reconnectTimeout: number | null = null;
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private shouldReconnect = true;
   private handlers: {
     onOutput?: (chunk: string, command: string) => void;
