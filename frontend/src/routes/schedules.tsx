@@ -140,17 +140,57 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
   const [name, setName] = useState(schedule?.name || '')
   const [command, setCommand] = useState<SnapRaidCommand>(schedule?.command || 'sync')
   const [configPath, setConfigPath] = useState(schedule?.configPath || configs[0]?.path || '')
-  const [cronExpression, setCronExpression] = useState(schedule?.cronExpression || '0 2 * * *')
   const [enabled, setEnabled] = useState(schedule?.enabled ?? true)
+  
+  // Schedule builder state
+  const [scheduleType, setScheduleType] = useState<'preset' | 'custom'>('preset')
+  const [preset, setPreset] = useState('daily')
+  const [customFrequency, setCustomFrequency] = useState<'hourly' | 'daily' | 'weekly' | 'monthly'>('daily')
+  const [hour, setHour] = useState(2)
+  const [minute, setMinute] = useState(0)
+  const [dayOfWeek, setDayOfWeek] = useState(0) // Sunday
+  const [dayOfMonth, setDayOfMonth] = useState(1)
+  const [everyNHours, setEveryNHours] = useState(6)
+  const [everyNMinutes, setEveryNMinutes] = useState(30)
+  const [useEveryHour, setUseEveryHour] = useState(false)
+  const [useEveryMinute, setUseEveryMinute] = useState(false)
 
   const commands: SnapRaidCommand[] = ['sync', 'scrub', 'status', 'diff', 'check', 'smart']
 
-  const cronPresets = [
-    { label: 'Daily 2 AM', value: '0 2 * * *' },
-    { label: 'Weekly Sunday', value: '0 2 * * 0' },
-    { label: 'Monthly 1st', value: '0 2 1 * *' },
-    { label: 'Every 6 hours', value: '0 */6 * * *' },
-  ]
+  // Generate cron expression based on settings
+  const generateCronExpression = (): string => {
+    if (scheduleType === 'preset') {
+      switch (preset) {
+        case 'daily': return '0 2 * * *'
+        case 'weekly': return '0 2 * * 0'
+        case 'monthly': return '0 2 1 * *'
+        case 'every6h': return '0 */6 * * *'
+        default: return '0 2 * * *'
+      }
+    }
+
+    // Custom schedule
+    switch (customFrequency) {
+      case 'hourly':
+        return `${minute} */${everyNHours} * * *`
+      case 'daily':
+        const minutePart = useEveryMinute ? `*/${everyNMinutes}` : minute.toString()
+        const hourPart = useEveryHour ? '*' : hour.toString()
+        return `${minutePart} ${hourPart} * * *`
+      case 'weekly':
+        const weeklyMinutePart = useEveryMinute ? `*/${everyNMinutes}` : minute.toString()
+        const weeklyHourPart = useEveryHour ? '*' : hour.toString()
+        return `${weeklyMinutePart} ${weeklyHourPart} * * ${dayOfWeek}`
+      case 'monthly':
+        const monthlyMinutePart = useEveryMinute ? `*/${everyNMinutes}` : minute.toString()
+        const monthlyHourPart = useEveryHour ? '*' : hour.toString()
+        return `${monthlyMinutePart} ${monthlyHourPart} ${dayOfMonth} * *`
+      default:
+        return '0 2 * * *'
+    }
+  }
+
+  const cronExpression = generateCronExpression()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -215,37 +255,221 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
         </div>
 
         <div>
-          <label htmlFor="cron" className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Schedule
           </label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {cronPresets.map((preset) => (
-              <button
-                key={preset.value}
-                type="button"
-                onClick={() => setCronExpression(preset.value)}
-                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                  cronExpression === preset.value 
-                    ? 'bg-cyan-600 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {preset.label}
-              </button>
-            ))}
+          
+          {/* Preset vs Custom Toggle */}
+          <div className="flex gap-2 mb-3">
+            <button
+              type="button"
+              onClick={() => setScheduleType('preset')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                scheduleType === 'preset'
+                  ? 'bg-cyan-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Quick Presets
+            </button>
+            <button
+              type="button"
+              onClick={() => setScheduleType('custom')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                scheduleType === 'custom'
+                  ? 'bg-cyan-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Custom Schedule
+            </button>
           </div>
-          <input
-            id="cron"
-            type="text"
-            value={cronExpression}
-            onChange={(e) => setCronExpression(e.target.value)}
-            required
-            placeholder="0 2 * * *"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-cyan-500"
-          />
-          <p className="text-sm text-gray-500 mt-1">
-            Cron format: minute hour day month weekday (e.g., 0 2 * * * = daily at 2 AM)
-          </p>
+
+          {scheduleType === 'preset' ? (
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: 'daily', label: 'Daily at 2 AM' },
+                { id: 'weekly', label: 'Weekly (Sunday 2 AM)' },
+                { id: 'monthly', label: 'Monthly (1st, 2 AM)' },
+                { id: 'every6h', label: 'Every 6 hours' },
+              ].map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setPreset(p.id)}
+                  className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                    preset === p.id
+                      ? 'bg-cyan-100 border-2 border-cyan-600 text-cyan-900'
+                      : 'bg-gray-50 border border-gray-300 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+              {/* Frequency Selector */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Frequency
+                </label>
+                <select
+                  value={customFrequency}
+                  onChange={(e) => setCustomFrequency(e.target.value as any)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm"
+                >
+                  <option value="hourly">Every N hours</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+
+              {/* Time Inputs */}
+              {customFrequency === 'hourly' ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Every N hours
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="23"
+                      value={everyNHours}
+                      onChange={(e) => setEveryNHours(Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      At minute
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="59"
+                      value={minute}
+                      onChange={(e) => setMinute(Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-1">
+                        <input
+                          type="checkbox"
+                          checked={useEveryHour}
+                          onChange={(e) => setUseEveryHour(e.target.checked)}
+                          className="w-4 h-4 text-cyan-600 border-gray-300 rounded"
+                        />
+                        Every hour
+                      </label>
+                      {!useEveryHour && (
+                        <input
+                          type="number"
+                          min="0"
+                          max="23"
+                          value={hour}
+                          onChange={(e) => setHour(Number(e.target.value))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          placeholder="Hour (0-23)"
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-1">
+                        <input
+                          type="checkbox"
+                          checked={useEveryMinute}
+                          onChange={(e) => setUseEveryMinute(e.target.checked)}
+                          className="w-4 h-4 text-cyan-600 border-gray-300 rounded"
+                        />
+                        Every N minutes
+                      </label>
+                      {useEveryMinute ? (
+                        <input
+                          type="number"
+                          min="1"
+                          max="59"
+                          value={everyNMinutes}
+                          onChange={(e) => setEveryNMinutes(Number(e.target.value))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          placeholder="Every N min"
+                        />
+                      ) : (
+                        <input
+                          type="number"
+                          min="0"
+                          max="59"
+                          value={minute}
+                          onChange={(e) => setMinute(Number(e.target.value))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                          placeholder="Minute (0-59)"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Day Selector for Weekly */}
+              {customFrequency === 'weekly' && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Day of week
+                  </label>
+                  <select
+                    value={dayOfWeek}
+                    onChange={(e) => setDayOfWeek(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  >
+                    <option value={0}>Sunday</option>
+                    <option value={1}>Monday</option>
+                    <option value={2}>Tuesday</option>
+                    <option value={3}>Wednesday</option>
+                    <option value={4}>Thursday</option>
+                    <option value={5}>Friday</option>
+                    <option value={6}>Saturday</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Day Selector for Monthly */}
+              {customFrequency === 'monthly' && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Day of month (1-31)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={dayOfMonth}
+                    onChange={(e) => setDayOfMonth(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Show generated cron expression */}
+          <div className="mt-3">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Generated Cron Expression
+            </label>
+            <input
+              type="text"
+              value={cronExpression}
+              readOnly
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg font-mono text-sm text-gray-700"
+            />
+          </div>
         </div>
 
         <div>
