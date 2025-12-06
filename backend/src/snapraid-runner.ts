@@ -1,8 +1,17 @@
 import type { SnapRaidCommand, CommandOutput, SnapRaidStatus, RunningJob } from "./types.ts";
+import { LogManager } from "./log-manager.ts";
 
 export class SnapRaidRunner {
   private processes = new Map<string, Deno.ChildProcess>();
   private currentJob: RunningJob | null = null;
+  private logManager: LogManager | null = null;
+
+  /**
+   * Set log manager for automatic logging
+   */
+  setLogManager(logManager: LogManager): void {
+    this.logManager = logManager;
+  }
 
   /**
    * Execute a SnapRAID command and stream output
@@ -14,7 +23,15 @@ export class SnapRaidRunner {
     additionalArgs: string[] = []
   ): Promise<CommandOutput> {
     const processId = `${command}-${Date.now()}`;
-    const args = [command, "-c", configPath, ...additionalArgs];
+    let args = [command, "-c", configPath, ...additionalArgs];
+    
+    // Add log file if log manager is configured
+    let logPath: string | undefined;
+    if (this.logManager) {
+      await this.logManager.ensureLogDirectory();
+      logPath = this.logManager.getLogPath(command);
+      args = [command, "-c", configPath, "-l", logPath, ...additionalArgs];
+    }
     
     console.log(`Executing: snapraid ${args.join(" ")}`);
 

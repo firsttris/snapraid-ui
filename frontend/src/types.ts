@@ -13,6 +13,9 @@ export interface AppConfig {
   };
   logs: {
     maxHistoryEntries: number;
+    directory: string;
+    maxFiles: number;
+    maxAge: number;
   };
 }
 
@@ -46,6 +49,14 @@ export interface CommandOutput {
 }
 
 export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff';
+
+export interface LogFile {
+  filename: string;
+  path: string;
+  command: SnapRaidCommand;
+  timestamp: string;
+  size: number;
+}
 
 export interface RunningJob {
   command: SnapRaidCommand;

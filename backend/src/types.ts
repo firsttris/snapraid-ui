@@ -13,6 +13,9 @@ export interface AppConfig {
   };
   logs: {
     maxHistoryEntries: number;
+    directory: string;
+    maxFiles: number;
+    maxAge: number;
   };
 }
 

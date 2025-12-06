@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { ConfigParser } from "../config-parser.ts";
 import { SnapRaidRunner } from "../snapraid-runner.ts";
+import type { LogManager } from "../log-manager.ts";
 import type { CommandOutput } from "../types.ts";
 
 const snapraid = new Hono();
@@ -14,6 +15,10 @@ let broadcastFn: (message: unknown) => void = () => {};
 
 export function setBroadcast(fn: (message: unknown) => void) {
   broadcastFn = fn;
+}
+
+export function setRunnerLogManager(logManager: LogManager) {
+  runner.setLogManager(logManager);
 }
 
 // GET /api/snapraid/parse - Parse SnapRAID config

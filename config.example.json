@@ -12,6 +12,9 @@
     "port": 3001
   },
   "logs": {
-    "maxHistoryEntries": 50
+    "maxHistoryEntries": 50,
+    "directory": "~/.snapraid-ui/logs",
+    "maxFiles": 100,
+    "maxAge": 30
   }
 }

@@ -1,4 +1,4 @@
-import { AppConfig, CommandOutput, ParsedSnapRaidConfig, SnapRaidCommand, RunningJob } from "@/types";
+import { AppConfig, CommandOutput, ParsedSnapRaidConfig, SnapRaidCommand, RunningJob, LogFile } from "@/types";
 
 
 const API_BASE = 'http://localhost:3001';
@@ -6,6 +6,8 @@ const WS_URL = 'ws://localhost:3001/ws';
 
 export class ApiClient {
   private ws: WebSocket | null = null;
+  private reconnectTimeout: number | null = null;
+  private shouldReconnect = true;
 
   /**
    * Get app configuration
@@ -240,11 +242,25 @@ export class ApiClient {
     onError?: (error: string, command: string) => void;
     onStatus?: (status: any) => void;
   }): void {
-    if (this.ws) {
-      this.ws.close();
+    // Clear any pending reconnection
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
     }
 
+    // Close existing connection if any
+    if (this.ws) {
+      this.shouldReconnect = false;
+      this.ws.close();
+      this.ws = null;
+    }
+
+    this.shouldReconnect = true;
     this.ws = new WebSocket(WS_URL);
+
+    this.ws.onopen = () => {
+      console.log('WebSocket connected');
+    };
 
     this.ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
@@ -271,8 +287,13 @@ export class ApiClient {
 
     this.ws.onclose = () => {
       console.log('WebSocket disconnected');
-      // Reconnect after 3 seconds
-      setTimeout(() => this.connectWebSocket(handlers), 3000);
+      // Only reconnect if we should (i.e., not manually disconnected)
+      if (this.shouldReconnect) {
+        this.reconnectTimeout = setTimeout(() => {
+          console.log('Attempting to reconnect WebSocket...');
+          this.connectWebSocket(handlers);
+        }, 3000);
+      }
     };
   }
 
@@ -280,10 +301,56 @@ export class ApiClient {
    * Disconnect WebSocket
    */
   disconnectWebSocket(): void {
+    this.shouldReconnect = false;
+    
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
+  }
+
+  /**
+   * Get all log files
+   */
+  async getLogs(): Promise<LogFile[]> {
+    const response = await fetch(`${API_BASE}/api/logs`);
+    if (!response.ok) throw new Error('Failed to fetch logs');
+    return response.json();
+  }
+
+  /**
+   * Get log file content
+   */
+  async getLogContent(filename: string): Promise<string> {
+    const response = await fetch(`${API_BASE}/api/logs/${encodeURIComponent(filename)}`);
+    if (!response.ok) throw new Error('Failed to fetch log content');
+    return response.text();
+  }
+
+  /**
+   * Delete a log file
+   */
+  async deleteLog(filename: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/api/logs/${encodeURIComponent(filename)}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete log');
+  }
+
+  /**
+   * Trigger log rotation
+   */
+  async rotateLogs(): Promise<{ deleted: number }> {
+    const response = await fetch(`${API_BASE}/api/logs/rotate`, {
+      method: 'POST',
+    });
+    if (!response.ok) throw new Error('Failed to rotate logs');
+    return response.json();
   }
 }
 

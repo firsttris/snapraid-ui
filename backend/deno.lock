@@ -2,12 +2,22 @@
   "version": "5",
   "specifiers": {
     "jsr:@hono/hono@^4.6.14": "4.10.7",
+    "jsr:@std/fs@*": "1.0.20",
     "jsr:@std/internal@^1.0.12": "1.0.12",
-    "jsr:@std/path@^1.0.8": "1.1.3"
+    "jsr:@std/path@*": "1.1.3",
+    "jsr:@std/path@^1.0.8": "1.1.3",
+    "jsr:@std/path@^1.1.3": "1.1.3"
   },
   "jsr": {
     "@hono/hono@4.10.7": {
       "integrity": "b60512559d554f20a945e07a6c5f115e57cbd4c024da9217833c8e7b2c90355d"
+    },
+    "@std/fs@1.0.20": {
+      "integrity": "e953206aae48d46ee65e8783ded459f23bec7dd1f3879512911c35e5484ea187",
+      "dependencies": [
+        "jsr:@std/internal",
+        "jsr:@std/path@^1.1.3"
+      ]
     },
     "@std/internal@1.0.12": {
       "integrity": "972a634fd5bc34b242024402972cd5143eac68d8dffaca5eaa4dba30ce17b027"
