@@ -42,6 +42,12 @@ export interface SnapRaidStatus {
   newFiles: number;
   modifiedFiles: number;
   deletedFiles: number;
+  // Additional info from 'status' command
+  scrubPercentage?: number; // % of array that is scrubbed
+  syncInProgress?: boolean;
+  oldestScrubDays?: number; // Days since oldest block was scrubbed
+  fragmentedFiles?: number;
+  wastedGB?: number;
   rawOutput: string;
 }
 

@@ -145,7 +145,7 @@ export class SnapRaidRunner {
   }
 
   /**
-   * Parse SnapRAID status output
+   * Parse SnapRAID status/diff output
    */
   static parseStatusOutput(output: string): SnapRaidStatus {
     const status: SnapRaidStatus = {
@@ -157,23 +157,75 @@ export class SnapRaidRunner {
       rawOutput: output,
     };
 
-    // Check for errors
-    status.hasErrors = output.toLowerCase().includes("error") || 
-                       output.toLowerCase().includes("warning");
+    // Check for errors - but "No error detected" means OK
+    if (output.includes("No error detected")) {
+      status.hasErrors = false;
+    } else {
+      status.hasErrors = output.toLowerCase().includes("error") || 
+                         output.toLowerCase().includes("warning") ||
+                         output.includes("bad blocks");
+    }
+
+    // Parse "status" command specific info
+    // Check if sync is in progress
+    status.syncInProgress = output.includes("sync is in progress") && !output.includes("No sync is in progress");
+
+    // Parse scrub percentage: "100% of the array is not scrubbed" or "50% of the array is scrubbed"
+    const notScrubbed = output.match(/(\d+)%\s+of the array is not scrubbed/i);
+    if (notScrubbed) {
+      status.scrubPercentage = 100 - parseInt(notScrubbed[1], 10);
+    }
+    const isScrubbed = output.match(/(\d+)%\s+of the array is scrubbed/i);
+    if (isScrubbed) {
+      status.scrubPercentage = parseInt(isScrubbed[1], 10);
+    }
+
+    // Parse oldest scrub: "The oldest block was scrubbed 5 days ago"
+    const oldestScrub = output.match(/oldest block was scrubbed (\d+) days? ago/i);
+    if (oldestScrub) {
+      status.oldestScrubDays = parseInt(oldestScrub[1], 10);
+    }
+
+    // Parse fragmented files from status table
+    const fragmentMatch = output.match(/Fragmented[\s\S]*?Files[\s\S]*?(\d+)/);
+    if (fragmentMatch) {
+      status.fragmentedFiles = parseInt(fragmentMatch[1], 10);
+    }
+
+    // Parse wasted space
+    const wastedMatch = output.match(/Wasted[\s\S]*?GB[\s\S]*?([\d.]+)/);
+    if (wastedMatch) {
+      status.wastedGB = parseFloat(wastedMatch[1]);
+    }
 
     // Check parity status
-    status.parityUpToDate = output.includes("Everything OK") ||
-                            output.includes("Nothing to do");
+    // For "status" command: check if no errors and no sync in progress
+    // For "diff" command: check if no differences
+    status.parityUpToDate = (output.includes("No error detected") && !status.syncInProgress) ||
+                            output.includes("Everything OK") ||
+                            output.includes("Nothing to do") ||
+                            output.includes("No differences") ||
+                            (output.includes("equal") && !output.match(/(\d+)\s+(added|removed|updated)/i));
 
-    // Extract file counts using regex
-    const newMatch = output.match(/(\d+)\s+new/i);
-    if (newMatch) status.newFiles = parseInt(newMatch[1], 10);
+    // Parse "diff" command output
+    // Example: "5 equal, 3 added, 2 removed, 1 updated"
+    const summaryMatch = output.match(/(\d+)\s+equal.*?(\d+)\s+added.*?(\d+)\s+removed.*?(\d+)\s+updated/is);
+    if (summaryMatch) {
+      status.newFiles = parseInt(summaryMatch[2], 10);
+      status.deletedFiles = parseInt(summaryMatch[3], 10);
+      status.modifiedFiles = parseInt(summaryMatch[4], 10);
+      return status;
+    }
 
-    const modifiedMatch = output.match(/(\d+)\s+(modified|updated|changed)/i);
-    if (modifiedMatch) status.modifiedFiles = parseInt(modifiedMatch[1], 10);
+    // Alternative parsing for individual lines (diff command)
+    const addedMatch = output.match(/(\d+)\s+(added|new)/i);
+    if (addedMatch) status.newFiles = parseInt(addedMatch[1], 10);
 
-    const deletedMatch = output.match(/(\d+)\s+(deleted|removed)/i);
-    if (deletedMatch) status.deletedFiles = parseInt(deletedMatch[1], 10);
+    const updatedMatch = output.match(/(\d+)\s+(updated|modified|changed)/i);
+    if (updatedMatch) status.modifiedFiles = parseInt(updatedMatch[1], 10);
+
+    const removedMatch = output.match(/(\d+)\s+(removed|deleted)/i);
+    if (removedMatch) status.deletedFiles = parseInt(removedMatch[1], 10);
 
     return status;
   }

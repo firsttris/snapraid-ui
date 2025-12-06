@@ -83,8 +83,8 @@ snapraid.post("/execute", async (c) => {
         timestamp: result.timestamp,
       });
 
-      // Parse status if it was a status command
-      if (command === "status") {
+      // Parse status if it was a status or diff command
+      if (command === "status" || command === "diff") {
         const status = SnapRaidRunner.parseStatusOutput(result.output);
         state.broadcastFn({
           type: "status",
