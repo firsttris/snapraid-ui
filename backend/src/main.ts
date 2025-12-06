@@ -76,7 +76,6 @@ const main = async (): Promise<void> => {
   // Load schedules
   try {
     await scheduler.loadSchedules();
-    console.log(`📅 Scheduler initialized`);
   } catch (error) {
     console.error("Failed to initialize scheduler:", error);
   }
@@ -89,9 +88,6 @@ const main = async (): Promise<void> => {
     config.logs.maxFiles,
     config.logs.maxAge
   );
-  if (deleted > 0) {
-    console.log(`🗑️  Rotated ${deleted} old log file(s)`);
-  }
 
   console.log(`🚀 Starting SnapRAID Backend on http://${host}:${port}`);
   console.log(`📝 Logs directory: ${config.logs.directory}`);

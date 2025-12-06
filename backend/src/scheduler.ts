@@ -81,11 +81,8 @@ const executeScheduledCommand = async (
 
   const currentJob = runner.getCurrentJob();
   if (currentJob) {
-    console.log(`Skipping schedule ${schedule.name}: Job already running (${currentJob.command})`);
     return;
   }
-
-  console.log(`Executing scheduled job: ${schedule.name} - ${schedule.command}`);
 
   const job = activeJobs.get(scheduleId);
   const nextRun = job?.nextRun();
@@ -108,8 +105,6 @@ const executeScheduledCommand = async (
       (chunk) => onOutput?.(scheduleId, chunk),
       schedule.args || []
     );
-
-    console.log(`Scheduled job completed: ${schedule.name}`);
   } catch (error) {
     console.error(`Scheduled job failed: ${schedule.name}:`, error);
   }
@@ -131,7 +126,6 @@ const startCronJob = (
     );
 
     activeJobs.set(schedule.id, job);
-    console.log(`Started schedule: ${schedule.name} (${schedule.cronExpression})`);
   } catch (error) {
     console.error(`Failed to start schedule ${schedule.id}:`, error);
   }
@@ -143,7 +137,6 @@ const stopCronJob = (scheduleId: string): void => {
   if (job) {
     job.stop();
     activeJobs.delete(scheduleId);
-    console.log(`Stopped schedule: ${scheduleId}`);
   }
 };
 
@@ -168,8 +161,6 @@ export const createScheduler = (configPath: string, runner: SnapRaidRunner) => {
       schedules
         .filter((schedule) => schedule.enabled)
         .forEach((schedule) => startCronJob(configPath, runner, outputCallback, schedule));
-
-      console.log(`Loaded ${schedules.length} schedules`);
     },
 
     getSchedules: async (): Promise<Schedule[]> => 

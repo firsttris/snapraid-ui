@@ -18,12 +18,10 @@ export const handleWebSocketUpgrade = (req: Request): Response => {
   const { socket, response } = Deno.upgradeWebSocket(req);
 
   socket.onopen = () => {
-    console.log("WebSocket client connected");
     wsClients.add(socket);
   };
 
   socket.onclose = () => {
-    console.log("WebSocket client disconnected");
     wsClients.delete(socket);
   };
 

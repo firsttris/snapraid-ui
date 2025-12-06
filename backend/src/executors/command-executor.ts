@@ -106,8 +106,6 @@ const executeCommand = (state: ExecutorState) => async (
   const logPath = state.logManager ? await prepareLogPath(state, command) : undefined;
   const args = buildCommandArgs(command, configPath, additionalArgs, logPath);
   const timestamp = new Date().toISOString();
-  
-  console.log(`Executing: snapraid ${args.join(" ")}`);
 
   state.currentJob = {
     command,
@@ -180,15 +178,6 @@ const executeSnapraidCommand = () => async (args: string[]): Promise<{ stdout: s
     stdout: decoder.decode(stdout),
     stderr: decoder.decode(stderr),
   };
-};
-
-/**
- * Log stderr if present
- */
-const logStderr = (commandName: string, stderr: string): void => {
-  if (stderr) {
-    console.log(`${commandName} command stderr:`, stderr);
-  }
 };
 
 /**
