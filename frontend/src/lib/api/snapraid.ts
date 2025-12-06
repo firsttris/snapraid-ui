@@ -137,3 +137,20 @@ export const removeExclude = async (configPath: string, pattern: string): Promis
   const result = await response.json();
   return result.config;
 }
+
+/**
+ * Set pool directory in SnapRAID config
+ */
+export const setPool = async (configPath: string, poolPath: string | undefined): Promise<ParsedSnapRaidConfig> => {
+  const response = await fetch(`${API_BASE}/api/snapraid/set-pool`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configPath, poolPath }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to set pool directory');
+  }
+  const result = await response.json();
+  return result.config;
+}

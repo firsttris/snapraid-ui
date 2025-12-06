@@ -27,6 +27,7 @@ export interface ParsedSnapRaidConfig {
   content: string[];
   data: Record<string, string>;
   exclude: string[];
+  pool?: string;
 }
 
 export interface DiskInfo {
@@ -51,7 +52,7 @@ export interface CommandOutput {
   exitCode: number | null;
 }
 
-export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff' | 'fix' | 'check';
+export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff' | 'fix' | 'check' | 'pool';
 
 export interface LogFile {
   filename: string;

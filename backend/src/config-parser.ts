@@ -48,6 +48,13 @@ export class ConfigParser {
           };
         }
         
+        if (line.startsWith("pool ")) {
+          return {
+            ...config,
+            pool: line.substring(5).trim(),
+          };
+        }
+        
         return config;
       }, {
         parity: [],

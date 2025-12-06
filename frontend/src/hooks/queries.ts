@@ -15,6 +15,7 @@ import {
   removeDisk,
   addExclude,
   removeExclude,
+  setPool,
 } from '../lib/api/snapraid';
 import {
   browseFilesystem,
@@ -213,6 +214,17 @@ export const useRemoveExclude = (options?: UseMutationOptions<ParsedSnapRaidConf
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ configPath, pattern }) => removeExclude(configPath, pattern),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.snapraidConfig(variables.configPath) });
+    },
+    ...options,
+  });
+}
+
+export const useSetPool = (options?: UseMutationOptions<ParsedSnapRaidConfig, Error, { configPath: string; poolPath: string | undefined }>) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ configPath, poolPath }) => setPool(configPath, poolPath),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.snapraidConfig(variables.configPath) });
     },

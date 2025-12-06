@@ -17,6 +17,7 @@ const getCommandLabel = (id: SnapRaidCommand) => {
     case 'scrub': return m.commands_scrub()
     case 'fix': return m.commands_fix()
     case 'check': return m.commands_check()
+    case 'pool': return m.commands_pool()
     default: return id
   }
 }
@@ -30,6 +31,7 @@ const COMMANDS: Array<{
   { id: 'sync', color: 'bg-green-600 hover:bg-green-700' },
   { id: 'scrub', color: 'bg-purple-600 hover:bg-purple-700' },
   { id: 'check', color: 'bg-yellow-600 hover:bg-yellow-700' },
+  { id: 'pool', color: 'bg-teal-600 hover:bg-teal-700' },
 ]
 
 export const CommandPanel = ({ onExecute, onUndelete, disabled, isRunning, currentCommand }: CommandPanelProps) => {

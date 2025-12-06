@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { useSnapRaidConfig, useAddDataDisk, useRemoveDisk, useAddParityDisk, useAddExclude, useRemoveExclude } from '../hooks/queries'
+import { useSnapRaidConfig, useAddDataDisk, useRemoveDisk, useAddParityDisk, useAddExclude, useRemoveExclude, useSetPool } from '../hooks/queries'
 import { ParityDiskSection } from './ParityDiskSection'
 import { DataDiskSection } from './DataDiskSection'
 import { ExcludePatternSection } from './ExcludePatternSection'
+import { PoolSection } from './PoolSection'
 import * as m from '../paraglide/messages'
 
 interface DiskManagerProps {
@@ -20,6 +21,7 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
   const addParityDiskMutation = useAddParityDisk()
   const addExcludeMutation = useAddExclude()
   const removeExcludeMutation = useRemoveExclude()
+  const setPoolMutation = useSetPool()
 
   // Handler functions for child components
   const handleAddDataDisk = async (name: string, path: string) => {
@@ -91,11 +93,24 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
       }
     )
   }
-
   const handleRemoveExclude = async (pattern: string) => {
     setError('')
     removeExcludeMutation.mutate(
       { configPath, pattern },
+      {
+        onSuccess: () => onUpdate?.(),
+        onError: (err) => {
+          setError(String(err))
+          throw err
+        }
+      }
+    )
+  }
+
+  const handleSetPool = async (poolPath: string | undefined) => {
+    setError('')
+    setPoolMutation.mutate(
+      { configPath, poolPath },
       {
         onSuccess: () => onUpdate?.(),
         onError: (err) => {
@@ -146,6 +161,11 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
         exclude={config.exclude}
         onAdd={handleAddExclude}
         onRemove={handleRemoveExclude}
+      />
+
+      <PoolSection
+        pool={config.pool}
+        onPoolChange={handleSetPool}
       />
     </div>
   )
