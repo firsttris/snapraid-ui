@@ -198,7 +198,6 @@ export const createCommandExecutor = () => {
     abortCommand: abortCommand(state),
     getCurrentJob: getCurrentJob(state),
     executeSnapraidCommand: executeSnapraidCommand(),
-    logStderr,
     setLogManager: setLogManager(state),
   };
 };

@@ -252,7 +252,7 @@ snapraid.post("/add-data-disk", async (c) => {
     await Deno.writeTextFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
-    const parsed = await ConfigParser.parseSnapRaidConfig(configPath);
+    const parsed = await parseSnapRaidConfig(configPath);
     return c.json({ success: true, config: parsed });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
@@ -308,7 +308,7 @@ snapraid.post("/add-parity-disk", async (c) => {
     await Deno.writeTextFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
-    const parsed = await ConfigParser.parseSnapRaidConfig(configPath);
+    const parsed = await parseSnapRaidConfig(configPath);
     return c.json({ success: true, config: parsed });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
@@ -361,7 +361,7 @@ snapraid.post("/remove-disk", async (c) => {
     await Deno.writeTextFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
-    const parsed = await ConfigParser.parseSnapRaidConfig(configPath);
+    const parsed = await parseSnapRaidConfig(configPath);
     return c.json({ success: true, config: parsed });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
@@ -420,7 +420,7 @@ snapraid.post("/add-exclude", async (c) => {
     await Deno.writeTextFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
-    const parsed = await ConfigParser.parseSnapRaidConfig(configPath);
+    const parsed = await parseSnapRaidConfig(configPath);
     return c.json({ success: true, config: parsed });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
@@ -447,7 +447,7 @@ snapraid.post("/remove-exclude", async (c) => {
     await Deno.writeTextFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
-    const parsed = await ConfigParser.parseSnapRaidConfig(configPath);
+    const parsed = await parseSnapRaidConfig(configPath);
     return c.json({ success: true, config: parsed });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
@@ -506,7 +506,7 @@ snapraid.post("/set-pool", async (c) => {
     await Deno.writeTextFile(configPath, filteredLines.join("\n"));
 
     // Parse and return updated config
-    const parsed = await ConfigParser.parseSnapRaidConfig(configPath);
+    const parsed = await parseSnapRaidConfig(configPath);
     return c.json({ success: true, config: parsed });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
