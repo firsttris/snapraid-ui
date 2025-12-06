@@ -7,6 +7,7 @@ import { ConfigSelector } from '../components/ConfigSelector'
 import { DashboardCards } from '../components/DashboardCards'
 import { CommandPanel } from '../components/CommandPanel'
 import { OutputConsole } from '../components/OutputConsole'
+import { UndeleteDialog } from '../components/UndeleteDialog'
 import { useWebSocketConnection } from '../hooks/useWebSocketConnection'
 
 export const Route = createFileRoute('/')({
@@ -16,6 +17,7 @@ export const Route = createFileRoute('/')({
 function Dashboard() {
   const [selectedConfig, setSelectedConfig] = useState<string>('')
   const [showConfigManager, setShowConfigManager] = useState(false)
+  const [showUndeleteDialog, setShowUndeleteDialog] = useState(false)
 
   // TanStack Query hooks
   const { data: config, refetch: refetchConfig } = useConfig()
@@ -62,6 +64,33 @@ function Dashboard() {
     })
   }, [selectedConfig, wsState, executeCommandMutation])
 
+  const handleUndelete = useCallback((mode: 'all-missing' | 'directory-missing' | 'specific', path?: string) => {
+    if (!selectedConfig || wsState.isRunning) return
+    
+    wsState.setIsRunning(true)
+    wsState.clearOutput()
+    wsState.setCurrentCommand('fix')
+    setShowUndeleteDialog(false)
+    
+    // Build arguments based on mode
+    const args: string[] = []
+    
+    if (mode === 'all-missing') {
+      args.push('-m')
+    } else if (mode === 'directory-missing' && path) {
+      args.push('-m', '-f', path)
+    } else if (mode === 'specific' && path) {
+      args.push('-f', path)
+    }
+    
+    executeCommandMutation.mutate({ command: 'fix', configPath: selectedConfig, args }, {
+      onError: (error) => {
+        console.error('Failed to execute undelete:', error)
+        wsState.setIsRunning(false)
+      }
+    })
+  }, [selectedConfig, wsState, executeCommandMutation])
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow">
@@ -95,10 +124,19 @@ function Dashboard() {
 
           <CommandPanel
             onExecute={executeCommand}
+            onUndelete={() => setShowUndeleteDialog(true)}
             disabled={!selectedConfig}
             isRunning={wsState.isRunning}
             currentCommand={wsState.currentCommand}
           />
+
+          {showUndeleteDialog && parsedConfig && (
+            <UndeleteDialog
+              dataDisk={parsedConfig.data}
+              onExecute={handleUndelete}
+              onClose={() => setShowUndeleteDialog(false)}
+            />
+          )}
 
           <OutputConsole output={wsState.output} />
         </div>

@@ -51,7 +51,7 @@ export interface CommandOutput {
   exitCode: number | null;
 }
 
-export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff';
+export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff' | 'fix';
 
 export interface LogFile {
   filename: string;

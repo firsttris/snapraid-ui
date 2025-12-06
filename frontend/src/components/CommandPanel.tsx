@@ -3,6 +3,7 @@ import * as m from '../paraglide/messages'
 
 interface CommandPanelProps {
   onExecute: (command: SnapRaidCommand) => void
+  onUndelete: () => void
   disabled: boolean
   isRunning: boolean
   currentCommand: string
@@ -14,6 +15,7 @@ const getCommandLabel = (id: SnapRaidCommand) => {
     case 'diff': return m.commands_diff()
     case 'sync': return m.commands_sync()
     case 'scrub': return m.commands_scrub()
+    case 'fix': return m.commands_fix()
     default: return id
   }
 }
@@ -28,7 +30,7 @@ const COMMANDS: Array<{
   { id: 'scrub', color: 'bg-purple-600 hover:bg-purple-700' },
 ]
 
-export const CommandPanel = ({ onExecute, disabled, isRunning, currentCommand }: CommandPanelProps) => {
+export const CommandPanel = ({ onExecute, onUndelete, disabled, isRunning, currentCommand }: CommandPanelProps) => {
   return (
     <div className="bg-white shadow rounded-lg p-6 mb-6">
       <h2 className="text-xl font-semibold mb-4">{m.commands_title()}</h2>
@@ -43,6 +45,13 @@ export const CommandPanel = ({ onExecute, disabled, isRunning, currentCommand }:
             {getCommandLabel(id)}
           </button>
         ))}
+        <button
+          onClick={onUndelete}
+          disabled={disabled || isRunning}
+          className="px-4 py-2 text-white rounded transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed bg-orange-600 hover:bg-orange-700"
+        >
+          {m.commands_fix()}
+        </button>
       </div>
       {isRunning && currentCommand && (
         <div className="mt-4 text-sm text-gray-600">
