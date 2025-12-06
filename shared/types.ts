@@ -42,12 +42,17 @@ export interface SnapRaidStatus {
   newFiles: number;
   modifiedFiles: number;
   deletedFiles: number;
+  equalFiles?: number; // From diff command
+  movedFiles?: number; // From diff command
+  copiedFiles?: number; // From diff command
+  restoredFiles?: number; // From diff command
   // Additional info from 'status' command
   scrubPercentage?: number; // % of array that is scrubbed
   syncInProgress?: boolean;
   oldestScrubDays?: number; // Days since oldest block was scrubbed
   fragmentedFiles?: number;
   wastedGB?: number;
+  freeSpaceGB?: number; // Free space in GB
   rawOutput: string;
 }
 

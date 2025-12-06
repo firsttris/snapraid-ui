@@ -1,0 +1,38 @@
+[tristan@AMD-B6507800X3D ~]$ snapraid status -c /home/tristan/Downloads/snapraid.conf
+Self test...
+Loading state from /home/tristan/Downloads/SnapRAID.content...
+Using 0 MiB of memory for the file-system.
+SnapRAID status report:
+
+   Files Fragmented Excess  Wasted  Used    Free  Use Name
+            Files  Fragments  GB      GB      GB
+      13       0       0   502.5       0     209   0% test1
+       0       0       0       -       0       -   -  test2
+ --------------------------------------------------------------------------
+      13       0       0   502.5       0     209   0%
+
+
+ 95%|o                                                                     
+    |o                                                                     
+    |o                                                                     
+    |o                                                                     
+    |o                                                                     
+    |o                                                                     
+    |o                                                                     
+ 47%|o                                                                     
+    |o                                                                     
+    |o                                                                     
+    |o                                                                     
+    |o                                                                     
+    |o                                                                     
+    |o                                                                     
+  0%|o____________________________________________________________________o
+     0                    days ago of the last scrub/sync                 0
+
+The oldest block was scrubbed 0 days ago, the median 0, the newest 0.
+
+No sync is in progress.
+100% of the array is not scrubbed.
+No file has a zero sub-second timestamp.
+No rehash is in progress or needed.
+No error detected.

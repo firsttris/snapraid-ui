@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import type { ProbeReport, DiskPowerStatus } from '@shared/types'
-import * as m from '../paraglide/messages'
 
 interface DiskPowerControlProps {
   configPath: string
@@ -77,7 +76,6 @@ const DiskPowerCard = ({
 }
 
 export const DiskPowerControl = ({ 
-  configPath, 
   onProbe, 
   onSpinUp, 
   onSpinDown 

@@ -13,8 +13,11 @@ export const DashboardCards = ({ parsedConfig, status }: DashboardCardsProps) =>
   const dataDiskCount = Object.keys(parsedConfig.data).length
   const parityDiskCount = parsedConfig.parity.length
 
-  // Calculate total changes
-  const totalChanges = status ? status.newFiles + status.modifiedFiles + status.deletedFiles : 0
+  // Calculate total changes (including moved, copied, restored)
+  const totalChanges = status 
+    ? status.newFiles + status.modifiedFiles + status.deletedFiles + 
+      (status.movedFiles || 0) + (status.copiedFiles || 0) + (status.restoredFiles || 0)
+    : 0
   const hasChanges = totalChanges > 0
 
   return (
@@ -81,6 +84,19 @@ export const DashboardCards = ({ parsedConfig, status }: DashboardCardsProps) =>
               {/* Show file changes if available (from diff command) */}
               {hasChanges ? (
                 <>
+                  {/* Equal Files */}
+                  {status.equalFiles !== undefined && status.equalFiles > 0 && (
+                    <div className="flex items-center justify-between p-2 rounded bg-green-50 border border-green-200">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">✓</span>
+                        <span className="text-sm font-medium text-gray-700">Equal</span>
+                      </div>
+                      <span className="font-bold text-lg text-green-600">
+                        {status.equalFiles}
+                      </span>
+                    </div>
+                  )}
+
                   {/* New Files */}
                   <div className={`flex items-center justify-between p-2 rounded ${
                     status.newFiles > 0 ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'
@@ -125,6 +141,45 @@ export const DashboardCards = ({ parsedConfig, status }: DashboardCardsProps) =>
                       {status.deletedFiles}
                     </span>
                   </div>
+
+                  {/* Moved Files */}
+                  {status.movedFiles !== undefined && status.movedFiles > 0 && (
+                    <div className="flex items-center justify-between p-2 rounded bg-purple-50 border border-purple-200">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">↔️</span>
+                        <span className="text-sm font-medium text-gray-700">Moved</span>
+                      </div>
+                      <span className="font-bold text-lg text-purple-600">
+                        {status.movedFiles}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Copied Files */}
+                  {status.copiedFiles !== undefined && status.copiedFiles > 0 && (
+                    <div className="flex items-center justify-between p-2 rounded bg-cyan-50 border border-cyan-200">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">📋</span>
+                        <span className="text-sm font-medium text-gray-700">Copied</span>
+                      </div>
+                      <span className="font-bold text-lg text-cyan-600">
+                        {status.copiedFiles}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Restored Files */}
+                  {status.restoredFiles !== undefined && status.restoredFiles > 0 && (
+                    <div className="flex items-center justify-between p-2 rounded bg-green-50 border border-green-200">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">♻️</span>
+                        <span className="text-sm font-medium text-gray-700">Restored</span>
+                      </div>
+                      <span className="font-bold text-lg text-green-600">
+                        {status.restoredFiles}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Total Changes Summary */}
                   <div className="mt-3 pt-3 border-t border-gray-200">
@@ -182,6 +237,18 @@ export const DashboardCards = ({ parsedConfig, status }: DashboardCardsProps) =>
                       </div>
                       <span className="font-bold text-lg text-red-600">
                         {status.wastedGB.toFixed(2)} GB
+                      </span>
+                    </div>
+                  )}
+
+                  {status.freeSpaceGB !== undefined && (
+                    <div className="flex items-center justify-between p-2 rounded bg-blue-50 border border-blue-200">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">📀</span>
+                        <span className="text-sm font-medium text-gray-700">Free Space</span>
+                      </div>
+                      <span className="font-bold text-lg text-blue-600">
+                        {status.freeSpaceGB.toFixed(0)} GB
                       </span>
                     </div>
                   )}

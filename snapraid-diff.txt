@@ -1,0 +1,14 @@
+Loading state from /home/tristan/Downloads/SnapRAID.content...
+Comparing...
+add Vergleich_Bescheiddaten_Einkommensteuer_2024_283602161462422222.pdf
+restore test/Pflegetagebuch.png
+remove status-20251206-094002.log
+
+      11 equal
+       1 added
+       1 removed
+       0 updated
+       0 moved
+       0 copied
+       1 restored
+There are differences!
