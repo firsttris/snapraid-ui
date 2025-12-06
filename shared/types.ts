@@ -192,6 +192,27 @@ export interface ListReport {
   rawOutput: string;
 }
 
+// Diff report types (from snapraid diff command)
+export interface DiffFileInfo {
+  status: 'equal' | 'added' | 'removed' | 'updated' | 'moved' | 'copied' | 'restored';
+  name: string;            // File path/name
+  size?: string;           // File size if available
+}
+
+export interface DiffReport {
+  files: DiffFileInfo[];
+  totalFiles: number;
+  equalFiles: number;
+  newFiles: number;
+  modifiedFiles: number;
+  deletedFiles: number;
+  movedFiles: number;
+  copiedFiles: number;
+  restoredFiles: number;
+  timestamp: string;       // ISO string
+  rawOutput: string;
+}
+
 // Check report types (from snapraid check command)
 export interface CheckFileInfo {
   status: 'OK' | 'ERROR' | 'REHASH';  // Check status

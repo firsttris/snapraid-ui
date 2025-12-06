@@ -1,4 +1,4 @@
-import type { SnapRaidCommand, CommandOutput, SnapRaidStatus, RunningJob, DevicesReport, DeviceInfo, ListReport, SnapRaidFileInfo, CheckReport, CheckFileInfo } from "@shared/types.ts";
+import type { SnapRaidCommand, CommandOutput, SnapRaidStatus, RunningJob, DevicesReport, DeviceInfo, ListReport, SnapRaidFileInfo, CheckReport, CheckFileInfo, DiffReport, DiffFileInfo } from "@shared/types.ts";
 import { LogManager } from "./log-manager.ts";
 
 export class SnapRaidRunner {
@@ -451,6 +451,120 @@ export class SnapRaidRunner {
     return { files, totalFiles, errorCount, rehashCount, okCount };
   }
 
+  static parseDiffOutput(output: string): { 
+    files: DiffFileInfo[], 
+    totalFiles: number, 
+    equalFiles: number,
+    newFiles: number, 
+    modifiedFiles: number, 
+    deletedFiles: number,
+    movedFiles: number,
+    copiedFiles: number,
+    restoredFiles: number
+  } {
+    const files: DiffFileInfo[] = [];
+    const lines = output.split('\n');
+    let equalFiles = 0;
+    let newFiles = 0;
+    let modifiedFiles = 0;
+    let deletedFiles = 0;
+    let movedFiles = 0;
+    let copiedFiles = 0;
+    let restoredFiles = 0;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Skip header/progress lines
+      if (!trimmed || 
+          trimmed.startsWith('Self test') ||
+          trimmed.startsWith('Loading') || 
+          trimmed.startsWith('Comparing') ||
+          trimmed.startsWith('Scanning') ||
+          trimmed.startsWith('Using') ||
+          trimmed.startsWith('Saving') ||
+          trimmed.includes('% completed')) {
+        continue;
+      }
+
+      // Parse summary lines: "   1234 equal"
+      const equalMatch = trimmed.match(/^\s*(\d+)\s+equal/);
+      if (equalMatch) {
+        equalFiles = parseInt(equalMatch[1], 10);
+        continue;
+      }
+
+      const addedMatch = trimmed.match(/^\s*(\d+)\s+added/);
+      if (addedMatch) {
+        newFiles = parseInt(addedMatch[1], 10);
+        continue;
+      }
+
+      const removedMatch = trimmed.match(/^\s*(\d+)\s+removed/);
+      if (removedMatch) {
+        deletedFiles = parseInt(removedMatch[1], 10);
+        continue;
+      }
+
+      const updatedMatch = trimmed.match(/^\s*(\d+)\s+updated/);
+      if (updatedMatch) {
+        modifiedFiles = parseInt(updatedMatch[1], 10);
+        continue;
+      }
+
+      const movedMatch = trimmed.match(/^\s*(\d+)\s+moved/);
+      if (movedMatch) {
+        movedFiles = parseInt(movedMatch[1], 10);
+        continue;
+      }
+
+      const copiedMatch = trimmed.match(/^\s*(\d+)\s+copied/);
+      if (copiedMatch) {
+        copiedFiles = parseInt(copiedMatch[1], 10);
+        continue;
+      }
+
+      const restoredMatch = trimmed.match(/^\s*(\d+)\s+restored/);
+      if (restoredMatch) {
+        restoredFiles = parseInt(restoredMatch[1], 10);
+        continue;
+      }
+
+      // Parse individual file entries
+      // Format can be: "add file.txt" or "upd file.txt" or "restore file.txt" or "remove file.txt" etc.
+      const fileMatch = trimmed.match(/^(add|rem|remove|upd|update|updated|move|moved|copy|copied|rest|restore)\s+(.+)$/);
+      if (fileMatch) {
+        const status = fileMatch[1];
+        const fileName = fileMatch[2];
+        
+        let mappedStatus: DiffFileInfo['status'] = 'equal';
+        switch (status) {
+          case 'add': mappedStatus = 'added'; break;
+          case 'rem': 
+          case 'remove': mappedStatus = 'removed'; break;
+          case 'upd': 
+          case 'update':
+          case 'updated': mappedStatus = 'updated'; break;
+          case 'move': 
+          case 'moved': mappedStatus = 'moved'; break;
+          case 'copy': 
+          case 'copied': mappedStatus = 'copied'; break;
+          case 'rest': 
+          case 'restore': mappedStatus = 'restored'; break;
+        }
+        
+        files.push({
+          status: mappedStatus,
+          name: fileName,
+        });
+      }
+    }
+
+    const totalFiles = equalFiles + newFiles + modifiedFiles + deletedFiles + movedFiles + copiedFiles + restoredFiles;
+
+    return { files, totalFiles, equalFiles, newFiles, modifiedFiles, deletedFiles, movedFiles, copiedFiles, restoredFiles };
+  }
+
   /**
    * Run devices command
    */
@@ -539,6 +653,44 @@ export class SnapRaidRunner {
       errorCount,
       rehashCount,
       okCount,
+      timestamp: new Date().toISOString(),
+      rawOutput: output,
+    };
+  }
+
+  async runDiff(configPath: string): Promise<DiffReport> {
+    const cmd = new Deno.Command("snapraid", {
+      args: ["diff", "-c", configPath],
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const { stdout, stderr } = await cmd.output();
+    const stdoutText = new TextDecoder().decode(stdout);
+    const stderrText = new TextDecoder().decode(stderr);
+
+    // Combine stdout and stderr for parsing
+    const output = stdoutText + '\n' + stderrText;
+
+    if (stderrText) {
+      console.log("Diff command stderr:", stderrText);
+    }
+
+    const { files, totalFiles, equalFiles, newFiles, modifiedFiles, deletedFiles, movedFiles, copiedFiles, restoredFiles } = 
+      SnapRaidRunner.parseDiffOutput(output);
+    
+    console.log("Diff parsed results:", { files, totalFiles, equalFiles, newFiles, modifiedFiles, deletedFiles, movedFiles, copiedFiles, restoredFiles });
+
+    return {
+      files,
+      totalFiles,
+      equalFiles,
+      newFiles,
+      modifiedFiles,
+      deletedFiles,
+      movedFiles,
+      copiedFiles,
+      restoredFiles,
       timestamp: new Date().toISOString(),
       rawOutput: output,
     };

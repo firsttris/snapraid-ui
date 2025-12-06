@@ -833,4 +833,20 @@ snapraid.get("/check", async (c) => {
   }
 });
 
+// GET /api/snapraid/diff - Get diff report
+snapraid.get("/diff", async (c) => {
+  const configPath = c.req.query("path");
+  
+  if (!configPath) {
+    return c.json({ error: "Missing path parameter" }, 400);
+  }
+
+  try {
+    const result = await runner.runDiff(configPath);
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 export default snapraid;
