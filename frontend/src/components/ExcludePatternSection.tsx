@@ -6,13 +6,13 @@ interface ExcludePatternSectionProps {
   onRemove: (pattern: string) => Promise<void>
 }
 
-export function ExcludePatternSection({ exclude, onAdd, onRemove }: ExcludePatternSectionProps) {
+export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatternSectionProps) => {
   const [showAddExclude, setShowAddExclude] = useState(false)
   const [newExcludePattern, setNewExcludePattern] = useState('')
   const [addingExclude, setAddingExclude] = useState(false)
   const [error, setError] = useState('')
 
-  async function handleAddExclude() {
+  const handleAddExclude = async () => {
     if (!newExcludePattern.trim()) {
       setError('Exclude pattern is required')
       return
@@ -31,7 +31,7 @@ export function ExcludePatternSection({ exclude, onAdd, onRemove }: ExcludePatte
     }
   }
 
-  async function handleRemoveExclude(pattern: string) {
+  const handleRemoveExclude = async (pattern: string) => {
     if (!confirm(`Are you sure you want to remove exclude pattern '${pattern}'?`)) return
 
     setError('')

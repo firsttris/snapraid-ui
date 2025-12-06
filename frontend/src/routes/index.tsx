@@ -44,7 +44,8 @@ function Dashboard() {
       setSelectedConfig(currentJob.configPath)
       wsState.appendOutput(`\n[Reconnected to running job: ${currentJob.command}]\n`)
     }
-  }, [currentJob]) // Abhängigkeiten minimal halten
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentJob])
 
   const executeCommand = useCallback((command: SnapRaidCommand) => {
     if (!selectedConfig || wsState.isRunning) return

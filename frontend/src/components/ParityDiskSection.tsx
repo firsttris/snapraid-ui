@@ -7,7 +7,7 @@ interface ParityDiskSectionProps {
   onRemove: () => Promise<void>
 }
 
-export function ParityDiskSection({ parity, onAdd, onRemove }: ParityDiskSectionProps) {
+export const ParityDiskSection = ({ parity, onAdd, onRemove }: ParityDiskSectionProps) => {
   const [showAddParity, setShowAddParity] = useState(false)
   const [newParityPath, setNewParityPath] = useState('')
   const [newParityFilename, setNewParityFilename] = useState('snapraid.parity')
@@ -15,7 +15,7 @@ export function ParityDiskSection({ parity, onAdd, onRemove }: ParityDiskSection
   const [showParityBrowser, setShowParityBrowser] = useState(false)
   const [error, setError] = useState('')
 
-  async function handleAddParity() {
+  const handleAddParity = async () => {
     if (!newParityPath.trim()) {
       setError('Parity directory path is required')
       return
@@ -47,7 +47,7 @@ export function ParityDiskSection({ parity, onAdd, onRemove }: ParityDiskSection
     }
   }
 
-  async function handleRemove() {
+  const handleRemove = async () => {
     if (!confirm('Are you sure you want to remove a parity disk?')) return
     
     setError('')

@@ -20,7 +20,7 @@ function LogsPage() {
   const deleteLogMutation = useDeleteLog()
   const rotateLogsMutation = useRotateLogs()
 
-  function handleDeleteLog(filename: string) {
+  const handleDeleteLog = (filename: string) => {
     if (!confirm(`Delete log file ${filename}?`)) return
 
     deleteLogMutation.mutate(filename, {
@@ -35,7 +35,7 @@ function LogsPage() {
     })
   }
 
-  function handleRotateLogs() {
+  const handleRotateLogs = () => {
     rotateLogsMutation.mutate(undefined, {
       onSuccess: (result) => {
         alert(`Deleted ${result.deleted} old log file(s)`)
@@ -46,7 +46,7 @@ function LogsPage() {
     })
   }
 
-  function handleDownloadLog(filename: string) {
+  const handleDownloadLog = (filename: string) => {
     const blob = new Blob([logContent], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')

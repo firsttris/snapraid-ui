@@ -18,7 +18,7 @@ const COMMANDS: Array<{
   { id: 'scrub', label: 'Scrub', color: 'bg-purple-600 hover:bg-purple-700' },
 ]
 
-export function CommandPanel({ onExecute, disabled, isRunning, currentCommand }: CommandPanelProps) {
+export const CommandPanel = ({ onExecute, disabled, isRunning, currentCommand }: CommandPanelProps) => {
   return (
     <div className="bg-white shadow rounded-lg p-6 mb-6">
       <h2 className="text-xl font-semibold mb-4">Commands</h2>

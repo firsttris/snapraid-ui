@@ -2,22 +2,14 @@ import { Link } from '@tanstack/react-router'
 
 import { useState } from 'react'
 import {
-  ChevronDown,
-  ChevronRight,
   Home,
   Menu,
-  Network,
-  SquareFunction,
-  StickyNote,
   FileText,
   X,
 } from 'lucide-react'
 
-export default function Header() {
+const Header = () => {
   const [isOpen, setIsOpen] = useState(false)
-  const [groupedExpanded, setGroupedExpanded] = useState<
-    Record<string, boolean>
-  >({})
 
   return (
     <>
@@ -87,3 +79,5 @@ export default function Header() {
     </>
   )
 }
+
+export default Header

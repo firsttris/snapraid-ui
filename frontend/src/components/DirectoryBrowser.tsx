@@ -8,7 +8,7 @@ interface DirectoryBrowserProps {
   currentValue?: string
 }
 
-export function DirectoryBrowser({ onSelect, onClose, title = 'Select Directory', currentValue }: DirectoryBrowserProps) {
+export const DirectoryBrowser = ({ onSelect, onClose, title = 'Select Directory', currentValue }: DirectoryBrowserProps) => {
   const [currentPath, setCurrentPath] = useState<string>(currentValue || '')
   
   // TanStack Query hook
@@ -17,13 +17,13 @@ export function DirectoryBrowser({ onSelect, onClose, title = 'Select Directory'
   const entries = data?.entries || []
   const actualPath = data?.path || currentPath
 
-  function goUp() {
+  const goUp = () => {
     const parts = actualPath.split('/').filter(Boolean)
     parts.pop()
     setCurrentPath('/' + parts.join('/'))
   }
 
-  function handleSelect() {
+  const handleSelect = () => {
     onSelect(actualPath)
   }
 

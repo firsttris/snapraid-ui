@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { apiClient } from '../lib/api-client'
+import { connectWebSocket } from '../lib/api-client'
 import type { SnapRaidStatus } from '@shared/types'
 
 interface WebSocketState {
@@ -9,7 +9,7 @@ interface WebSocketState {
   status: SnapRaidStatus | null
 }
 
-export function useWebSocketConnection(onJobComplete: () => void) {
+export const useWebSocketConnection = (onJobComplete: () => void) => {
   const [state, setState] = useState<WebSocketState>({
     output: '',
     currentCommand: '',
@@ -18,7 +18,7 @@ export function useWebSocketConnection(onJobComplete: () => void) {
   })
 
   useEffect(() => {
-    apiClient.connectWebSocket({
+    connectWebSocket({
       onOutput: (chunk: string, command: string) => {
         setState(prev => ({ ...prev, output: prev.output + chunk, currentCommand: command }))
       },

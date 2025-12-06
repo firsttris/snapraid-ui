@@ -5,7 +5,7 @@ interface LogViewerProps {
   onDownload: (filename: string) => void
 }
 
-export function LogViewer({ selectedLog, logContent, isLoading, onDownload }: LogViewerProps) {
+export const LogViewer = ({ selectedLog, logContent, isLoading, onDownload }: LogViewerProps) => {
   return (
     <div className="bg-white shadow-lg rounded-xl border border-gray-100">
       <div className="p-6 border-b border-gray-200">

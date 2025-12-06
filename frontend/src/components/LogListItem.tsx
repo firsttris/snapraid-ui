@@ -8,7 +8,7 @@ interface LogListItemProps {
   onDelete: (filename: string) => void
 }
 
-export function LogListItem({ log, isSelected, onSelect, onDelete }: LogListItemProps) {
+export const LogListItem = ({ log, isSelected, onSelect, onDelete }: LogListItemProps) => {
   return (
     <div
       className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${

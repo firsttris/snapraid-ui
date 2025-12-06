@@ -8,13 +8,13 @@ interface ConfigSelectorProps {
   onManageClick: () => void
 }
 
-export function ConfigSelector({ 
+export const ConfigSelector = ({ 
   config, 
   selectedConfig, 
   onSelect, 
   disabled = false,
   onManageClick 
-}: ConfigSelectorProps) {
+}: ConfigSelectorProps) => {
   const enabledConfigs = config.filter(c => c.enabled)
 
   return (

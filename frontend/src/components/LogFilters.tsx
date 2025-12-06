@@ -7,7 +7,7 @@ interface LogFiltersProps {
   onFilterChange: (value: SnapRaidCommand | 'all') => void
 }
 
-export function LogFilters({ searchTerm, onSearchChange, filterCommand, onFilterChange }: LogFiltersProps) {
+export const LogFilters = ({ searchTerm, onSearchChange, filterCommand, onFilterChange }: LogFiltersProps) => {
   return (
     <div className="space-y-3">
       <input

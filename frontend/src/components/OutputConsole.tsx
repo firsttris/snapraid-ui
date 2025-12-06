@@ -4,7 +4,7 @@ interface OutputConsoleProps {
   output: string
 }
 
-export function OutputConsole({ output }: OutputConsoleProps) {
+export const OutputConsole = ({ output }: OutputConsoleProps) => {
   const outputRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to bottom when output changes

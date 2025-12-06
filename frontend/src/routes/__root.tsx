@@ -3,7 +3,7 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { apiClient } from '../lib/api-client'
+import { connectWebSocket, disconnectWebSocket } from '../lib/api-client'
 
 import Header from '../components/Header'
 
@@ -58,10 +58,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   // Initialize WebSocket once at root level to persist across route changes
   useEffect(() => {
     // Connect with empty handlers - individual routes will update them
-    apiClient.connectWebSocket({})
+    connectWebSocket({})
 
     return () => {
-      apiClient.disconnectWebSocket()
+      disconnectWebSocket()
     }
   }, [])
 

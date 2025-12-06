@@ -16,7 +16,7 @@ interface LogListProps {
   onRotate: () => void
 }
 
-export function LogList({
+export const LogList = ({
   logs,
   isLoading,
   selectedLog,
@@ -28,7 +28,7 @@ export function LogList({
   onDeleteLog,
   onRefresh,
   onRotate,
-}: LogListProps) {
+}: LogListProps) => {
   const filteredLogs = logs.filter(log => {
     const matchesCommand = filterCommand === 'all' || log.command === filterCommand
     const matchesSearch = log.filename.toLowerCase().includes(searchTerm.toLowerCase())

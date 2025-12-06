@@ -8,7 +8,7 @@ interface FileBrowserProps {
   onClose: () => void
 }
 
-export function FileBrowser({ onSelect, onClose }: FileBrowserProps) {
+export const FileBrowser = ({ onSelect, onClose }: FileBrowserProps) => {
   const [currentPath, setCurrentPath] = useState<string>('')
   
   // Use TanStack Query hook
@@ -17,7 +17,7 @@ export function FileBrowser({ onSelect, onClose }: FileBrowserProps) {
   const entries = data?.entries || []
   const actualPath = data?.path || currentPath
 
-  function goUp() {
+  const goUp = () => {
     const parts = actualPath.split('/').filter(Boolean)
     parts.pop()
     setCurrentPath('/' + parts.join('/'))
@@ -93,7 +93,7 @@ interface ConfigManagerProps {
   onClose: () => void
 }
 
-export function ConfigManager({ config, onConfigsChanged, onClose }: ConfigManagerProps) {
+export const ConfigManager = ({ config, onConfigsChanged, onClose }: ConfigManagerProps) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [showFileBrowser, setShowFileBrowser] = useState(false)
   const [editingConfig, setEditingConfig] = useState<{ path: string; name: string } | null>(null)
@@ -105,7 +105,7 @@ export function ConfigManager({ config, onConfigsChanged, onClose }: ConfigManag
   const addConfigMutation = useAddConfig()
   const removeConfigMutation = useRemoveConfig()
 
-  async function handleAddConfig() {
+  const handleAddConfig = async () => {
     if (!newConfigName.trim() || !newConfigPath.trim()) {
       setError('Name and path are required')
       return
@@ -128,7 +128,7 @@ export function ConfigManager({ config, onConfigsChanged, onClose }: ConfigManag
     )
   }
 
-  async function handleRemoveConfig(path: string) {
+  const handleRemoveConfig = async (path: string) => {
     if (!confirm('Are you sure you want to remove this config?')) return
 
     removeConfigMutation.mutate(path, {

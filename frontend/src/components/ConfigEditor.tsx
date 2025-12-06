@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { apiClient, useFileContent, useWriteFile } from '../lib/api-client'
+import { validateConfig, useFileContent, useWriteFile } from '../lib/api-client'
 import { DiskManager } from './DiskManager'
 
 interface ConfigEditorProps {
@@ -9,7 +9,16 @@ interface ConfigEditorProps {
   onSaved?: () => void
 }
 
-function highlightSnapRaidConfig(text: string): string {
+const escapeHtml = (text: string): string => {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
+const highlightSnapRaidConfig = (text: string): string => {
   // Keywords that should be highlighted
   const keywords = [
     'parity', 'q-parity', 'content', 'data', 'disk', 'exclude', 
@@ -53,16 +62,7 @@ function highlightSnapRaidConfig(text: string): string {
   }).join('\n')
 }
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
-}
-
-export function ConfigEditor({ configPath, configName, onClose, onSaved }: ConfigEditorProps) {
+export const ConfigEditor = ({ configPath, configName, onClose, onSaved }: ConfigEditorProps) => {
   const [content, setContent] = useState<string>('')
   const [originalContent, setOriginalContent] = useState<string>('')
   const [validating, setValidating] = useState(false)
@@ -108,12 +108,12 @@ export function ConfigEditor({ configPath, configName, onClose, onSaved }: Confi
     }
   }, [viewMode])
 
-  function handleDiskUpdate() {
+  const handleDiskUpdate = () => {
     // Reload the file content when disks are updated
     refetchFile()
   }
 
-  async function handleSave() {
+  const handleSave = async () => {
     setError('')
     writeFileMutation.mutate(
       { path: configPath, content },
@@ -131,12 +131,12 @@ export function ConfigEditor({ configPath, configName, onClose, onSaved }: Confi
     )
   }
 
-  async function handleValidate() {
+  const handleValidate = async () => {
     setValidating(true)
     setError('')
     setValidationResult(null)
     try {
-      const result = await apiClient.validateConfig(configPath)
+      const result = await validateConfig(configPath)
       setValidationResult(result)
     } catch (err) {
       setError(String(err))
@@ -145,7 +145,7 @@ export function ConfigEditor({ configPath, configName, onClose, onSaved }: Confi
     }
   }
 
-  function handleClose() {
+  const handleClose = () => {
     if (hasChanges) {
       if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
         return

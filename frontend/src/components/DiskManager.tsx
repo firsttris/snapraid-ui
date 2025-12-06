@@ -9,7 +9,7 @@ interface DiskManagerProps {
   onUpdate?: () => void
 }
 
-export function DiskManager({ configPath, onUpdate }: DiskManagerProps) {
+export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
   const [error, setError] = useState<string>('')
 
   // TanStack Query hooks
@@ -21,7 +21,7 @@ export function DiskManager({ configPath, onUpdate }: DiskManagerProps) {
   const removeExcludeMutation = useRemoveExclude()
 
   // Handler functions for child components
-  async function handleAddDataDisk(name: string, path: string) {
+  const handleAddDataDisk = async (name: string, path: string) => {
     setError('')
     addDataDiskMutation.mutate(
       { configPath, diskName: name, diskPath: path },
@@ -35,7 +35,7 @@ export function DiskManager({ configPath, onUpdate }: DiskManagerProps) {
     )
   }
 
-  async function handleRemoveDataDisk(diskName: string) {
+  const handleRemoveDataDisk = async (diskName: string) => {
     setError('')
     removeDiskMutation.mutate(
       { configPath, diskName, diskType: 'data' },
@@ -49,7 +49,7 @@ export function DiskManager({ configPath, onUpdate }: DiskManagerProps) {
     )
   }
 
-  async function handleAddParity(fullPath: string) {
+  const handleAddParity = async (fullPath: string) => {
     setError('')
     addParityDiskMutation.mutate(
       { configPath, parityPath: fullPath },
@@ -63,7 +63,7 @@ export function DiskManager({ configPath, onUpdate }: DiskManagerProps) {
     )
   }
 
-  async function handleRemoveParity() {
+  const handleRemoveParity = async () => {
     setError('')
     removeDiskMutation.mutate(
       { configPath, diskName: null, diskType: 'parity' },
@@ -77,7 +77,7 @@ export function DiskManager({ configPath, onUpdate }: DiskManagerProps) {
     )
   }
 
-  async function handleAddExclude(pattern: string) {
+  const handleAddExclude = async (pattern: string) => {
     setError('')
     addExcludeMutation.mutate(
       { configPath, pattern },
@@ -91,7 +91,7 @@ export function DiskManager({ configPath, onUpdate }: DiskManagerProps) {
     )
   }
 
-  async function handleRemoveExclude(pattern: string) {
+  const handleRemoveExclude = async (pattern: string) => {
     setError('')
     removeExcludeMutation.mutate(
       { configPath, pattern },

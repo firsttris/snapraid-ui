@@ -5,7 +5,7 @@ interface DashboardCardsProps {
   status: SnapRaidStatus | null
 }
 
-export function DashboardCards({ parsedConfig, status }: DashboardCardsProps) {
+export const DashboardCards = ({ parsedConfig, status }: DashboardCardsProps) => {
   if (!parsedConfig) return null
 
   // Berechneter Wert direkt im Render - kein State nötig

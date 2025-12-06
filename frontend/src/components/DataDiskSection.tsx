@@ -7,7 +7,7 @@ interface DataDiskSectionProps {
   onRemove: (diskName: string) => Promise<void>
 }
 
-export function DataDiskSection({ data, onAdd, onRemove }: DataDiskSectionProps) {
+export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps) => {
   const [showAddDataDisk, setShowAddDataDisk] = useState(false)
   const [newDataDiskName, setNewDataDiskName] = useState('')
   const [newDataDiskPath, setNewDataDiskPath] = useState('')
@@ -15,7 +15,7 @@ export function DataDiskSection({ data, onAdd, onRemove }: DataDiskSectionProps)
   const [showDataDiskBrowser, setShowDataDiskBrowser] = useState(false)
   const [error, setError] = useState('')
 
-  async function handleAddDataDisk() {
+  const handleAddDataDisk = async () => {
     if (!newDataDiskName.trim() || !newDataDiskPath.trim()) {
       setError('Disk name and path are required')
       return
@@ -35,7 +35,7 @@ export function DataDiskSection({ data, onAdd, onRemove }: DataDiskSectionProps)
     }
   }
 
-  async function handleRemoveDisk(diskName: string) {
+  const handleRemoveDisk = async (diskName: string) => {
     if (!confirm(`Are you sure you want to remove data disk '${diskName}'?`)) return
 
     setError('')
