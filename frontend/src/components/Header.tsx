@@ -8,7 +8,7 @@ import {
   X,
 } from 'lucide-react'
 
-const Header = () => {
+export const Header = () => {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -79,5 +79,3 @@ const Header = () => {
     </>
   )
 }
-
-export default Header

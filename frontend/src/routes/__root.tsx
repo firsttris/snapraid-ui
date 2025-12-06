@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { connectWebSocket, disconnectWebSocket } from '../lib/api-client'
 
-import Header from '../components/Header'
+import { Header } from '../components/Header'
 
 import appCss from '../styles.css?url'
 

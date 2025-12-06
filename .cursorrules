@@ -198,6 +198,33 @@ if (condition) {
 3. Types (use `type` keyword)
 4. Relative imports
 
+### Export Style
+- **ALWAYS use named exports** - `export const ComponentName = ...`
+- **NEVER use default exports** - except in TanStack Router route files where required
+- Named exports improve tree-shaking and make refactoring easier
+- Named exports are more explicit and easier to search
+
+```typescript
+// ✅ Good - Named exports
+export const Button = () => { /* ... */ };
+export const formatDate = (date: Date): string => { /* ... */ };
+export const API_BASE = 'http://localhost:3001';
+
+// ✅ Good - Named imports
+import { Button } from './components/Button';
+import { formatDate, API_BASE } from './lib/utils';
+
+// ❌ Bad - Default exports (except TanStack Router routes)
+export default Button;
+export default function formatDate(date: Date) { /* ... */ }
+
+// ⚠️ Exception - Only in TanStack Router route files
+// In routes/*.tsx files, TanStack Router requires default export:
+export const Route = createFileRoute('/path')({
+  component: ComponentName, // Component itself uses named export
+})
+```
+
 ```typescript
 import { Hono } from "hono";
 import { join } from "@std/path";
