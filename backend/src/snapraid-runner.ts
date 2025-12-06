@@ -51,8 +51,7 @@ export const createSnapRaidRunner = () => {
      * Run devices command
      */
     runDevices: async (configPath: string): Promise<DevicesReport> => {
-      const { stdout, stderr } = await executor.executeSnapraidCommand(["devices", "-c", configPath]);
-      executor.logStderr("Devices", stderr);
+      const { stdout } = await executor.executeSnapraidCommand(["devices", "-c", configPath]);
 
       return {
         devices: parseDevicesOutput(stdout),
@@ -65,8 +64,7 @@ export const createSnapRaidRunner = () => {
      * Run list command
      */
     runList: async (configPath: string): Promise<ListReport> => {
-      const { stdout, stderr } = await executor.executeSnapraidCommand(["list", "-c", configPath]);
-      executor.logStderr("List", stderr);
+      const { stdout } = await executor.executeSnapraidCommand(["list", "-c", configPath]);
 
       const { files, totalFiles, totalSize, totalLinks } = parseListOutput(stdout);
 
@@ -85,7 +83,6 @@ export const createSnapRaidRunner = () => {
      */
     runCheck: async (configPath: string): Promise<CheckReport> => {
       const { stdout, stderr } = await executor.executeSnapraidCommand(["check", "-c", configPath]);
-      executor.logStderr("Check", stderr);
 
       const output = stdout + '\n' + stderr;
       const { files, totalFiles, errorCount, rehashCount, okCount } = parseCheckOutput(output);
@@ -106,7 +103,6 @@ export const createSnapRaidRunner = () => {
      */
     runDiff: async (configPath: string): Promise<DiffReport> => {
       const { stdout, stderr } = await executor.executeSnapraidCommand(["diff", "-c", configPath]);
-      executor.logStderr("Diff", stderr);
 
       const output = stdout + '\n' + stderr;
       const { files, totalFiles, equalFiles, newFiles, modifiedFiles, deletedFiles, movedFiles, copiedFiles, restoredFiles } = 

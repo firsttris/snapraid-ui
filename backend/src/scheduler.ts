@@ -163,7 +163,7 @@ export const createScheduler = (configPath: string, runner: SnapRaidRunner) => {
         .forEach((schedule) => startCronJob(configPath, runner, outputCallback, schedule));
     },
 
-    getSchedules: async (): Promise<Schedule[]> => 
+    getSchedules: (): Promise<Schedule[]> => 
       loadSchedulesFromFile(configPath),
 
     getSchedule: async (id: string): Promise<Schedule | undefined> => {

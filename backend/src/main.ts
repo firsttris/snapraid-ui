@@ -84,7 +84,7 @@ const main = async (): Promise<void> => {
   setScheduler(scheduler);
 
   // Perform initial log rotation
-  const deleted = await logManager.rotateLogs(
+  await logManager.rotateLogs(
     config.logs.maxFiles,
     config.logs.maxAge
   );
