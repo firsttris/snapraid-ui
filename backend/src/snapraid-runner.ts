@@ -2,12 +2,10 @@ import type { SnapRaidCommand, CommandOutput, RunningJob, DevicesReport, ListRep
 import type { LogManager } from "./log-manager.ts";
 import { createCommandExecutor } from "./executors/command-executor.ts";
 import { parseStatusOutput } from "./parsers/status-parser.ts";
-import { 
-  parseDevicesOutput, 
-  parseListOutput, 
-  parseCheckOutput, 
-  parseDiffOutput 
-} from "./parsers/output-parsers.ts";
+import { parseDevicesOutput } from "./parsers/devices-parser.ts";
+import { parseListOutput } from "./parsers/list-parser.ts";
+import { parseCheckOutput } from "./parsers/check-parser.ts";
+import { parseDiffOutput } from "./parsers/diff-parser.ts";
 
 /**
  * Create a SnapRAID runner with functional API

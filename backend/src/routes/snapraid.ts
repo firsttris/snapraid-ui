@@ -3,7 +3,8 @@ import { parseSnapRaidConfig } from "../config-parser.ts";
 import { createSnapRaidRunner, parseStatusOutput, type SnapRaidRunner } from "../snapraid-runner.ts";
 import type { LogManager } from "../log-manager.ts";
 import type { CommandOutput } from "@shared/types.ts";
-import { parseProbeOutput, parseSmartOutput } from "../parsers/output-parsers.ts";
+import { parseProbeOutput } from "../parsers/probe-parser.ts";
+import { parseSmartOutput } from "../parsers/smart-parser.ts";
 
 const snapraid = new Hono();
 
