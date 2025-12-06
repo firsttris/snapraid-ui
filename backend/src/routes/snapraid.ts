@@ -817,4 +817,20 @@ snapraid.get("/list", async (c) => {
   }
 });
 
+// GET /api/snapraid/check - Get check report
+snapraid.get("/check", async (c) => {
+  const configPath = c.req.query("path");
+  
+  if (!configPath) {
+    return c.json({ error: "Missing path parameter" }, 400);
+  }
+
+  try {
+    const result = await runner.runCheck(configPath);
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 export default snapraid;

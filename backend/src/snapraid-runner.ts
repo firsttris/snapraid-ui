@@ -1,4 +1,4 @@
-import type { SnapRaidCommand, CommandOutput, SnapRaidStatus, RunningJob, DevicesReport, DeviceInfo, ListReport, SnapRaidFileInfo } from "@shared/types.ts";
+import type { SnapRaidCommand, CommandOutput, SnapRaidStatus, RunningJob, DevicesReport, DeviceInfo, ListReport, SnapRaidFileInfo, CheckReport, CheckFileInfo } from "@shared/types.ts";
 import { LogManager } from "./log-manager.ts";
 
 export class SnapRaidRunner {
@@ -343,6 +343,115 @@ export class SnapRaidRunner {
   }
 
   /**
+   * Parse check output
+   * Format example:
+   * Missing file '/path/to/file.log'.
+   * recoverable status-20251206-094002.log
+   * 100% completed, 67 MB accessed in 0:00
+   * 
+   *        1 errors
+   *        0 unrecoverable errors
+   */
+  static parseCheckOutput(output: string): { files: CheckFileInfo[], totalFiles: number, errorCount: number, rehashCount: number, okCount: number } {
+    const files: CheckFileInfo[] = [];
+    const lines = output.split('\n');
+    let errorCount = 0;
+    let rehashCount = 0;
+    let okCount = 0;
+    let totalFiles = 0;
+    const seenFiles = new Set<string>(); // Track files we've already seen to avoid duplicates
+
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      
+      // Skip header/progress lines
+      if (!trimmed || 
+          trimmed.startsWith('Self test') ||
+          trimmed.startsWith('Loading') || 
+          trimmed.startsWith('Searching') ||
+          trimmed.startsWith('Using') ||
+          trimmed.startsWith('Initializing') ||
+          trimmed.startsWith('Selecting') ||
+          trimmed.startsWith('Checking') ||
+          trimmed.startsWith('WARNING') ||
+          trimmed.includes('% completed')) {
+        continue;
+      }
+
+      // Parse error summary line: "1 errors"
+      const errorsMatch = trimmed.match(/^(\d+)\s+errors?$/);
+      if (errorsMatch) {
+        // Use the summary line as the authoritative error count
+        errorCount = parseInt(errorsMatch[1], 10);
+        continue;
+      }
+
+      // Parse unrecoverable errors: "0 unrecoverable errors"
+      if (trimmed.includes('unrecoverable errors')) {
+        continue;
+      }
+
+      // Parse missing file: "Missing file '/path/to/file.log'."
+      const missingMatch = trimmed.match(/^Missing file '(.+)'\.$/);
+      if (missingMatch) {
+        const filePath = missingMatch[1];
+        
+        // Skip if we've already seen this file (avoid duplicates from stdout/stderr)
+        if (seenFiles.has(filePath)) {
+          continue;
+        }
+        seenFiles.add(filePath);
+        
+        // Check next line for recoverable/unrecoverable status
+        let errorType = 'Missing file';
+        if (i + 1 < lines.length) {
+          const nextLine = lines[i + 1].trim();
+          if (nextLine.startsWith('recoverable ') || nextLine.startsWith('unrecoverable ')) {
+            errorType = nextLine.split(/\s+/)[0];
+            i++; // Skip next line as we've processed it
+          }
+        }
+        
+        files.push({
+          status: 'ERROR',
+          name: filePath,
+          error: errorType,
+        });
+        totalFiles++;
+        continue;
+      }
+
+      // Parse files that need rehashing
+      if (trimmed.includes('rehash')) {
+        files.push({
+          status: 'REHASH',
+          name: trimmed,
+          error: 'Needs rehashing',
+        });
+        rehashCount++;
+        totalFiles++;
+        continue;
+      }
+
+      // Parse other error patterns
+      if (trimmed.toLowerCase().includes('error') && !trimmed.includes('errors')) {
+        files.push({
+          status: 'ERROR',
+          name: trimmed,
+          error: 'Check error',
+        });
+        totalFiles++;
+      }
+    }
+
+    // Calculate OK count
+    okCount = totalFiles - errorCount - rehashCount;
+    if (okCount < 0) okCount = 0;
+
+    return { files, totalFiles, errorCount, rehashCount, okCount };
+  }
+
+  /**
    * Run devices command
    */
   async runDevices(configPath: string): Promise<DevicesReport> {
@@ -394,6 +503,42 @@ export class SnapRaidRunner {
       totalFiles,
       totalSize,
       totalLinks,
+      timestamp: new Date().toISOString(),
+      rawOutput: output,
+    };
+  }
+
+  /**
+   * Run check command
+   */
+  async runCheck(configPath: string): Promise<CheckReport> {
+    const cmd = new Deno.Command("snapraid", {
+      args: ["check", "-c", configPath],
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const { stdout, stderr } = await cmd.output();
+    const stdoutText = new TextDecoder().decode(stdout);
+    const stderrText = new TextDecoder().decode(stderr);
+
+    // Combine stdout and stderr for parsing, as errors can appear in either
+    const output = stdoutText + '\n' + stderrText;
+
+    if (stderrText) {
+      console.log("Check command stderr:", stderrText);
+    }
+
+    const { files, totalFiles, errorCount, rehashCount, okCount } = SnapRaidRunner.parseCheckOutput(output);
+    
+    console.log("Check parsed results:", { files, totalFiles, errorCount, rehashCount, okCount });
+
+    return {
+      files,
+      totalFiles,
+      errorCount,
+      rehashCount,
+      okCount,
       timestamp: new Date().toISOString(),
       rawOutput: output,
     };

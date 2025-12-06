@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useCallback } from 'react'
 import { useConfig, useSnapRaidConfig, useCurrentJob, useExecuteCommand } from '../hooks/queries'
-import type { SnapRaidCommand, DevicesReport, ListReport } from '@shared/types'
+import type { SnapRaidCommand, DevicesReport, ListReport, CheckReport } from '@shared/types'
 import { ConfigManager } from '../components/ConfigManager'
 import { ConfigSelector } from '../components/ConfigSelector'
 import { DashboardCards } from '../components/DashboardCards'
@@ -12,8 +12,9 @@ import { SmartMonitor } from '../components/SmartMonitor'
 import { DiskPowerControl } from '../components/DiskPowerControl'
 import { DeviceList } from '../components/DeviceList'
 import { FileListViewer } from '../components/FileListViewer'
+import { CheckViewer } from '../components/CheckViewer'
 import { useWebSocketConnection } from '../hooks/useWebSocketConnection'
-import { getSmart, probe, spinUp, spinDown, getDevices, getFileList } from '../lib/api/snapraid'
+import { getSmart, probe, spinUp, spinDown, getDevices, getFileList, getCheck } from '../lib/api/snapraid'
 
 export const Route = createFileRoute('/')({
   component: Dashboard,
@@ -26,10 +27,13 @@ function Dashboard() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'smart' | 'power'>('dashboard')
   const [showDevicesModal, setShowDevicesModal] = useState(false)
   const [showFileListModal, setShowFileListModal] = useState(false)
+  const [showCheckModal, setShowCheckModal] = useState(false)
   const [devicesData, setDevicesData] = useState<DevicesReport | null>(null)
   const [fileListData, setFileListData] = useState<ListReport | null>(null)
+  const [checkData, setCheckData] = useState<CheckReport | null>(null)
   const [isLoadingDevices, setIsLoadingDevices] = useState(false)
   const [isLoadingFileList, setIsLoadingFileList] = useState(false)
+  const [isLoadingCheck, setIsLoadingCheck] = useState(false)
 
   // TanStack Query hooks
   const { data: config, refetch: refetchConfig } = useConfig()
@@ -89,6 +93,20 @@ function Dashboard() {
         console.error('Failed to get file list:', error)
       } finally {
         setIsLoadingFileList(false)
+      }
+      return
+    }
+    
+    if (command === 'check') {
+      setIsLoadingCheck(true)
+      setShowCheckModal(true)
+      try {
+        const data = await getCheck(selectedConfig)
+        setCheckData(data)
+      } catch (error) {
+        console.error('Failed to get check report:', error)
+      } finally {
+        setIsLoadingCheck(false)
       }
       return
     }
@@ -240,6 +258,18 @@ function Dashboard() {
                   totalLinks={fileListData?.totalLinks || 0}
                   isLoading={isLoadingFileList}
                   onClose={() => setShowFileListModal(false)}
+                />
+              )}
+
+              {showCheckModal && (
+                <CheckViewer
+                  files={checkData?.files || []}
+                  totalFiles={checkData?.totalFiles || 0}
+                  errorCount={checkData?.errorCount || 0}
+                  rehashCount={checkData?.rehashCount || 0}
+                  okCount={checkData?.okCount || 0}
+                  isLoading={isLoadingCheck}
+                  onClose={() => setShowCheckModal(false)}
                 />
               )}
 

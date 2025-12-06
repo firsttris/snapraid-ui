@@ -1,4 +1,4 @@
-import type { ParsedSnapRaidConfig, SnapRaidCommand, CommandOutput, RunningJob, SmartReport, ProbeReport, DevicesReport, ListReport } from "@shared/types";
+import type { ParsedSnapRaidConfig, SnapRaidCommand, CommandOutput, RunningJob, SmartReport, ProbeReport, DevicesReport, ListReport, CheckReport } from "@shared/types";
 import { API_BASE } from "./constants";
 
 /**
@@ -231,6 +231,18 @@ export const getFileList = async (configPath: string): Promise<ListReport> => {
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to get file list');
+  }
+  return response.json();
+}
+
+/**
+ * Get check report from SnapRAID
+ */
+export const getCheck = async (configPath: string): Promise<CheckReport> => {
+  const response = await fetch(`${API_BASE}/api/snapraid/check?path=${encodeURIComponent(configPath)}`);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to get check report');
   }
   return response.json();
 }

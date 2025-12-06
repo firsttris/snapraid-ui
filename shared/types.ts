@@ -191,3 +191,21 @@ export interface ListReport {
   timestamp: string;       // ISO string
   rawOutput: string;
 }
+
+// Check report types (from snapraid check command)
+export interface CheckFileInfo {
+  status: 'OK' | 'ERROR' | 'REHASH';  // Check status
+  name: string;            // File path/name
+  hash?: string;           // Hash value if available
+  error?: string;          // Error message if status is ERROR
+}
+
+export interface CheckReport {
+  files: CheckFileInfo[];
+  totalFiles: number;
+  errorCount: number;
+  rehashCount: number;
+  okCount: number;
+  timestamp: string;       // ISO string
+  rawOutput: string;
+}
