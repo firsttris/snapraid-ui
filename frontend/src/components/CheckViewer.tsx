@@ -43,25 +43,25 @@ export function CheckViewer({ files, totalFiles, errorCount, rehashCount, okCoun
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b">
           <div>
-            <h2 className="text-xl font-semibold">Check Report</h2>
+            <h2 className="text-xl font-semibold">{m.check_report_title()}</h2>
             {!isLoading && (
               <div className="flex gap-4 mt-2">
                 <p className="text-sm text-gray-500">
-                  Total: <span className="font-semibold">{totalFiles}</span>
+                  {m.check_report_total()}: <span className="font-semibold">{totalFiles}</span>
                 </p>
                 {errorCount > 0 && (
                   <p className="text-sm text-red-600">
-                    Errors: <span className="font-semibold">{errorCount}</span>
+                    {m.check_report_errors()}: <span className="font-semibold">{errorCount}</span>
                   </p>
                 )}
                 {rehashCount > 0 && (
                   <p className="text-sm text-yellow-600">
-                    Rehash: <span className="font-semibold">{rehashCount}</span>
+                    {m.check_report_rehash()}: <span className="font-semibold">{rehashCount}</span>
                   </p>
                 )}
                 {okCount > 0 && (
                   <p className="text-sm text-green-600">
-                    OK: <span className="font-semibold">{okCount}</span>
+                    {m.check_report_ok()}: <span className="font-semibold">{okCount}</span>
                   </p>
                 )}
               </div>
@@ -83,21 +83,21 @@ export function CheckViewer({ files, totalFiles, errorCount, rehashCount, okCoun
           ) : files.length === 0 && errorCount === 0 ? (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">✓</div>
-              <p className="text-lg font-semibold text-green-600">All files checked successfully!</p>
-              <p className="text-sm text-gray-500 mt-2">No errors found</p>
+              <p className="text-lg font-semibold text-green-600">{m.check_report_all_success()}</p>
+              <p className="text-sm text-gray-500 mt-2">{m.check_report_no_errors()}</p>
             </div>
           ) : (
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50 sticky top-0">
                 <tr>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[100px]">
-                    Status
+                    {m.check_report_status()}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    File Path
+                    {m.check_report_file_path()}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[200px]">
-                    Details
+                    {m.check_report_details()}
                   </th>
                 </tr>
               </thead>
@@ -126,8 +126,7 @@ export function CheckViewer({ files, totalFiles, errorCount, rehashCount, okCoun
         {!isLoading && errorCount > 0 && (
           <div className="p-4 bg-red-50 border-t border-red-100">
             <p className="text-sm text-red-800">
-              <span className="font-semibold">⚠️ Warning:</span> {errorCount} error{errorCount !== 1 ? 's' : ''} found. 
-              Please review the files above and consider running a fix or sync operation.
+              <span className="font-semibold">⚠️ {m.check_report_warning_title()}:</span> {m.check_report_warning_message({ count: errorCount, plural: errorCount !== 1 ? 's' : '' })}
             </p>
           </div>
         )}

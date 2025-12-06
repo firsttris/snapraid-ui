@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ProbeReport, DiskPowerStatus } from '@shared/types'
+import * as m from '../paraglide/messages'
 
 interface DiskPowerControlProps {
   configPath: string
@@ -171,14 +172,14 @@ export const DiskPowerControl = ({
     <div className="bg-white shadow rounded-lg p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold">Disk Power Management</h2>
+          <h2 className="text-xl font-semibold">{m.disk_power_title()}</h2>
           {report && (
             <p className="text-sm text-gray-500 mt-1">
-              Last updated: {new Date(report.timestamp).toLocaleString()}
+              {m.disk_power_last_updated()}: {new Date(report.timestamp).toLocaleString()}
               {' • '}
-              <span className="text-green-600">{activeCount} Active</span>
+              <span className="text-green-600">{activeCount} {m.disk_power_active()}</span>
               {' • '}
-              <span className="text-gray-600">{standbyCount} Standby</span>
+              <span className="text-gray-600">{standbyCount} {m.disk_power_standby()}</span>
             </p>
           )}
         </div>
@@ -187,18 +188,16 @@ export const DiskPowerControl = ({
           disabled={loading || operating}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
         >
-          {loading ? 'Probing...' : 'Probe Disk Status'}
+          {loading ? m.disk_power_probing() : m.disk_power_probe()}
         </button>
       </div>
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded text-red-700">
-          <strong>Error:</strong> {error}
+          <strong>{m.disk_power_error()}:</strong> {error}
           {isUnsupported && (
             <div className="mt-3 p-3 bg-yellow-50 border border-yellow-300 rounded text-yellow-800 text-sm">
-              <strong>ℹ️ Note:</strong> The <code className="bg-yellow-100 px-1 rounded">probe</code> command is not supported on your platform. 
-              This is common with NVMe drives or certain disk controllers. You can still use the <strong>Spin Up</strong> and <strong>Spin Down</strong> commands 
-              directly without probing the current status first.
+              <strong>ℹ️ {m.disk_power_unsupported_note()}:</strong> {m.disk_power_unsupported_message()}
             </div>
           )}
         </div>
@@ -206,7 +205,7 @@ export const DiskPowerControl = ({
 
       {success && (
         <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded text-green-700">
-          <strong>Success:</strong> {success}
+          <strong>{m.disk_power_success()}:</strong> {success}
         </div>
       )}
 
@@ -218,20 +217,20 @@ export const DiskPowerControl = ({
                 onClick={selectAll}
                 className="px-3 py-1 text-sm border rounded hover:bg-gray-50"
               >
-                Select All
+                {m.disk_power_select_all()}
               </button>
               <button
                 onClick={selectNone}
                 className="px-3 py-1 text-sm border rounded hover:bg-gray-50"
               >
-                Select None
+                {m.disk_power_select_none()}
               </button>
             </div>
             <div className="text-sm text-gray-600">
               {selectedDisks.size > 0 ? (
-                <span>{selectedDisks.size} disk{selectedDisks.size > 1 ? 's' : ''} selected</span>
+                <span>{selectedDisks.size} {m.disk_power_disks_selected()}</span>
               ) : (
-                <span>No disks selected (operations will affect all disks)</span>
+                <span>{m.disk_power_no_selection()}</span>
               )}
             </div>
           </div>
@@ -253,21 +252,19 @@ export const DiskPowerControl = ({
               disabled={operating || loading}
               className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold"
             >
-              {operating ? 'Operating...' : `🔄 Spin Up ${selectedDisks.size > 0 ? `(${selectedDisks.size})` : 'All'}`}
+              {operating ? m.disk_power_operating() : `🔄 ${m.disk_power_spin_up()} ${selectedDisks.size > 0 ? `(${selectedDisks.size})` : m.disk_power_all()}`}
             </button>
             <button
               onClick={handleSpinDown}
               disabled={operating || loading}
               className="flex-1 px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold"
             >
-              {operating ? 'Operating...' : `⏸️ Spin Down ${selectedDisks.size > 0 ? `(${selectedDisks.size})` : 'All'}`}
+              {operating ? m.disk_power_operating() : `⏸️ ${m.disk_power_spin_down()} ${selectedDisks.size > 0 ? `(${selectedDisks.size})` : m.disk_power_all()}`}
             </button>
           </div>
 
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-            <strong>⚠️ Warning:</strong> Spinning up all disks at once requires significant power. 
-            Ensure your power supply can handle the load. Spinning down disks will put them in standby mode 
-            to save power and reduce wear.
+            <strong>⚠️ {m.disk_power_warning_title()}:</strong> {m.disk_power_warning_message()}
           </div>
 
           <div className="mt-6 border-t pt-4">
@@ -275,7 +272,7 @@ export const DiskPowerControl = ({
               onClick={() => setShowRawOutput(!showRawOutput)}
               className="text-sm text-gray-600 hover:text-gray-800"
             >
-              {showRawOutput ? '▼' : '▶'} Show Raw Output
+              {showRawOutput ? '▼' : '▶'} {m.disk_power_show_raw_output()}
             </button>
             {showRawOutput && (
               <pre className="mt-2 p-4 bg-gray-50 rounded text-xs overflow-x-auto">
@@ -286,7 +283,7 @@ export const DiskPowerControl = ({
         </>
       ) : !loading && !error && (
         <div className="text-center py-8 text-gray-500">
-          Click "Probe Disk Status" to check the power state of all disks
+          {m.disk_power_no_data()}
         </div>
       )}
 
@@ -294,9 +291,9 @@ export const DiskPowerControl = ({
       {isUnsupported && (
         <>
           <div className="p-4 bg-blue-50 border border-blue-200 rounded mb-4">
-            <h3 className="font-semibold text-blue-900 mb-2">Direct Disk Control</h3>
+            <h3 className="font-semibold text-blue-900 mb-2">{m.disk_power_direct_control_title()}</h3>
             <p className="text-sm text-blue-800 mb-3">
-              Since probe is not available, you can still control all disks directly using the buttons below.
+              {m.disk_power_direct_control_message()}
             </p>
           </div>
 
@@ -306,21 +303,19 @@ export const DiskPowerControl = ({
               disabled={operating || loading}
               className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold"
             >
-              {operating ? 'Operating...' : '🔄 Spin Up All Disks'}
+              {operating ? m.disk_power_operating() : m.disk_power_spin_up_all()}
             </button>
             <button
               onClick={handleSpinDown}
               disabled={operating || loading}
               className="flex-1 px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-semibold"
             >
-              {operating ? 'Operating...' : '⏸️ Spin Down All Disks'}
+              {operating ? m.disk_power_operating() : m.disk_power_spin_down_all()}
             </button>
           </div>
 
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-            <strong>⚠️ Warning:</strong> Spinning up all disks at once requires significant power. 
-            Ensure your power supply can handle the load. Spinning down disks will put them in standby mode 
-            to save power and reduce wear.
+            <strong>⚠️ {m.disk_power_warning_title()}:</strong> {m.disk_power_warning_message()}
           </div>
         </>
       )}

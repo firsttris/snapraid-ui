@@ -11,6 +11,7 @@ import {
   Filler,
 } from 'chart.js'
 import type { SnapRaidStatus } from '@shared/types'
+import * as m from '../paraglide/messages'
 
 // Register Chart.js components
 ChartJS.register(
@@ -45,9 +46,9 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
   }
 
   const getHealthText = () => {
-    if (status.hasErrors) return 'Errors Detected'
-    if (!status.parityUpToDate) return 'Needs Sync'
-    return 'Healthy'
+    if (status.hasErrors) return m.status_modal_errors_detected()
+    if (!status.parityUpToDate) return m.status_modal_needs_sync()
+    return m.status_modal_healthy()
   }
 
   // Scrub status color
@@ -60,10 +61,10 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
 
   // Prepare chart data
   const chartData = {
-    labels: status.scrubHistory?.map(point => `${point.daysAgo}d`) || [],
+    labels: status.scrubHistory?.map(point => `${point.daysAgo}${m.status_modal_days_ago()}`) || [],
     datasets: [
       {
-        label: 'Scrub Coverage',
+        label: m.status_modal_coverage(),
         data: status.scrubHistory?.map(point => point.percentage) || [],
         fill: true,
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -91,7 +92,7 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => `Coverage: ${context.parsed.y}%`,
+          label: (context: any) => `${m.status_modal_coverage()}: ${context.parsed.y}%`,
         },
       },
     },
@@ -132,17 +133,17 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
         {/* Header */}
         <div className="p-6 border-b flex justify-between items-center">
           <div>
-            <h3 className="text-xl font-semibold">SnapRAID Status</h3>
-            <p className="text-sm text-gray-600 mt-1">Array health and disk information</p>
+            <h3 className="text-xl font-semibold">{m.status_modal_title()}</h3>
+            <p className="text-sm text-gray-600 mt-1">{m.status_modal_description()}</p>
           </div>
           <div className="flex gap-2">
             {onRefresh && (
               <button
                 onClick={onRefresh}
                 className="px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                title="Refresh status"
+                title={m.status_modal_refresh()}
               >
-                🔄 Refresh
+                🔄 {m.status_modal_refresh()}
               </button>
             )}
             <button
@@ -161,19 +162,19 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
             {/* Health Card */}
             <div className={`p-4 rounded-lg border-2 ${getHealthColor()}`}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium opacity-80">Array Health</span>
+                <span className="text-sm font-medium opacity-80">{m.status_modal_array_health()}</span>
                 <span className="text-2xl">{getHealthIcon()}</span>
               </div>
               <div className="text-2xl font-bold">{getHealthText()}</div>
               {!status.parityUpToDate && (
-                <div className="text-xs mt-1 opacity-70">Sync required</div>
+                <div className="text-xs mt-1 opacity-70">{m.status_modal_sync_required()}</div>
               )}
             </div>
 
             {/* Scrub Card */}
             <div className={`p-4 rounded-lg border-2 ${getScrubColor()}`}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium opacity-80">Scrub Status</span>
+                <span className="text-sm font-medium opacity-80">{m.status_modal_scrub_status()}</span>
                 <span className="text-2xl">🔍</span>
               </div>
               <div className="text-2xl font-bold">
@@ -181,22 +182,22 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
               </div>
               <div className="text-xs mt-1 opacity-70">
                 {status.oldestScrubDays !== undefined 
-                  ? `Oldest: ${status.oldestScrubDays}d ago`
-                  : 'No data'}
+                  ? `${m.status_modal_oldest()}: ${status.oldestScrubDays}${m.status_modal_days_ago()}`
+                  : m.status_modal_no_data()}
               </div>
             </div>
 
             {/* Sync Card */}
             <div className={`p-4 rounded-lg border-2 ${status.syncInProgress ? 'text-blue-600 bg-blue-50' : 'text-green-600 bg-green-50'}`}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium opacity-80">Sync Status</span>
+                <span className="text-sm font-medium opacity-80">{m.status_modal_sync_status()}</span>
                 <span className="text-2xl">{status.syncInProgress ? '⏳' : '✅'}</span>
               </div>
               <div className="text-2xl font-bold">
-                {status.syncInProgress ? 'In Progress' : 'Complete'}
+                {status.syncInProgress ? m.status_modal_in_progress() : m.status_modal_complete()}
               </div>
               {!status.syncInProgress && (
-                <div className="text-xs mt-1 opacity-70">Up to date</div>
+                <div className="text-xs mt-1 opacity-70">{m.status_modal_up_to_date()}</div>
               )}
             </div>
           </div>
@@ -204,20 +205,20 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
           {/* Disk Cards */}
           {status.disks && status.disks.length > 0 && (
             <div>
-              <h4 className="text-lg font-semibold mb-3">Data Disks ({status.disks.length})</h4>
+              <h4 className="text-lg font-semibold mb-3">{m.status_modal_data_disks()} ({status.disks.length})</h4>
               <div className="grid grid-cols-2 gap-4">
                 {status.disks.map((disk, idx) => (
                   <div key={idx} className="p-4 border rounded-lg bg-gray-50">
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h5 className="font-semibold text-lg">{disk.name}</h5>
-                        <p className="text-sm text-gray-600">{disk.files.toLocaleString()} files</p>
+                        <p className="text-sm text-gray-600">{disk.files.toLocaleString()} {m.status_modal_files()}</p>
                       </div>
                       <div className="text-right">
                         <div className={`text-2xl font-bold ${disk.usePercent > 80 ? 'text-red-600' : disk.usePercent > 60 ? 'text-yellow-600' : 'text-green-600'}`}>
                           {disk.usePercent}%
                         </div>
-                        <p className="text-xs text-gray-500">Usage</p>
+                        <p className="text-xs text-gray-500">{m.status_modal_usage()}</p>
                       </div>
                     </div>
                     
@@ -234,17 +235,17 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <span className="text-gray-600">Used:</span>
+                        <span className="text-gray-600">{m.status_modal_used()}:</span>
                         <span className="ml-1 font-medium">{formatGB(disk.usedGB)}</span>
                       </div>
                       <div>
-                        <span className="text-gray-600">Free:</span>
+                        <span className="text-gray-600">{m.status_modal_free()}:</span>
                         <span className="ml-1 font-medium">{formatGB(disk.freeGB)}</span>
                       </div>
                       {disk.fragmentedFiles > 0 && (
                         <div className="col-span-2">
-                          <span className="text-gray-600">Fragmented:</span>
-                          <span className="ml-1 font-medium text-orange-600">{disk.fragmentedFiles} files</span>
+                          <span className="text-gray-600">{m.status_modal_fragmented()}:</span>
+                          <span className="ml-1 font-medium text-orange-600">{disk.fragmentedFiles} {m.status_modal_files()}</span>
                         </div>
                       )}
                     </div>
@@ -257,28 +258,28 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
           {/* Totals Summary */}
           {(status.totalFiles !== undefined || status.totalUsedGB !== undefined) && (
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h4 className="font-semibold mb-2 text-blue-900">Total Array Summary</h4>
+              <h4 className="font-semibold mb-2 text-blue-900">{m.status_modal_total_summary()}</h4>
               <div className="grid grid-cols-4 gap-4 text-sm">
                 <div>
-                  <span className="text-blue-700">Files:</span>
+                  <span className="text-blue-700">{m.status_modal_files()}:</span>
                   <span className="ml-1 font-semibold text-blue-900">
                     {status.totalFiles?.toLocaleString() || '-'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-blue-700">Used:</span>
+                  <span className="text-blue-700">{m.status_modal_used()}:</span>
                   <span className="ml-1 font-semibold text-blue-900">
                     {formatGB(status.totalUsedGB)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-blue-700">Free:</span>
+                  <span className="text-blue-700">{m.status_modal_free()}:</span>
                   <span className="ml-1 font-semibold text-blue-900">
                     {formatGB(status.totalFreeGB)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-blue-700">Fragmented:</span>
+                  <span className="text-blue-700">{m.status_modal_fragmented()}:</span>
                   <span className="ml-1 font-semibold text-blue-900">
                     {status.fragmentedFiles || 0}
                   </span>
@@ -290,23 +291,23 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
           {/* Scrub History Chart */}
           {status.scrubHistory && status.scrubHistory.length > 0 && (
             <div>
-              <h4 className="text-lg font-semibold mb-3">Scrub History</h4>
+              <h4 className="text-lg font-semibold mb-3">{m.status_modal_scrub_history()}</h4>
               <div className="bg-gray-50 p-4 rounded-lg border">
                 <div className="h-64">
                   <Line data={chartData} options={chartOptions} />
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-2 text-sm text-center">
                   <div>
-                    <span className="text-gray-600">Oldest:</span>
-                    <span className="ml-1 font-semibold">{status.oldestScrubDays || 0} days</span>
+                    <span className="text-gray-600">{m.status_modal_oldest()}:</span>
+                    <span className="ml-1 font-semibold">{status.oldestScrubDays || 0} {m.status_modal_days()}</span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Median:</span>
-                    <span className="ml-1 font-semibold">{status.medianScrubDays || 0} days</span>
+                    <span className="text-gray-600">{m.status_modal_median()}:</span>
+                    <span className="ml-1 font-semibold">{status.medianScrubDays || 0} {m.status_modal_days()}</span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Newest:</span>
-                    <span className="ml-1 font-semibold">{status.newestScrubDays || 0} days</span>
+                    <span className="text-gray-600">{m.status_modal_newest()}:</span>
+                    <span className="ml-1 font-semibold">{status.newestScrubDays || 0} {m.status_modal_days()}</span>
                   </div>
                 </div>
               </div>
@@ -317,22 +318,22 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
           <div className="space-y-2">
             {status.syncInProgress && (
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                ℹ️ A sync operation is currently in progress
+                ℹ️ {m.status_modal_sync_in_progress_msg()}
               </div>
             )}
             {!status.parityUpToDate && !status.syncInProgress && (
               <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                ⚠️ Parity is not up to date. Run sync to update.
+                ⚠️ {m.status_modal_parity_not_updated_msg()}
               </div>
             )}
             {status.hasErrors && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-                ❌ Errors detected in the array. Check logs for details.
+                ❌ {m.status_modal_errors_msg()}
               </div>
             )}
             {!status.hasErrors && status.parityUpToDate && (
               <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
-                ✅ No errors detected. Array is healthy.
+                ✅ {m.status_modal_no_errors_msg()}
               </div>
             )}
           </div>
@@ -344,7 +345,7 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
             onClick={onClose}
             className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
           >
-            Close
+            {m.common_close()}
           </button>
         </div>
       </div>

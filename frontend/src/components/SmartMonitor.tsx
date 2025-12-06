@@ -62,7 +62,7 @@ const DiskCard = ({ disk }: { disk: SmartDiskInfo }) => {
             }`}>
               {disk.temperature}°C
             </div>
-            <div className="text-xs text-gray-500">Temperature</div>
+            <div className="text-xs text-gray-500">{m.smart_monitor_temperature()}</div>
           </div>
         )}
       </div>
@@ -70,7 +70,7 @@ const DiskCard = ({ disk }: { disk: SmartDiskInfo }) => {
       <div className="grid grid-cols-2 gap-4 text-sm">
         {disk.failureProbability !== undefined && (
           <div>
-            <div className="text-gray-500">Failure Probability</div>
+            <div className="text-gray-500">{m.smart_monitor_failure_probability()}</div>
             <div className={`font-semibold ${getFailureProbabilityColor(disk.failureProbability)}`}>
               {disk.failureProbability.toFixed(2)}%
             </div>
@@ -79,11 +79,11 @@ const DiskCard = ({ disk }: { disk: SmartDiskInfo }) => {
         
         {disk.powerOnHours !== undefined && (
           <div>
-            <div className="text-gray-500">Power On Hours</div>
+            <div className="text-gray-500">{m.smart_monitor_power_on_hours()}</div>
             <div className="font-semibold">
-              {disk.powerOnHours.toLocaleString()} hrs
+              {disk.powerOnHours.toLocaleString()} {m.smart_monitor_hours()}
               <span className="text-xs text-gray-500 ml-1">
-                ({Math.floor(disk.powerOnHours / 24 / 365)} years)
+                ({Math.floor(disk.powerOnHours / 24 / 365)} {m.smart_monitor_years()})
               </span>
             </div>
           </div>
@@ -91,14 +91,14 @@ const DiskCard = ({ disk }: { disk: SmartDiskInfo }) => {
         
         {disk.size && (
           <div>
-            <div className="text-gray-500">Capacity</div>
+            <div className="text-gray-500">{m.smart_monitor_capacity()}</div>
             <div className="font-semibold text-sm">{disk.size}</div>
           </div>
         )}
         
         {disk.serial && (
           <div>
-            <div className="text-gray-500">Serial</div>
+            <div className="text-gray-500">{m.smart_monitor_serial()}</div>
             <div className="font-mono text-xs">{disk.serial}</div>
           </div>
         )}
@@ -110,7 +110,7 @@ const DiskCard = ({ disk }: { disk: SmartDiskInfo }) => {
             onClick={() => setExpanded(!expanded)}
             className="text-sm text-blue-600 hover:text-blue-700 font-medium"
           >
-            {expanded ? '▼' : '▶'} SMART Attributes ({disk.attributes.length})
+            {expanded ? '▼' : '▶'} {m.smart_monitor_attributes()} ({disk.attributes.length})
           </button>
           
           {expanded && (
@@ -118,12 +118,12 @@ const DiskCard = ({ disk }: { disk: SmartDiskInfo }) => {
               <table className="min-w-full text-xs">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-2 py-1 text-left">ID</th>
-                    <th className="px-2 py-1 text-left">Name</th>
-                    <th className="px-2 py-1 text-right">Value</th>
-                    <th className="px-2 py-1 text-right">Worst</th>
-                    <th className="px-2 py-1 text-right">Threshold</th>
-                    <th className="px-2 py-1 text-right">Raw</th>
+                    <th className="px-2 py-1 text-left">{m.smart_monitor_id()}</th>
+                    <th className="px-2 py-1 text-left">{m.smart_monitor_name()}</th>
+                    <th className="px-2 py-1 text-right">{m.smart_monitor_value()}</th>
+                    <th className="px-2 py-1 text-right">{m.smart_monitor_worst()}</th>
+                    <th className="px-2 py-1 text-right">{m.smart_monitor_threshold()}</th>
+                    <th className="px-2 py-1 text-right">{m.smart_monitor_raw()}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -147,7 +147,7 @@ const DiskCard = ({ disk }: { disk: SmartDiskInfo }) => {
   )
 }
 
-export const SmartMonitor = ({ configPath, onRefresh }: SmartMonitorProps) => {
+export const SmartMonitor = ({ onRefresh }: SmartMonitorProps) => {
   const [report, setReport] = useState<SmartReport | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -181,10 +181,10 @@ export const SmartMonitor = ({ configPath, onRefresh }: SmartMonitorProps) => {
     <div className="bg-white shadow rounded-lg p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold">SMART Disk Health Monitor</h2>
+          <h2 className="text-xl font-semibold">{m.smart_monitor_title()}</h2>
           {report && (
             <p className="text-sm text-gray-500 mt-1">
-              Last updated: {new Date(report.timestamp).toLocaleString()}
+              {m.smart_monitor_last_updated()}: {new Date(report.timestamp).toLocaleString()}
             </p>
           )}
         </div>
@@ -193,30 +193,30 @@ export const SmartMonitor = ({ configPath, onRefresh }: SmartMonitorProps) => {
           disabled={loading}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
         >
-          {loading ? 'Loading...' : 'Refresh SMART Data'}
+          {loading ? m.smart_monitor_loading() : m.smart_monitor_refresh()}
         </button>
       </div>
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded text-red-700">
-          <strong>Error:</strong> {error}
+          <strong>{m.smart_monitor_error()}:</strong> {error}
         </div>
       )}
 
       {criticalDisks.length > 0 && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded">
-          <h3 className="font-semibold text-red-800 mb-2">⚠️ Critical Disks ({criticalDisks.length})</h3>
+          <h3 className="font-semibold text-red-800 mb-2">⚠️ {m.smart_monitor_critical_disks_count({ count: criticalDisks.length })}</h3>
           <p className="text-sm text-red-700">
-            The following disks require immediate attention. Consider replacing them soon.
+            {m.smart_monitor_critical_message()}
           </p>
         </div>
       )}
 
       {warningDisks.length > 0 && (
         <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
-          <h3 className="font-semibold text-yellow-800 mb-2">⚡ Warning Disks ({warningDisks.length})</h3>
+          <h3 className="font-semibold text-yellow-800 mb-2">⚡ {m.smart_monitor_warning_disks_count({ count: warningDisks.length })}</h3>
           <p className="text-sm text-yellow-700">
-            The following disks show warning signs. Monitor them closely.
+            {m.smart_monitor_warning_message()}
           </p>
         </div>
       )}
@@ -234,7 +234,7 @@ export const SmartMonitor = ({ configPath, onRefresh }: SmartMonitorProps) => {
               onClick={() => setShowRawOutput(!showRawOutput)}
               className="text-sm text-gray-600 hover:text-gray-800"
             >
-              {showRawOutput ? '▼' : '▶'} Show Raw Output
+              {showRawOutput ? '▼' : '▶'} {m.smart_monitor_show_raw_output()}
             </button>
             {showRawOutput && (
               <pre className="mt-2 p-4 bg-gray-50 rounded text-xs overflow-x-auto">
@@ -245,7 +245,7 @@ export const SmartMonitor = ({ configPath, onRefresh }: SmartMonitorProps) => {
         </>
       ) : !loading && !error && (
         <div className="text-center py-8 text-gray-500">
-          Click "Refresh SMART Data" to load disk health information
+          {m.smart_monitor_no_data()}
         </div>
       )}
     </div>
