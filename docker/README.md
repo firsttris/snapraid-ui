@@ -20,16 +20,16 @@ The setup builds a Docker image that:
 
 1. **Clone the repository or navigate to the project directory:**
    ```
-   cd /home/tristan/Projects/snapraid
+   cd /home/tristan/Projects/snapraid/docker
    ```
 
 2. **Build the Docker image and start the container:**
    ```
-   docker-compose -f docker/docker-compose.yml up --build
+   docker-compose -f up --build
    ```
    Or in the background:
    ```
-   docker-compose -f docker/docker-compose.yml up --build -d
+   docker-compose -f up --build -d
    ```
 
 3. **Access the application:**
@@ -45,9 +45,7 @@ Edit the `docker/docker-compose.yml` to adjust the paths to your SnapRAID config
 ```yaml
 volumes:
   - /usr/bin/snapraid:/usr/bin/snapraid:ro
-  - /path/to/snapraid.conf:/snapraid/snapraid.conf
-  - /path/to/logs:/snapraid/logs
-  - /path/to/schedules.json:/app/backend/schedules.json
+  - /path/to/snapraid/:/app/snapraid
   # Add your data and parity disks
   # - /mnt/disk1:/mnt/disk1:ro
   # - /mnt/disk1/SnapRAID.content:/mnt/disk1/SnapRAID.content
@@ -58,6 +56,7 @@ volumes:
 ### Environment Variables
 
 - `DENO_ENV=production`: Sets the Deno environment to production.
+- `SNAPRAID_BASE_PATH=/app/snapraid`: snapraid absolute config path inside the container 
 
 ## Podman Quadlet Setup
 

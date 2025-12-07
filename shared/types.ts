@@ -10,10 +10,6 @@ export interface SnapRaidConfig {
 export interface AppConfig {
   version: string;
   snapraidConfigs: SnapRaidConfig[];
-  backend: {
-    host: string;
-    port: number;
-  };
   logs: {
     maxHistoryEntries: number;
     directory: string;

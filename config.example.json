@@ -3,17 +3,13 @@
   "snapraidConfigs": [
     {
       "name": "Default",
-      "path": "/etc/snapraid.conf",
+      "path": "snapraid.conf",
       "enabled": true
     }
   ],
-  "backend": {
-    "host": "localhost",
-    "port": 3001
-  },
   "logs": {
     "maxHistoryEntries": 50,
-    "directory": "~/.snapraid-ui/logs",
+    "directory": "logs",
     "maxFiles": 100,
     "maxAge": 30
   }
