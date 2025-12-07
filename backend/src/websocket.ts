@@ -26,7 +26,7 @@ export const handleWebSocketUpgrade = (req: Request): Response => {
   };
 
   socket.onerror = (error: Event | ErrorEvent) => {
-    console.error("WebSocket error:", error);
+    //console.error("WebSocket error:", error);
     wsClients.delete(socket);
   };
 
