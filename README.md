@@ -1,8 +1,8 @@
 # SnapRAID Web Manager
 
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://www.docker.com/)
-[![Deno](https://img.shields.io/badge/Deno-1.0+-green)](https://deno.com/)
-[![React](https://img.shields.io/badge/React-18+-blue)](https://reactjs.org/)
+[![Deno](https://img.shields.io/badge/Deno-2.5.6+-green)](https://deno.com/)
+[![React](https://img.shields.io/badge/React-19+-blue)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue)](https://www.typescriptlang.org/)
 
 A modern, user-friendly web interface for managing [SnapRAID](https://www.snapraid.it/) installations. Allows you to execute SnapRAID commands, manage configurations, monitor disks, and more – all through a web browser.
@@ -30,12 +30,36 @@ SnapRAID Web Manager is a complete toolkit for SnapRAID users that replaces comm
 
 ## 🛠️ Installation
 
-### With Docker (Recommended)
+### Local Development (Recommended for Development)
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/snapraid-web-manager.git
-   cd snapraid-web-manager
+   git clone https://github.com/firsttris/snapraid-ui
+   cd snapraid-ui
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   ./install.sh
+   ```
+
+3. **Start the application:**
+   ```bash
+   ./start.sh
+   ```
+
+   This will start both the backend (Deno) and frontend (React/Vite) servers in the background.
+
+4. **Access the application:**
+   - Frontend: http://localhost:5173 (default Vite port)
+   - Backend API: http://localhost:8080
+
+### With Docker (For Production Deployment)
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/firsttris/snapraid-ui
+   cd snapraid-ui
    ```
 
 2. **Adjust configuration:**
@@ -49,23 +73,6 @@ SnapRAID Web Manager is a complete toolkit for SnapRAID users that replaces comm
 4. **Access the application:**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8080
-
-### Local Development
-
-#### Backend (Deno)
-
-```bash
-cd backend
-deno task dev
-```
-
-#### Frontend (React/Vite)
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
 
 ## 📖 Usage
 
