@@ -138,7 +138,7 @@ const parseDiffStats = (lines: string[]): Partial<SnapRaidStatus> => {
 /**
  * Parse scrub history chart
  */
-const parseScrubHistory = (lines: string[], oldestScrubDays?: number): ScrubHistoryPoint[] => {
+const parseScrubHistory = (lines: string[], oldestScrubDays?: number, newestScrubDays?: number): ScrubHistoryPoint[] => {
   const chartLines = lines.reduce((acc, line) => {
     if (line.match(/^\s*\d+%\|/) || (acc.foundStart && line.match(/^\s+\|/))) {
       return { foundStart: true, lines: [...acc.lines, line] };
@@ -153,6 +153,7 @@ const parseScrubHistory = (lines: string[], oldestScrubDays?: number): ScrubHist
 
   const CHART_WIDTH = 70;
   const maxDays = oldestScrubDays || 30;
+  const minDays = newestScrubDays || 0;
 
   return chartLines.lines.flatMap(chartLine => {
     const percentMatch = chartLine.match(/^\s*(\d+)%\|/);
@@ -164,7 +165,8 @@ const parseScrubHistory = (lines: string[], oldestScrubDays?: number): ScrubHist
     return [...chartLine].reduce((positions, char, index) => {
       if (char !== 'o') return positions;
       const relativePos = (index - pipeIndex - 1) / CHART_WIDTH;
-      const daysAgo = Math.round(relativePos * maxDays);
+      // Left side (pos=0) is oldest, right side (pos=1) is newest
+      const daysAgo = Math.round(maxDays - (relativePos * (maxDays - minDays)));
       return [...positions, { daysAgo, percentage }];
     }, [] as ScrubHistoryPoint[]);
   });
@@ -191,7 +193,7 @@ export const parseStatusOutput = (output: string): SnapRaidStatus => {
   const diffStats = parseDiffStats(lines);
   const scrubAge = parseScrubAge(output);
   const scrubPercentage = parseScrubPercentage(output);
-  const scrubHistory = parseScrubHistory(lines, scrubAge.oldestScrubDays);
+  const scrubHistory = parseScrubHistory(lines, scrubAge.oldestScrubDays, scrubAge.newestScrubDays);
 
   const status: SnapRaidStatus = {
     hasErrors: hasErrors(output),

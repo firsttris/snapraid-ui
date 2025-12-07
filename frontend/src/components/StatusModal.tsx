@@ -59,13 +59,15 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
     return 'text-green-600 bg-green-50'
   }
 
-  // Prepare chart data
+  // Prepare chart data - sort by daysAgo descending (oldest to newest, left to right)
+  const sortedHistory = [...(status.scrubHistory || [])].sort((a, b) => b.daysAgo - a.daysAgo);
+  
   const chartData = {
-    labels: status.scrubHistory?.map(point => `${point.daysAgo}${m.status_modal_days_ago()}`) || [],
+    labels: sortedHistory.map(point => `${point.daysAgo}${m.status_modal_days_ago()}`),
     datasets: [
       {
         label: m.status_modal_coverage(),
-        data: status.scrubHistory?.map(point => point.percentage) || [],
+        data: sortedHistory.map(point => point.percentage),
         fill: true,
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
         borderColor: 'rgb(59, 130, 246)',
@@ -108,7 +110,6 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
         },
       },
       x: {
-        reverse: true, // Most recent on the left
         grid: {
           display: false,
         },
@@ -116,6 +117,13 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
           maxRotation: 0,
           autoSkip: true,
           maxTicksLimit: 8,
+        },
+        title: {
+          display: true,
+          text: m.status_modal_days_ago(),
+          font: {
+            size: 12,
+          },
         },
       },
     },
