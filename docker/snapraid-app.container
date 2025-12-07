@@ -1,0 +1,50 @@
+# Quadlet file for Podman systemd integration
+# Place this file in ~/.config/containers/systemd/ or /etc/containers/systemd/
+# Then run: systemctl --user daemon-reload (or systemctl daemon-reload for system)
+# Start with: systemctl --user start snapraid-app (or systemctl start for system)
+# Enable on boot: systemctl --user enable snapraid-app
+
+[Unit]
+Description=SnapRAID Application Service
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=localhost/snapraid-app:latest
+ContainerName=snapraid-app
+
+# Volumes - adjust paths to match your system
+Volume=/usr/bin/snapraid:/usr/bin/snapraid:ro,Z
+Volume=/home/tristan/snapraid/snapraid.conf:/snapraid/snapraid.conf:Z  # conf must be writable!
+Volume=/home/tristan/snapraid/logs:/snapraid/logs:Z # logs must be writable!
+Volume=/home/tristan/Projects/snapraid/backend/schedules.json:/app/backend/schedules.json:Z # schedules must be writable!
+# Mount your data disks (uncomment and adjust as needed)
+# Volume=/mnt/disk1:/mnt/disk1:ro,Z
+# Volume=/mnt/disk1/SnapRAID.content:/mnt/disk1/SnapRAID.content:Z  # content must be writable!
+# Volume=/mnt/disk2:/mnt/disk2:ro,Z
+# Volume=/mnt/disk2/SnapRAID.content:/mnt/disk2/SnapRAID.content:Z  # content must be writable!
+# Volume=/mnt/parity:/mnt/parity:Z  # Parity disks must be writable!
+
+# Environment variables
+Environment=DENO_ENV=production
+
+# Network
+PublishPort=3000:80
+PublishPort=8080:8080
+Network=snapraid-net
+
+# Security options
+SecurityLabelDisable=false
+# Privileged access for disk operations and SMART data
+AddCapability=CAP_SYS_ADMIN
+AddCapability=CAP_SYS_RAWIO
+
+# Restart policy
+Restart=unless-stopped
+
+[Service]
+Restart=always
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target default.target

@@ -1,0 +1,23 @@
+node_modules
+dist
+.git
+.vscode
+*.log
+npm-debug.log*
+.DS_Store
+
+# Development files
+frontend/node_modules
+backend/.cache
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+**/test
+**/tests
+
+# Docker files
+docker/
+Dockerfile*
+docker-compose*.yml
+.dockerignore

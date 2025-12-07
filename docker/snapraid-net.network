@@ -1,0 +1,12 @@
+# Quadlet network file for Podman systemd integration
+# Place this file in ~/.config/containers/systemd/ or /etc/containers/systemd/
+
+[Unit]
+Description=SnapRAID Network
+
+[Network]
+NetworkName=snapraid-net
+Driver=bridge
+
+[Install]
+WantedBy=multi-user.target default.target

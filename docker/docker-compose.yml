@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: snapraid-app
+    restart: unless-stopped
+    volumes:
+      # SnapRAID binary
+      - /usr/bin/snapraid:/usr/bin/snapraid:ro
+      # SnapRAID config and data
+      - /home/tristan/snapraid/snapraid.conf:/snapraid/snapraid.conf
+      - /home/tristan/snapraid/logs:/snapraid/logs
+      # Application data
+      - /home/tristan/snapraid/schedules.json:/app/backend/schedules.json
+      # Mount your data disks (adjust paths as needed)
+      # - /mnt/disk1:/mnt/disk1:ro
+      # - /mnt/disk1/SnapRAID.content:/mnt/disk1/SnapRAID.content # content disks must be writable!
+      # - /mnt/disk2:/mnt/disk2:ro
+      # - /mnt/disk2/SnapRAID.content:/mnt/disk2/SnapRAID.content # content disks must be writable!
+      # - /mnt/parity:/mnt/parity  # Parity disks must be writable!
+    environment:
+      - DENO_ENV=production
+    ports:
+      - "3000:80"  # Frontend on port 3000
+      - "8080:8080"  # Backend API on port 8080 (optional, for direct API access)
+    privileged: true  # Required for disk operations and SMART data
+    networks:
+      - snapraid-net
+
+networks:
+  snapraid-net:
+    driver: bridge
