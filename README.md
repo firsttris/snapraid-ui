@@ -5,7 +5,7 @@
 [![React](https://img.shields.io/badge/React-18+-blue)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue)](https://www.typescriptlang.org/)
 
-A modern, user-friendly web interface for managing SnapRAID installations. Allows you to execute SnapRAID commands, manage configurations, monitor disks, and more – all through a web browser.
+A modern, user-friendly web interface for managing [SnapRAID](https://www.snapraid.it/) installations. Allows you to execute SnapRAID commands, manage configurations, monitor disks, and more – all through a web browser.
 
 ## 🚀 Overview
 
