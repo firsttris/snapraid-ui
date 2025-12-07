@@ -76,7 +76,7 @@ export const connectWebSocket = (handlers: {
   };
 
   wsState.ws.onerror = (error) => {
-    console.error('WebSocket error:', error);
+    //console.error('WebSocket error:', error);
   };
 
   wsState.ws.onclose = () => {

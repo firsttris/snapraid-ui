@@ -64,6 +64,7 @@ snapraid.get("/current-job", (c) => {
 
 // POST /api/snapraid/execute - Execute SnapRAID command
 snapraid.post("/execute", async (c) => {
+  console.log('Received execute command request', JSON.stringify(c));
   const { command, configPath, args = [] } = await c.req.json();
 
   if (!command || !configPath) {
