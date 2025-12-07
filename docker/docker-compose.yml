@@ -20,7 +20,7 @@ services:
       - DENO_ENV=production
       - SNAPRAID_BASE_PATH=/app/snapraid
     ports:
-      - "3000:80"  # Frontend on port 3000
+      - "3001:80"  # Frontend on port 3001, Nginx listens on port 80 internally
       - "8080:8080"  # Backend API on port 8080 (optional, for direct API access)
     privileged: true  # Required for disk operations and SMART data
     networks:
