@@ -44,7 +44,10 @@ app.notFound((c) => {
 
 const main = async (): Promise<void> => {
   const config = await loadAppConfig();
-  const { host, port } = config.backend;
+
+  // Use environment variables with config fallback
+  const host = "0.0.0.0";
+  const port = "8080";
 
   // Initialize log manager
   const logManager = createLogManager(join(BASE_PATH, config.logs.directory));

@@ -77,7 +77,7 @@ export const loadAppConfig = async (): Promise<AppConfig> => {
     console.warn(`Failed to load config from ${configPath}, using defaults:`, error);
     
     // Return default config
-    return {
+    const defaultConfig: AppConfig = {
       version: "1.0.0",
       snapraidConfigs: [
         {
@@ -86,10 +86,6 @@ export const loadAppConfig = async (): Promise<AppConfig> => {
           enabled: true,
         },
       ],
-      backend: {
-        host: "localhost",
-        port: 3001,
-      },
       logs: {
         maxHistoryEntries: 50,
         directory: "logs",
@@ -97,6 +93,16 @@ export const loadAppConfig = async (): Promise<AppConfig> => {
         maxAge: 30,
       },
     };
+
+    // Save the default config
+    try {
+      await saveAppConfig(defaultConfig);
+      console.log(`Created default config at ${configPath}`);
+    } catch (saveError) {
+      console.error(`Failed to save default config:`, saveError);
+    }
+
+    return defaultConfig;
   }
 };
 
