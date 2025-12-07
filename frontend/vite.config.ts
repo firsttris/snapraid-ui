@@ -23,6 +23,21 @@ const config = defineConfig({
     tailwindcss(),
     tanstackStart(),
     viteReact(),
+    /* Proxy not forwarding POST request bodys correctly, disabled for now
+      server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        ws: true,
+      },
+    },
+  },
+  */
   ],
 });
 
