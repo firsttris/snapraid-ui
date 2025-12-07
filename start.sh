@@ -1,5 +1,8 @@
 #!/usr/bin/env fish
 
+# Set base path for local development
+set -x SNAPRAID_BASE_PATH ./snapraid
+
 # Starte Backend im Hintergrund
 cd backend
 deno task dev &

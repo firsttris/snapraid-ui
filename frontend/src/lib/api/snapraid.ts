@@ -5,7 +5,8 @@ import { API_BASE } from "./constants";
  * Parse a SnapRAID config file
  */
 export const parseSnapRaidConfig = async (path: string): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/snapraid/parse?path=${encodeURIComponent(path)}`);
+  const relativePath = path.replace(/^.*[\/\\]/, '');
+  const response = await fetch(`${API_BASE}/snapraid/parse?path=${encodeURIComponent(relativePath)}`);
   if (!response.ok) throw new Error('Failed to parse config');
   return response.json();
 }
@@ -14,10 +15,11 @@ export const parseSnapRaidConfig = async (path: string): Promise<ParsedSnapRaidC
  * Execute a SnapRAID command
  */
 export const executeCommand = async (command: SnapRaidCommand, configPath: string, args: string[] = []): Promise<void> => {
+  const relativePath = configPath.replace(/^.*[\/\\]/, '');
   const response = await fetch(`${API_BASE}/snapraid/execute`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ command, configPath, args }),
+    body: JSON.stringify({ command, configPath: relativePath, args }),
   });
   if (!response.ok) throw new Error('Failed to execute command');
 }
@@ -44,8 +46,9 @@ export const getCurrentJob = async (): Promise<RunningJob | null> => {
  * Get parsed status from last status command
  */
 export const getStatus = async (configPath?: string): Promise<{ status: any; timestamp: string; exitCode: number | null }> => {
-  const url = configPath 
-    ? `${API_BASE}/snapraid/status?path=${encodeURIComponent(configPath)}`
+  const relativePath = configPath ? configPath.replace(/^.*[\/\\]/, '') : undefined;
+  const url = relativePath 
+    ? `${API_BASE}/snapraid/status?path=${encodeURIComponent(relativePath)}`
     : `${API_BASE}/snapraid/status`;
   const response = await fetch(url);
   if (!response.ok) throw new Error('Failed to fetch status');

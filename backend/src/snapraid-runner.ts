@@ -1,6 +1,6 @@
 import type { SnapRaidCommand, CommandOutput, RunningJob, DevicesReport, ListReport, CheckReport, DiffReport } from "@shared/types.ts";
 import type { LogManager } from "./log-manager.ts";
-import { createCommandExecutor } from "./executors/command-executor.ts";
+import { executeCommand, abortCommand, getCurrentJob, executeSnapraidCommand, setLogManager } from "./executors/command-executor.ts";
 import { parseStatusOutput } from "./parsers/status-parser.ts";
 import { parseDevicesOutput } from "./parsers/devices-parser.ts";
 import { parseListOutput } from "./parsers/list-parser.ts";
@@ -11,14 +11,12 @@ import { parseDiffOutput } from "./parsers/diff-parser.ts";
  * Create a SnapRAID runner with functional API
  */
 export const createSnapRaidRunner = () => {
-  const executor = createCommandExecutor();
-
   return {
     /**
      * Set log manager for automatic logging
      */
     setLogManager: (logManager: LogManager): void => {
-      executor.setLogManager(logManager);
+      setLogManager(logManager);
     },
 
     /**
@@ -30,28 +28,28 @@ export const createSnapRaidRunner = () => {
       onOutput: (chunk: string) => void,
       additionalArgs: string[] = []
     ): Promise<CommandOutput> => {
-      return executor.executeCommand(command, configPath, onOutput, additionalArgs);
+      return executeCommand(command, configPath, onOutput, additionalArgs);
     },
 
     /**
      * Abort a running command
      */
     abortCommand: (processId: string): boolean => {
-      return executor.abortCommand(processId);
+      return abortCommand(processId);
     },
 
     /**
      * Get current running job
      */
     getCurrentJob: (): RunningJob | null => {
-      return executor.getCurrentJob();
+      return getCurrentJob();
     },
 
     /**
      * Run devices command
      */
     runDevices: async (configPath: string): Promise<DevicesReport> => {
-      const { stdout } = await executor.executeSnapraidCommand(["devices", "-c", configPath]);
+      const { stdout } = await executeSnapraidCommand(["devices", "-c", configPath]);
 
       return {
         devices: parseDevicesOutput(stdout),
@@ -64,7 +62,7 @@ export const createSnapRaidRunner = () => {
      * Run list command
      */
     runList: async (configPath: string): Promise<ListReport> => {
-      const { stdout } = await executor.executeSnapraidCommand(["list", "-c", configPath]);
+      const { stdout } = await executeSnapraidCommand(["list", "-c", configPath]);
 
       const { files, totalFiles, totalSize, totalLinks } = parseListOutput(stdout);
 
@@ -82,7 +80,7 @@ export const createSnapRaidRunner = () => {
      * Run check command
      */
     runCheck: async (configPath: string): Promise<CheckReport> => {
-      const { stdout, stderr } = await executor.executeSnapraidCommand(["check", "-c", configPath]);
+      const { stdout, stderr } = await executeSnapraidCommand(["check", "-c", configPath]);
 
       const output = stdout + '\n' + stderr;
       const { files, totalFiles, errorCount, rehashCount, okCount } = parseCheckOutput(output);
@@ -102,7 +100,7 @@ export const createSnapRaidRunner = () => {
      * Run diff command
      */
     runDiff: async (configPath: string): Promise<DiffReport> => {
-      const { stdout, stderr } = await executor.executeSnapraidCommand(["diff", "-c", configPath]);
+      const { stdout, stderr } = await executeSnapraidCommand(["diff", "-c", configPath]);
 
       const output = stdout + '\n' + stderr;
       const { files, totalFiles, equalFiles, newFiles, modifiedFiles, deletedFiles, movedFiles, copiedFiles, restoredFiles } = 

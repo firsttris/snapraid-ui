@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { join } from "@std/path";
 import { loadAppConfig } from "./config-parser.ts";
 import { broadcast, handleWebSocketUpgrade } from "./websocket.ts";
 import { setBroadcast } from "./routes/snapraid.ts";
@@ -12,6 +13,7 @@ import { filesystemRoutes } from "./routes/filesystem.ts";
 import { snapraidRoutes } from "./routes/snapraid.ts";
 import { logsRoutes } from "./routes/logs.ts";
 import { schedulesRoutes } from "./routes/schedules.ts";
+import { BASE_PATH } from "./config.ts";
 
 const app = new Hono();
 
@@ -45,7 +47,7 @@ const main = async (): Promise<void> => {
   const { host, port } = config.backend;
 
   // Initialize log manager
-  const logManager = createLogManager(config.logs.directory);
+  const logManager = createLogManager(join(BASE_PATH, config.logs.directory));
   await logManager.ensureLogDirectory();
 
   // Inject broadcast function into snapraid routes
@@ -59,7 +61,7 @@ const main = async (): Promise<void> => {
   setRunnerLogManager(logManager);
 
   // Initialize scheduler
-  const schedulesConfigPath = "./schedules.json";
+  const schedulesConfigPath = join(BASE_PATH, "schedules.json");
   const runner = getRunner();
   const scheduler = createScheduler(schedulesConfigPath, runner);
   

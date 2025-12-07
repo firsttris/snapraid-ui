@@ -2,27 +2,18 @@ import type { SnapRaidCommand, CommandOutput, RunningJob } from "@shared/types.t
 import type { LogManager } from "../log-manager.ts";
 
 /**
- * State for command executor
+ * Global state for command executor
  */
-interface ExecutorState {
-  processes: Map<string, Deno.ChildProcess>;
-  currentJob: RunningJob | null;
-  logManager: LogManager | null;
-}
-
-/**
- * Create a new executor state
- */
-const createExecutorState = (): ExecutorState => ({
-  processes: new Map(),
-  currentJob: null,
-  logManager: null,
-});
+const state = {
+  processes: new Map<string, Deno.ChildProcess>(),
+  currentJob: null as RunningJob | null,
+  logManager: null as LogManager | null,
+};
 
 /**
  * Prepare log path and ensure directory exists
  */
-const prepareLogPath = async (state: ExecutorState, command: SnapRaidCommand): Promise<string> => {
+const prepareLogPath = async (command: SnapRaidCommand): Promise<string> => {
   if (!state.logManager) throw new Error("Log manager not configured");
   await state.logManager.ensureLogDirectory();
   return state.logManager.getLogPath(command);
@@ -88,7 +79,7 @@ const readProcessStreams = async (
 /**
  * Cleanup after process completion
  */
-const cleanupProcess = (state: ExecutorState, processId: string): void => {
+const cleanupProcess = (processId: string): void => {
   state.processes.delete(processId);
   state.currentJob = null;
 };
@@ -96,14 +87,14 @@ const cleanupProcess = (state: ExecutorState, processId: string): void => {
 /**
  * Execute a SnapRAID command and stream output
  */
-const executeCommand = (state: ExecutorState) => async (
+export const executeCommand = async (
   command: SnapRaidCommand,
   configPath: string,
   onOutput: (chunk: string) => void,
   additionalArgs: string[] = []
 ): Promise<CommandOutput> => {
   const processId = `${command}-${Date.now()}`;
-  const logPath = state.logManager ? await prepareLogPath(state, command) : undefined;
+  const logPath = state.logManager ? await prepareLogPath(command) : undefined;
   const args = buildCommandArgs(command, configPath, additionalArgs, logPath);
   const timestamp = new Date().toISOString();
 
@@ -126,7 +117,7 @@ const executeCommand = (state: ExecutorState) => async (
   try {
     const fullOutput = await readProcessStreams(process, onOutput);
     const status = await process.status;
-    cleanupProcess(state, processId);
+    cleanupProcess(processId);
 
     return {
       command: `snapraid ${args.join(" ")}`,
@@ -135,7 +126,7 @@ const executeCommand = (state: ExecutorState) => async (
       exitCode: status.code,
     };
   } catch (error) {
-    cleanupProcess(state, processId);
+    cleanupProcess(processId);
     throw error;
   }
 };
@@ -143,7 +134,7 @@ const executeCommand = (state: ExecutorState) => async (
 /**
  * Abort a running command
  */
-const abortCommand = (state: ExecutorState) => (processId: string): boolean => {
+export const abortCommand = (processId: string): boolean => {
   const process = state.processes.get(processId);
   if (process) {
     process.kill("SIGTERM");
@@ -157,14 +148,14 @@ const abortCommand = (state: ExecutorState) => (processId: string): boolean => {
 /**
  * Get current running job
  */
-const getCurrentJob = (state: ExecutorState) => (): RunningJob | null => {
+export const getCurrentJob = (): RunningJob | null => {
   return state.currentJob;
 };
 
 /**
  * Execute snapraid command with given args (non-streaming)
  */
-const executeSnapraidCommand = () => async (args: string[]): Promise<{ stdout: string, stderr: string }> => {
+export const executeSnapraidCommand = async (args: string[]): Promise<{ stdout: string, stderr: string }> => {
   const cmd = new Deno.Command("snapraid", {
     args,
     stdout: "piped",
@@ -183,24 +174,9 @@ const executeSnapraidCommand = () => async (args: string[]): Promise<{ stdout: s
 /**
  * Set log manager
  */
-const setLogManager = (state: ExecutorState) => (logManager: LogManager): void => {
-  state.logManager = logManager;
+export const setLogManager = (logManager_: LogManager): void => {
+  state.logManager = logManager_;
 };
 
-/**
- * Create a command executor with closures
- */
-export const createCommandExecutor = () => {
-  const state = createExecutorState();
-  
-  return {
-    executeCommand: executeCommand(state),
-    abortCommand: abortCommand(state),
-    getCurrentJob: getCurrentJob(state),
-    executeSnapraidCommand: executeSnapraidCommand(),
-    setLogManager: setLogManager(state),
-  };
-};
 
-export type CommandExecutor = ReturnType<typeof createCommandExecutor>;
 

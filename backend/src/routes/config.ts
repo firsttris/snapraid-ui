@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { loadAppConfig, saveAppConfig } from "../config-parser.ts";
+import { BASE_PATH } from "../config.ts";
 
 const config = new Hono();
 
@@ -52,6 +53,11 @@ config.post("/remove", async (c) => {
   await saveAppConfig(appConfig);
 
   return c.json({ success: true, config: appConfig });
+});
+
+// GET /api/config/base-path - Get base path
+config.get("/base-path", (c) => {
+  return c.json({ basePath: BASE_PATH });
 });
 
 export { config as configRoutes };

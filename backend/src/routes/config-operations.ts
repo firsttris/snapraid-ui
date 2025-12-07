@@ -1,15 +1,19 @@
 import { Hono } from "hono";
+import { join } from "@std/path";
 import { parseSnapRaidConfig } from "../config-parser.ts";
+import { BASE_PATH } from "../config.ts";
 
 const configOperations = new Hono();
 
 // POST /api/snapraid/add-exclude - Add an exclude pattern to SnapRAID config
 configOperations.post("/add-exclude", async (c) => {
-  const { configPath, pattern } = await c.req.json();
+  const { configPath: relativePath, pattern } = await c.req.json();
 
-  if (!configPath || !pattern) {
+  if (!relativePath || !pattern) {
     return c.json({ error: "Missing configPath or pattern" }, 400);
   }
+
+  const configPath = join(BASE_PATH, relativePath);
 
   try {
     // Read the config file
@@ -64,11 +68,13 @@ configOperations.post("/add-exclude", async (c) => {
 
 // POST /api/snapraid/remove-exclude - Remove an exclude pattern from SnapRAID config
 configOperations.post("/remove-exclude", async (c) => {
-  const { configPath, pattern } = await c.req.json();
+  const { configPath: relativePath, pattern } = await c.req.json();
 
-  if (!configPath || !pattern) {
+  if (!relativePath || !pattern) {
     return c.json({ error: "Missing configPath or pattern" }, 400);
   }
+
+  const configPath = join(BASE_PATH, relativePath);
 
   try {
     // Read the config file
@@ -91,11 +97,13 @@ configOperations.post("/remove-exclude", async (c) => {
 
 // POST /api/snapraid/set-pool - Set pool directory in SnapRAID config
 configOperations.post("/set-pool", async (c) => {
-  const { configPath, poolPath } = await c.req.json();
+  const { configPath: relativePath, poolPath } = await c.req.json();
 
-  if (!configPath) {
+  if (!relativePath) {
     return c.json({ error: "Missing configPath" }, 400);
   }
+
+  const configPath = join(BASE_PATH, relativePath);
 
   try {
     // Read the config file
@@ -149,4 +157,3 @@ configOperations.post("/set-pool", async (c) => {
 });
 
 export { configOperations as configOperationsRoutes };
-export default configOperations;

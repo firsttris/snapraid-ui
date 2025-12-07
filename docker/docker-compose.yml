@@ -14,7 +14,8 @@ services:
       - /home/tristan/snapraid/snapraid.conf:/snapraid/snapraid.conf
       - /home/tristan/snapraid/logs:/snapraid/logs
       # Application data
-      - /home/tristan/snapraid/schedules.json:/app/backend/schedules.json
+      - /home/tristan/snapraid/config.json:/snapraid/config.json
+      - /home/tristan/snapraid/schedules.json:/snapraid/schedules.json
       # Mount your data disks (adjust paths as needed)
       # - /mnt/disk1:/mnt/disk1:ro
       # - /mnt/disk1/SnapRAID.content:/mnt/disk1/SnapRAID.content # content disks must be writable!
@@ -23,6 +24,7 @@ services:
       # - /mnt/parity:/mnt/parity  # Parity disks must be writable!
     environment:
       - DENO_ENV=production
+      - SNAPRAID_BASE_PATH=/snapraid
     ports:
       - "3000:80"  # Frontend on port 3000
       - "8080:8080"  # Backend API on port 8080 (optional, for direct API access)

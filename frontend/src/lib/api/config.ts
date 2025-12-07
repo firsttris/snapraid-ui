@@ -29,7 +29,7 @@ export const addConfig = async (name: string, path: string, enabled: boolean = t
   const response = await fetch(`${API_BASE}/config/add`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, path, enabled }),
+    body: JSON.stringify({ name, path: path.replace(/^.*[\/\\]/, ''), enabled }),
   });
   if (!response.ok) {
     const error = await response.json();

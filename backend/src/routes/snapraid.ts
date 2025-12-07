@@ -1,12 +1,14 @@
 import { Hono } from "hono";
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { createSnapRaidRunner, parseStatusOutput, type SnapRaidRunner } from "../snapraid-runner.ts";
+import { join } from "@std/path";
 import type { LogManager } from "../log-manager.ts";
 import type { CommandOutput } from "@shared/types.ts";
-import diskManagement from "./disk-management.ts";
-import configOperations from "./config-operations.ts";
-import hardware from "./hardware.ts";
-import reports, { setReportsRunner } from "./reports.ts";
+import { BASE_PATH } from "../config.ts";
+import {diskManagementRoutes} from "./disk-management.ts";
+import {configOperationsRoutes} from "./config-operations.ts";
+import {hardwareRoutes} from "./hardware.ts";
+import { setReportsRunner, reportsRoutes } from "./reports.ts";
 
 const snapraid = new Hono();
 
@@ -35,18 +37,20 @@ export const getRunner = (): SnapRaidRunner => {
 setReportsRunner(runner);
 
 // Mount sub-routes
-snapraid.route("/", diskManagement);
-snapraid.route("/", configOperations);
-snapraid.route("/", hardware);
-snapraid.route("/", reports);
+snapraid.route("/", diskManagementRoutes);
+snapraid.route("/", configOperationsRoutes);
+snapraid.route("/", hardwareRoutes);
+snapraid.route("/", reportsRoutes);
 
 // GET /api/snapraid/parse - Parse SnapRAID config
 snapraid.get("/parse", async (c) => {
-  const configPath = c.req.query("path");
+  const relativePath = c.req.query("path");
   
-  if (!configPath) {
+  if (!relativePath) {
     return c.json({ error: "Missing path parameter" }, 400);
   }
+
+  const configPath = join(BASE_PATH, relativePath);
 
   try {
     const parsed = await parseSnapRaidConfig(configPath);
@@ -64,11 +68,13 @@ snapraid.get("/current-job", (c) => {
 
 // POST /api/snapraid/execute - Execute SnapRAID command
 snapraid.post("/execute", async (c) => {
-  const { command, configPath, args = [] } = await c.req.json();
+  const { command, configPath: relativePath, args = [] } = await c.req.json();
 
-  if (!command || !configPath) {
+  if (!command || !relativePath) {
     return c.json({ error: "Missing command or configPath" }, 400);
   }
+
+  const configPath = join(BASE_PATH, relativePath);
 
   // Execute command and stream output via WebSocket
   (async () => {
@@ -129,10 +135,10 @@ snapraid.get("/history", (c) => {
 
 // GET /api/snapraid/status - Get parsed status from last status command or execute new one
 snapraid.get("/status", async (c) => {
-  const configPath = c.req.query("path");
+  const relativePath = c.req.query("path");
   
   // If no config path provided, try to get from last status in history
-  if (!configPath) {
+  if (!relativePath) {
     const lastStatus = commandHistory.find(cmd => cmd.command === 'status');
     
     if (!lastStatus) {
@@ -149,6 +155,7 @@ snapraid.get("/status", async (c) => {
 
   // Execute new status command
   try {
+    const configPath = join(BASE_PATH, relativePath);
     const cmd = new Deno.Command("snapraid", {
       args: ["-c", configPath, "status"],
       stdout: "piped",
@@ -172,13 +179,14 @@ snapraid.get("/status", async (c) => {
 
 // POST /api/snapraid/validate - Validate SnapRAID config
 snapraid.post("/validate", async (c) => {
-  const { configPath } = await c.req.json();
+  const { configPath: relativePath } = await c.req.json();
 
-  if (!configPath) {
+  if (!relativePath) {
     return c.json({ error: "Missing configPath" }, 400);
   }
 
   try {
+    const configPath = join(BASE_PATH, relativePath);
     // Run snapraid status to validate the config
     // We only care about whether it succeeds or fails, not the actual status output
     const command = new Deno.Command("snapraid", {

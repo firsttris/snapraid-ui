@@ -1,5 +1,6 @@
 import { join } from "@std/path";
 import type { AppConfig, ParsedSnapRaidConfig } from "@shared/types.ts";
+import { BASE_PATH } from "./config.ts";
 
 /**
  * Parse a SnapRAID config file and extract disk information
@@ -67,7 +68,7 @@ export const parseSnapRaidConfig = async (
  * Load the application config
  */
 export const loadAppConfig = async (): Promise<AppConfig> => {
-  const configPath = join(Deno.cwd(), "..", "config.json");
+  const configPath = join(BASE_PATH, "config.json");
   
   try {
     const content = await Deno.readTextFile(configPath);
@@ -81,7 +82,7 @@ export const loadAppConfig = async (): Promise<AppConfig> => {
       snapraidConfigs: [
         {
           name: "Default",
-          path: "/etc/snapraid.conf",
+          path: "snapraid.conf",
           enabled: true,
         },
       ],
@@ -91,7 +92,7 @@ export const loadAppConfig = async (): Promise<AppConfig> => {
       },
       logs: {
         maxHistoryEntries: 50,
-        directory: "~/.snapraid-ui/logs",
+        directory: "logs",
         maxFiles: 100,
         maxAge: 30,
       },
@@ -103,6 +104,6 @@ export const loadAppConfig = async (): Promise<AppConfig> => {
  * Save the application config
  */
 export const saveAppConfig = async (config: AppConfig): Promise<void> => {
-  const configPath = join(Deno.cwd(), "..", "config.json");
+  const configPath = join(BASE_PATH, "config.json");
   await Deno.writeTextFile(configPath, JSON.stringify(config, null, 2));
 };

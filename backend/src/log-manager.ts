@@ -12,17 +12,6 @@ export interface LogManager {
 }
 
 /**
- * Expand ~ to home directory
- */
-const expandPath = (path: string): string => {
-  if (path.startsWith("~/")) {
-    const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
-    return join(home, path.slice(2));
-  }
-  return path;
-};
-
-/**
  * Parse timestamp from log filename parts
  */
 const parseLogTimestamp = (dateStr: string, timeStr: string): string => {
@@ -40,9 +29,8 @@ export const createLogManager = (logDirectory: string): LogManager => {
    * Ensure log directory exists
    */
   const ensureLogDirectory = async (): Promise<void> => {
-    const expandedPath = expandPath(logDirectory);
     try {
-      await Deno.mkdir(expandedPath, { recursive: true });
+      await Deno.mkdir(logDirectory, { recursive: true });
     } catch (error) {
       if (!(error instanceof Deno.errors.AlreadyExists)) {
         throw error;
@@ -59,18 +47,16 @@ export const createLogManager = (logDirectory: string): LogManager => {
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
     const timeStr = now.toISOString().slice(11, 19).replace(/:/g, "");
     const filename = `${command}-${dateStr}-${timeStr}.log`;
-    return join(expandPath(logDirectory), filename);
+    return join(logDirectory, filename);
   };
 
   /**
    * List all log files
    */
   const listLogs = async (): Promise<LogFile[]> => {
-    const expandedPath = expandPath(logDirectory);
-
     try {
       const entries: Array<{ name: string; path: string }> = [];
-      for await (const entry of expandGlob(`${expandedPath}/*.log`)) {
+      for await (const entry of expandGlob(`${logDirectory}/*.log`)) {
         if (entry.isFile) {
           entries.push({ name: entry.name, path: entry.path });
         }
@@ -111,7 +97,7 @@ export const createLogManager = (logDirectory: string): LogManager => {
    * Read log file content
    */
   const readLog = async (filename: string): Promise<string> => {
-    const logPath = join(expandPath(logDirectory), filename);
+    const logPath = join(logDirectory, filename);
     try {
       return await Deno.readTextFile(logPath);
     } catch (error) {
@@ -154,7 +140,7 @@ export const createLogManager = (logDirectory: string): LogManager => {
    * Delete a specific log file
    */
   const deleteLog = async (filename: string): Promise<void> => {
-    const logPath = join(expandPath(logDirectory), filename);
+    const logPath = join(logDirectory, filename);
     try {
       await Deno.remove(logPath);
     } catch (error) {

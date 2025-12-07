@@ -1,15 +1,19 @@
 import { Hono } from "hono";
+import { join } from "@std/path";
 import { parseSnapRaidConfig } from "../config-parser.ts";
+import { BASE_PATH } from "../config.ts";
 
 const diskManagement = new Hono();
 
 // POST /api/snapraid/add-data-disk - Add a data disk to SnapRAID config
 diskManagement.post("/add-data-disk", async (c) => {
-  const { configPath, diskName, diskPath } = await c.req.json();
+  const { configPath: relativePath, diskName, diskPath } = await c.req.json();
 
-  if (!configPath || !diskName || !diskPath) {
+  if (!relativePath || !diskName || !diskPath) {
     return c.json({ error: "Missing configPath, diskName, or diskPath" }, 400);
   }
+
+  const configPath = join(BASE_PATH, relativePath);
 
   try {
     // Read the config file
@@ -76,11 +80,13 @@ diskManagement.post("/add-data-disk", async (c) => {
 
 // POST /api/snapraid/add-parity-disk - Add a parity disk to SnapRAID config
 diskManagement.post("/add-parity-disk", async (c) => {
-  const { configPath, parityPath } = await c.req.json();
+  const { configPath: relativePath, parityPath } = await c.req.json();
 
-  if (!configPath || !parityPath) {
+  if (!relativePath || !parityPath) {
     return c.json({ error: "Missing configPath or parityPath" }, 400);
   }
+
+  const configPath = join(BASE_PATH, relativePath);
 
   // Validate that parityPath ends with .parity
   if (!parityPath.endsWith(".parity")) {
@@ -132,11 +138,13 @@ diskManagement.post("/add-parity-disk", async (c) => {
 
 // POST /api/snapraid/remove-disk - Remove a disk from SnapRAID config
 diskManagement.post("/remove-disk", async (c) => {
-  const { configPath, diskName, diskType } = await c.req.json();
+  const { configPath: relativePath, diskName, diskType } = await c.req.json();
 
-  if (!configPath || (!diskName && diskType !== "parity")) {
+  if (!relativePath || (!diskName && diskType !== "parity")) {
     return c.json({ error: "Missing required parameters" }, 400);
   }
+
+  const configPath = join(BASE_PATH, relativePath);
 
   try {
     // Read the config file
@@ -184,4 +192,3 @@ diskManagement.post("/remove-disk", async (c) => {
 });
 
 export { diskManagement as diskManagementRoutes };
-export default diskManagement;

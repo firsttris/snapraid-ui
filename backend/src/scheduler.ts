@@ -2,6 +2,8 @@ import { Cron } from "@hexagon/croner";
 import type { Schedule, ScheduleConfig } from "@shared/types.ts";
 import type { SnapRaidRunner } from "./snapraid-runner.ts";
 import { existsSync } from "@std/fs";
+import { join } from "@std/path";
+import { BASE_PATH } from "./config.ts";
 
 // Module-level storage for active jobs
 const activeJobs = new Map<string, Cron>();
@@ -101,7 +103,7 @@ const executeScheduledCommand = async (
   try {
     await runner.executeCommand(
       schedule.command,
-      schedule.configPath,
+      join(BASE_PATH, schedule.configPath),
       (chunk) => onOutput?.(scheduleId, chunk),
       schedule.args || []
     );
