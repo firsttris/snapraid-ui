@@ -89,6 +89,18 @@ After installation:
 - **Database**: File-based (no external DB required)
 - **Containerization**: Docker with Nginx as reverse proxy
 
+## 📸 Screenshots
+
+### Dashboard
+![Dashboard](docs/ui-screenshot.png)
+
+### Logs
+![Logs](docs/ui-screenshot2.png)
+
+### Scheduler
+![Scheduler](docs/ui-screenshot3.png)
+
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please:
