@@ -3,6 +3,7 @@ const wsClients = new Set<WebSocket>();
 
 export const broadcast = (message: unknown): void => {
   const data = JSON.stringify(message);
+  console.log(`Broadcasting message: ${data.substring(0, 100)}...`);
   wsClients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(data);

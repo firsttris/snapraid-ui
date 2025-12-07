@@ -5,7 +5,7 @@ import { API_BASE } from "./constants";
  * Parse a SnapRAID config file
  */
 export const parseSnapRaidConfig = async (path: string): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/parse?path=${encodeURIComponent(path)}`);
+  const response = await fetch(`${API_BASE}/snapraid/parse?path=${encodeURIComponent(path)}`);
   if (!response.ok) throw new Error('Failed to parse config');
   return response.json();
 }
@@ -14,7 +14,7 @@ export const parseSnapRaidConfig = async (path: string): Promise<ParsedSnapRaidC
  * Execute a SnapRAID command
  */
 export const executeCommand = async (command: SnapRaidCommand, configPath: string, args: string[] = []): Promise<void> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/execute`, {
+  const response = await fetch(`${API_BASE}/snapraid/execute`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ command, configPath, args }),
@@ -26,7 +26,7 @@ export const executeCommand = async (command: SnapRaidCommand, configPath: strin
  * Get command history
  */
 export const getHistory = async (): Promise<CommandOutput[]> => {
-  const response = await fetch(`${API_BASE}/api/history`);
+  const response = await fetch(`${API_BASE}/snapraid/history`);
   if (!response.ok) throw new Error('Failed to fetch history');
   return response.json();
 }
@@ -35,7 +35,7 @@ export const getHistory = async (): Promise<CommandOutput[]> => {
  * Get current running job
  */
 export const getCurrentJob = async (): Promise<RunningJob | null> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/current-job`);
+  const response = await fetch(`${API_BASE}/snapraid/current-job`);
   if (!response.ok) throw new Error('Failed to fetch current job');
   return response.json();
 }
@@ -45,8 +45,8 @@ export const getCurrentJob = async (): Promise<RunningJob | null> => {
  */
 export const getStatus = async (configPath?: string): Promise<{ status: any; timestamp: string; exitCode: number | null }> => {
   const url = configPath 
-    ? `${API_BASE}/api/snapraid/status?path=${encodeURIComponent(configPath)}`
-    : `${API_BASE}/api/snapraid/status`;
+    ? `${API_BASE}/snapraid/status?path=${encodeURIComponent(configPath)}`
+    : `${API_BASE}/snapraid/status`;
   const response = await fetch(url);
   if (!response.ok) throw new Error('Failed to fetch status');
   return response.json();
@@ -56,7 +56,7 @@ export const getStatus = async (configPath?: string): Promise<{ status: any; tim
  * Validate SnapRAID config
  */
 export const validateConfig = async (configPath: string): Promise<{ valid: boolean; exitCode: number; output: string }> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/validate`, {
+  const response = await fetch(`${API_BASE}/snapraid/validate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath }),
@@ -69,7 +69,7 @@ export const validateConfig = async (configPath: string): Promise<{ valid: boole
  * Add a data disk to SnapRAID config
  */
 export const addDataDisk = async (configPath: string, diskName: string, diskPath: string): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/add-data-disk`, {
+  const response = await fetch(`${API_BASE}/snapraid/add-data-disk`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, diskName, diskPath }),
@@ -86,7 +86,7 @@ export const addDataDisk = async (configPath: string, diskName: string, diskPath
  * Add a parity disk to SnapRAID config
  */
 export const addParityDisk = async (configPath: string, parityPath: string): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/add-parity-disk`, {
+  const response = await fetch(`${API_BASE}/snapraid/add-parity-disk`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, parityPath }),
@@ -103,7 +103,7 @@ export const addParityDisk = async (configPath: string, parityPath: string): Pro
  * Remove a disk from SnapRAID config
  */
 export const removeDisk = async (configPath: string, diskName: string | null, diskType: 'data' | 'parity'): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/remove-disk`, {
+  const response = await fetch(`${API_BASE}/snapraid/remove-disk`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, diskName, diskType }),
@@ -120,7 +120,7 @@ export const removeDisk = async (configPath: string, diskName: string | null, di
  * Add an exclude pattern to SnapRAID config
  */
 export const addExclude = async (configPath: string, pattern: string): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/add-exclude`, {
+  const response = await fetch(`${API_BASE}/snapraid/add-exclude`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, pattern }),
@@ -137,7 +137,7 @@ export const addExclude = async (configPath: string, pattern: string): Promise<P
  * Remove an exclude pattern from SnapRAID config
  */
 export const removeExclude = async (configPath: string, pattern: string): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/remove-exclude`, {
+  const response = await fetch(`${API_BASE}/snapraid/remove-exclude`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, pattern }),
@@ -154,7 +154,7 @@ export const removeExclude = async (configPath: string, pattern: string): Promis
  * Set pool directory in SnapRAID config
  */
 export const setPool = async (configPath: string, poolPath: string | undefined): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/set-pool`, {
+  const response = await fetch(`${API_BASE}/snapraid/set-pool`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, poolPath }),
@@ -171,7 +171,7 @@ export const setPool = async (configPath: string, poolPath: string | undefined):
  * Get SMART report for all disks
  */
 export const getSmart = async (configPath: string): Promise<SmartReport> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/smart?path=${encodeURIComponent(configPath)}`);
+  const response = await fetch(`${API_BASE}/snapraid/smart?path=${encodeURIComponent(configPath)}`);
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to get SMART report');
@@ -183,7 +183,7 @@ export const getSmart = async (configPath: string): Promise<SmartReport> => {
  * Get power status of all disks (probe)
  */
 export const probe = async (configPath: string): Promise<ProbeReport> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/probe?path=${encodeURIComponent(configPath)}`);
+  const response = await fetch(`${API_BASE}/snapraid/probe?path=${encodeURIComponent(configPath)}`);
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to probe disk status');
@@ -195,7 +195,7 @@ export const probe = async (configPath: string): Promise<ProbeReport> => {
  * Spin up disks
  */
 export const spinUp = async (configPath: string, disks?: string[]): Promise<{ success: boolean; message: string; output: string }> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/up`, {
+  const response = await fetch(`${API_BASE}/snapraid/up`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, disks }),
@@ -211,7 +211,7 @@ export const spinUp = async (configPath: string, disks?: string[]): Promise<{ su
  * Spin down disks
  */
 export const spinDown = async (configPath: string, disks?: string[]): Promise<{ success: boolean; message: string; output: string }> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/down`, {
+  const response = await fetch(`${API_BASE}/snapraid/down`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, disks }),
@@ -227,7 +227,7 @@ export const spinDown = async (configPath: string, disks?: string[]): Promise<{ 
  * Get device information
  */
 export const getDevices = async (configPath: string): Promise<DevicesReport> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/devices?path=${encodeURIComponent(configPath)}`);
+  const response = await fetch(`${API_BASE}/snapraid/devices?path=${encodeURIComponent(configPath)}`);
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to get device information');
@@ -239,7 +239,7 @@ export const getDevices = async (configPath: string): Promise<DevicesReport> => 
  * Get file list from SnapRAID
  */
 export const getFileList = async (configPath: string): Promise<ListReport> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/list?path=${encodeURIComponent(configPath)}`);
+  const response = await fetch(`${API_BASE}/snapraid/list?path=${encodeURIComponent(configPath)}`);
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to get file list');
@@ -251,7 +251,7 @@ export const getFileList = async (configPath: string): Promise<ListReport> => {
  * Get check report from SnapRAID
  */
 export const getCheck = async (configPath: string): Promise<CheckReport> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/check?path=${encodeURIComponent(configPath)}`);
+  const response = await fetch(`${API_BASE}/snapraid/check?path=${encodeURIComponent(configPath)}`);
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to get check report');
@@ -263,7 +263,7 @@ export const getCheck = async (configPath: string): Promise<CheckReport> => {
  * Get diff report from SnapRAID
  */
 export const getDiff = async (configPath: string): Promise<DiffReport> => {
-  const response = await fetch(`${API_BASE}/api/snapraid/diff?path=${encodeURIComponent(configPath)}`);
+  const response = await fetch(`${API_BASE}/snapraid/diff?path=${encodeURIComponent(configPath)}`);
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to get diff report');

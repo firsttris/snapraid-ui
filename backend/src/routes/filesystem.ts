@@ -1,14 +1,16 @@
 import { Hono } from "hono";
 import { join } from "@std/path";
+import { resolvePath } from "../utils/path.ts";
 
 const filesystem = new Hono();
 
 // GET /api/filesystem/browse - Browse directories for .conf files
 filesystem.get("/browse", async (c) => {
-  const dirPath = c.req.query("path") || Deno.env.get("HOME") || "/";
+  const dirPathQuery = c.req.query("path") || "/snapraid";
   const filterType = c.req.query("filter") || "conf"; // "conf" or "directories"
 
   try {
+    const dirPath = await resolvePath(dirPathQuery);
     const entries = [];
     for await (const entry of Deno.readDir(dirPath)) {
       const shouldInclude = filterType === "directories"
@@ -39,7 +41,8 @@ filesystem.get("/read", async (c) => {
   }
 
   try {
-    const content = await Deno.readTextFile(filePath);
+    const resolvedPath = await resolvePath(filePath);
+    const content = await Deno.readTextFile(resolvedPath);
     return c.json({ content });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
@@ -55,7 +58,8 @@ filesystem.post("/write", async (c) => {
   }
 
   try {
-    await Deno.writeTextFile(path, content);
+    const resolvedPath = await resolvePath(path);
+    await Deno.writeTextFile(resolvedPath, content);
     return c.json({ success: true });
   } catch (error) {
     return c.json({ error: String(error) }, 500);

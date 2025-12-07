@@ -1,16 +1,19 @@
 import { Hono } from "hono";
 import { parseProbeOutput } from "../parsers/probe-parser.ts";
 import { parseSmartOutput } from "../parsers/smart-parser.ts";
+import { resolvePath } from "../utils/path.ts";
 
-const hardware = new Hono();
+export const hardware = new Hono();
 
 // GET /api/snapraid/smart - Get SMART report for all disks
 hardware.get("/smart", async (c) => {
-  const configPath = c.req.query("path");
+  const rawConfigPath = c.req.query("path");
   
-  if (!configPath) {
+  if (!rawConfigPath) {
     return c.json({ error: "Missing path parameter" }, 400);
   }
+
+  const configPath = await resolvePath(rawConfigPath);
 
   try {
     const command = new Deno.Command("snapraid", {
@@ -45,11 +48,13 @@ hardware.get("/smart", async (c) => {
 
 // GET /api/snapraid/probe - Get power status of all disks
 hardware.get("/probe", async (c) => {
-  const configPath = c.req.query("path");
+  const rawConfigPath = c.req.query("path");
   
-  if (!configPath) {
+  if (!rawConfigPath) {
     return c.json({ error: "Missing path parameter" }, 400);
   }
+
+  const configPath = await resolvePath(rawConfigPath);
 
   try {
     const command = new Deno.Command("snapraid", {
@@ -97,11 +102,13 @@ hardware.get("/probe", async (c) => {
 
 // POST /api/snapraid/up - Spin up all disks
 hardware.post("/up", async (c) => {
-  const { configPath, disks } = await c.req.json();
+  const { configPath: rawConfigPath, disks } = await c.req.json();
 
-  if (!configPath) {
+  if (!rawConfigPath) {
     return c.json({ error: "Missing configPath" }, 400);
   }
+
+  const configPath = await resolvePath(rawConfigPath);
 
   try {
     const args = ["-c", configPath];
@@ -148,11 +155,13 @@ hardware.post("/up", async (c) => {
 
 // POST /api/snapraid/down - Spin down all disks
 hardware.post("/down", async (c) => {
-  const { configPath, disks } = await c.req.json();
+  const { configPath: rawConfigPath, disks } = await c.req.json();
 
-  if (!configPath) {
+  if (!rawConfigPath) {
     return c.json({ error: "Missing configPath" }, 400);
   }
+
+  const configPath = await resolvePath(rawConfigPath);
 
   try {
     const args = ["-c", configPath];
@@ -196,6 +205,3 @@ hardware.post("/down", async (c) => {
     return c.json({ error: String(error) }, 500);
   }
 });
-
-export { hardware as hardwareRoutes };
-export default hardware;

@@ -6,7 +6,7 @@ dist/
 .DS_Store
 .vscode/
 .idea/
-config.json
 backend/.deno/
 frontend/.output/
 frontend/.vinxi/
+config.json

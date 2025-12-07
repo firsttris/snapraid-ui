@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { Scheduler } from "../scheduler.ts";
+import { resolvePath } from "../utils/path.ts";
 
 const schedules = new Hono();
 
@@ -54,10 +55,12 @@ schedules.post("/", async (c) => {
       }, 400);
     }
 
+    const configPath = await resolvePath(body.configPath);
+
     const schedule = await state.scheduler.createSchedule({
       name: body.name,
       command: body.command,
-      configPath: body.configPath,
+      configPath,
       cronExpression: body.cronExpression,
       args: body.args || [],
       enabled: body.enabled ?? true,

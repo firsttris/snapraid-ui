@@ -1,10 +1,11 @@
-import { join } from "@std/path";
+import { join, } from "@std/path";
 import { expandGlob } from "@std/fs";
 import type { SnapRaidCommand, LogFile } from "@shared/types.ts";
+import { resolvePath } from "./utils/path.ts";
 
 export interface LogManager {
   ensureLogDirectory(): Promise<void>;
-  getLogPath(command: SnapRaidCommand): string;
+  getLogPath(command: SnapRaidCommand): Promise<string>;
   listLogs(): Promise<LogFile[]>;
   readLog(filename: string): Promise<string>;
   rotateLogs(maxFiles: number, maxAge: number): Promise<number>;
@@ -12,15 +13,9 @@ export interface LogManager {
 }
 
 /**
- * Expand ~ to home directory
+ * Expand ~ to home directory and resolve relative paths to project root in dev mode
  */
-const expandPath = (path: string): string => {
-  if (path.startsWith("~/")) {
-    const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
-    return join(home, path.slice(2));
-  }
-  return path;
-};
+const expandPath = resolvePath;
 
 /**
  * Parse timestamp from log filename parts
@@ -40,7 +35,7 @@ export const createLogManager = (logDirectory: string): LogManager => {
    * Ensure log directory exists
    */
   const ensureLogDirectory = async (): Promise<void> => {
-    const expandedPath = expandPath(logDirectory);
+    const expandedPath = await expandPath(logDirectory);
     try {
       await Deno.mkdir(expandedPath, { recursive: true });
     } catch (error) {
@@ -54,19 +49,19 @@ export const createLogManager = (logDirectory: string): LogManager => {
    * Generate log file path for a command
    * Format: <command>-YYYYMMDD-HHMMSS.log
    */
-  const getLogPath = (command: SnapRaidCommand): string => {
+  const getLogPath = async (command: SnapRaidCommand): Promise<string> => {
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
     const timeStr = now.toISOString().slice(11, 19).replace(/:/g, "");
     const filename = `${command}-${dateStr}-${timeStr}.log`;
-    return join(expandPath(logDirectory), filename);
+    return join(await expandPath(logDirectory), filename);
   };
 
   /**
    * List all log files
    */
   const listLogs = async (): Promise<LogFile[]> => {
-    const expandedPath = expandPath(logDirectory);
+    const expandedPath = await expandPath(logDirectory);
 
     try {
       const entries: Array<{ name: string; path: string }> = [];
@@ -111,7 +106,7 @@ export const createLogManager = (logDirectory: string): LogManager => {
    * Read log file content
    */
   const readLog = async (filename: string): Promise<string> => {
-    const logPath = join(expandPath(logDirectory), filename);
+    const logPath = join(await expandPath(logDirectory), filename);
     try {
       return await Deno.readTextFile(logPath);
     } catch (error) {
@@ -154,7 +149,7 @@ export const createLogManager = (logDirectory: string): LogManager => {
    * Delete a specific log file
    */
   const deleteLog = async (filename: string): Promise<void> => {
-    const logPath = join(expandPath(logDirectory), filename);
+    const logPath = join(await expandPath(logDirectory), filename);
     try {
       await Deno.remove(logPath);
     } catch (error) {

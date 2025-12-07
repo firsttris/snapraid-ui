@@ -12,6 +12,7 @@ import { filesystemRoutes } from "./routes/filesystem.ts";
 import { snapraidRoutes } from "./routes/snapraid.ts";
 import { logsRoutes } from "./routes/logs.ts";
 import { schedulesRoutes } from "./routes/schedules.ts";
+import { resolvePath } from "./utils/path.ts";
 
 const app = new Hono();
 
@@ -41,6 +42,8 @@ app.notFound((c) => {
 });
 
 const main = async (): Promise<void> => {
+  console.log(`Current working directory: ${Deno.cwd()}`);
+  
   const config = await loadAppConfig();
   const { host, port } = config.backend;
 
@@ -59,7 +62,7 @@ const main = async (): Promise<void> => {
   setRunnerLogManager(logManager);
 
   // Initialize scheduler
-  const schedulesConfigPath = "./schedules.json";
+  const schedulesConfigPath = await resolvePath("/snapraid/schedules.json");
   const runner = getRunner();
   const scheduler = createScheduler(schedulesConfigPath, runner);
   

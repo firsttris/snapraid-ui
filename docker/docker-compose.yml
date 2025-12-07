@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   app:
     build:
@@ -11,10 +9,7 @@ services:
       # SnapRAID binary
       - /usr/bin/snapraid:/usr/bin/snapraid:ro
       # SnapRAID config and data
-      - /home/tristan/snapraid/snapraid.conf:/snapraid/snapraid.conf
-      - /home/tristan/snapraid/logs:/snapraid/logs
-      # Application data
-      - /home/tristan/snapraid/schedules.json:/app/backend/schedules.json
+      - /home/tristan/snapraid/:/snapraid
       # Mount your data disks (adjust paths as needed)
       # - /mnt/disk1:/mnt/disk1:ro
       # - /mnt/disk1/SnapRAID.content:/mnt/disk1/SnapRAID.content # content disks must be writable!

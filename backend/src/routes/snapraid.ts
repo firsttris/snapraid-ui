@@ -3,10 +3,11 @@ import { parseSnapRaidConfig } from "../config-parser.ts";
 import { createSnapRaidRunner, parseStatusOutput, type SnapRaidRunner } from "../snapraid-runner.ts";
 import type { LogManager } from "../log-manager.ts";
 import type { CommandOutput } from "@shared/types.ts";
-import diskManagement from "./disk-management.ts";
-import configOperations from "./config-operations.ts";
-import hardware from "./hardware.ts";
-import reports, { setReportsRunner } from "./reports.ts";
+import { resolvePath } from "../utils/path.ts";
+import { diskManagement } from "./disk-management.ts";
+import { configOperations } from "./config-operations.ts";
+import { hardware } from "./hardware.ts";
+import { setReportsRunner, reports } from "./reports.ts";
 
 const snapraid = new Hono();
 
@@ -64,14 +65,17 @@ snapraid.get("/current-job", (c) => {
 
 // POST /api/snapraid/execute - Execute SnapRAID command
 snapraid.post("/execute", async (c) => {
-  const { command, configPath, args = [] } = await c.req.json();
+  const { command, configPath: rawConfigPath, args = [] } = await c.req.json();
 
-  if (!command || !configPath) {
+  if (!command || !rawConfigPath) {
     return c.json({ error: "Missing command or configPath" }, 400);
   }
 
+  const configPath = await resolvePath(rawConfigPath);
+
   // Execute command and stream output via WebSocket
   (async () => {
+    console.log(`Starting command: ${command}`);
     try {
       const result = await runner.executeCommand(
         command,
@@ -87,6 +91,8 @@ snapraid.post("/execute", async (c) => {
         args
       );
 
+      console.log(`Command completed: ${command}, exitCode: ${result.exitCode}`);
+
       // Add to history
       commandHistory.unshift(result);
       if (commandHistory.length > MAX_HISTORY) {
@@ -101,6 +107,8 @@ snapraid.post("/execute", async (c) => {
         timestamp: result.timestamp,
       });
 
+      console.log(`Sent complete message for: ${command}`);
+
       // Parse status if it was a status or diff command
       if (command === "status" || command === "diff") {
         const status = parseStatusOutput(result.output);
@@ -110,6 +118,7 @@ snapraid.post("/execute", async (c) => {
         });
       }
     } catch (error) {
+      console.log(`Command error: ${command}, error: ${error}`);
       state.broadcastFn({
         type: "error",
         command,
@@ -129,10 +138,10 @@ snapraid.get("/history", (c) => {
 
 // GET /api/snapraid/status - Get parsed status from last status command or execute new one
 snapraid.get("/status", async (c) => {
-  const configPath = c.req.query("path");
+  const rawConfigPath = c.req.query("path");
   
   // If no config path provided, try to get from last status in history
-  if (!configPath) {
+  if (!rawConfigPath) {
     const lastStatus = commandHistory.find(cmd => cmd.command === 'status');
     
     if (!lastStatus) {
@@ -146,6 +155,8 @@ snapraid.get("/status", async (c) => {
       exitCode: lastStatus.exitCode,
     });
   }
+
+  const configPath = await resolvePath(rawConfigPath);
 
   // Execute new status command
   try {
@@ -172,11 +183,13 @@ snapraid.get("/status", async (c) => {
 
 // POST /api/snapraid/validate - Validate SnapRAID config
 snapraid.post("/validate", async (c) => {
-  const { configPath } = await c.req.json();
+  const { configPath: rawConfigPath } = await c.req.json();
 
-  if (!configPath) {
+  if (!rawConfigPath) {
     return c.json({ error: "Missing configPath" }, 400);
   }
+
+  const configPath = await resolvePath(rawConfigPath);
 
   try {
     // Run snapraid status to validate the config

@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import type { SnapRaidRunner } from "../snapraid-runner.ts";
+import { resolvePath } from "../utils/path.ts";
 
-const reports = new Hono();
+export const reports = new Hono();
 
 // Runner will be injected
 let runner: SnapRaidRunner;
@@ -12,11 +13,13 @@ export const setReportsRunner = (snapraidRunner: SnapRaidRunner): void => {
 
 // GET /api/snapraid/devices - Get device information
 reports.get("/devices", async (c) => {
-  const configPath = c.req.query("path");
+  const rawConfigPath = c.req.query("path");
   
-  if (!configPath) {
+  if (!rawConfigPath) {
     return c.json({ error: "Missing path parameter" }, 400);
   }
+
+  const configPath = await resolvePath(rawConfigPath);
 
   try {
     const result = await runner.runDevices(configPath);
@@ -28,11 +31,13 @@ reports.get("/devices", async (c) => {
 
 // GET /api/snapraid/list - Get file list
 reports.get("/list", async (c) => {
-  const configPath = c.req.query("path");
+  const rawConfigPath = c.req.query("path");
   
-  if (!configPath) {
+  if (!rawConfigPath) {
     return c.json({ error: "Missing path parameter" }, 400);
   }
+
+  const configPath = await resolvePath(rawConfigPath);
 
   try {
     const result = await runner.runList(configPath);
@@ -44,11 +49,13 @@ reports.get("/list", async (c) => {
 
 // GET /api/snapraid/check - Get check report
 reports.get("/check", async (c) => {
-  const configPath = c.req.query("path");
+  const rawConfigPath = c.req.query("path");
   
-  if (!configPath) {
+  if (!rawConfigPath) {
     return c.json({ error: "Missing path parameter" }, 400);
   }
+
+  const configPath = await resolvePath(rawConfigPath);
 
   try {
     const result = await runner.runCheck(configPath);
@@ -60,11 +67,13 @@ reports.get("/check", async (c) => {
 
 // GET /api/snapraid/diff - Get diff report
 reports.get("/diff", async (c) => {
-  const configPath = c.req.query("path");
+  const rawConfigPath = c.req.query("path");
   
-  if (!configPath) {
+  if (!rawConfigPath) {
     return c.json({ error: "Missing path parameter" }, 400);
   }
+
+  const configPath = await resolvePath(rawConfigPath);
 
   try {
     const result = await runner.runDiff(configPath);
@@ -73,6 +82,3 @@ reports.get("/diff", async (c) => {
     return c.json({ error: String(error) }, 500);
   }
 });
-
-export { reports as reportsRoutes };
-export default reports;

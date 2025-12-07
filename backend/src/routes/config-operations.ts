@@ -1,15 +1,18 @@
 import { Hono } from "hono";
 import { parseSnapRaidConfig } from "../config-parser.ts";
+import { resolvePath } from "../utils/path.ts";
 
 const configOperations = new Hono();
 
-// POST /api/snapraid/add-exclude - Add an exclude pattern to SnapRAID config
-configOperations.post("/add-exclude", async (c) => {
-  const { configPath, pattern } = await c.req.json();
+// POST /api/snapraid/remove-exclude - Remove an exclude pattern from SnapRAID config
+configOperations.post("/remove-exclude", async (c) => {
+  const { configPath: rawConfigPath, pattern } = await c.req.json();
 
-  if (!configPath || !pattern) {
+  if (!rawConfigPath || !pattern) {
     return c.json({ error: "Missing configPath or pattern" }, 400);
   }
+
+  const configPath = await resolvePath(rawConfigPath);
 
   try {
     // Read the config file
@@ -64,11 +67,13 @@ configOperations.post("/add-exclude", async (c) => {
 
 // POST /api/snapraid/remove-exclude - Remove an exclude pattern from SnapRAID config
 configOperations.post("/remove-exclude", async (c) => {
-  const { configPath, pattern } = await c.req.json();
+  const { configPath: rawConfigPath, pattern } = await c.req.json();
 
-  if (!configPath || !pattern) {
+  if (!rawConfigPath || !pattern) {
     return c.json({ error: "Missing configPath or pattern" }, 400);
   }
+
+  const configPath = await resolvePath(rawConfigPath);
 
   try {
     // Read the config file
@@ -91,11 +96,13 @@ configOperations.post("/remove-exclude", async (c) => {
 
 // POST /api/snapraid/set-pool - Set pool directory in SnapRAID config
 configOperations.post("/set-pool", async (c) => {
-  const { configPath, poolPath } = await c.req.json();
+  const { configPath: rawConfigPath, poolPath } = await c.req.json();
 
-  if (!configPath) {
+  if (!rawConfigPath) {
     return c.json({ error: "Missing configPath" }, 400);
   }
+
+  const configPath = await resolvePath(rawConfigPath);
 
   try {
     // Read the config file
@@ -148,5 +155,4 @@ configOperations.post("/set-pool", async (c) => {
   }
 });
 
-export { configOperations as configOperationsRoutes };
-export default configOperations;
+export { configOperations };
