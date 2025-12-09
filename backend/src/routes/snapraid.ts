@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { parseSnapRaidConfig } from "../config-parser.ts";
-import { createSnapRaidRunner, parseStatusOutput, type SnapRaidRunner } from "../snapraid-runner.ts";
+import { createSnapRaidRunner, type SnapRaidRunner } from "../snapraid-runner.ts";
 import { join } from "@std/path";
 import type { LogManager } from "../log-manager.ts";
 import type { CommandOutput } from "@shared/types.ts";
@@ -9,6 +9,7 @@ import {diskManagementRoutes} from "./disk-management.ts";
 import {configOperationsRoutes} from "./config-operations.ts";
 import {hardwareRoutes} from "./hardware.ts";
 import { setReportsRunner, reportsRoutes } from "./reports.ts";
+import { parseStatusOutput } from "../parsers/status-parser.ts";
 
 const snapraid = new Hono();
 

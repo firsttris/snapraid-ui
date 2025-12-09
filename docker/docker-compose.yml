@@ -11,6 +11,9 @@ services:
       # SnapRAID config and data
       - /home/tristan/snapraid/:/app/snapraid
       # Mount your data disks (adjust paths as needed)
+      - /home/tristan/Downloads/:/home/tristan/Downloads/
+      - /mnt/4TB-NVME/TestSnap/:/mnt/4TB-NVME/TestSnap/
+      - /run/media/tristan/Backup/paritytest/:/run/media/tristan/Backup/paritytest/
       # - /mnt/disk1:/mnt/disk1:ro
       # - /mnt/disk1/SnapRAID.content:/mnt/disk1/SnapRAID.content # content disks must be writable!
       # - /mnt/disk2:/mnt/disk2:ro

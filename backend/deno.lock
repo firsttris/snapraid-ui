@@ -4,6 +4,7 @@
     "jsr:@hexagon/croner@8": "8.1.2",
     "jsr:@hexagon/croner@^8.1.2": "8.1.2",
     "jsr:@hono/hono@^4.6.14": "4.10.7",
+    "jsr:@std/assert@^1.0.16": "1.0.16",
     "jsr:@std/fs@*": "1.0.20",
     "jsr:@std/fs@1": "1.0.20",
     "jsr:@std/fs@^1.0.8": "1.0.20",
@@ -18,6 +19,12 @@
     },
     "@hono/hono@4.10.7": {
       "integrity": "b60512559d554f20a945e07a6c5f115e57cbd4c024da9217833c8e7b2c90355d"
+    },
+    "@std/assert@1.0.16": {
+      "integrity": "6a7272ed1eaa77defe76e5ff63ca705d9c495077e2d5fd0126d2b53fc5bd6532",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
     },
     "@std/fs@1.0.20": {
       "integrity": "e953206aae48d46ee65e8783ded459f23bec7dd1f3879512911c35e5484ea187",
@@ -40,6 +47,7 @@
     "dependencies": [
       "jsr:@hexagon/croner@^8.1.2",
       "jsr:@hono/hono@^4.6.14",
+      "jsr:@std/assert@^1.0.16",
       "jsr:@std/fs@^1.0.8",
       "jsr:@std/path@^1.0.8"
     ]

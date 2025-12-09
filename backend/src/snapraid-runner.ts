@@ -1,7 +1,6 @@
 import type { SnapRaidCommand, CommandOutput, RunningJob, DevicesReport, ListReport, CheckReport, DiffReport } from "@shared/types.ts";
 import type { LogManager } from "./log-manager.ts";
 import { executeCommand, abortCommand, getCurrentJob, executeSnapraidCommand, setLogManager } from "./executors/command-executor.ts";
-import { parseStatusOutput } from "./parsers/status-parser.ts";
 import { parseDevicesOutput } from "./parsers/devices-parser.ts";
 import { parseListOutput } from "./parsers/list-parser.ts";
 import { parseCheckOutput } from "./parsers/check-parser.ts";
@@ -122,11 +121,6 @@ export const createSnapRaidRunner = () => {
     },
   };
 };
-
-/**
- * Parse SnapRAID status/diff output
- */
-export { parseStatusOutput };
 
 export type SnapRaidRunner = ReturnType<typeof createSnapRaidRunner>;
 

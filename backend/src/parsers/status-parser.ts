@@ -27,7 +27,7 @@ const parseScrubPercentage = (output: string): number | undefined => {
 /**
  * Parse scrub age details
  */
-const parseScrubAge = (output: string): Pick<SnapRaidStatus, 'oldestScrubDays' | 'medianScrubDays' | 'newestScrubDays'> => {
+const parseScrubAge = (output: string): Partial<Pick<SnapRaidStatus, 'oldestScrubDays' | 'medianScrubDays' | 'newestScrubDays'>> => {
   const scrubAgeMatch = output.match(/oldest block was scrubbed (\d+) days? ago,?\s+the median (\d+),?\s+the newest (\d+)/i);
   if (scrubAgeMatch) {
     return {
@@ -92,14 +92,12 @@ const parseDiskTable = (lines: string[]): { disks: DiskStatusInfo[], totals: Par
       return { ...acc, skipNext: false };
     }
     
-    // Detect table end
-    if (line.match(/^ *-{10,} *$/)) {
-      const totalLine = lines[index + 1];
-      const totals = totalLine ? parseTotalLine(totalLine) : {};
-      return { ...acc, inTable: false, totals };
-    }
-    
-    // Parse disk rows
+  // Detect table end
+  if (line.trim().match(/^ *-{10,} *$/)) {
+    const totalLine = lines[index + 1];
+    const totals = totalLine ? parseTotalLine(totalLine) : {};
+    return { ...acc, inTable: false, totals };
+  }    // Parse disk rows
     if (acc.inTable && line.trim()) {
       const diskInfo = parseDiskRow(line);
       if (diskInfo) {
