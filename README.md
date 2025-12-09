@@ -7,6 +7,8 @@
 
 A modern, user-friendly web interface for managing [SnapRAID](https://www.snapraid.it/) installations. Allows you to execute SnapRAID commands, manage configurations, monitor disks, and more – all through a web browser.
 
+**Note: This project is currently in early development.**
+
 ## 🚀 Overview
 
 SnapRAID Web Manager is a complete toolkit for SnapRAID users that replaces command-line complexity with an intuitive web UI. The project consists of a Deno-based backend and a React frontend that can be deployed in a Docker container.
@@ -25,6 +27,7 @@ SnapRAID Web Manager is a complete toolkit for SnapRAID users that replaces comm
 ## 📋 Prerequisites
 
 - Docker and Docker Compose (recommended)
+- Node.js 18+ and Deno 2.5.6+ (for local development)
 - SnapRAID installed on the host system
 - Access to SnapRAID configuration files and disks
 
@@ -38,7 +41,7 @@ SnapRAID Web Manager is a complete toolkit for SnapRAID users that replaces comm
    cd snapraid-ui
    ```
 
-2. **Install dependencies:**
+2. **Install dependencies:** (requires Node.js and Deno)
    ```bash
    ./install.sh
    ```
@@ -51,7 +54,7 @@ SnapRAID Web Manager is a complete toolkit for SnapRAID users that replaces comm
    This will start both the backend (Deno) and frontend (React/Vite) servers in the background.
 
 4. **Access the application:**
-   - Frontend: http://localhost:5173 (default Vite port)
+   - Frontend: http://localhost:3000
    - Backend API: http://localhost:8080
 
 ### With Docker (For Production Deployment)
@@ -71,7 +74,7 @@ SnapRAID Web Manager is a complete toolkit for SnapRAID users that replaces comm
    ```
 
 4. **Access the application:**
-   - Frontend: http://localhost:3000
+   - Frontend: http://localhost:3001 (what you define in docker-compose.yml)
    - Backend API: http://localhost:8080
 
 ## 📖 Usage
