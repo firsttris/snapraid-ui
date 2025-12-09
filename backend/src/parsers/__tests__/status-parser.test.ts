@@ -44,6 +44,7 @@ Deno.test("parseStatusOutput - parses snapraid status output correctly", async (
   assertEquals(status.disks![1].usedGB, 0);
   assertEquals(status.disks![1].freeGB, 0);
   assertEquals(status.disks![1].usePercent, 0);
+  console.log('status.scrubHistory:', status.scrubHistory);
   assertEquals(Array.isArray(status.scrubHistory), true);
   assertEquals(status.rawOutput, input);
 });

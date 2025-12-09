@@ -98,11 +98,11 @@ const parseDisksFromSummary = (keyValueMap: Map<string, string>): DiskStatusInfo
         case 'space_wasted':
           disk.wastedGB = Math.max(0, Math.round(parseFloat(value) / 1e9 * 10) / 10);
           break;
-        case 'used_gb':
-          disk.usedGB = parseFloat(value) || 0;
+        case 'used':
+          disk.usedGB = Math.max(0, Math.round(parseFloat(value) / 1e9 * 10) / 10);
           break;
-        case 'free_gb':
-          disk.freeGB = parseFloat(value) || 0;
+        case 'free':
+          disk.freeGB = Math.max(0, Math.round(parseFloat(value) / 1e9 * 10) / 10);
           break;
         case 'use_percent':
           disk.usePercent = parseInt(value, 10) || 0;
@@ -141,14 +141,14 @@ const parseTotalsFromSummary = (keyValueMap: Map<string, string>): Partial<SnapR
         case 'fragmented_file_count':
           totals.fragmentedFiles = parseInt(value, 10) || 0;
           break;
-        case 'total_wasted_gb':
-          totals.wastedGB = parseFloat(value) || 0;
+        case 'total_wasted':
+          totals.wastedGB = Math.max(0, Math.round(parseFloat(value) / 1e9 * 10) / 10);
           break;
-        case 'total_used_gb':
-          totals.totalUsedGB = parseFloat(value) || 0;
+        case 'total_used':
+          totals.totalUsedGB = Math.max(0, Math.round(parseFloat(value) / 1e9 * 10) / 10);
           break;
-        case 'total_free_gb':
-          totals.totalFreeGB = parseFloat(value) || 0;
+        case 'total_free':
+          totals.totalFreeGB = Math.max(0, Math.round(parseFloat(value) / 1e9 * 10) / 10);
           break;
       }
     }
@@ -160,23 +160,28 @@ const parseTotalsFromSummary = (keyValueMap: Map<string, string>): Partial<SnapR
 /**
  * Parse scrub history from structured keys
  */
-const parseScrubHistoryFromKeys = (keyValueMap: Map<string, string>): ScrubHistoryPoint[] => {
-  const history: ScrubHistoryPoint[] = [];
+const parseScrubHistoryFromKeys = (lines: string[]): ScrubHistoryPoint[] => {
+  const historyMap = new Map<number, number>();
 
-  keyValueMap.forEach((value, key) => {
-    if (key.startsWith('scrub_history:')) {
-      const parts = key.split(':');
+  lines.forEach(line => {
+    const kv = parseKeyValue(line);
+    if (kv && kv[0].startsWith('scrub_history:')) {
+      const parts = kv[0].split(':');
       if (parts.length >= 2) {
         const daysAgo = parseInt(parts[1], 10);
-        const percentage = parseInt(value, 10);
+        const percentage = parseInt(kv[1], 10);
         if (!isNaN(daysAgo) && !isNaN(percentage)) {
-          history.push({ daysAgo, percentage });
+          const current = historyMap.get(daysAgo) || 0;
+          historyMap.set(daysAgo, current + percentage);
         }
       }
     }
   });
 
-  return history;
+  return Array.from(historyMap.entries()).map(([daysAgo, percentage]) => ({
+    daysAgo,
+    percentage,
+  }));
 };
 
 /**
@@ -191,7 +196,7 @@ export const parseStatusOutput = (output: string): SnapRaidStatus => {
   const totals = parseTotalsFromSummary(keyValueMap);
   const scrubAge = parseScrubAge(keyValueMap);
   const scrubPercentage = parseScrubPercentage(keyValueMap);
-  const scrubHistory = parseScrubHistoryFromKeys(keyValueMap);
+  const scrubHistory = parseScrubHistoryFromKeys(lines);
 
   const status: SnapRaidStatus = {
     hasErrors: hasErrors(keyValueMap),
