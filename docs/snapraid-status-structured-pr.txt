@@ -1,0 +1,207 @@
+tristan@AMD-B6507800X3D ~/P/snapraid-git (master)> ./snapraid status -c snapraid.conf -l ">&2"
+version:13.0-2-g3c7b90e
+unixtime:1765291515
+time:2025-12-09 15:45:15
+command:status
+argv:0:./snapraid
+argv:1:-c
+argv:2:snapraid.conf
+argv:3:-l
+argv:4:>&2
+argv:5:status
+selftest:
+msg:progress: Self test...
+Self test...
+conf:file:snapraid.conf
+blocksize:262144
+data:test1:/home/tristan/Downloads/
+data:test2:/mnt/4TB-NVME/TestSnap/
+mode:par1
+parity:0:/run/media/tristan/Backup/paritytest/snapraid.parity
+filter:exclude /lost+found/
+filter:exclude /tmp/*
+content:/home/tristan/Downloads/SnapRAID.content
+msg:progress: Loading state from /home/tristan/Downloads/SnapRAID.content...
+Loading state from /home/tristan/Downloads/SnapRAID.content...
+msg:verbose:       22 files
+msg:verbose:        0 hardlinks
+msg:verbose:        0 symlinks
+msg:verbose:        0 empty dirs
+memory:used:287704
+memory:block:17
+memory:extent:88
+memory:file:192
+memory:link:88
+memory:dir:80
+msg:progress: Using 0 MiB of memory for the file-system.
+Using 0 MiB of memory for the file-system.
+summary:block_size:262144
+summary:parity_block_count:455
+summary:parity_block_total:parity:897035
+summary:parity_block_free:parity:798556
+summary:parity_block_free_min:798556
+SnapRAID status report:
+
+   Files Fragmented Excess  Wasted  Used    Free  Use Name
+            Files  Fragments  GB      GB      GB
+      22       1       1   499.8       0     209   0% test1
+summary:disk_file_count:test1:22
+summary:disk_block_count:test1:455
+summary:disk_fragmented_file_count:test1:1
+summary:disk_excess_fragment_count:test1:1
+summary:disk_zerosubsecond_file_count:test1:0
+summary:disk_file_size:test1:114636424
+summary:disk_block_allocated:test1:455
+summary:disk_block_total:test1:7502701
+summary:disk_block_free:test1:2704989
+summary:disk_block_max_by_space:test1:2705444
+summary:disk_block_max_by_parity:test1:799011
+summary:disk_block_max:test1:799011
+summary:disk_space_wasted:test1:499759972352
+summary:disk_used_gb:test1:0
+summary:disk_free_gb:test1:209
+summary:disk_use_percent:test1:0
+       0       0       0       -       0       -   -  test2
+summary:disk_file_count:test2:0
+summary:disk_block_count:test2:0
+summary:disk_fragmented_file_count:test2:0
+summary:disk_excess_fragment_count:test2:0
+summary:disk_zerosubsecond_file_count:test2:0
+summary:disk_file_size:test2:0
+summary:disk_block_allocated:test2:1
+summary:disk_block_total:test2:0
+summary:disk_block_free:test2:0
+summary:disk_block_max_by_space:test2:0
+summary:disk_block_max_by_parity:test2:799011
+summary:disk_block_max:test2:0
+summary:disk_space_wasted:test2:-209455939584
+summary:disk_used_gb:test2:0
+summary:disk_free_gb:test2:0
+summary:disk_use_percent:test2:0
+ --------------------------------------------------------------------------
+      22       1       1   499.8       0     209   0%
+summary:file_count:22
+summary:file_block_count:455
+summary:fragmented_file_count:1
+summary:excess_fragment_count:1
+summary:zerosubsecond_file_count:0
+summary:file_size:114636424
+summary:parity_size:119275520
+summary:parity_size_max:209455939584
+summary:hash:spooky2
+summary:prev_hash:undefined
+summary:best_hash:spooky2
+summary:total_wasted_gb:499
+summary:total_used_gb:0
+summary:total_free_gb:209
+block_count:455
+summary:has_unsynced:0
+summary:has_unscrubbed:455
+summary:has_rehash:0
+summary:has_bad:0:0:0
+info_count:455
+info_time:1765021520:246:new
+info_time:1765023608:13:new
+info_time:1765108456:1:new
+info_time:1765133448:9:new
+info_time:1765188224:185:new
+info_time:1765190848:1:new
+summary:scrub_oldest_days:3
+summary:scrub_median_days:3
+summary:scrub_newest_days:1
+scrub_history:1:56
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721395:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:1
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721396:0
+scrub_history:4232721397:0
+scrub_history:4232721397:0
+scrub_history:4232721397:0
+scrub_history:4232721397:0
+scrub_history:4232721397:40
+scrub_history:4232721397:0
+
+
+ 56%|o                                                                     
+    |o                                                                     
+    |o                                                                     
+    |o                                                                     
+    |o                                                                   o 
+    |o                                                                   o 
+    |o                                                                   o 
+ 28%|o                                                                   o 
+    |o                                                                   o 
+    |o                                                                   o 
+    |o                                                                   o 
+    |o                                                                   o 
+    |o                                                                   o 
+    |o                                                                   o 
+  0%|o__________________________________o__________o_____________________oo
+     3                    days ago of the last scrub/sync                 1
+
+The oldest block was scrubbed 3 days ago, the median 3, the newest 1.
+
+No sync is in progress.
+100% of the array is not scrubbed.
+No file has a zero sub-second timestamp.
+No rehash is in progress or needed.
+No error detected.
