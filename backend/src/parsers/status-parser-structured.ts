@@ -83,7 +83,7 @@ const parseDisksFromSummary = (keyValueMap: Map<string, string>): DiskStatusInfo
     if (parts[0] === 'summary' && parts[1]?.startsWith('disk_')) {
       const diskName = parts[2];
       const prop = parts[1].replace('disk_', '');
-      let disk = diskMap.get(diskName) || { name: diskName };
+      const disk = diskMap.get(diskName) || { name: diskName };
 
       switch (prop) {
         case 'file_count':
