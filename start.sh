@@ -14,6 +14,8 @@ if test "$argv[1]" = "--demo"
     set -x SNAPRAID_EXTRA_ARGS --test-skip-device
 else
     set -x SNAPRAID_BASE_PATH $root/snapraid
+    # Local data directory, the backend fills it on first start
+    mkdir -p $SNAPRAID_BASE_PATH
 end
 
 # Fall back to the Deno downloaded by dev/setup.sh

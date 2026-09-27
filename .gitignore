@@ -16,3 +16,6 @@ dev/bin/
 dev/.cache/
 dev/sandbox/
 dev/tools/
+
+# Local data of ./start.sh (configs, schedules, logs)
+/snapraid/
