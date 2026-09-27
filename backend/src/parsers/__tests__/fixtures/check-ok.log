@@ -1,0 +1,78 @@
+version:14.9
+unixtime:1790530765
+time:2026-09-27 19:39:25
+command:check
+argv:0:snapraid
+argv:1:--test-skip-device
+argv:2:-c
+argv:3:snapraid.conf
+argv:4:-l
+argv:5:>&2
+argv:6:check
+selftest:
+msg:progress: Self-test...
+conf:file:snapraid.conf
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: not found
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: not found
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: not found
+blocksize:65536
+data:d1:/mnt/array/d1/:
+data:d2:/mnt/array/d2/:
+mode:par1
+parity:/mnt/array/parity/snapraid.parity:
+filter:exclude *.content
+msg:progress: Loading state from /mnt/array/parity/snapraid.content...
+content:/mnt/array/parity/snapraid.content
+content_info:read_unixtime:1790530704
+content_data:d1:8335720448:7332954112
+content_data_split:d1:
+content_data:d2:8335720448:7332954112
+content_data_split:d2:
+content_parity:parity:8335720448:7332954112
+content_parity_split:parity::/mnt/array/parity/snapraid.parity:3538944
+msg:verbose:        4 files
+msg:verbose:        0 hardlinks
+msg:verbose:        1 symlinks
+msg:verbose:        0 empty dirs
+content_info:file:4
+content_info:hardlink:0
+content_info:symlink:1
+content_info:dir_empty:0
+content_info:block:54
+content_info:block_bad:0
+content_info:block_rehash:0
+content_info:block_unsynced:0
+content_info:block_unscrubbed:54
+list:bucket_begin
+bucket:count:1
+bucket:entry:1790530704:0:54
+bucket:block_count:54
+list:bucket_end
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: not found
+msg:progress: Searching disk d1...
+msg:verbose: Excluding content '/mnt/array/d1/snapraid.content'
+msg:progress: Searching disk d2...
+memory:used:211129
+memory:block:17
+memory:extent:88
+memory:file:192
+memory:link:88
+memory:dir:80
+msg:progress: Using 0 MiB of memory for the file-system.
+msg:progress: Initializing...
+msg:progress: Selecting...
+msg:progress: Checking...
+msg:status: Everything OK
+summary:error_soft:0
+summary:error_io:0
+summary:error_data:0
+summary:error_unrecoverable:0
+summary:exit:ok

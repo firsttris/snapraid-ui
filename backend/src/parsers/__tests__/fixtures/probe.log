@@ -1,0 +1,7 @@
+version:14.9
+unixtime:1790531200
+time:2026-09-27 19:46:40
+command:probe
+probe:/dev/sda:d1:0
+probe:/dev/nvme0n1:parity:1
+probe:/dev/sdb:d2:-1

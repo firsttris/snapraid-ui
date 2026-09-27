@@ -1,0 +1,168 @@
+version:14.9
+unixtime:1790530808
+time:2026-09-27 19:40:08
+command:check
+argv:0:snapraid
+argv:1:--test-skip-device
+argv:2:-c
+argv:3:snapraid.conf
+argv:4:-l
+argv:5:>&2
+argv:6:check
+selftest:
+msg:progress: Self-test...
+conf:file:snapraid.conf
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: not found
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: not found
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: not found
+blocksize:65536
+data:d1:/mnt/array/d1/:
+data:d2:/mnt/array/d2/:
+mode:par1
+parity:/mnt/array/parity/snapraid.parity:
+filter:exclude *.content
+msg:progress: Loading state from /mnt/array/parity/snapraid.content...
+content:/mnt/array/parity/snapraid.content
+content_info:read_unixtime:1790530808
+content_data:d1:8335720448:7330463744
+content_data_split:d1:
+content_data:d2:8335720448:7330463744
+content_data_split:d2:
+content_parity:parity:8335720448:7330463744
+content_parity_split:parity::/mnt/array/parity/snapraid.parity:4784128
+msg:verbose:        6 files
+msg:verbose:        0 hardlinks
+msg:verbose:        1 symlinks
+msg:verbose:        0 empty dirs
+content_info:file:6
+content_info:hardlink:0
+content_info:symlink:1
+content_info:dir_empty:0
+content_info:block:73
+content_info:block_bad:0
+content_info:block_rehash:0
+content_info:block_unsynced:0
+content_info:block_unscrubbed:73
+list:bucket_begin
+bucket:count:2
+bucket:entry:1790530704:0:52
+bucket:entry:1790530808:0:21
+bucket:block_count:73
+list:bucket_end
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: not found
+msg:progress: Searching disk d1...
+msg:verbose: Excluding content '/mnt/array/d1/snapraid.content'
+msg:progress: Searching disk d2...
+memory:used:212711
+memory:block:17
+memory:extent:88
+memory:file:192
+memory:link:88
+memory:dir:80
+msg:progress: Using 0 MiB of memory for the file-system.
+msg:progress: Initializing...
+msg:progress: Selecting...
+msg:progress: Checking...
+error:1:d1:a.bin: Data error at position 1, diff hash bits 66/128
+repair_entry:0:block:known:bad:d1:a.bin:1:
+status:recoverable:d1:a.bin
+msg:error: Missing file '/mnt/array/d1/c-copy.dat'.
+error:54:d1:c-copy.dat: Open error at position 0. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:0:
+repair_hash_import:0: Fixed by import
+recover_sync:54:0: Skipped for already recovered
+error:55:d1:c-copy.dat: Open error at position 1. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:1:
+repair_hash_import:0: Fixed by import
+recover_sync:55:0: Skipped for already recovered
+error:56:d1:c-copy.dat: Open error at position 2. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:2:
+repair_hash_import:0: Fixed by import
+recover_sync:56:0: Skipped for already recovered
+error:57:d1:c-copy.dat: Open error at position 3. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:3:
+repair_hash_import:0: Fixed by import
+recover_sync:57:0: Skipped for already recovered
+error:58:d1:c-copy.dat: Open error at position 4. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:4:
+repair_hash_import:0: Fixed by import
+recover_sync:58:0: Skipped for already recovered
+error:59:d1:c-copy.dat: Open error at position 5. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:5:
+repair_hash_import:0: Fixed by import
+recover_sync:59:0: Skipped for already recovered
+error:60:d1:c-copy.dat: Open error at position 6. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:6:
+repair_hash_import:0: Fixed by import
+recover_sync:60:0: Skipped for already recovered
+error:61:d1:c-copy.dat: Open error at position 7. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:7:
+repair_hash_import:0: Fixed by import
+recover_sync:61:0: Skipped for already recovered
+error:62:d1:c-copy.dat: Open error at position 8. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:8:
+repair_hash_import:0: Fixed by import
+recover_sync:62:0: Skipped for already recovered
+error:63:d1:c-copy.dat: Open error at position 9. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:9:
+repair_hash_import:0: Fixed by import
+recover_sync:63:0: Skipped for already recovered
+error:64:d1:c-copy.dat: Open error at position 10. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:10:
+repair_hash_import:0: Fixed by import
+recover_sync:64:0: Skipped for already recovered
+error:65:d1:c-copy.dat: Open error at position 11. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:11:
+repair_hash_import:0: Fixed by import
+recover_sync:65:0: Skipped for already recovered
+error:66:d1:c-copy.dat: Open error at position 12. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:12:
+repair_hash_import:0: Fixed by import
+recover_sync:66:0: Skipped for already recovered
+error:67:d1:c-copy.dat: Open error at position 13. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:13:
+repair_hash_import:0: Fixed by import
+recover_sync:67:0: Skipped for already recovered
+error:68:d1:c-copy.dat: Open error at position 14. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:14:
+repair_hash_import:0: Fixed by import
+recover_sync:68:0: Skipped for already recovered
+error:69:d1:c-copy.dat: Open error at position 15. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:15:
+repair_hash_import:0: Fixed by import
+recover_sync:69:0: Skipped for already recovered
+error:70:d1:c-copy.dat: Open error at position 16. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:16:
+repair_hash_import:0: Fixed by import
+recover_sync:70:0: Skipped for already recovered
+error:71:d1:c-copy.dat: Open error at position 17. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:17:
+repair_hash_import:0: Fixed by import
+recover_sync:71:0: Skipped for already recovered
+error:72:d1:c-copy.dat: Open error at position 18. No such file or directory.
+repair_entry:0:block:known:bad:d1:c-copy.dat:18:
+repair_hash_import:0: Fixed by import
+recover_sync:72:0: Skipped for already recovered
+status:recoverable:d1:c-copy.dat
+msg:status: 
+msg:status:       19 soft errors
+msg:status:        0 io errors
+msg:status:        1 data errors
+msg:status:        0 unrecoverable errors
+msg:fatal: WARNING! There are soft errors!
+WARNING! There are soft errors!
+msg:fatal_hardware: DANGER! Unexpected silent data errors!
+DANGER! Unexpected silent data errors!
+summary:error_soft:19
+summary:error_io:0
+summary:error_data:1
+summary:error_unrecoverable:0
+summary:exit:recoverable

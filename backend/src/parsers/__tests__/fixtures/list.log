@@ -1,0 +1,61 @@
+version:14.9
+unixtime:1790531093
+time:2026-09-27 19:44:53
+command:list
+argv:0:snapraid
+argv:1:--test-skip-device
+argv:2:-c
+argv:3:snapraid.conf
+argv:4:-l
+argv:5:>&2
+argv:6:--gui-verbose
+argv:7:list
+conf:file:snapraid.conf
+blocksize:65536
+data:d1:/mnt/array/d1/:
+data:d2:/mnt/array/d2/:
+mode:par1
+parity:/mnt/array/parity/snapraid.parity:
+filter:exclude *.content
+msg:progress: Loading state from /mnt/array/parity/snapraid.content...
+content:/mnt/array/parity/snapraid.content
+content_info:read_unixtime:1790531093
+content_data:d1:8335720448:7332757504
+content_data_split:d1:
+content_data:d2:8335720448:7332757504
+content_data_split:d2:
+content_parity:parity:8335720448:7332757504
+content_parity_split:parity::/mnt/array/parity/snapraid.parity:3538944
+msg:verbose:        5 files
+msg:verbose:        0 hardlinks
+msg:verbose:        1 symlinks
+msg:verbose:        0 empty dirs
+content_info:file:5
+content_info:hardlink:0
+content_info:symlink:1
+content_info:dir_empty:0
+content_info:block:54
+content_info:block_bad:0
+content_info:block_rehash:0
+content_info:block_unsynced:0
+content_info:block_unscrubbed:54
+list:bucket_begin
+bucket:count:2
+bucket:entry:1790530704:0:52
+bucket:entry:1790530808:0:2
+bucket:block_count:54
+list:bucket_end
+msg:progress: Listing...
+file:d1:a.bin:3000000:1790530695:970522968:30899
+file:d1:b\drenamed.txt:500000:1790530695:972522953:30900
+file:d2:h.txt:11:1790530765:498008856:30903
+file:d2:new file.txt:4:1790530765:511008762:30944
+file:d2:sub/c.dat:1200000:1790530695:979522901:30902
+link_symlink:d2:link:h.txt
+msg:status: 
+msg:status:        5 files, for 0 GB
+msg:status:        1 links
+summary:file_count:5
+summary:file_size:4700015
+summary:link_count:1
+summary:exit:ok

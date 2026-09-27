@@ -1,0 +1,90 @@
+version:14.9
+unixtime:1790530765
+time:2026-09-27 19:39:25
+command:diff
+argv:0:snapraid
+argv:1:--test-skip-device
+argv:2:-c
+argv:3:snapraid.conf
+argv:4:-l
+argv:5:>&2
+argv:6:diff
+conf:file:snapraid.conf
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: not found
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: match skipped for not /dev/ mountsource for tmpfs tmpfs
+resolve:proc:0:43: not found
+blocksize:65536
+data:d1:/mnt/array/d1/:
+data:d2:/mnt/array/d2/:
+mode:par1
+parity:/mnt/array/parity/snapraid.parity:
+filter:exclude *.content
+msg:progress: Loading state from /mnt/array/parity/snapraid.content...
+content:/mnt/array/parity/snapraid.content
+content_info:read_unixtime:1790530704
+content_data:d1:8335720448:7332954112
+content_data_split:d1:
+content_data:d2:8335720448:7332954112
+content_data_split:d2:
+content_parity:parity:8335720448:7332954112
+content_parity_split:parity::/mnt/array/parity/snapraid.parity:3538944
+msg:verbose:        4 files
+msg:verbose:        0 hardlinks
+msg:verbose:        1 symlinks
+msg:verbose:        0 empty dirs
+content_info:file:4
+content_info:hardlink:0
+content_info:symlink:1
+content_info:dir_empty:0
+content_info:block:54
+content_info:block_bad:0
+content_info:block_rehash:0
+content_info:block_unsynced:0
+content_info:block_unscrubbed:54
+list:bucket_begin
+bucket:count:1
+bucket:entry:1790530704:0:54
+bucket:block_count:54
+list:bucket_end
+label:blkid:0:43: blkid_devno_to_devname() failed, No such file or directory
+fsinfo_data_split:d1:8335720448:7331708928:tmpfs:
+fsinfo_data:d1:8335720448:7331708928
+label:blkid:0:43: blkid_devno_to_devname() failed, No such file or directory
+fsinfo_data_split:d2:8335720448:7331708928:tmpfs:
+fsinfo_data:d2:8335720448:7331708928
+label:blkid:0:43: blkid_devno_to_devname() failed, No such file or directory
+fsinfo_parity_split:parity:8335720448:7331708928:tmpfs:
+fsinfo_parity:parity:8335720448:7331708928
+msg:progress: Comparing...
+list:scan_begin
+msg:verbose: Excluding content '/mnt/array/d1/snapraid.content'
+scan:add:d1:b\drenamed.txt
+scan:add:d1:c-copy.dat
+scan:update:d2:h.txt: 6 1790530695.980077572 -> 11 1790530765.498008856
+scan:add:d2:new file.txt
+scan:remove:d1:b.txt
+msg:error: WARNING! Physical offsets not supported for disk 'd1'msg:error: , 'd2'msg:error: . The order of files won't be optimal.
+msg:error: WARNING! UUID is unsupported for disks: 'd1'msg:error: , 'd2'msg:error: . Not using inodes to detect move operations.
+msg:status: 
+msg:status:        3 equal
+msg:status:        3 added
+msg:status:        1 removed
+msg:status:        1 updated
+msg:status:        0 moved
+msg:status:        0 copied
+msg:status:        0 relocated
+msg:status:        0 restored
+summary:equal:3
+summary:added:3
+summary:removed:1
+summary:updated:1
+summary:moved:0
+summary:copied:0
+summary:relocated:0
+summary:restored:0
+list:scan_end
+msg:status: There are differences!
+summary:exit:diff

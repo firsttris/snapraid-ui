@@ -1,0 +1,44 @@
+version:14.9
+unixtime:1790531200
+time:2026-09-27 19:46:40
+command:smart
+info:/dev/sda:d1
+attr:/dev/sda:d1:serial:WD-WCC7K1234567
+attr:/dev/sda:d1:family:Western Digital Red
+attr:/dev/sda:d1:model:WDC WD40EFRX-68N32N0
+attr:/dev/sda:d1:interface:SATA
+attr:/dev/sda:d1:size:4000787030016
+attr:/dev/sda:d1:rotationrate:5400
+smart:/dev/sda:d1
+attr:/dev/sda:d1:error_protocol:0
+attr:/dev/sda:d1:error_medium:0
+attr:/dev/sda:d1:flags:0:0
+attr:/dev/sda:d1:afr:0.0456:0.0445756
+attr:/dev/sda:d1:5:0:0:200:200:140:Reallocated_Sector_Ct:prefail:always:never
+attr:/dev/sda:d1:9:21873:5571:71:71:0:Power_On_Hours:oldage:always:never
+attr:/dev/sda:d1:194:36:24:114:103:0:Temperature_Celsius:oldage:always:never
+attr:/dev/sda:d1:temperature:36
+info:/dev/nvme0n1:parity
+attr:/dev/nvme0n1:parity:serial:S6XXNX0T000000A
+attr:/dev/nvme0n1:parity:model:Samsung SSD 980 PRO 2TB
+attr:/dev/nvme0n1:parity:interface:NVMe
+attr:/dev/nvme0n1:parity:size:2000398934016
+attr:/dev/nvme0n1:parity:rotationrate:0
+smart:/dev/nvme0n1:parity
+attr:/dev/nvme0n1:parity:wear_level:3
+attr:/dev/nvme0n1:parity:flags:64:40
+attr:/dev/nvme0n1:parity:temperature:41
+info:/dev/sdb:d2
+attr:/dev/sdb:d2:serial:ZA1ABCDE
+attr:/dev/sdb:d2:size:8001563222016
+attr:/dev/sdb:d2:rotationrate:7200
+smart:/dev/sdb:d2
+attr:/dev/sdb:d2:flags:24:18
+attr:/dev/sdb:d2:afr:0.52:0.405479
+attr:/dev/sdb:d2:5:1024:400:1:1:10:Reallocated_Sector_Ct:prefail:always:now
+attr:/dev/sdb:d2:9:4294988592:10000532c:50:50:0:Power_On_Hours:oldage:always:never
+info:/dev/sdc:d3
+smart:/dev/sdc:d3
+attr:/dev/sdc:d3:flags:2:2
+summary:array_failure:0.5656:0.432
+msg:status: Probability that at least one disk is going to fail in the next year is 43%.
