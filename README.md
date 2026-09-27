@@ -57,6 +57,21 @@ SnapRAID Web Manager is a complete toolkit for SnapRAID users that replaces comm
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8080
 
+#### Stopping the servers
+
+`start.sh` runs backend and frontend in the background, so closing the terminal or pressing `Ctrl+C` does not always stop both. Starting it twice leaves two backends running.
+
+```bash
+# Show running backends
+pgrep -af "src/main.ts"
+
+# Stop backend and frontend
+pkill -f "deno task dev"; pkill -f "deno run.*src/main.ts"
+pkill -f "vite dev"
+```
+
+To stop a single process, use `kill <pid>` with a PID from `pgrep`; add `-9` if it does not react.
+
 #### Demo sandbox (no real disks or SnapRAID install needed)
 
 ```bash
