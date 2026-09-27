@@ -4,7 +4,7 @@ import { createSnapRaidRunner, type SnapRaidRunner } from "../snapraid-runner.ts
 import { join } from "@std/path";
 import type { LogManager } from "../log-manager.ts";
 import type { CommandOutput } from "@shared/types.ts";
-import { BASE_PATH } from "../config.ts";
+import { BASE_PATH, snapraidCommand } from "../config.ts";
 import {diskManagementRoutes} from "./disk-management.ts";
 import {configOperationsRoutes} from "./config-operations.ts";
 import {hardwareRoutes} from "./hardware.ts";
@@ -170,11 +170,7 @@ snapraid.get("/status", async (c) => {
   // Execute new status command
   try {
     const configPath = join(BASE_PATH, relativePath);
-    const cmd = new Deno.Command("snapraid", {
-      args: ["-c", configPath, ...STRUCTURED_LOG_ARGS, "status"],
-      stdout: "piped",
-      stderr: "piped",
-    });
+    const cmd = snapraidCommand(["-c", configPath, ...STRUCTURED_LOG_ARGS, "status"]);
 
     const { code, stdout, stderr } = await cmd.output();
     const { log, text } = splitStructuredOutput(new TextDecoder().decode(stderr));
@@ -203,11 +199,7 @@ snapraid.post("/validate", async (c) => {
     const configPath = join(BASE_PATH, relativePath);
     // Run snapraid status to validate the config
     // We only care about whether it succeeds or fails, not the actual status output
-    const command = new Deno.Command("snapraid", {
-      args: ["-c", configPath, "status"],
-      stdout: "piped",
-      stderr: "piped",
-    });
+    const command = snapraidCommand(["-c", configPath, "status"]);
 
     const { code, stderr } = await command.output();
     const errorOutput = new TextDecoder().decode(stderr);

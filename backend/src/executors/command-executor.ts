@@ -1,5 +1,6 @@
 import type { SnapRaidCommand, CommandOutput, RunningJob } from "@shared/types.ts";
 import type { LogManager } from "../log-manager.ts";
+import { snapraidCommand } from "../config.ts";
 
 /**
  * Global state for command executor
@@ -105,11 +106,7 @@ export const executeCommand = async (
     processId,
   };
 
-  const cmd = new Deno.Command("snapraid", {
-    args,
-    stdout: "piped",
-    stderr: "piped",
-  });
+  const cmd = snapraidCommand(args);
 
   const process = cmd.spawn();
   state.processes.set(processId, process);
@@ -157,11 +154,7 @@ export const getCurrentJob = (): RunningJob | null => {
  * Execute snapraid command with given args (non-streaming)
  */
 export const executeSnapraidCommand = async (args: string[]): Promise<{ stdout: string, stderr: string }> => {
-  const cmd = new Deno.Command("snapraid", {
-    args,
-    stdout: "piped",
-    stderr: "piped",
-  });
+  const cmd = snapraidCommand(args);
 
   const { stdout, stderr } = await cmd.output();
   const decoder = new TextDecoder();

@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { join } from "@std/path";
 import { parseProbeOutput } from "../parsers/probe-parser.ts";
 import { parseSmartOutput } from "../parsers/smart-parser.ts";
-import { BASE_PATH } from "../config.ts";
+import { BASE_PATH, snapraidCommand } from "../config.ts";
 import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
 
 const hardware = new Hono();
@@ -18,11 +18,7 @@ hardware.get("/smart", async (c) => {
   const configPath = join(BASE_PATH, relativePath);
 
   try {
-    const command = new Deno.Command("snapraid", {
-      args: ["-c", configPath, ...STRUCTURED_LOG_ARGS, "smart"],
-      stdout: "piped",
-      stderr: "piped",
-    });
+    const command = snapraidCommand(["-c", configPath, ...STRUCTURED_LOG_ARGS, "smart"]);
 
     const { code, stdout, stderr } = await command.output();
     const output = new TextDecoder().decode(stdout);
@@ -59,11 +55,7 @@ hardware.get("/probe", async (c) => {
   const configPath = join(BASE_PATH, relativePath);
 
   try {
-    const command = new Deno.Command("snapraid", {
-      args: ["-c", configPath, ...STRUCTURED_LOG_ARGS, "probe"],
-      stdout: "piped",
-      stderr: "piped",
-    });
+    const command = snapraidCommand(["-c", configPath, ...STRUCTURED_LOG_ARGS, "probe"]);
 
     const { code, stdout, stderr } = await command.output();
     const output = new TextDecoder().decode(stdout);
@@ -124,11 +116,7 @@ hardware.post("/up", async (c) => {
     
     args.push("up");
 
-    const command = new Deno.Command("snapraid", {
-      args,
-      stdout: "piped",
-      stderr: "piped",
-    });
+    const command = snapraidCommand(args);
 
     const { code, stdout, stderr } = await command.output();
     const output = new TextDecoder().decode(stdout);
@@ -177,11 +165,7 @@ hardware.post("/down", async (c) => {
     
     args.push("down");
 
-    const command = new Deno.Command("snapraid", {
-      args,
-      stdout: "piped",
-      stderr: "piped",
-    });
+    const command = snapraidCommand(args);
 
     const { code, stdout, stderr } = await command.output();
     const output = new TextDecoder().decode(stdout);

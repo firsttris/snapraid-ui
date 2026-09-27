@@ -57,6 +57,22 @@ SnapRAID Web Manager is a complete toolkit for SnapRAID users that replaces comm
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8080
 
+#### Demo sandbox (no real disks or SnapRAID install needed)
+
+```bash
+./start.sh --demo
+```
+
+On first run this calls `dev/setup.sh`, which builds a pinned SnapRAID binary into `dev/bin/` (needs `curl`, `gcc`, `make`) and creates `dev/sandbox/` with three fake data disks, a parity disk, an initial sync and a few pending changes. Run `dev/setup.sh --reset` to start over with a fresh sandbox. Everything under `dev/` except the script is gitignored.
+
+The backend reads these environment variables, which `--demo` sets for you:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `SNAPRAID_BASE_PATH` | `../snapraid` | Directory holding `config.json`, `schedules.json`, logs and SnapRAID configs |
+| `SNAPRAID_BIN` | `snapraid` | SnapRAID binary to execute |
+| `SNAPRAID_EXTRA_ARGS` | *(empty)* | Extra args for every SnapRAID call. The demo uses `--test-skip-device` because all sandbox disks share one filesystem |
+
 ### With Docker (For Production Deployment)
 
 1. **Clone the repository:**
