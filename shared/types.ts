@@ -18,8 +18,15 @@ export interface AppConfig {
   };
 }
 
+// One parity level of the config: `parity`, `2-parity` ... `6-parity` or `z-parity`
+export interface ParityLevel {
+  level: number;           // 1-6, `z-parity` counts as level 3
+  keyword: string;         // Config keyword, e.g. "2-parity"
+  paths: string[];         // Parity files, more than one when the parity is split
+}
+
 export interface ParsedSnapRaidConfig {
-  parity: string[];
+  parity: ParityLevel[];   // Sorted by level
   content: string[];
   data: Record<string, string>;
   exclude: string[];

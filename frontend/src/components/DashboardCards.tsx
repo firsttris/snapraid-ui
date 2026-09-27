@@ -49,17 +49,19 @@ export const DashboardCards = ({ parsedConfig }: DashboardCardsProps) => {
           {parityDiskCount}
         </p>
         <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
-          {parsedConfig.parity.map((path, index) => (
+          {parsedConfig.parity.map((parity) => (
             <div
-              key={path}
+              key={parity.keyword}
               className="text-sm bg-gray-50 rounded p-2 border border-gray-100"
             >
               <span className="font-semibold text-purple-600">
-                Parity {index + 1}
+                {parity.keyword}
               </span>
-              <div className="text-gray-60 truncate" title={path}>
-                {path}
-              </div>
+              {parity.paths.map((path) => (
+                <div key={path} className="text-gray-600 truncate" title={path}>
+                  {path}
+                </div>
+              ))}
             </div>
           ))}
         </div>

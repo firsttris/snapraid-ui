@@ -6,6 +6,7 @@ import { parseCheckOutput } from "../check-parser.ts";
 import { parseSmartOutput } from "../smart-parser.ts";
 import { parseProbeOutput } from "../probe-parser.ts";
 import { parseLogTags, splitStructuredOutput, unescapeTagValue } from "../structured-log.ts";
+import { parseParityLine } from "../../config-parser.ts";
 
 // Fixtures are the stderr of `snapraid --log ">&2" <command>` (SnapRAID 14.9) on a demo array.
 // smart.log and probe.log are hand written from the log_tag() calls in SnapRAID's device.c.
@@ -144,4 +145,17 @@ Deno.test("parseProbeOutput - power states", () => {
     { name: "parity", device: "/dev/nvme0n1", status: "Active" },
     { name: "d2", device: "/dev/sdb", status: "Unknown" },
   ]);
+});
+
+Deno.test("parseParityLine - parity levels and split parity", () => {
+  assertEquals(parseParityLine("parity /mnt/p1/snapraid.parity"), {
+    level: 1, keyword: "parity", paths: ["/mnt/p1/snapraid.parity"],
+  });
+  assertEquals(parseParityLine("2-parity /mnt/a/2.parity, /mnt/b/2.parity"), {
+    level: 2, keyword: "2-parity", paths: ["/mnt/a/2.parity", "/mnt/b/2.parity"],
+  });
+  assertEquals(parseParityLine("z-parity\t/mnt/z/z.parity")?.level, 3);
+  assertEquals(parseParityLine("6-parity /mnt/p6/6.parity")?.level, 6);
+  assertEquals(parseParityLine("7-parity /mnt/p7/7.parity"), null);
+  assertEquals(parseParityLine("data d1 /mnt/d1"), null);
 });

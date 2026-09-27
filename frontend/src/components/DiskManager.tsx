@@ -74,10 +74,10 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
     )
   }
 
-  const handleRemoveParity = async () => {
+  const handleRemoveParity = async (level: number) => {
     setError('')
     removeDiskMutation.mutate(
-      { configPath, diskName: null, diskType: 'parity' },
+      { configPath, diskName: null, diskType: 'parity', level },
       {
         onSuccess: () => onUpdate?.(),
         onError: (err) => {

@@ -1,9 +1,16 @@
 import { Hono } from "hono";
 import { join } from "@std/path";
-import { parseSnapRaidConfig } from "../config-parser.ts";
+import {
+  MAX_PARITY_LEVEL,
+  parityKeyword,
+  parseParityLine,
+  parseSnapRaidConfig,
+} from "../config-parser.ts";
 import { BASE_PATH } from "../config.ts";
 
 const diskManagement = new Hono();
+
+class ParityLevelError extends Error {}
 
 // POST /api/snapraid/add-data-disk - Add a data disk to SnapRAID config
 diskManagement.post("/add-data-disk", async (c) => {
@@ -46,7 +53,7 @@ diskManagement.post("/add-data-disk", async (c) => {
       const lastParityIndex = lns
         .map((line, i) => ({ line: line.trim(), index: i }))
         .reverse()
-        .find(({ line }) => line.startsWith("parity "))
+        .find(({ line }) => parseParityLine(line))
         ?.index;
       
       return lastParityIndex !== undefined ? lastParityIndex + 1 : lns.length;
@@ -98,15 +105,17 @@ diskManagement.post("/add-parity-disk", async (c) => {
     const content = await Deno.readTextFile(configPath);
     const lines = content.split("\n");
 
-    // Find the last parity line or a good position to insert
+    // New parity always becomes the next level above the existing ones
+    const levels = lines.map(parseParityLine).filter(parity => parity !== null);
+    const nextLevel = Math.max(0, ...levels.map(parity => parity.level)) + 1;
+    if (nextLevel > MAX_PARITY_LEVEL) {
+      return c.json({ error: `SnapRAID supports at most ${MAX_PARITY_LEVEL} parity levels` }, 400);
+    }
+
+    // Insert after the last parity line, or before the first setting
     const findParityInsertIndex = (lns: string[]): number => {
-      const lastParityIndex = lns
-        .map((line, i) => ({ line: line.trim(), index: i }))
-        .reverse()
-        .find(({ line }) => line.startsWith("parity "))
-        ?.index;
-      
-      if (lastParityIndex !== undefined) return lastParityIndex + 1;
+      const lastParityIndex = lns.findLastIndex(line => parseParityLine(line));
+      if (lastParityIndex !== -1) return lastParityIndex + 1;
       
       const firstNonCommentIndex = lns
         .map((line, i) => ({ line: line.trim(), index: i }))
@@ -117,7 +126,7 @@ diskManagement.post("/add-parity-disk", async (c) => {
     };
 
     const insertIndex = findParityInsertIndex(lines);
-    const newLine = `parity ${parityPath}`;
+    const newLine = `${parityKeyword(nextLevel)} ${parityPath}`;
     
     const updatedLines = [
       ...lines.slice(0, insertIndex),
@@ -138,7 +147,7 @@ diskManagement.post("/add-parity-disk", async (c) => {
 
 // POST /api/snapraid/remove-disk - Remove a disk from SnapRAID config
 diskManagement.post("/remove-disk", async (c) => {
-  const { configPath: relativePath, diskName, diskType } = await c.req.json();
+  const { configPath: relativePath, diskName, diskType, level } = await c.req.json();
 
   if (!relativePath || (!diskName && diskType !== "parity")) {
     return c.json({ error: "Missing required parameters" }, 400);
@@ -170,11 +179,21 @@ diskManagement.post("/remove-disk", async (c) => {
       }
       
       if (diskType === "parity") {
-        // Remove the first parity line found
-        const parityIndex = lines.findIndex(line => line.trim().startsWith("parity "));
-        return parityIndex !== -1
-          ? [...lines.slice(0, parityIndex), ...lines.slice(parityIndex + 1)]
-          : lines;
+        // Only the highest level can go, SnapRAID needs the levels without gaps
+        const parityLines = lines
+          .map((line, index) => ({ parity: parseParityLine(line), index }))
+          .filter(({ parity }) => parity !== null);
+        const highest = parityLines.reduce<typeof parityLines[number] | null>(
+          (max, entry) => (!max || entry.parity!.level > max.parity!.level ? entry : max),
+          null,
+        );
+        if (!highest) return lines;
+        if (level !== undefined && level !== highest.parity!.level) {
+          throw new ParityLevelError(
+            `Only the highest parity level (${highest.parity!.keyword}) can be removed`,
+          );
+        }
+        return [...lines.slice(0, highest.index), ...lines.slice(highest.index + 1)];
       }
       
       return lines;
@@ -187,6 +206,9 @@ diskManagement.post("/remove-disk", async (c) => {
     const parsed = await parseSnapRaidConfig(configPath);
     return c.json({ success: true, config: parsed });
   } catch (error) {
+    if (error instanceof ParityLevelError) {
+      return c.json({ error: error.message }, 400);
+    }
     return c.json({ error: String(error) }, 500);
   }
 });

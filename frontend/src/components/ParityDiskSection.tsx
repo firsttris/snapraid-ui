@@ -1,13 +1,16 @@
+import type { ParityLevel } from '@shared/types'
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
 import { DirectoryBrowser } from './DirectoryBrowser'
 import { useFeedback } from './Feedback'
 
 interface ParityDiskSectionProps {
-  parity: string[]
+  parity: ParityLevel[]
   onAdd: (fullPath: string) => Promise<void>
-  onRemove: () => Promise<void>
+  onRemove: (level: number) => Promise<void>
 }
+
+const MAX_PARITY_LEVEL = 6
 
 export const ParityDiskSection = ({
   parity,
@@ -21,6 +24,12 @@ export const ParityDiskSection = ({
   const [addingParity, setAddingParity] = useState(false)
   const [showParityBrowser, setShowParityBrowser] = useState(false)
   const [error, setError] = useState('')
+
+  // Levels must stay without gaps, so only the highest one can be removed
+  const highestLevel = Math.max(0, ...parity.map((p) => p.level))
+  const nextKeyword =
+    highestLevel === 0 ? 'parity' : `${highestLevel + 1}-parity`
+  const canAdd = highestLevel < MAX_PARITY_LEVEL
 
   const handleAddParity = async () => {
     if (!newParityPath.trim()) {
@@ -54,7 +63,7 @@ export const ParityDiskSection = ({
     }
   }
 
-  const handleRemove = async () => {
+  const handleRemove = async (level: number) => {
     const confirmed = await confirm({
       message: m.parity_disk_confirm_remove(),
       confirmLabel: m.confirm_remove(),
@@ -64,7 +73,7 @@ export const ParityDiskSection = ({
 
     setError('')
     try {
-      await onRemove()
+      await onRemove(level)
     } catch (err) {
       setError(String(err))
     }
@@ -93,7 +102,9 @@ export const ParityDiskSection = ({
         <button
           type="button"
           onClick={() => setShowAddParity(!showAddParity)}
-          className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+          disabled={!canAdd}
+          title={canAdd ? undefined : m.parity_disk_max_reached()}
+          className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           + {m.parity_disk_add_parity()}
         </button>
@@ -107,6 +118,9 @@ export const ParityDiskSection = ({
 
       {showAddParity && (
         <div className="mb-3 p-3 bg-white rounded border border-blue-300">
+          <p className="text-sm text-gray-600 mb-3">
+            {m.parity_disk_next_level({ keyword: nextKeyword })}
+          </p>
           <div className="space-y-3">
             <div>
               <label
@@ -185,18 +199,40 @@ export const ParityDiskSection = ({
             {m.parity_disk_no_disks()}
           </div>
         ) : (
-          parity.map((path) => (
+          parity.map((p) => (
             <div
-              key={path}
+              key={p.keyword}
               className="flex justify-between items-center bg-white p-3 rounded border border-blue-200"
             >
-              <div className="font-mono text-sm text-gray-700 flex-1">
-                {path}
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold text-blue-700">
+                  {p.keyword}
+                  {p.paths.length > 1 && (
+                    <span className="ml-2 font-normal text-gray-500">
+                      {m.parity_disk_split({ count: p.paths.length })}
+                    </span>
+                  )}
+                </div>
+                {p.paths.map((path) => (
+                  <div
+                    key={path}
+                    className="font-mono text-sm text-gray-700 truncate"
+                    title={path}
+                  >
+                    {path}
+                  </div>
+                ))}
               </div>
               <button
                 type="button"
-                onClick={handleRemove}
-                className="ml-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                onClick={() => handleRemove(p.level)}
+                disabled={p.level !== highestLevel}
+                title={
+                  p.level !== highestLevel
+                    ? m.parity_disk_remove_highest_only()
+                    : undefined
+                }
+                className="ml-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-500"
               >
                 {m.common_remove()}
               </button>

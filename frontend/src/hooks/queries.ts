@@ -295,13 +295,18 @@ export const useRemoveDisk = (
   options?: UseMutationOptions<
     ParsedSnapRaidConfig,
     Error,
-    { configPath: string; diskName: string | null; diskType: 'data' | 'parity' }
+    {
+      configPath: string
+      diskName: string | null
+      diskType: 'data' | 'parity'
+      level?: number
+    }
   >,
 ) => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ configPath, diskName, diskType }) =>
-      removeDisk(configPath, diskName, diskType),
+    mutationFn: ({ configPath, diskName, diskType, level }) =>
+      removeDisk(configPath, diskName, diskType, level),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.snapraidConfig(variables.configPath),

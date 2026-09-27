@@ -175,11 +175,12 @@ export const removeDisk = async (
   configPath: string,
   diskName: string | null,
   diskType: 'data' | 'parity',
+  level?: number,
 ): Promise<ParsedSnapRaidConfig> => {
   const response = await fetch(`${API_BASE}/snapraid/remove-disk`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ configPath, diskName, diskType }),
+    body: JSON.stringify({ configPath, diskName, diskType, level }),
   })
   if (!response.ok) {
     const error = await response.json()
