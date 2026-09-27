@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
+import { Button } from './Button'
 import { DirectoryBrowser } from './DirectoryBrowser'
 import { useFeedback } from './Feedback'
 
@@ -46,13 +47,9 @@ export const PoolSection = ({ pool, onPoolChange }: PoolSectionProps) => {
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold">{m.pool_section_title()}</h3>
           {!editMode && !pool && (
-            <button
-              type="button"
-              onClick={() => setEditMode(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
-            >
+            <Button onClick={() => setEditMode(true)} className="text-sm">
               {m.common_add()}
-            </button>
+            </Button>
           )}
         </div>
 

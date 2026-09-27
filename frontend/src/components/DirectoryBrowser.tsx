@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useFilesystem } from '../hooks/queries'
 import * as m from '../paraglide/messages'
+import { Button } from './Button'
 
 interface DirectoryBrowserProps {
   onSelect: (path: string) => void
@@ -102,20 +103,10 @@ export const DirectoryBrowser = ({
             <span className="font-mono">{actualPath || '/'}</span>
           </div>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-            >
+            <Button variant="secondary" onClick={onClose}>
               {m.common_cancel()}
-            </button>
-            <button
-              type="button"
-              onClick={handleSelect}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              {m.common_select()}
-            </button>
+            </Button>
+            <Button onClick={handleSelect}>{m.common_select()}</Button>
           </div>
         </div>
       </div>

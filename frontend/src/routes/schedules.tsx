@@ -2,6 +2,7 @@ import type { Schedule, ScheduleOutcome, SnapRaidCommand } from '@shared/types'
 import { createFileRoute } from '@tanstack/react-router'
 import { Calendar, Edit, Pause, Play, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { Button } from '../components/Button'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { PageLayout } from '../components/PageLayout'
 import {
@@ -129,7 +130,7 @@ const weekdayName = (day: number) =>
   )
 
 const inputClass =
-  'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500'
+  'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
 const smallLabelClass = 'block text-xs font-medium text-gray-600 mb-1'
 
 function SchedulesPage() {
@@ -193,15 +194,10 @@ function SchedulesPage() {
     <PageLayout
       title={m.schedules_title()}
       actions={
-        <button
-          type="button"
-          onClick={() => setIsCreating(true)}
-          disabled={isCreating}
-          className="flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <Button onClick={() => setIsCreating(true)} disabled={isCreating}>
           <Plus size={18} />
           {m.schedules_create_new()}
-        </button>
+        </Button>
       }
     >
       {isCreating && (
@@ -218,13 +214,9 @@ function SchedulesPage() {
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-400" />
           <p className="text-xl text-gray-600">{m.schedules_empty()}</p>
-          <button
-            type="button"
-            onClick={() => setIsCreating(true)}
-            className="mt-6 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700"
-          >
+          <Button onClick={() => setIsCreating(true)} className="mt-6">
             {m.schedules_create_new()}
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="space-y-4">
@@ -359,9 +351,9 @@ function ScheduleForm({
         if (mode === 'cron') setRawCron(cronExpression)
         setScheduleType(mode)
       }}
-      className={`px-4 py-2 rounded-lg transition-colors ${
+      className={`px-4 py-2 rounded transition-colors ${
         scheduleType === mode
-          ? 'bg-cyan-600 text-white'
+          ? 'bg-blue-600 text-white'
           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
       }`}
     >
@@ -457,7 +449,7 @@ function ScheduleForm({
                 type="checkbox"
                 checked={syncGuard}
                 onChange={(e) => setSyncGuard(e.target.checked)}
-                className="w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <span className="text-sm font-medium text-gray-700">
                 {m.schedules_sync_guard()}
@@ -505,9 +497,9 @@ function ScheduleForm({
                   key={p.id}
                   type="button"
                   onClick={() => setPreset(p.id)}
-                  className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                  className={`px-3 py-2 text-sm rounded transition-colors ${
                     preset === p.id
-                      ? 'bg-cyan-100 border-2 border-cyan-600 text-cyan-900'
+                      ? 'bg-blue-50 border-2 border-blue-600 text-blue-900'
                       : 'bg-gray-50 border border-gray-300 text-gray-700 hover:bg-gray-100'
                   }`}
                 >
@@ -600,7 +592,7 @@ function ScheduleForm({
                         type="checkbox"
                         checked={useEveryHour}
                         onChange={(e) => setUseEveryHour(e.target.checked)}
-                        className="w-4 h-4 text-cyan-600 border-gray-300 rounded"
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded"
                       />
                       {m.schedules_every_hour()}
                     </label>
@@ -623,7 +615,7 @@ function ScheduleForm({
                         type="checkbox"
                         checked={useEveryMinute}
                         onChange={(e) => setUseEveryMinute(e.target.checked)}
-                        className="w-4 h-4 text-cyan-600 border-gray-300 rounded"
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded"
                       />
                       {m.schedules_every_n_minutes()}
                     </label>
@@ -716,7 +708,7 @@ function ScheduleForm({
               type="checkbox"
               checked={enabled}
               onChange={(e) => setEnabled(e.target.checked)}
-              className="w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
             <span className="text-sm font-medium text-gray-700">
               {m.schedules_field_enabled()}
@@ -725,20 +717,12 @@ function ScheduleForm({
         </div>
 
         <div className="flex gap-2 justify-end pt-4">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-          >
+          <Button variant="secondary" onClick={onCancel}>
             {m.common_cancel()}
-          </button>
-          <button
-            type="submit"
-            disabled={!isOptionsValid}
-            className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+          </Button>
+          <Button type="submit" disabled={!isOptionsValid}>
             {schedule ? m.common_save() : m.common_create()}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -894,8 +878,7 @@ function ScheduleCard({
         </div>
 
         <div className="flex gap-1 shrink-0">
-          <button
-            type="button"
+          <Button
             onClick={onToggle}
             title={
               schedule.enabled ? m.schedules_disable() : m.schedules_enable()
@@ -903,32 +886,33 @@ function ScheduleCard({
             aria-label={
               schedule.enabled ? m.schedules_disable() : m.schedules_enable()
             }
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            variant="ghost"
+            size="icon"
           >
             {schedule.enabled ? (
               <Pause className="w-5 h-5" />
             ) : (
               <Play className="w-5 h-5" />
             )}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             onClick={onEdit}
             title={m.common_edit()}
             aria-label={m.common_edit()}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            variant="ghost"
+            size="icon"
           >
             <Edit className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             onClick={onDelete}
             title={m.common_delete()}
             aria-label={m.common_delete()}
-            className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors"
+            variant="ghostDanger"
+            size="icon"
           >
             <Trash2 className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

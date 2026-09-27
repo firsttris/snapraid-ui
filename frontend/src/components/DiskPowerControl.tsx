@@ -1,6 +1,7 @@
 import type { DiskPowerStatus, ProbeReport } from '@shared/types'
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
+import { Button } from './Button'
 
 interface DiskPowerControlProps {
   configPath: string
@@ -206,14 +207,9 @@ export const DiskPowerControl = ({
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleProbe}
-          disabled={loading || operating}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-        >
+        <Button onClick={handleProbe} disabled={loading || operating}>
           {loading ? m.disk_power_probing() : m.disk_power_probe()}
-        </button>
+        </Button>
       </div>
 
       {error && (

@@ -10,6 +10,7 @@ import type { ReactNode } from 'react'
 import { daysSince, formatRelativeTime } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
+import { Button } from './Button'
 
 // A run older than this is flagged as overdue
 const SYNC_STALE_DAYS = 7
@@ -178,19 +179,19 @@ export const ArrayHealthPanel = ({
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">{m.health_title()}</h2>
         <div className="flex gap-2">
-          <button
-            type="button"
+          <Button
             onClick={onShowDetails}
             disabled={!status}
-            className="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="secondary"
+            size="sm"
           >
             {m.health_details()}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             onClick={onRefresh}
             disabled={refreshDisabled || isStatusLoading}
-            className="p-1.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="secondary"
+            size="iconSm"
             aria-label={m.health_refresh()}
             title={m.health_refresh()}
           >
@@ -198,7 +199,7 @@ export const ArrayHealthPanel = ({
               size={16}
               className={isStatusLoading ? 'animate-spin' : ''}
             />
-          </button>
+          </Button>
         </div>
       </div>
 

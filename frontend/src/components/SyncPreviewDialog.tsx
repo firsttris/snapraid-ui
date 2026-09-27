@@ -2,6 +2,7 @@ import type { DiffReport } from '@shared/types'
 import { useEffect, useState } from 'react'
 import { getDiff } from '../lib/api/snapraid'
 import * as m from '../paraglide/messages'
+import { Button } from './Button'
 
 // How many deleted files are listed before collapsing into "… and N more"
 const MAX_DELETED_SHOWN = 20
@@ -163,13 +164,9 @@ export const SyncPreviewDialog = ({
         </div>
 
         <div className="flex justify-end gap-3 p-6 border-t">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-          >
+          <Button onClick={onClose} variant="secondary">
             {m.sync_preview_cancel()}
-          </button>
+          </Button>
           <button
             type="button"
             onClick={onConfirm}

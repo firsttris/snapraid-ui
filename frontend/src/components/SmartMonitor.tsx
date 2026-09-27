@@ -1,6 +1,7 @@
 import type { SmartDiskInfo, SmartReport } from '@shared/types'
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
+import { Button } from './Button'
 
 interface SmartMonitorProps {
   configPath: string
@@ -232,14 +233,9 @@ export const SmartMonitor = ({ onRefresh }: SmartMonitorProps) => {
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-        >
+        <Button onClick={handleRefresh} disabled={loading}>
           {loading ? m.smart_monitor_loading() : m.smart_monitor_refresh()}
-        </button>
+        </Button>
       </div>
 
       {error && (

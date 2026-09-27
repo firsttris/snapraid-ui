@@ -1,6 +1,7 @@
 import type { ParityLevel } from '@shared/types'
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
+import { Button } from './Button'
 import { DirectoryBrowser } from './DirectoryBrowser'
 import { useFeedback } from './Feedback'
 
@@ -169,14 +170,13 @@ export const ParityDiskSection = ({
             </div>
           </div>
           <div className="flex gap-2 mt-2">
-            <button
-              type="button"
+            <Button
               onClick={handleAddParity}
               disabled={addingParity}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-sm"
+              className="text-sm"
             >
               {addingParity ? `${m.common_adding()}` : m.common_add()}
-            </button>
+            </Button>
             <button
               type="button"
               onClick={() => {

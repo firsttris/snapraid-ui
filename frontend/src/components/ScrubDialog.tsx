@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
+import { Button } from './Button'
 import {
   DEFAULT_SCRUB_OPTIONS,
   isValidScrubOptions,
@@ -48,13 +49,9 @@ export const ScrubDialog = ({
         </div>
 
         <div className="flex justify-end gap-3 p-6 border-t">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-          >
+          <Button onClick={onClose} variant="secondary">
             {m.common_cancel()}
-          </button>
+          </Button>
           <button
             type="button"
             onClick={() => onConfirm(scrubArgs(options))}
