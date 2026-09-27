@@ -12,9 +12,9 @@ import { ArrayHealthPanel } from '../components/ArrayHealthPanel'
 import { CheckViewer } from '../components/CheckViewer'
 import { CommandPanel } from '../components/CommandPanel'
 import { ConfigBar } from '../components/ConfigBar'
-import { DashboardCards } from '../components/DashboardCards'
 import { DeviceList } from '../components/DeviceList'
 import { DiffViewer } from '../components/DiffViewer'
+import { DisksPanel } from '../components/DisksPanel'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { FileListViewer } from '../components/FileListViewer'
 import { OutputConsole } from '../components/OutputConsole'
@@ -29,6 +29,8 @@ import {
   useCurrentJob,
   useExecuteCommand,
   useLastRuns,
+  useParityUsage,
+  useProbe,
   useSchedules,
   useSnapRaidConfig,
   useStatus,
@@ -57,6 +59,9 @@ const REPORT_LOADERS = {
   diff: getDiff,
 } as const
 
+// Probe does not wake disks, so polling it keeps the power state fresh
+const PROBE_INTERVAL_MS = 60_000
+
 const isReportCommand = (command: SnapRaidCommand): command is Report['kind'] =>
   command in REPORT_LOADERS
 
@@ -80,6 +85,7 @@ function Dashboard() {
     isError: isStatusError,
   } = useStatus(selectedConfig, { enabled: !!selectedConfig })
   const { data: lastRuns } = useLastRuns(selectedConfig)
+  const { data: parityUsage } = useParityUsage(selectedConfig)
   const { data: schedules } = useSchedules()
   const executeCommandMutation = useExecuteCommand()
   const abortMutation = useAbortJob()
@@ -89,10 +95,17 @@ function Dashboard() {
     refetchCurrentJob()
     queryClient.invalidateQueries({ queryKey: queryKeys.status })
     queryClient.invalidateQueries({ queryKey: ['last-runs'] })
+    queryClient.invalidateQueries({ queryKey: ['parity-usage'] })
   }, [refetchCurrentJob, queryClient])
 
   // WebSocket connection hook
   const wsState = useWebSocketConnection(handleJobComplete)
+  // Unsupported on some controllers, the panel then just shows no power state
+  const { data: probeReport } = useProbe(selectedConfig, {
+    enabled: !wsState.isRunning,
+    refetchInterval: PROBE_INTERVAL_MS,
+    retry: false,
+  })
   const [dismissedResult, setDismissedResult] = useState<string | null>(null)
   const isAborting = abortMutation.isPending || !!currentJob?.aborting
   const progress = useMemo(
@@ -287,7 +300,12 @@ function Dashboard() {
           }
         />
 
-        <DashboardCards parsedConfig={parsedConfig} />
+        <DisksPanel
+          parsedConfig={parsedConfig}
+          status={statusData?.status}
+          parityUsage={parityUsage}
+          powerStates={probeReport?.disks}
+        />
 
         <OutputConsole
           output={wsState.output}

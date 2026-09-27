@@ -5,6 +5,7 @@ import { parseListOutput } from "../list-parser.ts";
 import { parseCheckOutput } from "../check-parser.ts";
 import { parseSmartOutput } from "../smart-parser.ts";
 import { parseProbeOutput } from "../probe-parser.ts";
+import { parseDfOutput } from "../df-parser.ts";
 import { parseLogTags, splitStructuredOutput, unescapeTagValue } from "../structured-log.ts";
 import { parseParityLine } from "../../config-parser.ts";
 
@@ -159,4 +160,10 @@ Deno.test("parseParityLine - parity levels and split parity", () => {
   assertEquals(parseParityLine("6-parity /mnt/p6/6.parity")?.level, 6);
   assertEquals(parseParityLine("7-parity /mnt/p7/7.parity"), null);
   assertEquals(parseParityLine("data d1 /mnt/d1"), null);
+});
+
+Deno.test("parseDfOutput - size, free space and mount point", () => {
+  const output = "     1B-blocks         Avail Mounted on\n4000787030016 1234567890123 /mnt/parity 1\n";
+  assertEquals(parseDfOutput(output), { totalBytes: 4000787030016, freeBytes: 1234567890123, mount: "/mnt/parity 1" });
+  assertEquals(parseDfOutput("df: /missing: No such file or directory\n"), null);
 });

@@ -5,6 +5,7 @@ import type {
   DiffReport,
   LastRuns,
   ListReport,
+  ParityLevelUsage,
   ParsedSnapRaidConfig,
   ProbeReport,
   RunningJob,
@@ -109,6 +110,20 @@ export const getStatus = async (
     : `${API_BASE}/snapraid/status`
   const response = await fetch(url)
   if (!response.ok) throw new Error('Failed to fetch status')
+  return response.json()
+}
+
+/**
+ * Get size and free space of the parity disks, which status does not report
+ */
+export const getParityUsage = async (
+  configPath: string,
+): Promise<ParityLevelUsage[]> => {
+  const relativePath = configPath.replace(/^.*[/\\]/, '')
+  const response = await fetch(
+    `${API_BASE}/snapraid/parity-usage?path=${encodeURIComponent(relativePath)}`,
+  )
+  if (!response.ok) throw new Error('Failed to fetch parity usage')
   return response.json()
 }
 

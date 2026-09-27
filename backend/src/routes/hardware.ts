@@ -4,6 +4,8 @@ import { parseProbeOutput } from "../parsers/probe-parser.ts";
 import { parseSmartOutput } from "../parsers/smart-parser.ts";
 import { BASE_PATH, snapraidCommand } from "../config.ts";
 import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
+import { parseSnapRaidConfig } from "../config-parser.ts";
+import { getParityUsage } from "../parity-usage.ts";
 
 const hardware = new Hono();
 
@@ -89,6 +91,24 @@ hardware.get("/probe", async (c) => {
       timestamp: new Date().toISOString(),
       rawOutput: output,
     });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// GET /api/snapraid/parity-usage - Size and free space of the parity disks
+hardware.get("/parity-usage", async (c) => {
+  const relativePath = c.req.query("path");
+
+  if (!relativePath) {
+    return c.json({ error: "Missing path parameter" }, 400);
+  }
+
+  const configPath = join(BASE_PATH, relativePath);
+
+  try {
+    const config = await parseSnapRaidConfig(configPath);
+    return c.json(await getParityUsage(config));
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }

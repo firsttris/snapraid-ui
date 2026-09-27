@@ -2,7 +2,9 @@ import type {
   AppConfig,
   LastRuns,
   LogFile,
+  ParityLevelUsage,
   ParsedSnapRaidConfig,
+  ProbeReport,
   RunningJob,
   Schedule,
   SnapRaidCommand,
@@ -33,8 +35,10 @@ import {
   executeCommand,
   getCurrentJob,
   getLastRuns,
+  getParityUsage,
   getStatus,
   parseSnapRaidConfig,
+  probe,
   removeDisk,
   removeExclude,
   setPool,
@@ -50,6 +54,8 @@ export const queryKeys = {
   currentJob: ['current-job'] as const,
   status: ['status'] as const,
   lastRuns: (path: string) => ['last-runs', path] as const,
+  parityUsage: (path: string) => ['parity-usage', path] as const,
+  probe: (path: string) => ['probe', path] as const,
   logs: ['logs'] as const,
   logContent: (filename: string) => ['log-content', filename] as const,
   filesystem: (path: string | undefined, filter: 'conf' | 'directories') =>
@@ -119,6 +125,29 @@ export const useLastRuns = (
   return useQuery({
     queryKey: queryKeys.lastRuns(configPath ?? ''),
     queryFn: configPath ? () => getLastRuns(configPath) : skipToken,
+    ...options,
+  })
+}
+
+export const useParityUsage = (
+  configPath: string | undefined,
+  options?: Omit<UseQueryOptions<ParityLevelUsage[]>, 'queryKey' | 'queryFn'>,
+) => {
+  return useQuery({
+    queryKey: queryKeys.parityUsage(configPath ?? ''),
+    queryFn: configPath ? () => getParityUsage(configPath) : skipToken,
+    ...options,
+  })
+}
+
+// Probe reads the power state without waking disks in standby
+export const useProbe = (
+  configPath: string | undefined,
+  options?: Omit<UseQueryOptions<ProbeReport>, 'queryKey' | 'queryFn'>,
+) => {
+  return useQuery({
+    queryKey: queryKeys.probe(configPath ?? ''),
+    queryFn: configPath ? () => probe(configPath) : skipToken,
     ...options,
   })
 }

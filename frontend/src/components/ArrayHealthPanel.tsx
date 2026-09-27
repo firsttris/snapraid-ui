@@ -7,7 +7,7 @@ import type {
 import { Link } from '@tanstack/react-router'
 import { RefreshCw } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { daysSince, formatGB, formatRelativeTime } from '../lib/utils'
+import { daysSince, formatRelativeTime } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 
@@ -143,12 +143,6 @@ const LastRunTile = ({
   )
 }
 
-const usageColor = (percent: number) => {
-  if (percent >= 95) return 'bg-red-500'
-  if (percent >= 85) return 'bg-yellow-500'
-  return 'bg-blue-500'
-}
-
 export const ArrayHealthPanel = ({
   status,
   isStatusLoading,
@@ -177,7 +171,6 @@ export const ArrayHealthPanel = ({
             ? 'sync_failed'
             : 'healthy'
   const [title, message] = getHealthText(health)
-  const disks = status?.disks ?? []
   const badBlocks = health === 'errors' ? (status?.badBlocks ?? 0) : 0
 
   return (
@@ -307,33 +300,6 @@ export const ArrayHealthPanel = ({
           )}
         </Tile>
       </div>
-
-      {disks.length > 0 && (
-        <div className="mt-6">
-          <h3 className="mb-3 text-sm font-semibold text-gray-700">
-            {m.health_disk_usage()}
-          </h3>
-          <div className="space-y-3">
-            {disks.map((disk) => (
-              <div key={disk.name}>
-                <div className="mb-1 flex justify-between text-sm">
-                  <span className="font-medium text-gray-800">{disk.name}</span>
-                  <span className="text-gray-500">
-                    {disk.usePercent}% ·{' '}
-                    {m.health_free({ free: formatGB(disk.freeGB) })}
-                  </span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-gray-200">
-                  <div
-                    className={`h-full rounded-full ${usageColor(disk.usePercent)}`}
-                    style={{ width: `${Math.min(disk.usePercent, 100)}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

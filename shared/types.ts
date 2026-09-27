@@ -186,6 +186,22 @@ export interface ProbeReport {
   rawOutput: string;
 }
 
+// Space of a parity level, SnapRAID status does not report parity disks
+export interface ParityFileUsage {
+  path: string;
+  fileSizeGB: number | null;   // null while the parity file does not exist yet
+  mount: string | null;        // Filesystem holding the file, null when unknown
+  diskTotalGB: number | null;
+  diskFreeGB: number | null;
+}
+
+export interface ParityLevelUsage {
+  level: number;
+  keyword: string;
+  files: ParityFileUsage[];
+  capacityGB: number | null;   // Size the parity can grow to: current files plus free space
+}
+
 // Scheduling types
 export interface Schedule {
   id: string;
