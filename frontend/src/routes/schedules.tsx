@@ -1,9 +1,18 @@
-import type { Schedule, SnapRaidCommand } from '@shared/types'
+import type { Schedule, ScheduleOutcome, SnapRaidCommand } from '@shared/types'
 import { createFileRoute } from '@tanstack/react-router'
 import { Calendar, Edit, Pause, Play, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { PageLayout } from '../components/PageLayout'
+import {
+  getScrubPlanLabel,
+  isValidScrubOptions,
+  parseScrubArgs,
+  type ScrubOptions,
+  type ScrubPlan,
+  ScrubPlanPicker,
+  scrubArgs,
+} from '../components/ScrubPlanPicker'
 import {
   useConfig,
   useCreateSchedule,
@@ -46,6 +55,53 @@ const PRESETS = [
 ] as const
 
 type PresetId = (typeof PRESETS)[number]['id']
+
+// Repairs follow a scrub that found errors, so scrub -p bad is not a schedule plan
+const SCHEDULE_SCRUB_PLANS: ScrubPlan[] = ['default', 'percent', 'new', 'full']
+
+// Default for new sync schedules: skip when more files were deleted than this
+const DEFAULT_MAX_DELETED_FILES = 50
+
+const OUTCOME_STYLES: Record<ScheduleOutcome['result'], string> = {
+  ok: 'bg-green-100 text-green-700',
+  warning: 'bg-yellow-100 text-yellow-800',
+  error: 'bg-red-100 text-red-700',
+  aborted: 'bg-gray-200 text-gray-700',
+  incomplete: 'bg-gray-200 text-gray-700',
+  skipped: 'bg-orange-100 text-orange-800',
+}
+
+const getOutcomeLabel = (result: ScheduleOutcome['result']): string => {
+  switch (result) {
+    case 'ok':
+      return m.run_result_ok()
+    case 'warning':
+      return m.run_result_warning()
+    case 'error':
+      return m.run_result_error()
+    case 'aborted':
+      return m.run_result_aborted()
+    case 'incomplete':
+      return m.run_result_incomplete()
+    case 'skipped':
+      return m.schedules_outcome_skipped()
+  }
+}
+
+const getOutcomeDetail = (outcome: ScheduleOutcome): string | undefined => {
+  switch (outcome.skipReason) {
+    case 'job_running':
+      return m.schedules_skip_job_running()
+    case 'too_many_deleted':
+      return m.schedules_skip_too_many_deleted({
+        count: outcome.deletedFiles ?? 0,
+      })
+    case 'diff_failed':
+      return m.schedules_skip_diff_failed({ error: outcome.error ?? '' })
+    default:
+      return outcome.error
+  }
+}
 
 const getCommandLabel = (command: SnapRaidCommand): string => {
   switch (command) {
@@ -212,6 +268,24 @@ function ScheduleForm({
     schedule?.configPath || configs[0]?.path || '',
   )
   const [enabled, setEnabled] = useState(schedule?.enabled ?? true)
+  const [scrubOptions, setScrubOptions] = useState<ScrubOptions>(() =>
+    parseScrubArgs(schedule?.command === 'scrub' ? schedule.args : []),
+  )
+  const [syncGuard, setSyncGuard] = useState(
+    schedule ? schedule.maxDeletedFiles != null : true,
+  )
+  const [maxDeletedFiles, setMaxDeletedFiles] = useState(
+    String(schedule?.maxDeletedFiles ?? DEFAULT_MAX_DELETED_FILES),
+  )
+  const maxDeletedValue = Number(maxDeletedFiles)
+  const isOptionsValid =
+    command === 'scrub'
+      ? isValidScrubOptions(scrubOptions)
+      : command !== 'sync' ||
+        !syncGuard ||
+        (maxDeletedFiles.trim() !== '' &&
+          Number.isInteger(maxDeletedValue) &&
+          maxDeletedValue >= 0)
 
   // An existing schedule opens on its matching preset, or as a raw cron expression,
   // so saving other fields never changes when it runs
@@ -265,12 +339,15 @@ function ScheduleForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!isOptionsValid) return
     onSubmit({
       name,
       command,
       configPath,
       cronExpression,
       enabled,
+      args: command === 'scrub' ? scrubArgs(scrubOptions) : [],
+      maxDeletedFiles: command === 'sync' && syncGuard ? maxDeletedValue : null,
     })
   }
 
@@ -359,6 +436,56 @@ function ScheduleForm({
             </select>
           </div>
         </div>
+
+        {command === 'scrub' && (
+          <div>
+            <span className="block text-sm font-medium text-gray-700 mb-2">
+              {m.schedules_scrub_plan()}
+            </span>
+            <ScrubPlanPicker
+              value={scrubOptions}
+              onChange={setScrubOptions}
+              plans={SCHEDULE_SCRUB_PLANS}
+            />
+          </div>
+        )}
+
+        {command === 'sync' && (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={syncGuard}
+                onChange={(e) => setSyncGuard(e.target.checked)}
+                className="w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                {m.schedules_sync_guard()}
+              </span>
+            </label>
+            <p className="mt-1 ml-6 text-xs text-gray-500">
+              {m.schedules_sync_guard_hint()}
+            </p>
+            {syncGuard && (
+              <div className="mt-3 ml-6 max-w-48">
+                <label
+                  htmlFor="schedule-max-deleted"
+                  className={smallLabelClass}
+                >
+                  {m.schedules_sync_guard_label()}
+                </label>
+                <input
+                  id="schedule-max-deleted"
+                  type="number"
+                  min={0}
+                  value={maxDeletedFiles}
+                  onChange={(e) => setMaxDeletedFiles(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         <div>
           <span className="block text-sm font-medium text-gray-700 mb-2">
@@ -607,7 +734,8 @@ function ScheduleForm({
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
+            disabled={!isOptionsValid}
+            className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {schedule ? m.common_save() : m.common_create()}
           </button>
@@ -674,7 +802,39 @@ function ScheduleCard({
             <strong className="text-gray-700">
               {m.schedules_field_command()}:
             </strong>
-            <span>{getCommandLabel(schedule.command)}</span>
+            <span>
+              {getCommandLabel(schedule.command)}
+              {schedule.command === 'scrub' && (
+                <span className="text-gray-500">
+                  {' · '}
+                  {getScrubPlanLabel(parseScrubArgs(schedule.args).plan)}
+                  {schedule.args && schedule.args.length > 0 && (
+                    <code className="ml-2 bg-gray-100 px-1.5 py-0.5 rounded text-xs">
+                      {schedule.args.join(' ')}
+                    </code>
+                  )}
+                </span>
+              )}
+            </span>
+
+            {schedule.command === 'sync' && (
+              <>
+                <strong className="text-gray-700">
+                  {m.schedules_field_guard()}:
+                </strong>
+                {schedule.maxDeletedFiles != null ? (
+                  <span>
+                    {m.schedules_guard_summary({
+                      count: schedule.maxDeletedFiles,
+                    })}
+                  </span>
+                ) : (
+                  <span className="text-orange-700">
+                    {m.schedules_guard_off()}
+                  </span>
+                )}
+              </>
+            )}
 
             <strong className="text-gray-700">
               {m.schedules_field_config()}:
@@ -705,6 +865,29 @@ function ScheduleCard({
                   {m.schedules_last_run()}:
                 </strong>
                 <span>{formatRun(schedule.lastRun)}</span>
+              </>
+            )}
+
+            {schedule.lastOutcome && (
+              <>
+                <strong className="text-gray-700">
+                  {m.schedules_last_outcome()}:
+                </strong>
+                <span>
+                  <span
+                    className={`rounded px-2 py-0.5 text-xs font-medium ${OUTCOME_STYLES[schedule.lastOutcome.result]}`}
+                    title={new Date(
+                      schedule.lastOutcome.timestamp,
+                    ).toLocaleString()}
+                  >
+                    {getOutcomeLabel(schedule.lastOutcome.result)}
+                  </span>
+                  {getOutcomeDetail(schedule.lastOutcome) && (
+                    <span className="ml-2">
+                      {getOutcomeDetail(schedule.lastOutcome)}
+                    </span>
+                  )}
+                </span>
               </>
             )}
           </div>

@@ -455,5 +455,17 @@
   "health_fix_errors": "1. Repair (fix -e)",
   "health_scrub_bad": "2. Verify (scrub -p bad)",
   "health_fix_errors_confirm": "SnapRAID restores the blocks marked as bad from parity. Affected files are rewritten. Continue?",
-  "health_fix_errors_start": "Repair"
+  "health_fix_errors_start": "Repair",
+  "schedules_scrub_plan": "Scrub plan",
+  "schedules_sync_guard": "Skip sync when too many files were deleted",
+  "schedules_sync_guard_hint": "A diff runs before the sync. If a disk is missing or empty, a sync would drop its files from parity – then the sync is skipped.",
+  "schedules_sync_guard_label": "Max. deleted files",
+  "schedules_field_guard": "Protection",
+  "schedules_guard_summary": "Skipped when more than {count} files were deleted",
+  "schedules_guard_off": "No protection against deletions",
+  "schedules_last_outcome": "Last result",
+  "schedules_outcome_skipped": "Skipped",
+  "schedules_skip_job_running": "Another job was running.",
+  "schedules_skip_too_many_deleted": "{count} deleted files, more than allowed. Check with “Diff” whether a disk is missing, then start the sync manually.",
+  "schedules_skip_diff_failed": "Diff before sync failed: {error}"
 }

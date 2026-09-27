@@ -125,6 +125,7 @@ export const createSnapRaidRunner = () => {
         movedFiles,
         copiedFiles,
         restoredFiles,
+        failed: !/^summary:exit:/m.test(log),
         timestamp: new Date().toISOString(),
         rawOutput: text,
       };

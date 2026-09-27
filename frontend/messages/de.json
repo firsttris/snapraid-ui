@@ -455,5 +455,17 @@
   "health_fix_errors": "1. Reparieren (fix -e)",
   "health_scrub_bad": "2. Erneut prüfen (scrub -p bad)",
   "health_fix_errors_confirm": "SnapRAID stellt die als fehlerhaft markierten Blöcke aus der Parität wieder her. Betroffene Dateien werden dabei neu geschrieben. Fortfahren?",
-  "health_fix_errors_start": "Reparieren"
+  "health_fix_errors_start": "Reparieren",
+  "schedules_scrub_plan": "Scrub-Plan",
+  "schedules_sync_guard": "Sync überspringen, wenn zu viele Dateien gelöscht wurden",
+  "schedules_sync_guard_hint": "Vor dem Sync läuft ein Diff. Fehlt eine Festplatte oder ist sie leer, würde ein Sync ihre Dateien aus der Parität entfernen – dann wird er übersprungen.",
+  "schedules_sync_guard_label": "Max. gelöschte Dateien",
+  "schedules_field_guard": "Schutz",
+  "schedules_guard_summary": "Übersprungen bei mehr als {count} gelöschten Dateien",
+  "schedules_guard_off": "Kein Schutz vor Löschungen",
+  "schedules_last_outcome": "Letztes Ergebnis",
+  "schedules_outcome_skipped": "Übersprungen",
+  "schedules_skip_job_running": "Ein anderer Job lief gerade.",
+  "schedules_skip_too_many_deleted": "{count} gelöschte Dateien, mehr als erlaubt. Prüfe mit „Diff“, ob eine Festplatte fehlt, und starte den Sync dann manuell.",
+  "schedules_skip_diff_failed": "Diff vor dem Sync fehlgeschlagen: {error}"
 }

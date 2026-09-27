@@ -60,6 +60,7 @@ schedules.post("/", async (c) => {
       configPath: body.configPath,
       cronExpression: body.cronExpression,
       args: body.args || [],
+      maxDeletedFiles: body.maxDeletedFiles ?? null,
       enabled: body.enabled ?? true,
     });
 

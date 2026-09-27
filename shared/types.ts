@@ -195,10 +195,24 @@ export interface Schedule {
   args?: string[];
   cronExpression: string; // Cron syntax: "0 2 * * *" = daily at 2 AM
   enabled: boolean;
+  // sync only: skip the run when diff reports more deleted files, null disables the check
+  maxDeletedFiles?: number | null;
   lastRun?: string; // ISO string
+  lastOutcome?: ScheduleOutcome;
   nextRun?: string; // ISO string
   createdAt: string; // ISO string
   updatedAt: string; // ISO string
+}
+
+export type ScheduleSkipReason = 'job_running' | 'too_many_deleted' | 'diff_failed';
+
+// Result of the last scheduled run, including runs the scheduler skipped
+export interface ScheduleOutcome {
+  timestamp: string; // ISO string
+  result: RunResult | 'skipped';
+  skipReason?: ScheduleSkipReason;
+  deletedFiles?: number; // Deleted files diff reported, for too_many_deleted
+  error?: string;
 }
 
 export interface ScheduleConfig {
@@ -256,6 +270,7 @@ export interface DiffReport {
   movedFiles: number;
   copiedFiles: number;
   restoredFiles: number;
+  failed?: boolean;        // SnapRAID stopped before writing a summary, counts are not reliable
   timestamp: string;       // ISO string
   rawOutput: string;
 }

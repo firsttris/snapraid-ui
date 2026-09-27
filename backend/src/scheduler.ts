@@ -1,9 +1,10 @@
 import { Cron } from "@hexagon/croner";
-import type { Schedule, ScheduleConfig } from "@shared/types.ts";
+import type { CommandOutput, Schedule, ScheduleConfig, ScheduleOutcome } from "@shared/types.ts";
 import type { SnapRaidRunner } from "./snapraid-runner.ts";
 import { existsSync } from "@std/fs";
 import { join } from "@std/path";
 import { BASE_PATH } from "./config.ts";
+import { parseRunResult } from "./log-manager.ts";
 
 // Module-level storage for active jobs
 const activeJobs = new Map<string, Cron>();
@@ -70,6 +71,61 @@ const saveSchedulesToFile = async (path: string, schedules: Schedule[]): Promise
   await Deno.writeTextFile(path, JSON.stringify(config, null, 2));
 };
 
+// Apply changes to one schedule; reloads first, it may have been edited while a job ran
+const updateStoredSchedule = async (
+  configPath: string,
+  scheduleId: string,
+  updates: Partial<Schedule>
+): Promise<void> => {
+  const schedules = await loadSchedulesFromFile(configPath);
+  await saveSchedulesToFile(
+    configPath,
+    schedules.map((s) => (s.id === scheduleId ? { ...s, ...updates } : s))
+  );
+};
+
+const skipped = (skip: Omit<ScheduleOutcome, "timestamp" | "result">): ScheduleOutcome => ({
+  timestamp: new Date().toISOString(),
+  result: "skipped",
+  ...skip,
+});
+
+// An unattended sync after a disk went missing or empty would drop its files from parity,
+// so check the pending deletions first
+const checkSyncGuard = async (
+  runner: SnapRaidRunner,
+  schedule: Schedule,
+  snapraidConfigPath: string
+): Promise<ScheduleOutcome | null> => {
+  if (schedule.command !== "sync" || schedule.maxDeletedFiles == null) return null;
+
+  try {
+    const diff = await runner.runDiff(snapraidConfigPath);
+    if (diff.failed) {
+      return skipped({ skipReason: "diff_failed", error: diff.rawOutput.trim().split("\n").pop() });
+    }
+    if (diff.deletedFiles > schedule.maxDeletedFiles) {
+      return skipped({ skipReason: "too_many_deleted", deletedFiles: diff.deletedFiles });
+    }
+    return null;
+  } catch (error) {
+    return skipped({ skipReason: "diff_failed", error: String(error) });
+  }
+};
+
+const readOutcome = async (result: CommandOutput): Promise<ScheduleOutcome> => {
+  const timestamp = new Date().toISOString();
+  if (result.aborted) return { timestamp, result: "aborted" };
+  try {
+    if (result.logPath) {
+      return { timestamp, result: parseRunResult(await Deno.readTextFile(result.logPath)) };
+    }
+  } catch {
+    // Fall back to the exit code
+  }
+  return { timestamp, result: result.exitCode === 0 ? "ok" : "error" };
+};
+
 // Execute scheduled command
 const executeScheduledCommand = async (
   configPath: string,
@@ -81,35 +137,37 @@ const executeScheduledCommand = async (
   const schedule = schedules.find((s) => s.id === scheduleId);
   if (!schedule) return;
 
-  const currentJob = runner.getCurrentJob();
-  if (currentJob) {
+  const nextRun = activeJobs.get(scheduleId)?.nextRun()?.toISOString();
+  const snapraidConfigPath = join(BASE_PATH, schedule.configPath);
+
+  const skip = runner.getCurrentJob()
+    ? skipped({ skipReason: "job_running" })
+    : await checkSyncGuard(runner, schedule, snapraidConfigPath);
+  if (skip) {
+    console.warn(`Scheduled job skipped: ${schedule.name} (${skip.skipReason})`);
+    await updateStoredSchedule(configPath, scheduleId, { nextRun, lastOutcome: skip });
     return;
   }
 
-  const job = activeJobs.get(scheduleId);
-  const nextRun = job?.nextRun();
-  
-  const updatedSchedule: Schedule = {
-    ...schedule,
+  await updateStoredSchedule(configPath, scheduleId, {
     lastRun: new Date().toISOString(),
-    nextRun: nextRun?.toISOString(),
-  };
+    nextRun,
+  });
 
-  const updatedSchedules = schedules.map((s) =>
-    s.id === scheduleId ? updatedSchedule : s
-  );
-  await saveSchedulesToFile(configPath, updatedSchedules);
-
-  try {
-    await runner.executeCommand(
+  const outcome = await runner
+    .executeCommand(
       schedule.command,
-      join(BASE_PATH, schedule.configPath),
+      snapraidConfigPath,
       (chunk) => onOutput?.(scheduleId, chunk),
       schedule.args || []
-    );
-  } catch (error) {
-    console.error(`Scheduled job failed: ${schedule.name}:`, error);
-  }
+    )
+    .then(readOutcome)
+    .catch((error): ScheduleOutcome => {
+      console.error(`Scheduled job failed: ${schedule.name}:`, error);
+      return { timestamp: new Date().toISOString(), result: "error", error: String(error) };
+    });
+
+  await updateStoredSchedule(configPath, scheduleId, { lastOutcome: outcome });
 };
 
 // Start cron job for schedule

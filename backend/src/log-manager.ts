@@ -29,7 +29,7 @@ const parseLogTimestamp = (dateStr: string, timeStr: string): string => {
 /**
  * Derive the outcome of a run from its structured log
  */
-const parseRunResult = (log: string): RunResult => {
+export const parseRunResult = (log: string): RunResult => {
   if (/^sigint:/m.test(log)) return "aborted";
   const exit = log.match(/^summary:exit:(\w+)/m)?.[1];
   // SnapRAID bails out on fatal errors before writing the summary
