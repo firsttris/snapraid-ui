@@ -21,6 +21,7 @@ const MAX_HISTORY = 50;
 // Broadcast function will be injected
 const state = {
   broadcastFn: (() => {}) as (message: unknown) => void,
+  logManager: null as LogManager | null,
 };
 
 export const setBroadcast = (fn: (message: unknown) => void): void => {
@@ -29,6 +30,7 @@ export const setBroadcast = (fn: (message: unknown) => void): void => {
 
 export const setRunnerLogManager = (logManager: LogManager): void => {
   runner.setLogManager(logManager);
+  state.logManager = logManager;
 };
 
 export const getRunner = (): SnapRaidRunner => {
@@ -80,12 +82,51 @@ snapraid.get("/current-job", (c) => {
   return c.json(currentJob);
 });
 
+// POST /api/snapraid/abort - Abort the running job
+snapraid.post("/abort", (c) => {
+  const currentJob = runner.getCurrentJob();
+  if (!currentJob) {
+    return c.json({ error: "No job is running" }, 404);
+  }
+
+  const aborted = runner.abortCommand(currentJob.processId);
+  return c.json({ success: aborted });
+});
+
+// GET /api/snapraid/last-runs - Last sync and scrub of a config
+snapraid.get("/last-runs", async (c) => {
+  const relativePath = c.req.query("path");
+
+  if (!relativePath) {
+    return c.json({ error: "Missing path parameter" }, 400);
+  }
+  if (!state.logManager) {
+    return c.json({ error: "Log manager not initialized" }, 500);
+  }
+
+  const configPath = join(BASE_PATH, relativePath);
+
+  try {
+    const [sync, scrub] = await Promise.all([
+      state.logManager.findLastRun("sync", configPath),
+      state.logManager.findLastRun("scrub", configPath),
+    ]);
+    return c.json({ sync, scrub });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 // POST /api/snapraid/execute - Execute SnapRAID command
 snapraid.post("/execute", async (c) => {
   const { command, configPath: relativePath, args = [] } = await c.req.json();
 
   if (!command || !relativePath) {
     return c.json({ error: "Missing command or configPath" }, 400);
+  }
+
+  if (runner.getCurrentJob()) {
+    return c.json({ error: "Another job is already running" }, 409);
   }
 
   const configPath = join(BASE_PATH, relativePath);
@@ -118,6 +159,7 @@ snapraid.post("/execute", async (c) => {
         type: "complete",
         command,
         exitCode: result.exitCode,
+        aborted: result.aborted,
         timestamp: result.timestamp,
       });
 

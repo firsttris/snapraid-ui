@@ -1,11 +1,12 @@
 import { join } from "@std/path";
 import { expandGlob } from "@std/fs";
-import type { SnapRaidCommand, LogFile } from "@shared/types.ts";
+import type { SnapRaidCommand, LogFile, LastRun, RunResult } from "@shared/types.ts";
 
 export interface LogManager {
   ensureLogDirectory(): Promise<void>;
   getLogPath(command: SnapRaidCommand): string;
   listLogs(): Promise<LogFile[]>;
+  findLastRun(command: SnapRaidCommand, configPath: string): Promise<LastRun | null>;
   readLog(filename: string): Promise<string>;
   rotateLogs(maxFiles: number, maxAge: number): Promise<number>;
   deleteLog(filename: string): Promise<void>;
@@ -21,7 +22,19 @@ const parseLogTimestamp = (dateStr: string, timeStr: string): string => {
   const hour = parseInt(timeStr.slice(0, 2));
   const minute = parseInt(timeStr.slice(2, 4));
   const second = parseInt(timeStr.slice(4, 6));
-  return new Date(year, month, day, hour, minute, second).toISOString();
+  // getLogPath writes the filename in UTC
+  return new Date(Date.UTC(year, month, day, hour, minute, second)).toISOString();
+};
+
+/**
+ * Derive the outcome of a run from its structured log
+ */
+const parseRunResult = (log: string): RunResult => {
+  if (/^sigint:/m.test(log)) return "aborted";
+  const exit = log.match(/^summary:exit:(\w+)/m)?.[1];
+  if (!exit) return "incomplete";
+  if (exit === "ok" || exit === "warning") return exit;
+  return "error";
 };
 
 export const createLogManager = (logDirectory: string): LogManager => {
@@ -94,6 +107,31 @@ export const createLogManager = (logDirectory: string): LogManager => {
   };
 
   /**
+   * Find the newest run of a command for a config, using the `conf:file` tag of each log
+   */
+  const findLastRun = async (command: SnapRaidCommand, configPath: string): Promise<LastRun | null> => {
+    const logs = (await listLogs()).filter((log) => log.command === command);
+
+    for (const log of logs) {
+      let content: string;
+      try {
+        content = await Deno.readTextFile(log.path);
+      } catch {
+        continue;
+      }
+      if (content.match(/^conf:file:(.*)$/m)?.[1] !== configPath) continue;
+
+      const unixtime = content.match(/^unixtime:(\d+)$/m)?.[1];
+      return {
+        timestamp: unixtime ? new Date(Number(unixtime) * 1000).toISOString() : log.timestamp,
+        result: parseRunResult(content),
+        logFile: log.filename,
+      };
+    }
+    return null;
+  };
+
+  /**
    * Read log file content
    */
   const readLog = async (filename: string): Promise<string> => {
@@ -155,6 +193,7 @@ export const createLogManager = (logDirectory: string): LogManager => {
     ensureLogDirectory,
     getLogPath,
     listLogs,
+    findLastRun,
     readLog,
     rotateLogs,
     deleteLog,

@@ -2,11 +2,20 @@ import type { SnapRaidStatus } from '@shared/types'
 import { useEffect, useState } from 'react'
 import { connectWebSocket } from '../lib/api/websocket'
 
+export interface JobResult {
+  command: string
+  exitCode: number | null
+  aborted: boolean
+  error?: string
+  finishedAt: string
+}
+
 interface WebSocketState {
   output: string
   currentCommand: string
   isRunning: boolean
   status: SnapRaidStatus | null
+  lastResult: JobResult | null
 }
 
 export const useWebSocketConnection = (onJobComplete: () => void) => {
@@ -15,6 +24,7 @@ export const useWebSocketConnection = (onJobComplete: () => void) => {
     currentCommand: '',
     isRunning: false,
     status: null,
+    lastResult: null,
   })
 
   useEffect(() => {
@@ -26,17 +36,33 @@ export const useWebSocketConnection = (onJobComplete: () => void) => {
           currentCommand: command,
         }))
       },
-      onComplete: (command: string, exitCode: number) => {
-        setState((prev) => ({ ...prev, isRunning: false, currentCommand: '' }))
-        console.log(`Command ${command} completed with exit code ${exitCode}`)
+      onComplete: (command: string, exitCode: number, aborted: boolean) => {
+        setState((prev) => ({
+          ...prev,
+          isRunning: false,
+          currentCommand: '',
+          lastResult: {
+            command,
+            exitCode,
+            aborted,
+            finishedAt: new Date().toISOString(),
+          },
+        }))
         onJobComplete()
       },
-      onError: (error: string) => {
+      onError: (error: string, command: string) => {
         setState((prev) => ({
           ...prev,
           isRunning: false,
           currentCommand: '',
           output: `${prev.output}\n\nError: ${error}`,
+          lastResult: {
+            command,
+            exitCode: null,
+            aborted: false,
+            error,
+            finishedAt: new Date().toISOString(),
+          },
         }))
         onJobComplete()
       },
@@ -55,5 +81,18 @@ export const useWebSocketConnection = (onJobComplete: () => void) => {
     clearOutput: () => setState((prev) => ({ ...prev, output: '' })),
     appendOutput: (chunk: string) =>
       setState((prev) => ({ ...prev, output: prev.output + chunk })),
+    setError: (command: string, error: string) =>
+      setState((prev) => ({
+        ...prev,
+        isRunning: false,
+        currentCommand: '',
+        lastResult: {
+          command,
+          exitCode: null,
+          aborted: false,
+          error,
+          finishedAt: new Date().toISOString(),
+        },
+      })),
   }
 }

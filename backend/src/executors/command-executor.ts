@@ -7,6 +7,7 @@ import { snapraidCommand } from "../config.ts";
  */
 const state = {
   processes: new Map<string, Deno.ChildProcess>(),
+  abortRequested: new Set<string>(),
   currentJob: null as RunningJob | null,
   logManager: null as LogManager | null,
 };
@@ -82,7 +83,10 @@ const readProcessStreams = async (
  */
 const cleanupProcess = (processId: string): void => {
   state.processes.delete(processId);
-  state.currentJob = null;
+  state.abortRequested.delete(processId);
+  if (state.currentJob?.processId === processId) {
+    state.currentJob = null;
+  }
 };
 
 /**
@@ -114,6 +118,7 @@ export const executeCommand = async (
   try {
     const fullOutput = await readProcessStreams(process, onOutput);
     const status = await process.status;
+    const aborted = state.abortRequested.has(processId);
     cleanupProcess(processId);
 
     return {
@@ -122,6 +127,7 @@ export const executeCommand = async (
       timestamp,
       exitCode: status.code,
       logPath,
+      aborted,
     };
   } catch (error) {
     cleanupProcess(processId);
@@ -130,17 +136,20 @@ export const executeCommand = async (
 };
 
 /**
- * Abort a running command
+ * Abort a running command.
+ * SnapRAID handles SIGINT like Ctrl+C: it stops at the next block and saves its state,
+ * so the job stays current until the process has actually exited.
  */
 export const abortCommand = (processId: string): boolean => {
   const process = state.processes.get(processId);
-  if (process) {
-    process.kill("SIGTERM");
-    state.processes.delete(processId);
-    state.currentJob = null;
-    return true;
+  if (!process) return false;
+
+  process.kill("SIGINT");
+  state.abortRequested.add(processId);
+  if (state.currentJob?.processId === processId) {
+    state.currentJob = { ...state.currentJob, aborting: true };
   }
-  return false;
+  return true;
 };
 
 /**

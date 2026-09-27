@@ -5,8 +5,10 @@ import type {
   ListReport,
   SnapRaidCommand,
 } from '@shared/types'
+import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ArrayHealthPanel } from '../components/ArrayHealthPanel'
 import { CheckViewer } from '../components/CheckViewer'
 import { CommandPanel } from '../components/CommandPanel'
 import { ConfigManager } from '../components/ConfigManager'
@@ -19,11 +21,16 @@ import { FileListViewer } from '../components/FileListViewer'
 import { OutputConsole } from '../components/OutputConsole'
 import { SmartMonitor } from '../components/SmartMonitor'
 import { StatusModal } from '../components/StatusModal'
+import { SyncPreviewDialog } from '../components/SyncPreviewDialog'
 import { UndeleteDialog } from '../components/UndeleteDialog'
 import {
+  queryKeys,
+  useAbortJob,
   useConfig,
   useCurrentJob,
   useExecuteCommand,
+  useLastRuns,
+  useSchedules,
   useSnapRaidConfig,
   useStatus,
 } from '../hooks/queries'
@@ -38,6 +45,7 @@ import {
   spinDown,
   spinUp,
 } from '../lib/api/snapraid'
+import * as m from '../paraglide/messages'
 
 export const Route = createFileRoute('/')({
   component: Dashboard,
@@ -48,6 +56,7 @@ function Dashboard() {
   const [showConfigManager, setShowConfigManager] = useState(false)
   const [showUndeleteDialog, setShowUndeleteDialog] = useState(false)
   const [showStatusModal, setShowStatusModal] = useState(false)
+  const [showSyncPreview, setShowSyncPreview] = useState(false)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'smart' | 'power'>(
     'dashboard',
   )
@@ -65,17 +74,59 @@ function Dashboard() {
   const [isLoadingDiff, setIsLoadingDiff] = useState(false)
 
   // TanStack Query hooks
+  const queryClient = useQueryClient()
   const { data: config, refetch: refetchConfig } = useConfig()
   const { data: parsedConfig } = useSnapRaidConfig(selectedConfig)
   const { data: currentJob, refetch: refetchCurrentJob } = useCurrentJob()
-  const { data: statusData, refetch: refetchStatus } = useStatus(
-    selectedConfig,
-    { enabled: false },
-  )
+  const {
+    data: statusData,
+    refetch: refetchStatus,
+    isFetching: isStatusFetching,
+    isError: isStatusError,
+  } = useStatus(selectedConfig, { enabled: !!selectedConfig })
+  const { data: lastRuns } = useLastRuns(selectedConfig)
+  const { data: schedules } = useSchedules()
   const executeCommandMutation = useExecuteCommand()
+  const abortMutation = useAbortJob()
+
+  // A finished job changes status and run history, so reload them
+  const handleJobComplete = useCallback(() => {
+    refetchCurrentJob()
+    queryClient.invalidateQueries({ queryKey: queryKeys.status })
+    queryClient.invalidateQueries({ queryKey: ['last-runs'] })
+  }, [refetchCurrentJob, queryClient])
 
   // WebSocket connection hook
-  const wsState = useWebSocketConnection(refetchCurrentJob)
+  const wsState = useWebSocketConnection(handleJobComplete)
+  const [dismissedResult, setDismissedResult] = useState<string | null>(null)
+  const isAborting = abortMutation.isPending || !!currentJob?.aborting
+
+  const configFile = selectedConfig.replace(/^.*[/\\]/, '')
+  const nextSchedule = useMemo(
+    () =>
+      schedules
+        ?.filter(
+          (schedule) =>
+            schedule.enabled &&
+            schedule.nextRun &&
+            schedule.configPath.replace(/^.*[/\\]/, '') === configFile &&
+            new Date(schedule.nextRun).getTime() > Date.now(),
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.nextRun ?? 0).getTime() -
+            new Date(b.nextRun ?? 0).getTime(),
+        )[0],
+    [schedules, configFile],
+  )
+
+  const handleAbort = useCallback(() => {
+    if (!confirm(m.commands_abort_confirm({ command: wsState.currentCommand })))
+      return
+    abortMutation.mutate(undefined, {
+      onError: (error) => wsState.appendOutput(`\n[${error.message}]\n`),
+    })
+  }, [abortMutation, wsState])
 
   // Select first enabled config on mount
   useEffect(() => {
@@ -100,9 +151,34 @@ function Dashboard() {
     }
   }, [currentJob])
 
+  const runCommand = useCallback(
+    (command: SnapRaidCommand, args: string[] = []) => {
+      wsState.setIsRunning(true)
+      wsState.clearOutput()
+      wsState.setCurrentCommand(command)
+
+      executeCommandMutation.mutate(
+        { command, configPath: selectedConfig, args },
+        {
+          onError: (error) => {
+            console.error('Failed to execute command:', error)
+            wsState.setError(command, error.message)
+          },
+        },
+      )
+    },
+    [selectedConfig, wsState, executeCommandMutation],
+  )
+
   const executeCommand = useCallback(
     async (command: SnapRaidCommand) => {
       if (!selectedConfig || wsState.isRunning) return
+
+      // Show pending changes before sync, so accidental deletions are not synced away
+      if (command === 'sync') {
+        setShowSyncPreview(true)
+        return
+      }
 
       // Handle status command with modal
       if (command === 'status') {
@@ -168,22 +244,9 @@ function Dashboard() {
         return
       }
 
-      // Regular commands
-      wsState.setIsRunning(true)
-      wsState.clearOutput()
-      wsState.setCurrentCommand(command)
-
-      executeCommandMutation.mutate(
-        { command, configPath: selectedConfig },
-        {
-          onError: (error) => {
-            console.error('Failed to execute command:', error)
-            wsState.setIsRunning(false)
-          },
-        },
-      )
+      runCommand(command)
     },
-    [selectedConfig, wsState, executeCommandMutation, refetchStatus],
+    [selectedConfig, wsState, runCommand, refetchStatus],
   )
 
   const handleUndelete = useCallback(
@@ -194,9 +257,6 @@ function Dashboard() {
     ) => {
       if (!selectedConfig || wsState.isRunning) return
 
-      wsState.setIsRunning(true)
-      wsState.clearOutput()
-      wsState.setCurrentCommand('fix')
       setShowUndeleteDialog(false)
 
       // Build arguments based on mode
@@ -215,17 +275,9 @@ function Dashboard() {
         args.push('-f', path)
       }
 
-      executeCommandMutation.mutate(
-        { command: 'fix', configPath: selectedConfig, args },
-        {
-          onError: (error) => {
-            console.error('Failed to execute undelete:', error)
-            wsState.setIsRunning(false)
-          },
-        },
-      )
+      runCommand('fix', args)
     },
-    [selectedConfig, wsState, executeCommandMutation],
+    [selectedConfig, wsState, runCommand],
   )
 
   return (
@@ -296,15 +348,51 @@ function Dashboard() {
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
             <>
-              <DashboardCards parsedConfig={parsedConfig} />
+              {selectedConfig && (
+                <ArrayHealthPanel
+                  status={statusData?.status}
+                  isStatusLoading={isStatusFetching}
+                  isStatusError={isStatusError}
+                  lastSync={lastRuns?.sync}
+                  lastScrub={lastRuns?.scrub}
+                  nextSchedule={nextSchedule}
+                  onRefresh={() => refetchStatus()}
+                  onShowDetails={() => setShowStatusModal(true)}
+                  refreshDisabled={wsState.isRunning}
+                />
+              )}
 
               <CommandPanel
                 onExecute={executeCommand}
                 onUndelete={() => setShowUndeleteDialog(true)}
+                onAbort={handleAbort}
                 disabled={!selectedConfig}
                 isRunning={wsState.isRunning}
+                isAborting={isAborting}
                 currentCommand={wsState.currentCommand}
+                lastResult={
+                  wsState.lastResult?.finishedAt === dismissedResult
+                    ? null
+                    : wsState.lastResult
+                }
+                onDismissResult={() =>
+                  setDismissedResult(wsState.lastResult?.finishedAt ?? null)
+                }
               />
+
+              <DashboardCards parsedConfig={parsedConfig} />
+
+              {showSyncPreview && (
+                <SyncPreviewDialog
+                  configPath={selectedConfig}
+                  hasUnsyncedParity={!!statusData?.status.syncInProgress}
+                  onClose={() => setShowSyncPreview(false)}
+                  onConfirm={() => {
+                    setShowSyncPreview(false)
+                    runCommand('sync')
+                  }}
+                />
+              )}
 
               {showUndeleteDialog && parsedConfig && (
                 <UndeleteDialog

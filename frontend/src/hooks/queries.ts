@@ -1,5 +1,6 @@
 import type {
   AppConfig,
+  LastRuns,
   LogFile,
   ParsedSnapRaidConfig,
   RunningJob,
@@ -25,11 +26,13 @@ import { browseFilesystem, readFile, writeFile } from '../lib/api/filesystem'
 import { deleteLog, getLogContent, getLogs, rotateLogs } from '../lib/api/logs'
 import { schedulesApi } from '../lib/api/schedules'
 import {
+  abortJob,
   addDataDisk,
   addExclude,
   addParityDisk,
   executeCommand,
   getCurrentJob,
+  getLastRuns,
   getStatus,
   parseSnapRaidConfig,
   removeDisk,
@@ -46,6 +49,7 @@ export const queryKeys = {
   snapraidConfig: (path: string) => ['snapraid-config', path] as const,
   currentJob: ['current-job'] as const,
   status: ['status'] as const,
+  lastRuns: (path: string) => ['last-runs', path] as const,
   logs: ['logs'] as const,
   logContent: (filename: string) => ['log-content', filename] as const,
   filesystem: (path: string | undefined, filter: 'conf' | 'directories') =>
@@ -104,6 +108,17 @@ export const useStatus = (
   return useQuery({
     queryKey: [...queryKeys.status, configPath],
     queryFn: () => getStatus(configPath),
+    ...options,
+  })
+}
+
+export const useLastRuns = (
+  configPath: string | undefined,
+  options?: Omit<UseQueryOptions<LastRuns>, 'queryKey' | 'queryFn'>,
+) => {
+  return useQuery({
+    queryKey: queryKeys.lastRuns(configPath ?? ''),
+    queryFn: configPath ? () => getLastRuns(configPath) : skipToken,
     ...options,
   })
 }
@@ -395,6 +410,16 @@ export const useRotateLogs = (
       queryClient.invalidateQueries({ queryKey: queryKeys.logs })
     },
     ...options,
+  })
+}
+
+export const useAbortJob = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: abortJob,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentJob })
+    },
   })
 }
 

@@ -66,7 +66,26 @@ const main = async (): Promise<void> => {
   // Initialize scheduler
   const schedulesConfigPath = join(BASE_PATH, "schedules.json");
   const runner = getRunner();
-  const scheduler = createScheduler(schedulesConfigPath, runner);
+  // Report the end of scheduled jobs like manual ones, so clients stop showing them as running
+  const scheduler = createScheduler(schedulesConfigPath, {
+    ...runner,
+    executeCommand: async (command, ...rest) => {
+      try {
+        const result = await runner.executeCommand(command, ...rest);
+        broadcast({
+          type: "complete",
+          command,
+          exitCode: result.exitCode,
+          aborted: result.aborted,
+          timestamp: result.timestamp,
+        });
+        return result;
+      } catch (error) {
+        broadcast({ type: "error", command, error: String(error), timestamp: new Date().toISOString() });
+        throw error;
+      }
+    },
+  });
   
   // Set output callback for scheduled jobs
   scheduler.setOutputCallback((scheduleId, chunk) => {

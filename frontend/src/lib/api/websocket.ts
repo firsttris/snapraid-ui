@@ -8,7 +8,7 @@ const wsState = {
   shouldReconnect: true,
   handlers: {} as {
     onOutput?: (chunk: string, command: string) => void
-    onComplete?: (command: string, exitCode: number) => void
+    onComplete?: (command: string, exitCode: number, aborted: boolean) => void
     onError?: (error: string, command: string) => void
     onStatus?: (status: SnapRaidStatus) => void
   },
@@ -19,7 +19,7 @@ const wsState = {
  */
 export const connectWebSocket = (handlers: {
   onOutput?: (chunk: string, command: string) => void
-  onComplete?: (command: string, exitCode: number) => void
+  onComplete?: (command: string, exitCode: number, aborted: boolean) => void
   onError?: (error: string, command: string) => void
   onStatus?: (status: SnapRaidStatus) => void
 }): void => {
@@ -64,7 +64,11 @@ export const connectWebSocket = (handlers: {
         wsState.handlers.onOutput?.(message.chunk, message.command)
         break
       case 'complete':
-        wsState.handlers.onComplete?.(message.command, message.exitCode)
+        wsState.handlers.onComplete?.(
+          message.command,
+          message.exitCode,
+          message.aborted ?? false,
+        )
         break
       case 'error':
         wsState.handlers.onError?.(message.error, message.command)

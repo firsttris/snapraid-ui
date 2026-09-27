@@ -3,6 +3,7 @@ import type {
   CommandOutput,
   DevicesReport,
   DiffReport,
+  LastRuns,
   ListReport,
   ParsedSnapRaidConfig,
   ProbeReport,
@@ -41,7 +42,10 @@ export const executeCommand = async (
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ command, configPath: relativePath, args }),
   })
-  if (!response.ok) throw new Error('Failed to execute command')
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error || 'Failed to execute command')
+  }
 }
 
 /**
@@ -59,6 +63,31 @@ export const getHistory = async (): Promise<CommandOutput[]> => {
 export const getCurrentJob = async (): Promise<RunningJob | null> => {
   const response = await fetch(`${API_BASE}/snapraid/current-job`)
   if (!response.ok) throw new Error('Failed to fetch current job')
+  return response.json()
+}
+
+/**
+ * Abort the running job. SnapRAID stops at the next block and saves its state.
+ */
+export const abortJob = async (): Promise<void> => {
+  const response = await fetch(`${API_BASE}/snapraid/abort`, {
+    method: 'POST',
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to abort job')
+  }
+}
+
+/**
+ * Get the last sync and scrub run of a config
+ */
+export const getLastRuns = async (configPath: string): Promise<LastRuns> => {
+  const relativePath = configPath.replace(/^.*[/\\]/, '')
+  const response = await fetch(
+    `${API_BASE}/snapraid/last-runs?path=${encodeURIComponent(relativePath)}`,
+  )
+  if (!response.ok) throw new Error('Failed to fetch last runs')
   return response.json()
 }
 

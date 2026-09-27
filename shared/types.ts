@@ -81,6 +81,7 @@ export interface CommandOutput {
   timestamp: string; // ISO string for JSON serialization
   exitCode: number | null;
   logPath?: string; // Structured log file written by SnapRAID (--log)
+  aborted?: boolean; // Stopped on user request
 }
 
 export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff' | 'fix' | 'check' | 'pool' | 'smart' | 'probe' | 'up' | 'down' | 'devices' | 'list';
@@ -98,6 +99,21 @@ export interface RunningJob {
   configPath: string;
   startTime: string; // ISO string
   processId: string;
+  aborting?: boolean; // Abort requested, waiting for SnapRAID to save its state
+}
+
+// Outcome of a finished run, from the `summary:exit` tag of its log
+export type RunResult = 'ok' | 'warning' | 'error' | 'aborted' | 'incomplete';
+
+export interface LastRun {
+  timestamp: string; // ISO string
+  result: RunResult;
+  logFile: string;
+}
+
+export interface LastRuns {
+  sync: LastRun | null;
+  scrub: LastRun | null;
 }
 
 // WebSocket message types
@@ -106,6 +122,7 @@ export interface WSMessage {
   command?: string;
   chunk?: string;
   exitCode?: number;
+  aborted?: boolean;
   timestamp?: string;
   error?: string;
   status?: SnapRaidStatus;
