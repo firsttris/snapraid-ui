@@ -57,6 +57,7 @@ export interface ScrubHistoryPoint {
 
 export interface SnapRaidStatus {
   hasErrors: boolean;
+  badBlocks?: number; // Blocks marked bad by scrub/check, repaired by `fix -e`
   parityUpToDate: boolean;
   newFiles: number;
   modifiedFiles: number;

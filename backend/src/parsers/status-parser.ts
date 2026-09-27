@@ -134,6 +134,7 @@ export const parseStatusOutput = (output: string, rawOutput: string = output): S
 
   return {
     hasErrors,
+    badBlocks: blocks.bad,
     parityUpToDate,
     newFiles: 0,
     modifiedFiles: 0,

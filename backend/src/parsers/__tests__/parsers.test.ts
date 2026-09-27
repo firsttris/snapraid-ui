@@ -46,6 +46,7 @@ Deno.test("parseStatusOutput - bad blocks after scrub", () => {
   const status = parseStatusOutput(fixture("status-bad.log"));
 
   assertEquals(status.hasErrors, true);
+  assertEquals(status.badBlocks, 1);
   assertEquals(status.parityUpToDate, false);
   // text report: "2% of the array is not scrubbed"
   assertEquals(status.scrubPercentage, 98);

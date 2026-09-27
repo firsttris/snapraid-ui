@@ -24,6 +24,8 @@ interface ArrayHealthPanelProps {
   nextSchedule: Schedule | undefined
   onRefresh: () => void
   onShowDetails: () => void
+  onFixErrors: () => void
+  onScrubBad: () => void
   refreshDisabled: boolean
 }
 
@@ -156,6 +158,8 @@ export const ArrayHealthPanel = ({
   nextSchedule,
   onRefresh,
   onShowDetails,
+  onFixErrors,
+  onScrubBad,
   refreshDisabled,
 }: ArrayHealthPanelProps) => {
   // status only reads the content file, so it still looks healthy when the last
@@ -174,6 +178,7 @@ export const ArrayHealthPanel = ({
             : 'healthy'
   const [title, message] = getHealthText(health)
   const disks = status?.disks ?? []
+  const badBlocks = health === 'errors' ? (status?.badBlocks ?? 0) : 0
 
   return (
     <div className="bg-white shadow rounded-lg p-6 mb-6">
@@ -218,6 +223,31 @@ export const ArrayHealthPanel = ({
           <div>
             <p className="font-semibold">{title}</p>
             <p className="text-sm">{message}</p>
+            {badBlocks > 0 && (
+              <div className="mt-3">
+                <p className="text-sm font-medium">
+                  {m.health_bad_blocks({ count: badBlocks })}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={onFixErrors}
+                    disabled={refreshDisabled}
+                    className="rounded bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    {m.health_fix_errors()}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onScrubBad}
+                    disabled={refreshDisabled}
+                    className="rounded border border-red-300 bg-white px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {m.health_scrub_bad()}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -19,6 +19,7 @@ import { errorMessage, useFeedback } from '../components/Feedback'
 import { FileListViewer } from '../components/FileListViewer'
 import { OutputConsole } from '../components/OutputConsole'
 import { PageLayout } from '../components/PageLayout'
+import { ScrubDialog } from '../components/ScrubDialog'
 import { StatusModal } from '../components/StatusModal'
 import { SyncPreviewDialog } from '../components/SyncPreviewDialog'
 import { UndeleteDialog } from '../components/UndeleteDialog'
@@ -65,6 +66,7 @@ function Dashboard() {
   const [showUndeleteDialog, setShowUndeleteDialog] = useState(false)
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showSyncPreview, setShowSyncPreview] = useState(false)
+  const [showScrubDialog, setShowScrubDialog] = useState(false)
   const [report, setReport] = useState<Report | null>(null)
 
   // TanStack Query hooks
@@ -184,6 +186,11 @@ function Dashboard() {
         return
       }
 
+      if (command === 'scrub') {
+        setShowScrubDialog(true)
+        return
+      }
+
       if (command === 'status') {
         setShowStatusModal(true)
         await refetchStatus()
@@ -231,6 +238,17 @@ function Dashboard() {
     [selectedConfig, wsState.isRunning, runCommand],
   )
 
+  // Repair blocks that scrub marked as bad; `scrub -p bad` verifies the result
+  const handleFixErrors = useCallback(async () => {
+    if (!selectedConfig || wsState.isRunning) return
+    const confirmed = await confirm({
+      message: m.health_fix_errors_confirm(),
+      confirmLabel: m.health_fix_errors_start(),
+      danger: true,
+    })
+    if (confirmed) runCommand('fix', ['-e'])
+  }, [selectedConfig, wsState.isRunning, confirm, runCommand])
+
   const closeReport = () => setReport(null)
 
   return (
@@ -245,6 +263,8 @@ function Dashboard() {
           nextSchedule={nextSchedule}
           onRefresh={() => refetchStatus()}
           onShowDetails={() => setShowStatusModal(true)}
+          onFixErrors={handleFixErrors}
+          onScrubBad={() => runCommand('scrub', ['-p', 'bad'])}
           refreshDisabled={wsState.isRunning}
         />
 
@@ -283,6 +303,17 @@ function Dashboard() {
             onConfirm={() => {
               setShowSyncPreview(false)
               runCommand('sync')
+            }}
+          />
+        )}
+
+        {showScrubDialog && (
+          <ScrubDialog
+            badBlocks={statusData?.status.badBlocks ?? 0}
+            onClose={() => setShowScrubDialog(false)}
+            onConfirm={(args) => {
+              setShowScrubDialog(false)
+              runCommand('scrub', args)
             }}
           />
         )}
