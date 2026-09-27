@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
 import { DirectoryBrowser } from './DirectoryBrowser'
+import { useFeedback } from './Feedback'
 
 interface DataDiskSectionProps {
   data: Record<string, string>
@@ -13,6 +14,7 @@ export const DataDiskSection = ({
   onAdd,
   onRemove,
 }: DataDiskSectionProps) => {
+  const { confirm } = useFeedback()
   const [showAddDataDisk, setShowAddDataDisk] = useState(false)
   const [newDataDiskName, setNewDataDiskName] = useState('')
   const [newDataDiskPath, setNewDataDiskPath] = useState('')
@@ -41,7 +43,12 @@ export const DataDiskSection = ({
   }
 
   const handleRemoveDisk = async (diskName: string) => {
-    if (!confirm(m.data_disk_confirm_remove({ diskName }))) return
+    const confirmed = await confirm({
+      message: m.data_disk_confirm_remove({ diskName }),
+      confirmLabel: m.confirm_remove(),
+      danger: true,
+    })
+    if (!confirmed) return
 
     setError('')
     try {

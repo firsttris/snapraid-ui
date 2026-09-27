@@ -1,110 +1,112 @@
 import { Link } from '@tanstack/react-router'
-import { Calendar, FileText, Home, Languages, Menu, X } from 'lucide-react'
+import {
+  Activity,
+  Calendar,
+  FileText,
+  HardDrive,
+  Languages,
+  LayoutDashboard,
+  Menu,
+  X,
+  Zap,
+} from 'lucide-react'
 import { useState } from 'react'
+import { useCurrentJob } from '../hooks/queries'
 import * as m from '../paraglide/messages'
 import { getLocale, setLocale } from '../paraglide/runtime'
+
+// The dashboard learns about jobs over the WebSocket, other pages only need a coarse indicator
+const JOB_POLL_INTERVAL_MS = 5000
+
+const NAV_ITEMS = [
+  { to: '/', label: m.nav_dashboard, icon: LayoutDashboard },
+  { to: '/smart', label: m.nav_smart, icon: Activity },
+  { to: '/power', label: m.nav_power, icon: Zap },
+  { to: '/schedules', label: m.schedules, icon: Calendar },
+  { to: '/logs', label: m.logs, icon: FileText },
+] as const
 
 export const Header = () => {
   const [isOpen, setIsOpen] = useState(false)
   const currentLocale = getLocale()
+  const { data: currentJob } = useCurrentJob({
+    refetchInterval: JOB_POLL_INTERVAL_MS,
+  })
 
   const toggleLocale = () => {
-    const newLocale = currentLocale === 'en' ? 'de' : 'en'
-    setLocale(newLocale)
-    window.location.reload()
+    setLocale(currentLocale === 'en' ? 'de' : 'en')
   }
 
-  return (
-    <>
-      <header className="p-4 flex items-center bg-gray-800 text-white shadow-lg">
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-          aria-label="Open menu"
-        >
-          <Menu size={24} />
-        </button>
-        <h1 className="ml-4 text-xl font-semibold">
-          <Link to="/">
-            <img
-              src="/tanstack-word-logo-white.svg"
-              alt="TanStack Logo"
-              className="h-10"
-            />
-          </Link>
-        </h1>
-        <button
-          type="button"
-          onClick={toggleLocale}
-          className="ml-auto p-2 hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2"
-          aria-label="Switch language"
-        >
-          <Languages size={20} />
-          <span className="text-sm font-medium">
-            {currentLocale.toUpperCase()}
-          </span>
-        </button>
-      </header>
+  const linkClass =
+    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors'
+  const activeLinkClass =
+    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium bg-gray-900 text-white'
 
-      <aside
-        className={`fixed top-0 left-0 h-full w-80 bg-gray-900 text-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h2 className="text-xl font-bold">{m.navigation()}</h2>
+  const links = NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+    <Link
+      key={to}
+      to={to}
+      onClick={() => setIsOpen(false)}
+      className={linkClass}
+      activeProps={{ className: activeLinkClass }}
+      activeOptions={{ exact: to === '/' }}
+    >
+      <Icon size={16} />
+      {label()}
+    </Link>
+  ))
+
+  return (
+    <header className="bg-gray-800 text-white shadow-lg">
+      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-8">
+        <Link to="/" className="flex items-center gap-2 font-semibold">
+          <HardDrive size={22} className="text-cyan-400" />
+          <span className="text-lg">{m.app_title()}</span>
+        </Link>
+
+        <nav className="hidden flex-1 items-center gap-1 md:flex">{links}</nav>
+
+        <div className="ml-auto flex items-center gap-2 md:ml-0">
+          {currentJob && (
+            <Link
+              to="/"
+              className="flex items-center gap-2 rounded-full bg-cyan-600 px-3 py-1 text-xs font-medium hover:bg-cyan-700"
+              title={m.nav_job_running({ command: currentJob.command })}
+            >
+              <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
+              <span className="hidden sm:inline">
+                {m.nav_job_running({ command: currentJob.command })}
+              </span>
+            </Link>
+          )}
           <button
             type="button"
-            onClick={() => setIsOpen(false)}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-            aria-label="Close menu"
+            onClick={toggleLocale}
+            className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-gray-700"
+            aria-label="Switch language"
           >
-            <X size={24} />
+            <Languages size={18} />
+            <span className="text-sm font-medium">
+              {currentLocale.toUpperCase()}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsOpen((prev) => !prev)}
+            className="rounded-lg p-2 transition-colors hover:bg-gray-700 md:hidden"
+            aria-label={m.navigation()}
+            aria-expanded={isOpen}
+          >
+            {isOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
+      </div>
 
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <Link
-            to="/"
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
-            activeProps={{
-              className:
-                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
-            }}
-          >
-            <Home size={20} />
-            <span className="font-medium">{m.home()}</span>
-          </Link>
-
-          <Link
-            to="/logs"
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
-            activeProps={{
-              className:
-                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
-            }}
-          >
-            <FileText size={20} />
-            <span className="font-medium">{m.logs()}</span>
-          </Link>
-
-          <Link
-            to="/schedules"
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
-            activeProps={{
-              className:
-                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
-            }}
-          >
-            <Calendar size={20} />
-            <span className="font-medium">{m.schedules()}</span>
-          </Link>
+      {isOpen && (
+        <nav className="flex flex-col gap-1 border-t border-gray-700 px-4 py-3 md:hidden">
+          {links}
         </nav>
-      </aside>
-    </>
+      )}
+    </header>
   )
 }

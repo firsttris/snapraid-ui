@@ -6,6 +6,7 @@ import { ConfigEditorFooter } from './ConfigEditorFooter'
 import { ConfigTextEditor } from './ConfigTextEditor'
 import { DiskManager } from './DiskManager'
 import { ErrorAlert } from './ErrorAlert'
+import { useFeedback } from './Feedback'
 import { ValidationResultAlert } from './ValidationResultAlert'
 import { ViewModeToggle } from './ViewModeToggle'
 
@@ -22,6 +23,7 @@ export const ConfigEditor = ({
   onClose,
   onSaved,
 }: ConfigEditorProps) => {
+  const { confirm } = useFeedback()
   const [content, setContent] = useState<string>('')
   const [originalContent, setOriginalContent] = useState<string>('')
   const [validating, setValidating] = useState(false)
@@ -90,11 +92,14 @@ export const ConfigEditor = ({
     }
   }
 
-  const handleClose = () => {
+  const handleClose = async () => {
     if (hasChanges) {
-      if (!confirm(m.config_editor_unsaved_confirm())) {
-        return
-      }
+      const confirmed = await confirm({
+        message: m.config_editor_unsaved_confirm(),
+        confirmLabel: m.confirm_discard(),
+        danger: true,
+      })
+      if (!confirmed) return
     }
     onClose()
   }

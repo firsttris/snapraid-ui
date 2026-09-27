@@ -5,19 +5,23 @@ import * as m from '../paraglide/messages'
 import { ConfigAddForm } from './ConfigAddForm'
 import { ConfigEditor } from './ConfigEditor'
 import { ConfigList } from './ConfigList'
+import { useFeedback } from './Feedback'
 
 interface ConfigManagerProps {
   config: SnapRaidConfig[]
   onConfigsChanged: () => void
   onClose: () => void
+  startWithAddForm?: boolean
 }
 
 export const ConfigManager = ({
   config,
   onConfigsChanged,
   onClose,
+  startWithAddForm = false,
 }: ConfigManagerProps) => {
-  const [showAddForm, setShowAddForm] = useState(false)
+  const { confirm } = useFeedback()
+  const [showAddForm, setShowAddForm] = useState(startWithAddForm)
   const [editingConfig, setEditingConfig] = useState<{
     path: string
     name: string
@@ -27,7 +31,12 @@ export const ConfigManager = ({
   const removeConfigMutation = useRemoveConfig()
 
   const handleRemoveConfig = async (path: string) => {
-    if (!confirm(m.config_manager_remove_confirm())) return
+    const confirmed = await confirm({
+      message: m.config_manager_remove_confirm(),
+      confirmLabel: m.confirm_remove(),
+      danger: true,
+    })
+    if (!confirmed) return
 
     removeConfigMutation.mutate(path, {
       onSuccess: () => {

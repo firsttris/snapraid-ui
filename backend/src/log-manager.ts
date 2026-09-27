@@ -32,7 +32,8 @@ const parseLogTimestamp = (dateStr: string, timeStr: string): string => {
 const parseRunResult = (log: string): RunResult => {
   if (/^sigint:/m.test(log)) return "aborted";
   const exit = log.match(/^summary:exit:(\w+)/m)?.[1];
-  if (!exit) return "incomplete";
+  // SnapRAID bails out on fatal errors before writing the summary
+  if (!exit) return /^msg:fatal:/m.test(log) ? "error" : "incomplete";
   if (exit === "ok" || exit === "warning") return exit;
   return "error";
 };

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
 import { DirectoryBrowser } from './DirectoryBrowser'
+import { useFeedback } from './Feedback'
 
 interface ParityDiskSectionProps {
   parity: string[]
@@ -13,6 +14,7 @@ export const ParityDiskSection = ({
   onAdd,
   onRemove,
 }: ParityDiskSectionProps) => {
+  const { confirm } = useFeedback()
   const [showAddParity, setShowAddParity] = useState(false)
   const [newParityPath, setNewParityPath] = useState('')
   const [newParityFilename, setNewParityFilename] = useState('snapraid.parity')
@@ -53,7 +55,12 @@ export const ParityDiskSection = ({
   }
 
   const handleRemove = async () => {
-    if (!confirm(m.parity_disk_confirm_remove())) return
+    const confirmed = await confirm({
+      message: m.parity_disk_confirm_remove(),
+      confirmLabel: m.confirm_remove(),
+      danger: true,
+    })
+    if (!confirmed) return
 
     setError('')
     try {

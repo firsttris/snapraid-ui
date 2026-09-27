@@ -1,7 +1,9 @@
 import type { Schedule, SnapRaidCommand } from '@shared/types'
 import { createFileRoute } from '@tanstack/react-router'
-import { Calendar, Edit, Pause, Play, Trash2 } from 'lucide-react'
+import { Calendar, Edit, Pause, Play, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { errorMessage, useFeedback } from '../components/Feedback'
+import { PageLayout } from '../components/PageLayout'
 import {
   useConfig,
   useCreateSchedule,
@@ -10,12 +12,72 @@ import {
   useToggleSchedule,
   useUpdateSchedule,
 } from '../hooks/queries'
+import { formatRelativeTime } from '../lib/utils'
+import * as m from '../paraglide/messages'
+import { getLocale } from '../paraglide/runtime'
 
 export const Route = createFileRoute('/schedules')({
   component: SchedulesPage,
 })
 
+type ScheduleInput = Omit<
+  Schedule,
+  'id' | 'createdAt' | 'updatedAt' | 'lastRun' | 'nextRun'
+>
+
+const SCHEDULE_COMMANDS: SnapRaidCommand[] = [
+  'sync',
+  'scrub',
+  'status',
+  'diff',
+  'check',
+  'smart',
+]
+
+const PRESETS = [
+  { id: 'daily', cron: '0 2 * * *', label: m.schedules_preset_daily_2am },
+  {
+    id: 'weekly',
+    cron: '0 2 * * 0',
+    label: m.schedules_preset_weekly_sunday,
+  },
+  { id: 'monthly', cron: '0 2 1 * *', label: m.schedules_preset_monthly },
+  { id: 'every6h', cron: '0 */6 * * *', label: m.schedules_preset_every_6h },
+] as const
+
+type PresetId = (typeof PRESETS)[number]['id']
+
+const getCommandLabel = (command: SnapRaidCommand): string => {
+  switch (command) {
+    case 'sync':
+      return m.commands_sync()
+    case 'scrub':
+      return m.commands_scrub()
+    case 'status':
+      return m.commands_status()
+    case 'diff':
+      return m.commands_diff()
+    case 'check':
+      return m.commands_check()
+    case 'smart':
+      return m.commands_smart()
+    default:
+      return command
+  }
+}
+
+// 2023-01-01 was a Sunday, cron counts weekdays from Sunday = 0
+const weekdayName = (day: number) =>
+  new Intl.DateTimeFormat(getLocale(), { weekday: 'long' }).format(
+    new Date(2023, 0, 1 + day),
+  )
+
+const inputClass =
+  'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500'
+const smallLabelClass = 'block text-xs font-medium text-gray-600 mb-1'
+
 function SchedulesPage() {
+  const { confirm, toast } = useFeedback()
   const { data: schedules = [], isLoading } = useSchedules()
   const { data: config } = useConfig()
   const createSchedule = useCreateSchedule()
@@ -26,17 +88,13 @@ function SchedulesPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  const handleCreate = async (
-    schedule: Omit<
-      Schedule,
-      'id' | 'createdAt' | 'updatedAt' | 'lastRun' | 'nextRun'
-    >,
-  ) => {
+  const handleCreate = async (schedule: ScheduleInput) => {
     try {
       await createSchedule.mutateAsync(schedule)
       setIsCreating(false)
+      toast.success(m.schedules_created({ name: schedule.name }))
     } catch (error) {
-      console.error('Failed to create schedule:', error)
+      toast.error(errorMessage(error))
     }
   }
 
@@ -47,17 +105,23 @@ function SchedulesPage() {
     try {
       await updateSchedule.mutateAsync({ id, updates })
       setEditingId(null)
+      toast.success(m.schedules_saved())
     } catch (error) {
-      console.error('Failed to update schedule:', error)
+      toast.error(errorMessage(error))
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this schedule?')) return
+    const confirmed = await confirm({
+      message: m.schedules_delete_confirm(),
+      confirmLabel: m.confirm_delete(),
+      danger: true,
+    })
+    if (!confirmed) return
     try {
       await deleteSchedule.mutateAsync(id)
     } catch (error) {
-      console.error('Failed to delete schedule:', error)
+      toast.error(errorMessage(error))
     }
   }
 
@@ -65,96 +129,72 @@ function SchedulesPage() {
     try {
       await toggleSchedule.mutateAsync(id)
     } catch (error) {
-      console.error('Failed to toggle schedule:', error)
+      toast.error(errorMessage(error))
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white shadow">
-          <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-            <h1 className="text-3xl font-bold text-gray-900">Schedules</h1>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0">
-            <p className="text-gray-600">Loading...</p>
-          </div>
-        </main>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Calendar className="w-8 h-8" />
-            Scheduled Jobs
-          </h1>
+    <PageLayout
+      title={m.schedules_title()}
+      actions={
+        <button
+          type="button"
+          onClick={() => setIsCreating(true)}
+          disabled={isCreating}
+          className="flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Plus size={18} />
+          {m.schedules_create_new()}
+        </button>
+      }
+    >
+      {isCreating && (
+        <ScheduleForm
+          configs={config?.snapraidConfigs || []}
+          onSubmit={handleCreate}
+          onCancel={() => setIsCreating(false)}
+        />
+      )}
+
+      {isLoading ? (
+        <p className="text-gray-600">{m.common_loading()}</p>
+      ) : schedules.length === 0 && !isCreating ? (
+        <div className="bg-white rounded-lg shadow p-12 text-center">
+          <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+          <p className="text-xl text-gray-600">{m.schedules_empty()}</p>
           <button
             type="button"
             onClick={() => setIsCreating(true)}
-            disabled={isCreating}
-            className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="mt-6 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700"
           >
-            Create Schedule
+            {m.schedules_create_new()}
           </button>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          {isCreating && (
-            <ScheduleForm
+      ) : (
+        <div className="space-y-4">
+          {schedules.map((schedule) => (
+            <ScheduleCard
+              key={schedule.id}
+              schedule={schedule}
               configs={config?.snapraidConfigs || []}
-              onSubmit={handleCreate}
-              onCancel={() => setIsCreating(false)}
+              isEditing={editingId === schedule.id}
+              onEdit={() => setEditingId(schedule.id)}
+              onUpdate={(updates) => handleUpdate(schedule.id, updates)}
+              onCancelEdit={() => setEditingId(null)}
+              onDelete={() => handleDelete(schedule.id)}
+              onToggle={() => handleToggle(schedule.id)}
             />
-          )}
-
-          {schedules.length === 0 && !isCreating ? (
-            <div className="bg-white rounded-lg shadow p-12 text-center">
-              <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <p className="text-xl text-gray-600">
-                No schedules configured yet. Create one to automate your
-                SnapRAID tasks.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {schedules.map((schedule) => (
-                <ScheduleCard
-                  key={schedule.id}
-                  schedule={schedule}
-                  configs={config?.snapraidConfigs || []}
-                  isEditing={editingId === schedule.id}
-                  onEdit={() => setEditingId(schedule.id)}
-                  onUpdate={(updates) => handleUpdate(schedule.id, updates)}
-                  onCancelEdit={() => setEditingId(null)}
-                  onDelete={() => handleDelete(schedule.id)}
-                  onToggle={() => handleToggle(schedule.id)}
-                />
-              ))}
-            </div>
-          )}
+          ))}
         </div>
-      </main>
-    </div>
+      )}
+    </PageLayout>
   )
 }
 
 interface ScheduleFormProps {
   schedule?: Schedule
   configs: Array<{ name: string; path: string }>
-  onSubmit: (
-    schedule: Omit<
-      Schedule,
-      'id' | 'createdAt' | 'updatedAt' | 'lastRun' | 'nextRun'
-    >,
-  ) => void
+  onSubmit: (schedule: ScheduleInput) => void
   onCancel: () => void
 }
 
@@ -173,11 +213,18 @@ function ScheduleForm({
   )
   const [enabled, setEnabled] = useState(schedule?.enabled ?? true)
 
-  // Schedule builder state
-  const [scheduleType, setScheduleType] = useState<'preset' | 'custom'>(
-    'preset',
+  // An existing schedule opens on its matching preset, or as a raw cron expression,
+  // so saving other fields never changes when it runs
+  const existingPreset = PRESETS.find(
+    (p) => p.cron === schedule?.cronExpression,
   )
-  const [preset, setPreset] = useState('daily')
+  const [scheduleType, setScheduleType] = useState<
+    'preset' | 'custom' | 'cron'
+  >(schedule && !existingPreset ? 'cron' : 'preset')
+  const [preset, setPreset] = useState<PresetId>(existingPreset?.id ?? 'daily')
+  const [rawCron, setRawCron] = useState(
+    schedule?.cronExpression ?? PRESETS[0].cron,
+  )
   const [customFrequency, setCustomFrequency] = useState<
     'hourly' | 'daily' | 'weekly' | 'monthly'
   >('daily')
@@ -190,59 +237,27 @@ function ScheduleForm({
   const [useEveryHour, setUseEveryHour] = useState(false)
   const [useEveryMinute, setUseEveryMinute] = useState(false)
 
-  const commands: SnapRaidCommand[] = [
-    'sync',
-    'scrub',
-    'status',
-    'diff',
-    'check',
-    'smart',
-  ]
-
   // Generate cron expression based on settings
   const generateCronExpression = (): string => {
+    if (scheduleType === 'cron') return rawCron.trim()
     if (scheduleType === 'preset') {
-      switch (preset) {
-        case 'daily':
-          return '0 2 * * *'
-        case 'weekly':
-          return '0 2 * * 0'
-        case 'monthly':
-          return '0 2 1 * *'
-        case 'every6h':
-          return '0 */6 * * *'
-        default:
-          return '0 2 * * *'
-      }
+      return PRESETS.find((p) => p.id === preset)?.cron ?? PRESETS[0].cron
     }
 
-    // Custom schedule
+    const minutePart = useEveryMinute ? `*/${everyNMinutes}` : minute.toString()
+    const hourPart = useEveryHour ? '*' : hour.toString()
+
     switch (customFrequency) {
       case 'hourly':
         return `${minute} */${everyNHours} * * *`
-      case 'daily': {
-        const minutePart = useEveryMinute
-          ? `*/${everyNMinutes}`
-          : minute.toString()
-        const hourPart = useEveryHour ? '*' : hour.toString()
+      case 'daily':
         return `${minutePart} ${hourPart} * * *`
-      }
-      case 'weekly': {
-        const weeklyMinutePart = useEveryMinute
-          ? `*/${everyNMinutes}`
-          : minute.toString()
-        const weeklyHourPart = useEveryHour ? '*' : hour.toString()
-        return `${weeklyMinutePart} ${weeklyHourPart} * * ${dayOfWeek}`
-      }
-      case 'monthly': {
-        const monthlyMinutePart = useEveryMinute
-          ? `*/${everyNMinutes}`
-          : minute.toString()
-        const monthlyHourPart = useEveryHour ? '*' : hour.toString()
-        return `${monthlyMinutePart} ${monthlyHourPart} ${dayOfMonth} * *`
-      }
+      case 'weekly':
+        return `${minutePart} ${hourPart} * * ${dayOfWeek}`
+      case 'monthly':
+        return `${minutePart} ${hourPart} ${dayOfMonth} * *`
       default:
-        return '0 2 * * *'
+        return PRESETS[0].cron
     }
   }
 
@@ -259,10 +274,28 @@ function ScheduleForm({
     })
   }
 
+  const modeButton = (mode: typeof scheduleType, label: string) => (
+    <button
+      type="button"
+      onClick={() => {
+        // Start raw editing from what the other modes currently produce
+        if (mode === 'cron') setRawCron(cronExpression)
+        setScheduleType(mode)
+      }}
+      className={`px-4 py-2 rounded-lg transition-colors ${
+        scheduleType === mode
+          ? 'bg-cyan-600 text-white'
+          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+      }`}
+    >
+      {label}
+    </button>
+  )
+
   return (
     <div className="bg-white rounded-lg shadow p-6 mb-6">
       <h3 className="text-xl font-semibold mb-4">
-        {schedule ? 'Edit Schedule' : 'Create New Schedule'}
+        {schedule ? m.schedules_edit_title() : m.schedules_new_title()}
       </h3>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -270,7 +303,7 @@ function ScheduleForm({
             htmlFor="name"
             className="block text-sm font-medium text-gray-700 mb-2"
           >
-            Name
+            {m.schedules_field_name()}
           </label>
           <input
             id="name"
@@ -278,92 +311,69 @@ function ScheduleForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            placeholder="e.g., Daily Sync"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            placeholder={m.schedules_field_name_placeholder()}
+            className={inputClass}
           />
         </div>
 
-        <div>
-          <label
-            htmlFor="command"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            Command
-          </label>
-          <select
-            id="command"
-            value={command}
-            onChange={(e) => setCommand(e.target.value as SnapRaidCommand)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
-          >
-            {commands.map((cmd) => (
-              <option key={cmd} value={cmd}>
-                {cmd}
-              </option>
-            ))}
-          </select>
-        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label
+              htmlFor="command"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              {m.schedules_field_command()}
+            </label>
+            <select
+              id="command"
+              value={command}
+              onChange={(e) => setCommand(e.target.value as SnapRaidCommand)}
+              className={inputClass}
+            >
+              {SCHEDULE_COMMANDS.map((cmd) => (
+                <option key={cmd} value={cmd}>
+                  {getCommandLabel(cmd)}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div>
-          <label
-            htmlFor="config"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            Configuration
-          </label>
-          <select
-            id="config"
-            value={configPath}
-            onChange={(e) => setConfigPath(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
-          >
-            {configs.map((cfg) => (
-              <option key={cfg.path} value={cfg.path}>
-                {cfg.name}
-              </option>
-            ))}
-          </select>
+          <div>
+            <label
+              htmlFor="config"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              {m.schedules_field_config()}
+            </label>
+            <select
+              id="config"
+              value={configPath}
+              onChange={(e) => setConfigPath(e.target.value)}
+              className={inputClass}
+            >
+              {configs.map((cfg) => (
+                <option key={cfg.path} value={cfg.path}>
+                  {cfg.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div>
           <span className="block text-sm font-medium text-gray-700 mb-2">
-            Schedule
+            {m.schedules_field_schedule()}
           </span>
 
-          {/* Preset vs Custom Toggle */}
-          <div className="flex gap-2 mb-3">
-            <button
-              type="button"
-              onClick={() => setScheduleType('preset')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                scheduleType === 'preset'
-                  ? 'bg-cyan-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Quick Presets
-            </button>
-            <button
-              type="button"
-              onClick={() => setScheduleType('custom')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                scheduleType === 'custom'
-                  ? 'bg-cyan-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Custom Schedule
-            </button>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {modeButton('preset', m.schedules_mode_presets())}
+            {modeButton('custom', m.schedules_mode_custom())}
+            {modeButton('cron', m.schedules_mode_cron())}
           </div>
 
-          {scheduleType === 'preset' ? (
+          {scheduleType === 'preset' && (
             <div className="grid grid-cols-2 gap-2">
-              {[
-                { id: 'daily', label: 'Daily at 2 AM' },
-                { id: 'weekly', label: 'Weekly (Sunday 2 AM)' },
-                { id: 'monthly', label: 'Monthly (1st, 2 AM)' },
-                { id: 'every6h', label: 'Every 6 hours' },
-              ].map((p) => (
+              {PRESETS.map((p) => (
                 <button
                   key={p.id}
                   type="button"
@@ -374,19 +384,34 @@ function ScheduleForm({
                       : 'bg-gray-50 border border-gray-300 text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  {p.label}
+                  {p.label()}
                 </button>
               ))}
             </div>
-          ) : (
+          )}
+
+          {scheduleType === 'cron' && (
+            <div>
+              <input
+                id="schedule-raw-cron"
+                type="text"
+                value={rawCron}
+                onChange={(e) => setRawCron(e.target.value)}
+                required
+                className={`${inputClass} font-mono`}
+                aria-describedby="schedule-cron-help"
+              />
+              <p id="schedule-cron-help" className="mt-1 text-xs text-gray-500">
+                {m.schedules_cron_help()}
+              </p>
+            </div>
+          )}
+
+          {scheduleType === 'custom' && (
             <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
-              {/* Frequency Selector */}
               <div>
-                <label
-                  htmlFor="schedule-frequency"
-                  className="block text-xs font-medium text-gray-600 mb-1"
-                >
-                  Frequency
+                <label htmlFor="schedule-frequency" className={smallLabelClass}>
+                  {m.schedules_frequency()}
                 </label>
                 <select
                   id="schedule-frequency"
@@ -394,24 +419,23 @@ function ScheduleForm({
                   onChange={(e) =>
                     setCustomFrequency(e.target.value as typeof customFrequency)
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm"
+                  className={`${inputClass} text-sm`}
                 >
-                  <option value="hourly">Every N hours</option>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
+                  <option value="hourly">{m.schedules_freq_hourly()}</option>
+                  <option value="daily">{m.schedules_freq_daily()}</option>
+                  <option value="weekly">{m.schedules_freq_weekly()}</option>
+                  <option value="monthly">{m.schedules_freq_monthly()}</option>
                 </select>
               </div>
 
-              {/* Time Inputs */}
               {customFrequency === 'hourly' ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label
                       htmlFor="schedule-every-n-hours"
-                      className="block text-xs font-medium text-gray-600 mb-1"
+                      className={smallLabelClass}
                     >
-                      Every N hours
+                      {m.schedules_freq_hourly()}
                     </label>
                     <input
                       id="schedule-every-n-hours"
@@ -420,15 +444,15 @@ function ScheduleForm({
                       max="23"
                       value={everyNHours}
                       onChange={(e) => setEveryNHours(Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      className={inputClass}
                     />
                   </div>
                   <div>
                     <label
                       htmlFor="schedule-minute"
-                      className="block text-xs font-medium text-gray-600 mb-1"
+                      className={smallLabelClass}
                     >
-                      At minute
+                      {m.schedules_at_minute()}
                     </label>
                     <input
                       id="schedule-minute"
@@ -437,107 +461,103 @@ function ScheduleForm({
                       max="59"
                       value={minute}
                       onChange={(e) => setMinute(Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      className={inputClass}
                     />
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-1">
-                        <input
-                          type="checkbox"
-                          checked={useEveryHour}
-                          onChange={(e) => setUseEveryHour(e.target.checked)}
-                          className="w-4 h-4 text-cyan-600 border-gray-300 rounded"
-                        />
-                        Every hour
-                      </label>
-                      {!useEveryHour && (
-                        <input
-                          type="number"
-                          min="0"
-                          max="23"
-                          value={hour}
-                          onChange={(e) => setHour(Number(e.target.value))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          placeholder="Hour (0-23)"
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-1">
-                        <input
-                          type="checkbox"
-                          checked={useEveryMinute}
-                          onChange={(e) => setUseEveryMinute(e.target.checked)}
-                          className="w-4 h-4 text-cyan-600 border-gray-300 rounded"
-                        />
-                        Every N minutes
-                      </label>
-                      {useEveryMinute ? (
-                        <input
-                          type="number"
-                          min="1"
-                          max="59"
-                          value={everyNMinutes}
-                          onChange={(e) =>
-                            setEveryNMinutes(Number(e.target.value))
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          placeholder="Every N min"
-                        />
-                      ) : (
-                        <input
-                          type="number"
-                          min="0"
-                          max="59"
-                          value={minute}
-                          onChange={(e) => setMinute(Number(e.target.value))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                          placeholder="Minute (0-59)"
-                        />
-                      )}
-                    </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-1">
+                      <input
+                        type="checkbox"
+                        checked={useEveryHour}
+                        onChange={(e) => setUseEveryHour(e.target.checked)}
+                        className="w-4 h-4 text-cyan-600 border-gray-300 rounded"
+                      />
+                      {m.schedules_every_hour()}
+                    </label>
+                    {!useEveryHour && (
+                      <input
+                        type="number"
+                        min="0"
+                        max="23"
+                        value={hour}
+                        onChange={(e) => setHour(Number(e.target.value))}
+                        className={inputClass}
+                        placeholder={m.schedules_hour()}
+                        aria-label={m.schedules_hour()}
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-1">
+                      <input
+                        type="checkbox"
+                        checked={useEveryMinute}
+                        onChange={(e) => setUseEveryMinute(e.target.checked)}
+                        className="w-4 h-4 text-cyan-600 border-gray-300 rounded"
+                      />
+                      {m.schedules_every_n_minutes()}
+                    </label>
+                    {useEveryMinute ? (
+                      <input
+                        type="number"
+                        min="1"
+                        max="59"
+                        value={everyNMinutes}
+                        onChange={(e) =>
+                          setEveryNMinutes(Number(e.target.value))
+                        }
+                        className={inputClass}
+                        aria-label={m.schedules_every_n_minutes()}
+                      />
+                    ) : (
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={minute}
+                        onChange={(e) => setMinute(Number(e.target.value))}
+                        className={inputClass}
+                        placeholder={m.schedules_minute()}
+                        aria-label={m.schedules_minute()}
+                      />
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* Day Selector for Weekly */}
               {customFrequency === 'weekly' && (
                 <div>
                   <label
                     htmlFor="schedule-day-of-week"
-                    className="block text-xs font-medium text-gray-600 mb-1"
+                    className={smallLabelClass}
                   >
-                    Day of week
+                    {m.schedules_day_of_week()}
                   </label>
                   <select
                     id="schedule-day-of-week"
                     value={dayOfWeek}
                     onChange={(e) => setDayOfWeek(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className={inputClass}
                   >
-                    <option value={0}>Sunday</option>
-                    <option value={1}>Monday</option>
-                    <option value={2}>Tuesday</option>
-                    <option value={3}>Wednesday</option>
-                    <option value={4}>Thursday</option>
-                    <option value={5}>Friday</option>
-                    <option value={6}>Saturday</option>
+                    {[0, 1, 2, 3, 4, 5, 6].map((day) => (
+                      <option key={day} value={day}>
+                        {weekdayName(day)}
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}
 
-              {/* Day Selector for Monthly */}
               {customFrequency === 'monthly' && (
                 <div>
                   <label
                     htmlFor="schedule-day-of-month"
-                    className="block text-xs font-medium text-gray-600 mb-1"
+                    className={smallLabelClass}
                   >
-                    Day of month (1-31)
+                    {m.schedules_day_of_month()}
                   </label>
                   <input
                     id="schedule-day-of-month"
@@ -546,29 +566,21 @@ function ScheduleForm({
                     max="31"
                     value={dayOfMonth}
                     onChange={(e) => setDayOfMonth(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className={inputClass}
                   />
                 </div>
               )}
             </div>
           )}
 
-          {/* Show generated cron expression */}
-          <div className="mt-3">
-            <label
-              htmlFor="schedule-cron-expression"
-              className="block text-xs font-medium text-gray-600 mb-1"
-            >
-              Generated Cron Expression
-            </label>
-            <input
-              id="schedule-cron-expression"
-              type="text"
-              value={cronExpression}
-              readOnly
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg font-mono text-sm text-gray-700"
-            />
-          </div>
+          {scheduleType !== 'cron' && (
+            <p className="mt-3 text-xs text-gray-500">
+              {m.schedules_mode_cron()}:{' '}
+              <code className="rounded bg-gray-100 px-1.5 py-0.5 text-gray-700">
+                {cronExpression}
+              </code>
+            </p>
+          )}
         </div>
 
         <div>
@@ -579,7 +591,9 @@ function ScheduleForm({
               onChange={(e) => setEnabled(e.target.checked)}
               className="w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
             />
-            <span className="text-sm font-medium text-gray-700">Enabled</span>
+            <span className="text-sm font-medium text-gray-700">
+              {m.schedules_field_enabled()}
+            </span>
           </label>
         </div>
 
@@ -589,13 +603,13 @@ function ScheduleForm({
             onClick={onCancel}
             className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {m.common_cancel()}
           </button>
           <button
             type="submit"
             className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
           >
-            {schedule ? 'Save' : 'Create'}
+            {schedule ? m.common_save() : m.common_create()}
           </button>
         </div>
       </form>
@@ -639,55 +653,73 @@ function ScheduleCard({
     )
   }
 
+  const formatRun = (date: string) =>
+    `${formatRelativeTime(date, getLocale())} (${new Date(date).toLocaleString()})`
+
   return (
     <div
       className={`bg-white rounded-lg shadow p-6 ${!schedule.enabled ? 'opacity-60' : ''}`}
     >
       <div className="flex justify-between items-start gap-4">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
             {schedule.name}
             {!schedule.enabled && (
               <span className="text-xs px-2 py-0.5 bg-gray-500 text-white rounded">
-                Disabled
+                {m.schedules_disabled()}
               </span>
             )}
           </h3>
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm text-gray-600">
-            <strong className="text-gray-700">Command:</strong>
-            <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">
-              {schedule.command}
+            <strong className="text-gray-700">
+              {m.schedules_field_command()}:
+            </strong>
+            <span>{getCommandLabel(schedule.command)}</span>
+
+            <strong className="text-gray-700">
+              {m.schedules_field_config()}:
+            </strong>
+            <span className="truncate">{configName}</span>
+
+            <strong className="text-gray-700">
+              {m.schedules_field_schedule()}:
+            </strong>
+            <span>
+              <code className="bg-gray-100 px-2 py-0.5 rounded">
+                {schedule.cronExpression}
+              </code>
             </span>
 
-            <strong className="text-gray-700">Config:</strong>
-            <span>{configName}</span>
-
-            <strong className="text-gray-700">Schedule:</strong>
-            <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">
-              {schedule.cronExpression}
-            </span>
-
-            {schedule.nextRun && (
+            {schedule.enabled && schedule.nextRun && (
               <>
-                <strong className="text-gray-700">Next Run:</strong>
-                <span>{new Date(schedule.nextRun).toLocaleString()}</span>
+                <strong className="text-gray-700">
+                  {m.schedules_next_run()}:
+                </strong>
+                <span>{formatRun(schedule.nextRun)}</span>
               </>
             )}
 
             {schedule.lastRun && (
               <>
-                <strong className="text-gray-700">Last Run:</strong>
-                <span>{new Date(schedule.lastRun).toLocaleString()}</span>
+                <strong className="text-gray-700">
+                  {m.schedules_last_run()}:
+                </strong>
+                <span>{formatRun(schedule.lastRun)}</span>
               </>
             )}
           </div>
         </div>
 
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-1 shrink-0">
           <button
             type="button"
             onClick={onToggle}
-            title={schedule.enabled ? 'Disable' : 'Enable'}
+            title={
+              schedule.enabled ? m.schedules_disable() : m.schedules_enable()
+            }
+            aria-label={
+              schedule.enabled ? m.schedules_disable() : m.schedules_enable()
+            }
             className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
           >
             {schedule.enabled ? (
@@ -699,6 +731,8 @@ function ScheduleCard({
           <button
             type="button"
             onClick={onEdit}
+            title={m.common_edit()}
+            aria-label={m.common_edit()}
             className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <Edit className="w-5 h-5" />
@@ -706,6 +740,8 @@ function ScheduleCard({
           <button
             type="button"
             onClick={onDelete}
+            title={m.common_delete()}
+            aria-label={m.common_delete()}
             className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors"
           >
             <Trash2 className="w-5 h-5" />

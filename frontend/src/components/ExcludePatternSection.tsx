@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
+import { useFeedback } from './Feedback'
 
 interface ExcludePatternSectionProps {
   exclude: string[]
@@ -12,6 +13,7 @@ export const ExcludePatternSection = ({
   onAdd,
   onRemove,
 }: ExcludePatternSectionProps) => {
+  const { confirm } = useFeedback()
   const [showAddExclude, setShowAddExclude] = useState(false)
   const [newExcludePattern, setNewExcludePattern] = useState('')
   const [addingExclude, setAddingExclude] = useState(false)
@@ -37,7 +39,12 @@ export const ExcludePatternSection = ({
   }
 
   const handleRemoveExclude = async (pattern: string) => {
-    if (!confirm(m.exclude_pattern_confirm_remove({ pattern }))) return
+    const confirmed = await confirm({
+      message: m.exclude_pattern_confirm_remove({ pattern }),
+      confirmLabel: m.confirm_remove(),
+      danger: true,
+    })
+    if (!confirmed) return
 
     setError('')
     try {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
 import { DirectoryBrowser } from './DirectoryBrowser'
+import { useFeedback } from './Feedback'
 import { UndeleteAdvancedOptions } from './UndeleteAdvancedOptions'
 import { UndeleteModeSelector } from './UndeleteModeSelector'
 import { UndeletePathInput } from './UndeletePathInput'
@@ -20,6 +21,7 @@ export const UndeleteDialog = ({
   onExecute,
   onClose,
 }: UndeleteDialogProps) => {
+  const { toast } = useFeedback()
   const [mode, setMode] = useState<
     'all-missing' | 'directory-missing' | 'specific'
   >('specific')
@@ -35,14 +37,14 @@ export const UndeleteDialog = ({
       onExecute('all-missing', undefined, diskFilter)
     } else if (mode === 'directory-missing') {
       if (!filePath.trim()) {
-        alert(m.undelete_provide_directory())
+        toast.error(m.undelete_provide_directory())
         return
       }
       const relativePath = getRelativePath(filePath)
       onExecute('directory-missing', relativePath, diskFilter)
     } else {
       if (!filePath.trim()) {
-        alert(m.undelete_provide_file())
+        toast.error(m.undelete_provide_file())
         return
       }
       const relativePath = getRelativePath(filePath)

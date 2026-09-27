@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
 import { DirectoryBrowser } from './DirectoryBrowser'
+import { useFeedback } from './Feedback'
 
 interface PoolSectionProps {
   pool?: string
@@ -8,25 +9,30 @@ interface PoolSectionProps {
 }
 
 export const PoolSection = ({ pool, onPoolChange }: PoolSectionProps) => {
+  const { confirm, toast } = useFeedback()
   const [showBrowser, setShowBrowser] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [localPool, setLocalPool] = useState(pool || '')
 
   const handleAdd = () => {
     if (!localPool.trim()) {
-      alert(m.pool_directory_required())
+      toast.error(m.pool_directory_required())
       return
     }
     onPoolChange(localPool.trim())
     setEditMode(false)
   }
 
-  const handleRemove = () => {
-    if (confirm(m.pool_no_pool_configured())) {
-      onPoolChange(undefined)
-      setLocalPool('')
-      setEditMode(false)
-    }
+  const handleRemove = async () => {
+    const confirmed = await confirm({
+      message: m.pool_confirm_remove(),
+      confirmLabel: m.confirm_remove(),
+      danger: true,
+    })
+    if (!confirmed) return
+    onPoolChange(undefined)
+    setLocalPool('')
+    setEditMode(false)
   }
 
   const handleBrowserSelect = (path: string) => {

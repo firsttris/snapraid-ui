@@ -11,22 +11,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrayHealthPanel } from '../components/ArrayHealthPanel'
 import { CheckViewer } from '../components/CheckViewer'
 import { CommandPanel } from '../components/CommandPanel'
-import { ConfigManager } from '../components/ConfigManager'
-import { ConfigSelector } from '../components/ConfigSelector'
+import { ConfigBar } from '../components/ConfigBar'
 import { DashboardCards } from '../components/DashboardCards'
 import { DeviceList } from '../components/DeviceList'
 import { DiffViewer } from '../components/DiffViewer'
-import { DiskPowerControl } from '../components/DiskPowerControl'
+import { errorMessage, useFeedback } from '../components/Feedback'
 import { FileListViewer } from '../components/FileListViewer'
 import { OutputConsole } from '../components/OutputConsole'
-import { SmartMonitor } from '../components/SmartMonitor'
+import { PageLayout } from '../components/PageLayout'
 import { StatusModal } from '../components/StatusModal'
 import { SyncPreviewDialog } from '../components/SyncPreviewDialog'
 import { UndeleteDialog } from '../components/UndeleteDialog'
 import {
   queryKeys,
   useAbortJob,
-  useConfig,
   useCurrentJob,
   useExecuteCommand,
   useLastRuns,
@@ -34,48 +32,43 @@ import {
   useSnapRaidConfig,
   useStatus,
 } from '../hooks/queries'
+import { useSelectedConfig } from '../hooks/useSelectedConfig'
 import { useWebSocketConnection } from '../hooks/useWebSocketConnection'
-import {
-  getCheck,
-  getDevices,
-  getDiff,
-  getFileList,
-  getSmart,
-  probe,
-  spinDown,
-  spinUp,
-} from '../lib/api/snapraid'
+import { getCheck, getDevices, getDiff, getFileList } from '../lib/api/snapraid'
+import { parseProgress } from '../lib/progress'
 import * as m from '../paraglide/messages'
 
 export const Route = createFileRoute('/')({
   component: Dashboard,
 })
 
+// Commands answered by a report dialog instead of streamed console output
+type Report =
+  | { kind: 'devices'; data: DevicesReport | null }
+  | { kind: 'list'; data: ListReport | null }
+  | { kind: 'check'; data: CheckReport | null }
+  | { kind: 'diff'; data: DiffReport | null }
+
+const REPORT_LOADERS = {
+  devices: getDevices,
+  list: getFileList,
+  check: getCheck,
+  diff: getDiff,
+} as const
+
+const isReportCommand = (command: SnapRaidCommand): command is Report['kind'] =>
+  command in REPORT_LOADERS
+
 function Dashboard() {
-  const [selectedConfig, setSelectedConfig] = useState<string>('')
-  const [showConfigManager, setShowConfigManager] = useState(false)
+  const { selectedConfig, selectConfigByFile } = useSelectedConfig()
+  const { confirm, toast } = useFeedback()
   const [showUndeleteDialog, setShowUndeleteDialog] = useState(false)
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showSyncPreview, setShowSyncPreview] = useState(false)
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'smart' | 'power'>(
-    'dashboard',
-  )
-  const [showDevicesModal, setShowDevicesModal] = useState(false)
-  const [showFileListModal, setShowFileListModal] = useState(false)
-  const [showCheckModal, setShowCheckModal] = useState(false)
-  const [showDiffModal, setShowDiffModal] = useState(false)
-  const [devicesData, setDevicesData] = useState<DevicesReport | null>(null)
-  const [fileListData, setFileListData] = useState<ListReport | null>(null)
-  const [checkData, setCheckData] = useState<CheckReport | null>(null)
-  const [diffData, setDiffData] = useState<DiffReport | null>(null)
-  const [isLoadingDevices, setIsLoadingDevices] = useState(false)
-  const [isLoadingFileList, setIsLoadingFileList] = useState(false)
-  const [isLoadingCheck, setIsLoadingCheck] = useState(false)
-  const [isLoadingDiff, setIsLoadingDiff] = useState(false)
+  const [report, setReport] = useState<Report | null>(null)
 
   // TanStack Query hooks
   const queryClient = useQueryClient()
-  const { data: config, refetch: refetchConfig } = useConfig()
   const { data: parsedConfig } = useSnapRaidConfig(selectedConfig)
   const { data: currentJob, refetch: refetchCurrentJob } = useCurrentJob()
   const {
@@ -100,6 +93,10 @@ function Dashboard() {
   const wsState = useWebSocketConnection(handleJobComplete)
   const [dismissedResult, setDismissedResult] = useState<string | null>(null)
   const isAborting = abortMutation.isPending || !!currentJob?.aborting
+  const progress = useMemo(
+    () => (wsState.isRunning ? parseProgress(wsState.output) : null),
+    [wsState.isRunning, wsState.output],
+  )
 
   const configFile = selectedConfig.replace(/^.*[/\\]/, '')
   const nextSchedule = useMemo(
@@ -120,31 +117,25 @@ function Dashboard() {
     [schedules, configFile],
   )
 
-  const handleAbort = useCallback(() => {
-    if (!confirm(m.commands_abort_confirm({ command: wsState.currentCommand })))
-      return
-    abortMutation.mutate(undefined, {
-      onError: (error) => wsState.appendOutput(`\n[${error.message}]\n`),
+  const handleAbort = useCallback(async () => {
+    const confirmed = await confirm({
+      message: m.commands_abort_confirm({ command: wsState.currentCommand }),
+      confirmLabel: m.commands_abort(),
+      danger: true,
     })
-  }, [abortMutation, wsState])
+    if (!confirmed) return
+    abortMutation.mutate(undefined, {
+      onError: (error) => toast.error(error.message),
+    })
+  }, [abortMutation, confirm, toast, wsState.currentCommand])
 
-  // Select first enabled config on mount
-  useEffect(() => {
-    if (config && !selectedConfig) {
-      const firstEnabled = config.snapraidConfigs.find((c) => c.enabled)
-      if (firstEnabled) {
-        setSelectedConfig(firstEnabled.path)
-      }
-    }
-  }, [config, selectedConfig])
-
-  // Handle reconnection to running jobs - nur einmal ausführen
+  // Pick up a job that was started elsewhere (other tab, schedule) or before a reload
   // biome-ignore lint/correctness/useExhaustiveDependencies: only react to a newly detected job
   useEffect(() => {
     if (currentJob && !wsState.isRunning) {
       wsState.setIsRunning(true)
       wsState.setCurrentCommand(currentJob.command)
-      setSelectedConfig(currentJob.configPath)
+      selectConfigByFile(currentJob.configPath)
       wsState.appendOutput(
         `\n[Reconnected to running job: ${currentJob.command}]\n`,
       )
@@ -160,14 +151,27 @@ function Dashboard() {
       executeCommandMutation.mutate(
         { command, configPath: selectedConfig, args },
         {
-          onError: (error) => {
-            console.error('Failed to execute command:', error)
-            wsState.setError(command, error.message)
-          },
+          onError: (error) => wsState.setError(command, error.message),
         },
       )
     },
     [selectedConfig, wsState, executeCommandMutation],
+  )
+
+  const openReport = useCallback(
+    async (kind: Report['kind']) => {
+      setReport({ kind, data: null } as Report)
+      try {
+        const data = await REPORT_LOADERS[kind](selectedConfig)
+        setReport((prev) =>
+          prev?.kind === kind ? ({ kind, data } as Report) : prev,
+        )
+      } catch (error) {
+        setReport(null)
+        toast.error(m.report_failed({ error: errorMessage(error) }))
+      }
+    },
+    [selectedConfig, toast],
   )
 
   const executeCommand = useCallback(
@@ -180,73 +184,20 @@ function Dashboard() {
         return
       }
 
-      // Handle status command with modal
       if (command === 'status') {
         setShowStatusModal(true)
         await refetchStatus()
         return
       }
 
-      // Handle devices and list commands differently
-      if (command === 'devices') {
-        setIsLoadingDevices(true)
-        setShowDevicesModal(true)
-        try {
-          const data = await getDevices(selectedConfig)
-          setDevicesData(data)
-        } catch (error) {
-          console.error('Failed to get devices:', error)
-        } finally {
-          setIsLoadingDevices(false)
-        }
-        return
-      }
-
-      if (command === 'list') {
-        setIsLoadingFileList(true)
-        setShowFileListModal(true)
-        try {
-          const data = await getFileList(selectedConfig)
-          setFileListData(data)
-        } catch (error) {
-          console.error('Failed to get file list:', error)
-        } finally {
-          setIsLoadingFileList(false)
-        }
-        return
-      }
-
-      if (command === 'check') {
-        setIsLoadingCheck(true)
-        setShowCheckModal(true)
-        try {
-          const data = await getCheck(selectedConfig)
-          setCheckData(data)
-        } catch (error) {
-          console.error('Failed to get check report:', error)
-        } finally {
-          setIsLoadingCheck(false)
-        }
-        return
-      }
-
-      if (command === 'diff') {
-        setIsLoadingDiff(true)
-        setShowDiffModal(true)
-        try {
-          const data = await getDiff(selectedConfig)
-          setDiffData(data)
-        } catch (error) {
-          console.error('Failed to get diff report:', error)
-        } finally {
-          setIsLoadingDiff(false)
-        }
+      if (isReportCommand(command)) {
+        await openReport(command)
         return
       }
 
       runCommand(command)
     },
-    [selectedConfig, wsState, runCommand, refetchStatus],
+    [selectedConfig, wsState.isRunning, runCommand, refetchStatus, openReport],
   )
 
   const handleUndelete = useCallback(
@@ -277,219 +228,128 @@ function Dashboard() {
 
       runCommand('fix', args)
     },
-    [selectedConfig, wsState, runCommand],
+    [selectedConfig, wsState.isRunning, runCommand],
   )
 
+  const closeReport = () => setReport(null)
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-gray-900">SnapRAID UI</h1>
-        </div>
-      </header>
+    <PageLayout title={m.nav_dashboard()}>
+      <ConfigBar disabled={wsState.isRunning}>
+        <ArrayHealthPanel
+          status={statusData?.status}
+          isStatusLoading={isStatusFetching}
+          isStatusError={isStatusError}
+          lastSync={lastRuns?.sync}
+          lastScrub={lastRuns?.scrub}
+          nextSchedule={nextSchedule}
+          onRefresh={() => refetchStatus()}
+          onShowDetails={() => setShowStatusModal(true)}
+          refreshDisabled={wsState.isRunning}
+        />
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <ConfigSelector
-            config={config?.snapraidConfigs || []}
-            selectedConfig={selectedConfig}
-            onSelect={setSelectedConfig}
-            disabled={wsState.isRunning}
-            onManageClick={() => setShowConfigManager(true)}
+        <CommandPanel
+          onExecute={executeCommand}
+          onUndelete={() => setShowUndeleteDialog(true)}
+          onAbort={handleAbort}
+          disabled={!selectedConfig}
+          isRunning={wsState.isRunning}
+          isAborting={isAborting}
+          currentCommand={wsState.currentCommand}
+          progress={progress}
+          lastResult={
+            wsState.lastResult?.finishedAt === dismissedResult
+              ? null
+              : wsState.lastResult
+          }
+          onDismissResult={() =>
+            setDismissedResult(wsState.lastResult?.finishedAt ?? null)
+          }
+        />
+
+        <DashboardCards parsedConfig={parsedConfig} />
+
+        <OutputConsole
+          output={wsState.output}
+          command={wsState.currentCommand || wsState.lastResult?.command}
+          onClear={wsState.clearOutput}
+        />
+
+        {showSyncPreview && (
+          <SyncPreviewDialog
+            configPath={selectedConfig}
+            hasUnsyncedParity={!!statusData?.status.syncInProgress}
+            onClose={() => setShowSyncPreview(false)}
+            onConfirm={() => {
+              setShowSyncPreview(false)
+              runCommand('sync')
+            }}
           />
+        )}
 
-          {showConfigManager && config && (
-            <ConfigManager
-              config={config.snapraidConfigs}
-              onConfigsChanged={refetchConfig}
-              onClose={() => setShowConfigManager(false)}
-            />
-          )}
+        {showUndeleteDialog && parsedConfig && (
+          <UndeleteDialog
+            dataDisk={parsedConfig.data}
+            onExecute={handleUndelete}
+            onClose={() => setShowUndeleteDialog(false)}
+          />
+        )}
 
-          {/* Tab Navigation */}
-          <div className="mb-6 border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                type="button"
-                onClick={() => setActiveTab('dashboard')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'dashboard'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                📊 Dashboard
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('smart')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'smart'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                🔍 SMART Monitor
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('power')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'power'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                ⚡ Disk Power
-              </button>
-            </nav>
-          </div>
+        {report?.kind === 'devices' && (
+          <DeviceList
+            devices={report.data?.devices || []}
+            isLoading={!report.data}
+            onClose={closeReport}
+          />
+        )}
 
-          {/* Dashboard Tab */}
-          {activeTab === 'dashboard' && (
-            <>
-              {selectedConfig && (
-                <ArrayHealthPanel
-                  status={statusData?.status}
-                  isStatusLoading={isStatusFetching}
-                  isStatusError={isStatusError}
-                  lastSync={lastRuns?.sync}
-                  lastScrub={lastRuns?.scrub}
-                  nextSchedule={nextSchedule}
-                  onRefresh={() => refetchStatus()}
-                  onShowDetails={() => setShowStatusModal(true)}
-                  refreshDisabled={wsState.isRunning}
-                />
-              )}
+        {report?.kind === 'list' && (
+          <FileListViewer
+            files={report.data?.files || []}
+            totalFiles={report.data?.totalFiles || 0}
+            totalSize={report.data?.totalSize || 0}
+            totalLinks={report.data?.totalLinks || 0}
+            isLoading={!report.data}
+            onClose={closeReport}
+          />
+        )}
 
-              <CommandPanel
-                onExecute={executeCommand}
-                onUndelete={() => setShowUndeleteDialog(true)}
-                onAbort={handleAbort}
-                disabled={!selectedConfig}
-                isRunning={wsState.isRunning}
-                isAborting={isAborting}
-                currentCommand={wsState.currentCommand}
-                lastResult={
-                  wsState.lastResult?.finishedAt === dismissedResult
-                    ? null
-                    : wsState.lastResult
-                }
-                onDismissResult={() =>
-                  setDismissedResult(wsState.lastResult?.finishedAt ?? null)
-                }
-              />
+        {report?.kind === 'check' && (
+          <CheckViewer
+            files={report.data?.files || []}
+            totalFiles={report.data?.totalFiles || 0}
+            errorCount={report.data?.errorCount || 0}
+            rehashCount={report.data?.rehashCount || 0}
+            okCount={report.data?.okCount || 0}
+            isLoading={!report.data}
+            onClose={closeReport}
+          />
+        )}
 
-              <DashboardCards parsedConfig={parsedConfig} />
+        {report?.kind === 'diff' && (
+          <DiffViewer
+            files={report.data?.files || []}
+            totalFiles={report.data?.totalFiles || 0}
+            equalFiles={report.data?.equalFiles || 0}
+            newFiles={report.data?.newFiles || 0}
+            modifiedFiles={report.data?.modifiedFiles || 0}
+            deletedFiles={report.data?.deletedFiles || 0}
+            movedFiles={report.data?.movedFiles || 0}
+            copiedFiles={report.data?.copiedFiles || 0}
+            restoredFiles={report.data?.restoredFiles || 0}
+            isLoading={!report.data}
+            onClose={closeReport}
+          />
+        )}
 
-              {showSyncPreview && (
-                <SyncPreviewDialog
-                  configPath={selectedConfig}
-                  hasUnsyncedParity={!!statusData?.status.syncInProgress}
-                  onClose={() => setShowSyncPreview(false)}
-                  onConfirm={() => {
-                    setShowSyncPreview(false)
-                    runCommand('sync')
-                  }}
-                />
-              )}
-
-              {showUndeleteDialog && parsedConfig && (
-                <UndeleteDialog
-                  dataDisk={parsedConfig.data}
-                  onExecute={handleUndelete}
-                  onClose={() => setShowUndeleteDialog(false)}
-                />
-              )}
-
-              {showDevicesModal && (
-                <DeviceList
-                  devices={devicesData?.devices || []}
-                  isLoading={isLoadingDevices}
-                  onClose={() => setShowDevicesModal(false)}
-                />
-              )}
-
-              {showFileListModal && (
-                <FileListViewer
-                  files={fileListData?.files || []}
-                  totalFiles={fileListData?.totalFiles || 0}
-                  totalSize={fileListData?.totalSize || 0}
-                  totalLinks={fileListData?.totalLinks || 0}
-                  isLoading={isLoadingFileList}
-                  onClose={() => setShowFileListModal(false)}
-                />
-              )}
-
-              {showCheckModal && (
-                <CheckViewer
-                  files={checkData?.files || []}
-                  totalFiles={checkData?.totalFiles || 0}
-                  errorCount={checkData?.errorCount || 0}
-                  rehashCount={checkData?.rehashCount || 0}
-                  okCount={checkData?.okCount || 0}
-                  isLoading={isLoadingCheck}
-                  onClose={() => setShowCheckModal(false)}
-                />
-              )}
-
-              {showDiffModal && (
-                <DiffViewer
-                  files={diffData?.files || []}
-                  totalFiles={diffData?.totalFiles || 0}
-                  equalFiles={diffData?.equalFiles || 0}
-                  newFiles={diffData?.newFiles || 0}
-                  modifiedFiles={diffData?.modifiedFiles || 0}
-                  deletedFiles={diffData?.deletedFiles || 0}
-                  movedFiles={diffData?.movedFiles || 0}
-                  copiedFiles={diffData?.copiedFiles || 0}
-                  restoredFiles={diffData?.restoredFiles || 0}
-                  isLoading={isLoadingDiff}
-                  onClose={() => setShowDiffModal(false)}
-                />
-              )}
-
-              {showStatusModal && statusData && (
-                <StatusModal
-                  status={statusData.status}
-                  onClose={() => setShowStatusModal(false)}
-                  onRefresh={refetchStatus}
-                />
-              )}
-
-              <OutputConsole output={wsState.output} />
-            </>
-          )}
-
-          {/* SMART Monitor Tab */}
-          {activeTab === 'smart' && selectedConfig && (
-            <SmartMonitor
-              configPath={selectedConfig}
-              onRefresh={() => getSmart(selectedConfig)}
-            />
-          )}
-
-          {/* Disk Power Control Tab */}
-          {activeTab === 'power' && selectedConfig && (
-            <DiskPowerControl
-              configPath={selectedConfig}
-              onProbe={() => probe(selectedConfig)}
-              onSpinUp={(disks) => spinUp(selectedConfig, disks)}
-              onSpinDown={(disks) => spinDown(selectedConfig, disks)}
-            />
-          )}
-
-          {/* Show message when no config is selected */}
-          {!selectedConfig &&
-            (activeTab === 'smart' || activeTab === 'power') && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-                <p className="text-yellow-800 font-medium">
-                  Please select a SnapRAID configuration to use this feature
-                </p>
-              </div>
-            )}
-        </div>
-      </main>
-    </div>
+        {showStatusModal && statusData && (
+          <StatusModal
+            status={statusData.status}
+            onClose={() => setShowStatusModal(false)}
+            onRefresh={refetchStatus}
+          />
+        )}
+      </ConfigBar>
+    </PageLayout>
   )
 }

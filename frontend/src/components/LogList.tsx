@@ -2,6 +2,7 @@ import type { SnapRaidCommand } from '@shared/types'
 import { useState } from 'react'
 import { useDeleteLog, useLogs, useRotateLogs } from '../hooks/queries'
 import * as m from '../paraglide/messages'
+import { errorMessage, useFeedback } from './Feedback'
 import { LogFilters } from './LogFilters'
 import { LogListItem } from './LogListItem'
 
@@ -11,6 +12,7 @@ interface LogListProps {
 }
 
 export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
+  const { confirm, toast } = useFeedback()
   const [filterCommand, setFilterCommand] = useState<SnapRaidCommand | 'all'>(
     'all',
   )
@@ -20,8 +22,13 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
   const deleteLogMutation = useDeleteLog()
   const rotateLogsMutation = useRotateLogs()
 
-  const handleDeleteLog = (filename: string) => {
-    if (!confirm(`Delete log file ${filename}?`)) return
+  const handleDeleteLog = async (filename: string) => {
+    const confirmed = await confirm({
+      message: m.logs_delete_confirm({ filename }),
+      confirmLabel: m.confirm_delete(),
+      danger: true,
+    })
+    if (!confirmed) return
 
     deleteLogMutation.mutate(filename, {
       onSuccess: () => {
@@ -30,7 +37,7 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
         }
       },
       onError: (error) => {
-        alert(`Failed to delete log: ${error}`)
+        toast.error(m.logs_delete_failed({ error: errorMessage(error) }))
       },
     })
   }
@@ -38,10 +45,10 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
   const handleRotateLogs = () => {
     rotateLogsMutation.mutate(undefined, {
       onSuccess: (result) => {
-        alert(`Deleted ${result.deleted} old log file(s)`)
+        toast.success(m.logs_rotated({ count: result.deleted }))
       },
       onError: (error) => {
-        alert(`Failed to rotate logs: ${error}`)
+        toast.error(m.logs_rotate_failed({ error: errorMessage(error) }))
       },
     })
   }

@@ -8,7 +8,9 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
+import { FeedbackProvider } from '../components/Feedback'
 import { Header } from '../components/Header'
+import { SelectedConfigProvider } from '../hooks/useSelectedConfig'
 import { connectWebSocket, disconnectWebSocket } from '../lib/api/websocket'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
@@ -82,19 +84,25 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <QueryClientProvider client={queryClient}>
-          <Header />
-          {children}
-          <TanStackDevtools
-            config={{
-              position: 'bottom-right',
-            }}
-            plugins={[
-              {
-                name: 'Tanstack Router',
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-            ]}
-          />
+          <FeedbackProvider>
+            <SelectedConfigProvider>
+              <Header />
+              {children}
+            </SelectedConfigProvider>
+          </FeedbackProvider>
+          {import.meta.env.DEV && (
+            <TanStackDevtools
+              config={{
+                position: 'bottom-right',
+              }}
+              plugins={[
+                {
+                  name: 'Tanstack Router',
+                  render: <TanStackRouterDevtoolsPanel />,
+                },
+              ]}
+            />
+          )}
         </QueryClientProvider>
         <Scripts />
       </body>

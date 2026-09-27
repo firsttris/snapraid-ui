@@ -27,12 +27,16 @@ interface ArrayHealthPanelProps {
   refreshDisabled: boolean
 }
 
-type Health = 'healthy' | 'needs_sync' | 'errors' | 'unknown'
+type Health = 'healthy' | 'needs_sync' | 'sync_failed' | 'errors' | 'unknown'
 
 const HEALTH_STYLES: Record<Health, { box: string; icon: string }> = {
   healthy: { box: 'bg-green-50 border-green-200 text-green-800', icon: '✅' },
   needs_sync: {
     box: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+    icon: '⚠️',
+  },
+  sync_failed: {
+    box: 'bg-orange-50 border-orange-200 text-orange-800',
     icon: '⚠️',
   },
   errors: { box: 'bg-red-50 border-red-200 text-red-800', icon: '❌' },
@@ -45,6 +49,8 @@ const getHealthText = (health: Health): [string, string] => {
       return [m.health_healthy(), m.health_healthy_msg()]
     case 'needs_sync':
       return [m.health_needs_sync(), m.health_needs_sync_msg()]
+    case 'sync_failed':
+      return [m.health_sync_failed(), m.health_sync_failed_msg()]
     case 'errors':
       return [m.health_errors(), m.health_errors_msg()]
     case 'unknown':
@@ -152,6 +158,10 @@ export const ArrayHealthPanel = ({
   onShowDetails,
   refreshDisabled,
 }: ArrayHealthPanelProps) => {
+  // status only reads the content file, so it still looks healthy when the last
+  // sync failed before recording new files
+  const lastSyncFailed =
+    !!lastSync && lastSync.result !== 'ok' && lastSync.result !== 'warning'
   const health: Health =
     !status || isStatusError
       ? 'unknown'
@@ -159,7 +169,9 @@ export const ArrayHealthPanel = ({
         ? 'errors'
         : !status.parityUpToDate
           ? 'needs_sync'
-          : 'healthy'
+          : lastSyncFailed
+            ? 'sync_failed'
+            : 'healthy'
   const [title, message] = getHealthText(health)
   const disks = status?.disks ?? []
 

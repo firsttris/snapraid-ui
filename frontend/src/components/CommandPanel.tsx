@@ -1,6 +1,7 @@
 import type { SnapRaidCommand } from '@shared/types'
 import { Square } from 'lucide-react'
 import type { JobResult } from '../hooks/useWebSocketConnection'
+import type { JobProgress } from '../lib/progress'
 import * as m from '../paraglide/messages'
 
 interface CommandPanelProps {
@@ -11,6 +12,7 @@ interface CommandPanelProps {
   isRunning: boolean
   isAborting: boolean
   currentCommand: string
+  progress: JobProgress | null
   lastResult: JobResult | null
   onDismissResult: () => void
 }
@@ -87,6 +89,30 @@ const COMMAND_GROUPS: Array<{
   },
 ]
 
+const formatEta = (minutes: number) =>
+  `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`
+
+const ProgressBar = ({ progress }: { progress: JobProgress }) => (
+  <div className="w-full">
+    <div className="h-2 overflow-hidden rounded-full bg-blue-100">
+      <div
+        className="h-full rounded-full bg-blue-600 transition-[width] duration-500"
+        style={{ width: `${Math.min(progress.percent, 100)}%` }}
+      />
+    </div>
+    <div className="mt-1 flex flex-wrap gap-x-4 text-xs text-blue-900">
+      <span className="font-semibold">{progress.percent}%</span>
+      <span>{m.progress_processed({ size: progress.processedMB })}</span>
+      {progress.speedMBs !== undefined && (
+        <span>{m.progress_speed({ speed: progress.speedMBs })}</span>
+      )}
+      {progress.etaMinutes !== undefined && (
+        <span>{m.progress_eta({ eta: formatEta(progress.etaMinutes) })}</span>
+      )}
+    </div>
+  </div>
+)
+
 const getResultBanner = (
   result: JobResult,
 ): { className: string; text: string } => {
@@ -123,6 +149,7 @@ export const CommandPanel = ({
   isRunning,
   isAborting,
   currentCommand,
+  progress,
   lastResult,
   onDismissResult,
 }: CommandPanelProps) => {
@@ -156,6 +183,7 @@ export const CommandPanel = ({
             <Square size={14} fill="currentColor" />
             {m.commands_abort()}
           </button>
+          {progress && !isAborting && <ProgressBar progress={progress} />}
         </div>
       )}
 
