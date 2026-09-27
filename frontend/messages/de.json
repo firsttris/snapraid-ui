@@ -372,6 +372,7 @@
   "commands_result_failed": "„{command}“ fehlgeschlagen (Exit-Code {code})",
   "commands_result_aborted": "„{command}“ wurde abgebrochen",
   "commands_result_error": "„{command}“ konnte nicht ausgeführt werden: {error}",
+  "commands_more": "Weitere Befehle",
   "sync_preview_title": "Sync vorbereiten",
   "sync_preview_loading": "Prüfe Änderungen seit dem letzten Sync…",
   "sync_preview_intro": "Diese Änderungen werden in die Parität übernommen:",

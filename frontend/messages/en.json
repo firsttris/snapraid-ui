@@ -372,6 +372,7 @@
   "commands_result_failed": "\"{command}\" failed (exit code {code})",
   "commands_result_aborted": "\"{command}\" was aborted",
   "commands_result_error": "\"{command}\" could not be run: {error}",
+  "commands_more": "More commands",
   "sync_preview_title": "Prepare sync",
   "sync_preview_loading": "Checking changes since the last sync…",
   "sync_preview_intro": "These changes will be written to parity:",
