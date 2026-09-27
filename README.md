@@ -28,7 +28,7 @@ SnapRAID Web Manager is a complete toolkit for SnapRAID users that replaces comm
 
 - Docker and Docker Compose (recommended)
 - Node.js 18+ and Deno 2.5.6+ (for local development)
-- SnapRAID installed on the host system
+- SnapRAID 14.0+ installed on the host system (the backend parses SnapRAID's structured log output, `--log ">&2"`)
 - Access to SnapRAID configuration files and disks
 
 ## 🛠️ Installation

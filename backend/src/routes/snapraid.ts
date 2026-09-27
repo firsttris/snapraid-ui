@@ -10,6 +10,7 @@ import {configOperationsRoutes} from "./config-operations.ts";
 import {hardwareRoutes} from "./hardware.ts";
 import { setReportsRunner, reportsRoutes } from "./reports.ts";
 import { parseStatusOutput } from "../parsers/status-parser.ts";
+import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
 
 const snapraid = new Hono();
 
@@ -32,6 +33,18 @@ export const setRunnerLogManager = (logManager: LogManager): void => {
 
 export const getRunner = (): SnapRaidRunner => {
   return runner;
+};
+
+/**
+ * Read the structured log SnapRAID wrote for an executed command
+ */
+const readStructuredLog = async (result: CommandOutput): Promise<string> => {
+  if (!result.logPath) return "";
+  try {
+    return await Deno.readTextFile(result.logPath);
+  } catch {
+    return "";
+  }
 };
 
 // Initialize runner for reports module
@@ -110,7 +123,7 @@ snapraid.post("/execute", async (c) => {
 
       // Parse status if it was a status or diff command
       if (command === "status" || command === "diff") {
-        const status = parseStatusOutput(result.output);
+        const status = parseStatusOutput(await readStructuredLog(result), result.output);
         state.broadcastFn({
           type: "status",
           status,
@@ -140,13 +153,13 @@ snapraid.get("/status", async (c) => {
   
   // If no config path provided, try to get from last status in history
   if (!relativePath) {
-    const lastStatus = commandHistory.find(cmd => cmd.command === 'status');
+    const lastStatus = commandHistory.find(cmd => cmd.command.startsWith('snapraid status '));
     
     if (!lastStatus) {
       return c.json({ error: "No status command found in history. Please provide 'path' query parameter to execute status." }, 400);
     }
 
-    const parsedStatus = parseStatusOutput(lastStatus.output);
+    const parsedStatus = parseStatusOutput(await readStructuredLog(lastStatus), lastStatus.output);
     return c.json({
       status: parsedStatus,
       timestamp: lastStatus.timestamp,
@@ -158,14 +171,14 @@ snapraid.get("/status", async (c) => {
   try {
     const configPath = join(BASE_PATH, relativePath);
     const cmd = new Deno.Command("snapraid", {
-      args: ["-c", configPath, "status"],
+      args: ["-c", configPath, ...STRUCTURED_LOG_ARGS, "status"],
       stdout: "piped",
       stderr: "piped",
     });
 
     const { code, stdout, stderr } = await cmd.output();
-    const output = new TextDecoder().decode(code === 0 ? stdout : stderr);
-    const parsedStatus = parseStatusOutput(output);
+    const { log, text } = splitStructuredOutput(new TextDecoder().decode(stderr));
+    const parsedStatus = parseStatusOutput(log, code === 0 ? new TextDecoder().decode(stdout) : text);
     
     return c.json({
       status: parsedStatus,

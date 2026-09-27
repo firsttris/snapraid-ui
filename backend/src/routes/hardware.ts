@@ -3,6 +3,7 @@ import { join } from "@std/path";
 import { parseProbeOutput } from "../parsers/probe-parser.ts";
 import { parseSmartOutput } from "../parsers/smart-parser.ts";
 import { BASE_PATH } from "../config.ts";
+import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
 
 const hardware = new Hono();
 
@@ -18,14 +19,14 @@ hardware.get("/smart", async (c) => {
 
   try {
     const command = new Deno.Command("snapraid", {
-      args: ["-c", configPath, "smart"],
+      args: ["-c", configPath, ...STRUCTURED_LOG_ARGS, "smart"],
       stdout: "piped",
       stderr: "piped",
     });
 
     const { code, stdout, stderr } = await command.output();
     const output = new TextDecoder().decode(stdout);
-    const errorOutput = new TextDecoder().decode(stderr);
+    const { log, text: errorOutput } = splitStructuredOutput(new TextDecoder().decode(stderr));
 
     if (code !== 0) {
       return c.json({ 
@@ -35,7 +36,7 @@ hardware.get("/smart", async (c) => {
     }
 
     // Parse SMART output
-    const disks = parseSmartOutput(output);
+    const disks = parseSmartOutput(log);
 
     return c.json({
       disks,
@@ -59,14 +60,14 @@ hardware.get("/probe", async (c) => {
 
   try {
     const command = new Deno.Command("snapraid", {
-      args: ["-c", configPath, "probe"],
+      args: ["-c", configPath, ...STRUCTURED_LOG_ARGS, "probe"],
       stdout: "piped",
       stderr: "piped",
     });
 
     const { code, stdout, stderr } = await command.output();
     const output = new TextDecoder().decode(stdout);
-    const errorOutput = new TextDecoder().decode(stderr);
+    const { log, text: errorOutput } = splitStructuredOutput(new TextDecoder().decode(stderr));
 
     // Check if probe is unsupported - can be in stdout, stderr, or both
     // SnapRAID sometimes returns exit code 0 even when probe fails!
@@ -89,7 +90,7 @@ hardware.get("/probe", async (c) => {
     }
 
     // Parse probe output
-    const disks = parseProbeOutput(output);
+    const disks = parseProbeOutput(log);
 
     return c.json({
       disks,

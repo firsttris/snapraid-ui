@@ -1,52 +1,45 @@
 import type { SnapRaidFileInfo } from "@shared/types.ts";
-import { shouldSkipLine } from "./utils.ts";
+import { parseLogTags, collectKeyValues, toInt, unescapeTagValue } from "./structured-log.ts";
 
 /**
- * Parse file line from list output
+ * Extra argument required so that `list` emits one `file:` tag per file
  */
-const parseFileListLine = (line: string): SnapRaidFileInfo | null => {
-  const fileMatch = line.trim().match(/^(\d+)\s+(\d{4}\/\d{2}\/\d{2})\s+(\d{2}:\d{2})\s+(.+)$/);
-  if (!fileMatch) return null;
+export const LIST_ARGS = ["--gui-verbose"];
 
+const pad = (value: number): string => String(value).padStart(2, '0');
+
+/**
+ * Format a unix timestamp in local time like the `list` text output ("2025/12/01", "07:54")
+ */
+const formatMtime = (mtimeSec: number): { date: string, time: string } => {
+  const d = new Date(mtimeSec * 1000);
   return {
-    size: parseInt(fileMatch[1], 10),
-    date: fileMatch[2],
-    time: fileMatch[3],
-    name: fileMatch[4],
+    date: `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
   };
 };
 
 /**
- * Parse summary information from list output
- */
-const parseListSummary = (lines: string[]): { totalFiles: number, totalLinks: number } => {
-  const filesLine = lines.find(line => line.trim().match(/^\d+\s+files?,\s+for\s+\d+/));
-  const linksLine = lines.find(line => line.trim().match(/^\d+\s+links?/));
-
-  const filesMatch = filesLine?.trim().match(/^(\d+)\s+files?/);
-  const linksMatch = linksLine?.trim().match(/^(\d+)\s+links?/);
-
-  return {
-    totalFiles: filesMatch ? parseInt(filesMatch[1], 10) : 0,
-    totalLinks: linksMatch ? parseInt(linksMatch[1], 10) : 0,
-  };
-};
-
-/**
- * Parse list output
- * Format: "       76849 2025/12/01 07:54 filename.xlsx"
+ * Parse SnapRAID structured log output of `list --gui-verbose`
+ * Format: file:<disk>:<path>:<size>:<mtime_sec>:<mtime_nsec>:<inode>
  */
 export const parseListOutput = (output: string): { files: SnapRaidFileInfo[], totalFiles: number, totalSize: number, totalLinks: number } => {
-  const lines = output.split('\n');
-  const skipPrefixes = ['Loading', 'Listing', 'files, for', 'links'];
-  
-  const files = lines
-    .filter(line => !shouldSkipLine(line, skipPrefixes))
-    .map(line => parseFileListLine(line))
-    .filter((file): file is SnapRaidFileInfo => file !== null);
+  const tags = parseLogTags(output);
+  const summary = collectKeyValues(tags, 'summary');
 
-  const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-  const { totalFiles, totalLinks } = parseListSummary(lines);
+  const files = tags
+    .filter(tag => tag.name === 'file' && tag.values.length >= 4)
+    .map(({ values: [disk, path, size, mtimeSec] }) => ({
+      disk,
+      name: unescapeTagValue(path),
+      size: toInt(size),
+      ...formatMtime(toInt(mtimeSec)),
+    }));
 
-  return { files, totalFiles, totalSize, totalLinks };
+  return {
+    files,
+    totalFiles: toInt(summary.get('file_count'), files.length),
+    totalSize: toInt(summary.get('file_size'), files.reduce((sum, file) => sum + file.size, 0)),
+    totalLinks: toInt(summary.get('link_count')),
+  };
 };

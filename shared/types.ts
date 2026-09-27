@@ -80,6 +80,7 @@ export interface CommandOutput {
   output: string;
   timestamp: string; // ISO string for JSON serialization
   exitCode: number | null;
+  logPath?: string; // Structured log file written by SnapRAID (--log)
 }
 
 export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff' | 'fix' | 'check' | 'pool' | 'smart' | 'probe' | 'up' | 'down' | 'devices' | 'list';
@@ -200,6 +201,7 @@ export interface SnapRaidFileInfo {
   date: string;            // Date in format "2025/12/01"
   time: string;            // Time in format "07:54"
   name: string;            // File path/name
+  disk?: string;           // Data disk name
 }
 
 export interface ListReport {
@@ -215,6 +217,7 @@ export interface ListReport {
 export interface DiffFileInfo {
   status: 'equal' | 'added' | 'removed' | 'updated' | 'moved' | 'copied' | 'restored';
   name: string;            // File path/name
+  disk?: string;           // Data disk name
   size?: string;           // File size if available
 }
 
@@ -236,6 +239,7 @@ export interface DiffReport {
 export interface CheckFileInfo {
   status: 'OK' | 'ERROR' | 'REHASH';  // Check status
   name: string;            // File path/name
+  disk?: string;           // Data disk (or parity level) name
   hash?: string;           // Hash value if available
   error?: string;          // Error message if status is ERROR
 }
@@ -267,5 +271,5 @@ export interface SmartDiskInfo {
 export interface ProbeDiskInfo {
   name: string;
   device: string;
-  status: 'Standby' | 'Active' | 'Idle';
+  status: 'Standby' | 'Active' | 'Idle' | 'Unknown';
 }

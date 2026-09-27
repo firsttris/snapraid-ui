@@ -1,218 +1,151 @@
 import type { SnapRaidStatus, DiskStatusInfo, ScrubHistoryPoint } from "@shared/types.ts";
+import { type LogTag, parseLogTags, collectKeyValues, toInt } from "./structured-log.ts";
+
+const toGB = (bytes: string | undefined): number =>
+  Math.max(0, Math.round(parseFloat(bytes ?? '0') / 1e9 * 10) / 10) || 0;
 
 /**
- * Check if output has errors
+ * Block counters of the array from the `content_info:<kind>:<count>` tags
  */
-const hasErrors = (output: string): boolean => {
-  if (output.includes("No error detected")) return false;
-  return output.toLowerCase().includes("error") || 
-         output.toLowerCase().includes("warning") ||
-         output.includes("bad blocks");
-};
+const parseBlockCounters = (contentInfo: Map<string, string>) => ({
+  total: toInt(contentInfo.get('block')),
+  unscrubbed: toInt(contentInfo.get('block_unscrubbed')),
+  unsynced: toInt(contentInfo.get('block_unsynced')),
+  bad: toInt(contentInfo.get('block_bad')),
+});
 
 /**
- * Parse scrub percentage from output
+ * Parse scrub percentage (share of blocks already scrubbed)
  */
-const parseScrubPercentage = (output: string): number | undefined => {
-  const notScrubbed = output.match(/(\d+)%\s+of\s+the\s+array\s+is\s+not\s+scrubbed/i);
-  if (notScrubbed) {
-    const notScrubbedPercent = parseInt(notScrubbed[1], 10);
-    return 100 - notScrubbedPercent;
-  }
-  
-  const isScrubbed = output.match(/(\d+)%\s+of\s+the\s+array\s+is\s+scrubbed/i);
-  return isScrubbed ? parseInt(isScrubbed[1], 10) : undefined;
-};
+const parseScrubPercentage = (total: number, unscrubbed: number): number | undefined =>
+  total > 0 ? Math.floor((1 - unscrubbed / total) * 100) : undefined;
 
 /**
  * Parse scrub age details
  */
-const parseScrubAge = (output: string): Partial<Pick<SnapRaidStatus, 'oldestScrubDays' | 'medianScrubDays' | 'newestScrubDays'>> => {
-  const scrubAgeMatch = output.match(/oldest block was scrubbed (\d+) days? ago,?\s+the median (\d+),?\s+the newest (\d+)/i);
-  if (scrubAgeMatch) {
-    return {
-      oldestScrubDays: parseInt(scrubAgeMatch[1], 10),
-      medianScrubDays: parseInt(scrubAgeMatch[2], 10),
-      newestScrubDays: parseInt(scrubAgeMatch[3], 10),
-    };
-  }
-  
-  const oldestScrub = output.match(/oldest block was scrubbed (\d+) days? ago/i);
-  return oldestScrub ? { oldestScrubDays: parseInt(oldestScrub[1], 10) } : {};
-};
-
-/**
- * Parse a single disk row from status table
- */
-const parseDiskRow = (line: string): DiskStatusInfo | null => {
-  const cols = line.trim().split(/\s+/);
-  if (cols.length < 8) return null;
-
+const parseScrubAge = (summary: Map<string, string>): Partial<Pick<SnapRaidStatus, 'oldestScrubDays' | 'medianScrubDays' | 'newestScrubDays'>> => {
+  const days = (key: string) => summary.has(key) ? toInt(summary.get(key)) : undefined;
   return {
-    name: cols.slice(7).join(' '),
-    files: parseInt(cols[0], 10) || 0,
-    fragmentedFiles: parseInt(cols[1], 10) || 0,
-    excessFragments: parseInt(cols[2], 10) || 0,
-    wastedGB: cols[3] === '-' ? 0 : parseFloat(cols[3]) || 0,
-    usedGB: cols[4] === '-' ? 0 : parseFloat(cols[4]) || 0,
-    freeGB: cols[5] === '-' ? 0 : parseFloat(cols[5]) || 0,
-    usePercent: cols[6] === '-' ? 0 : parseInt(cols[6], 10) || 0,
+    oldestScrubDays: days('scrub_oldest_days'),
+    medianScrubDays: days('scrub_median_days'),
+    newestScrubDays: days('scrub_newest_days'),
   };
 };
 
 /**
- * Parse total line from status table
+ * Parse per disk information from `summary:disk_<prop>:<disk>:<value>` tags
  */
-const parseTotalLine = (line: string): Partial<SnapRaidStatus> => {
-  const totalCols = line.trim().split(/\s+/);
-  if (totalCols.length < 7) return {};
+const parseDisks = (tags: LogTag[]): DiskStatusInfo[] => {
+  const diskMap = new Map<string, Record<string, string>>();
+
+  tags
+    .filter(tag => tag.name === 'summary' && tag.values[0]?.startsWith('disk_') && tag.values.length >= 3)
+    .forEach(({ values: [key, diskName, value] }) => {
+      const disk = diskMap.get(diskName) ?? {};
+      disk[key.slice('disk_'.length)] = value;
+      diskMap.set(diskName, disk);
+    });
+
+  return Array.from(diskMap.entries()).map(([name, disk]) => ({
+    name,
+    files: toInt(disk.file_count),
+    fragmentedFiles: toInt(disk.fragmented_file_count),
+    excessFragments: toInt(disk.excess_fragment_count),
+    wastedGB: toGB(disk.space_wasted),
+    usedGB: toGB(disk.used),
+    freeGB: toGB(disk.free),
+    usePercent: toInt(disk.use_percent),
+  }));
+};
+
+/**
+ * Parse array totals
+ */
+const parseTotals = (summary: Map<string, string>): Partial<SnapRaidStatus> => {
+  if (!summary.has('file_count')) return {};
 
   return {
-    totalFiles: parseInt(totalCols[0], 10) || 0,
-    fragmentedFiles: parseInt(totalCols[1], 10) || 0,
-    wastedGB: parseFloat(totalCols[3]) || 0,
-    totalUsedGB: parseFloat(totalCols[4]) || 0,
-    totalFreeGB: parseFloat(totalCols[5]) || 0,
+    totalFiles: toInt(summary.get('file_count')),
+    fragmentedFiles: toInt(summary.get('fragmented_file_count')),
+    wastedGB: toGB(summary.get('total_wasted')),
+    totalUsedGB: toGB(summary.get('total_used')),
+    totalFreeGB: toGB(summary.get('total_free')),
   };
 };
 
 /**
- * Parse disk table from status output
+ * Parse diff statistics (`summary:added:<n>` ...), only present for diff/sync
  */
-const parseDiskTable = (lines: string[]): { disks: DiskStatusInfo[], totals: Partial<SnapRaidStatus> } => {
-  const disks: DiskStatusInfo[] = [];
-  const result = lines.reduce((acc, line, index) => {
-    // Detect table header
-    if (line.includes('Files') && line.includes('Fragmented') && line.includes('Wasted')) {
-      return { ...acc, inTable: true, skipNext: true };
-    }
-    
-    // Skip subheader
-    if (acc.skipNext) {
-      return { ...acc, skipNext: false };
-    }
-    
-  // Detect table end
-  if (line.trim().match(/^ *-{10,} *$/)) {
-    const totalLine = lines[index + 1];
-    const totals = totalLine ? parseTotalLine(totalLine) : {};
-    return { ...acc, inTable: false, totals };
-  }    // Parse disk rows
-    if (acc.inTable && line.trim()) {
-      const diskInfo = parseDiskRow(line);
-      if (diskInfo) {
-        disks.push(diskInfo);
-      }
-    }
-    
-    return acc;
-  }, { inTable: false, skipNext: false, totals: {} } as { inTable: boolean, skipNext: boolean, totals: Partial<SnapRaidStatus> });
-
-  return { disks, totals: result.totals };
-};
-
-/**
- * Parse diff statistics
- */
-const parseDiffStats = (lines: string[]): Partial<SnapRaidStatus> => {
-  const diffStats = lines.reduce((acc, line) => {
-    const match = line.match(/^\s*(\d+)\s+(equal|added|removed|updated|moved|copied|restored)/);
-    return match ? { ...acc, [match[2]]: parseInt(match[1], 10) } : acc;
-  }, {} as Record<string, number>);
-
-  if (Object.keys(diffStats).length === 0) return {};
+const parseDiffStats = (summary: Map<string, string>): Partial<SnapRaidStatus> => {
+  if (!summary.has('added')) return {};
 
   return {
-    equalFiles: diffStats.equal || 0,
-    newFiles: diffStats.added || 0,
-    deletedFiles: diffStats.removed || 0,
-    modifiedFiles: diffStats.updated || 0,
-    movedFiles: diffStats.moved || 0,
-    copiedFiles: diffStats.copied || 0,
-    restoredFiles: diffStats.restored || 0,
+    equalFiles: toInt(summary.get('equal')),
+    newFiles: toInt(summary.get('added')),
+    deletedFiles: toInt(summary.get('removed')),
+    modifiedFiles: toInt(summary.get('updated')),
+    movedFiles: toInt(summary.get('moved')) + toInt(summary.get('relocated')),
+    copiedFiles: toInt(summary.get('copied')),
+    restoredFiles: toInt(summary.get('restored')),
   };
 };
 
 /**
- * Parse scrub history chart
+ * Parse scrub history from `scrub_graph_bar:<index>:<days_ago>:<scrubbed>:<new>` (block counts).
+ * Percentages are relative to the total block count, like the graph in the text report.
  */
-const parseScrubHistory = (lines: string[], oldestScrubDays?: number, newestScrubDays?: number): ScrubHistoryPoint[] => {
-  const chartLines = lines.reduce((acc, line) => {
-    if (line.match(/^\s*\d+%\|/) || (acc.foundStart && line.match(/^\s+\|/))) {
-      return { foundStart: true, lines: [...acc.lines, line] };
-    }
-    if (acc.foundStart && (line.match(/^\s+\d+\s+days ago/) || !line.trim())) {
-      return { ...acc, foundStart: false };
-    }
-    return acc;
-  }, { foundStart: false, lines: [] as string[] });
+const parseScrubHistory = (tags: LogTag[], totalBlocks: number): ScrubHistoryPoint[] => {
+  if (totalBlocks === 0) return [];
+  const historyMap = new Map<number, number>();
 
-  if (chartLines.lines.length === 0) return [];
+  tags
+    .filter(tag => tag.name === 'scrub_graph_bar')
+    .forEach(({ values: [, daysAgo, scrubbed, fresh] }) => {
+      const percentage = (toInt(scrubbed) + toInt(fresh)) / totalBlocks * 100;
+      historyMap.set(toInt(daysAgo), (historyMap.get(toInt(daysAgo)) ?? 0) + percentage);
+    });
 
-  const CHART_WIDTH = 70;
-  const maxDays = oldestScrubDays || 30;
-  const minDays = newestScrubDays || 0;
-
-  return chartLines.lines.flatMap(chartLine => {
-    const percentMatch = chartLine.match(/^\s*(\d+)%\|/);
-    if (!percentMatch) return [];
-
-    const percentage = parseInt(percentMatch[1], 10);
-    const pipeIndex = chartLine.indexOf('|');
-    
-    return [...chartLine].reduce((positions, char, index) => {
-      if (char !== 'o') return positions;
-      const relativePos = (index - pipeIndex - 1) / CHART_WIDTH;
-      // Left side (pos=0) is oldest, right side (pos=1) is newest
-      const daysAgo = Math.round(maxDays - (relativePos * (maxDays - minDays)));
-      return [...positions, { daysAgo, percentage }];
-    }, [] as ScrubHistoryPoint[]);
-  });
+  return Array.from(historyMap.entries()).map(([daysAgo, percentage]) => ({
+    daysAgo,
+    percentage: Math.round(percentage),
+  }));
 };
 
 /**
- * Check if parity is up to date
+ * Parse SnapRAID structured log output of `status` (and `diff`)
+ * @param output structured log (`--log ">&2"` output or log file content)
+ * @param rawOutput human readable output to attach, defaults to `output`
  */
-const isParityUpToDate = (output: string, syncInProgress: boolean): boolean => 
-  (output.includes("No error detected") && !syncInProgress) ||
-  output.includes("Everything OK") ||
-  output.includes("Nothing to do") ||
-  output.includes("No differences") ||
-  (output.includes("equal") && !output.match(/(\d+)\s+(added|removed|updated)/i));
+export const parseStatusOutput = (output: string, rawOutput: string = output): SnapRaidStatus => {
+  const tags = parseLogTags(output);
+  const summary = collectKeyValues(tags, 'summary');
+  const contentInfo = collectKeyValues(tags, 'content_info');
+  const exit = summary.get('exit');
 
-/**
- * Parse SnapRAID status/diff output
- */
-export const parseStatusOutput = (output: string): SnapRaidStatus => {
-  const lines = output.split('\n');
-  const syncInProgress = output.includes("sync is in progress") && !output.includes("No sync is in progress");
-  
-  const { disks, totals } = parseDiskTable(lines);
-  const diffStats = parseDiffStats(lines);
-  const scrubAge = parseScrubAge(output);
-  const scrubPercentage = parseScrubPercentage(output);
-  const scrubHistory = parseScrubHistory(lines, scrubAge.oldestScrubDays, scrubAge.newestScrubDays);
+  const blocks = parseBlockCounters(contentInfo);
+  const fatal = tags.some(tag => tag.name === 'msg' && tag.values[0]?.startsWith('fatal'));
+  const hasErrors = fatal || blocks.bad > 0 || exit === 'bad';
+  const syncInProgress = blocks.unsynced > 0 || exit === 'unsynced';
+  const diffStats = parseDiffStats(summary);
+  const parityUpToDate = diffStats.newFiles !== undefined
+    ? exit === 'equal'
+    : !syncInProgress && !hasErrors;
+  const totals = parseTotals(summary);
 
-  const status: SnapRaidStatus = {
-    hasErrors: hasErrors(output),
-    parityUpToDate: isParityUpToDate(output, syncInProgress),
+  return {
+    hasErrors,
+    parityUpToDate,
     newFiles: 0,
     modifiedFiles: 0,
     deletedFiles: 0,
-    disks,
-    scrubHistory,
-    rawOutput: output,
+    disks: parseDisks(tags),
+    scrubHistory: parseScrubHistory(tags, blocks.total),
+    rawOutput,
     syncInProgress,
-    scrubPercentage,
-    ...scrubAge,
+    scrubPercentage: parseScrubPercentage(blocks.total, blocks.unscrubbed),
+    ...parseScrubAge(summary),
     ...totals,
     ...diffStats,
+    freeSpaceGB: totals.totalFreeGB,
   };
-
-  // Legacy fallback
-  if (!status.freeSpaceGB && status.totalFreeGB) {
-    status.freeSpaceGB = status.totalFreeGB;
-  }
-
-  return status;
 };

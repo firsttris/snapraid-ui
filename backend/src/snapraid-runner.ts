@@ -5,6 +5,18 @@ import { parseDevicesOutput } from "./parsers/devices-parser.ts";
 import { parseListOutput } from "./parsers/list-parser.ts";
 import { parseCheckOutput } from "./parsers/check-parser.ts";
 import { parseDiffOutput } from "./parsers/diff-parser.ts";
+import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "./parsers/structured-log.ts";
+import { LIST_ARGS } from "./parsers/list-parser.ts";
+
+/**
+ * Run a SnapRAID command with the structured log on stderr.
+ * Returns the structured log and the human readable output.
+ */
+const runStructured = async (args: string[]): Promise<{ log: string, text: string }> => {
+  const { stdout, stderr } = await executeSnapraidCommand([...args, ...STRUCTURED_LOG_ARGS]);
+  const { log, text } = splitStructuredOutput(stderr);
+  return { log, text: [stdout, text].filter(part => part.trim()).join('\n') };
+};
 
 /**
  * Create a SnapRAID runner with functional API
@@ -61,9 +73,9 @@ export const createSnapRaidRunner = () => {
      * Run list command
      */
     runList: async (configPath: string): Promise<ListReport> => {
-      const { stdout } = await executeSnapraidCommand(["list", "-c", configPath]);
+      const { log, text } = await runStructured(["list", "-c", configPath, ...LIST_ARGS]);
 
-      const { files, totalFiles, totalSize, totalLinks } = parseListOutput(stdout);
+      const { files, totalFiles, totalSize, totalLinks } = parseListOutput(log);
 
       return {
         files,
@@ -71,7 +83,7 @@ export const createSnapRaidRunner = () => {
         totalSize,
         totalLinks,
         timestamp: new Date().toISOString(),
-        rawOutput: stdout,
+        rawOutput: text,
       };
     },
 
@@ -79,10 +91,9 @@ export const createSnapRaidRunner = () => {
      * Run check command
      */
     runCheck: async (configPath: string): Promise<CheckReport> => {
-      const { stdout, stderr } = await executeSnapraidCommand(["check", "-c", configPath]);
+      const { log, text } = await runStructured(["check", "-c", configPath]);
 
-      const output = stdout + '\n' + stderr;
-      const { files, totalFiles, errorCount, rehashCount, okCount } = parseCheckOutput(output);
+      const { files, totalFiles, errorCount, rehashCount, okCount } = parseCheckOutput(log);
 
       return {
         files,
@@ -91,7 +102,7 @@ export const createSnapRaidRunner = () => {
         rehashCount,
         okCount,
         timestamp: new Date().toISOString(),
-        rawOutput: output,
+        rawOutput: text,
       };
     },
 
@@ -99,11 +110,10 @@ export const createSnapRaidRunner = () => {
      * Run diff command
      */
     runDiff: async (configPath: string): Promise<DiffReport> => {
-      const { stdout, stderr } = await executeSnapraidCommand(["diff", "-c", configPath]);
+      const { log, text } = await runStructured(["diff", "-c", configPath]);
 
-      const output = stdout + '\n' + stderr;
-      const { files, totalFiles, equalFiles, newFiles, modifiedFiles, deletedFiles, movedFiles, copiedFiles, restoredFiles } = 
-        parseDiffOutput(output);
+      const { files, totalFiles, equalFiles, newFiles, modifiedFiles, deletedFiles, movedFiles, copiedFiles, restoredFiles } =
+        parseDiffOutput(log);
 
       return {
         files,
@@ -116,7 +126,7 @@ export const createSnapRaidRunner = () => {
         copiedFiles,
         restoredFiles,
         timestamp: new Date().toISOString(),
-        rawOutput: output,
+        rawOutput: text,
       };
     },
   };

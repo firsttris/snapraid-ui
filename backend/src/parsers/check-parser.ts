@@ -1,109 +1,64 @@
 import type { CheckFileInfo } from "@shared/types.ts";
+import { parseLogTags, collectKeyValues, toInt, unescapeTagValue, restOf } from "./structured-log.ts";
 
 /**
- * Parse missing file error from check output
+ * Per-block error tags: error[_io|_data]:<block>:<disk>:<file>:<msg>
  */
-const parseMissingFile = (line: string, nextLine: string | undefined): CheckFileInfo | null => {
-  const missingMatch = line.trim().match(/^Missing file '(.+)'\.$/);
-  if (!missingMatch) return null;
-
-  const filePath = missingMatch[1];
-  const errorType = nextLine?.trim().startsWith('recoverable ') || nextLine?.trim().startsWith('unrecoverable ')
-    ? nextLine.trim().split(/\s+/)[0]
-    : 'Missing file';
-
-  return {
-    status: 'ERROR',
-    name: filePath,
-    error: errorType,
-  };
-};
+const FILE_ERROR_TAGS = new Set(['error', 'error_io', 'error_data']);
 
 /**
- * Parse check error line
+ * Per-item error tags without block: <kind>_error[_io]:<disk>:<path>:...:<msg>
  */
-const parseCheckError = (line: string): CheckFileInfo | null => {
-  const trimmed = line.trim();
-  
-  if (trimmed.includes('rehash')) {
-    return {
-      status: 'REHASH',
-      name: trimmed,
-      error: 'Needs rehashing',
-    };
-  }
-
-  if (trimmed.toLowerCase().includes('error') && !trimmed.includes('errors')) {
-    return {
-      status: 'ERROR',
-      name: trimmed,
-      error: 'Check error',
-    };
-  }
-
-  return null;
-};
+const LINK_ERROR_TAGS = new Set(['hardlink_error', 'hardlink_error_io', 'symlink_error', 'symlink_error_io', 'dir_error', 'dir_error_io']);
 
 /**
- * Parse check output
- * Format example:
- * Missing file '/path/to/file.log'.
- * recoverable status-20251206-094002.log
- * 100% completed, 67 MB accessed in 0:00
- * 
- *        1 errors
- *        0 unrecoverable errors
+ * Parse SnapRAID structured log output of `check`
+ * Errors are reported per block, so they are grouped per file with the first message.
+ * The final state of each file comes from `status:<recoverable|unrecoverable|recovered|correct>:<disk>:<file>`.
  */
 export const parseCheckOutput = (output: string): { files: CheckFileInfo[], totalFiles: number, errorCount: number, rehashCount: number, okCount: number } => {
-  const lines = output.split('\n');
-  const skipPrefixes = ['Self test', 'Loading', 'Searching', 'Using', 'Initializing', 'Selecting', 'Checking', 'WARNING'];
-  const seenFiles = new Set<string>();
+  const tags = parseLogTags(output);
+  const summary = collectKeyValues(tags, 'summary');
+  const entries = new Map<string, { disk: string, name: string, message?: string, state?: string }>();
 
-  const { files } = lines.reduce((acc, line, index) => {
-    const trimmed = line.trim();
-    
-    // Skip lines
-    if (!trimmed || skipPrefixes.some(prefix => trimmed.startsWith(prefix)) || trimmed.includes('% completed')) {
-      return acc;
+  const entry = (disk: string, name: string) => {
+    const key = `${disk}:${name}`;
+    const existing = entries.get(key) ?? { disk, name };
+    entries.set(key, existing);
+    return existing;
+  };
+
+  tags.forEach(({ name, values }) => {
+    if (FILE_ERROR_TAGS.has(name)) {
+      const e = entry(values[1], unescapeTagValue(values[2]));
+      e.message ??= restOf(values, 3);
+    } else if (LINK_ERROR_TAGS.has(name)) {
+      const e = entry(values[0], unescapeTagValue(values[1]));
+      e.message ??= values[values.length - 1]?.trim();
+    } else if (name === 'parity_error' || name === 'parity_error_io' || name === 'parity_error_data') {
+      // parity_error[_io|_data]:<block>:<level>:<msg>
+      const e = entry(values[1], values[1]);
+      e.message ??= restOf(values, 2);
+    } else if (name === 'outofparity') {
+      const e = entry(values[0], unescapeTagValue(values[1]));
+      e.message ??= 'Out of parity';
+    } else if (name === 'status') {
+      entry(values[1], unescapeTagValue(values[2])).state = values[0];
     }
+  });
 
-    // Skip summary/error count lines
-    if (trimmed.match(/^(\d+\s+(errors?|unrecoverable errors))$/)) {
-      return acc;
-    }
+  const files: CheckFileInfo[] = Array.from(entries.values()).map(({ disk, name, message, state }) => ({
+    status: state === 'correct' || state === 'recovered' ? 'OK' : 'ERROR',
+    disk,
+    name,
+    error: [state, message].filter(Boolean).join(': ') || undefined,
+  }));
 
-    // Parse missing file
-    const missingFile = parseMissingFile(line, lines[index + 1]);
-    if (missingFile && !seenFiles.has(missingFile.name)) {
-      seenFiles.add(missingFile.name);
-      return { 
-        files: [...acc.files, missingFile], 
-        processedIndices: new Set([...acc.processedIndices, index + 1])
-      };
-    }
-
-    // Skip if this line was already processed as next line of missing file
-    if (acc.processedIndices.has(index)) {
-      return acc;
-    }
-
-    // Parse other errors
-    const errorFile = parseCheckError(line);
-    if (errorFile) {
-      return { ...acc, files: [...acc.files, errorFile] };
-    }
-
-    return acc;
-  }, { files: [] as CheckFileInfo[], processedIndices: new Set<number>() });
-
-  // Parse error count from summary
-  const errorLine = lines.find(line => line.trim().match(/^\d+\s+errors?$/));
-  const errorMatch = errorLine?.trim().match(/^(\d+)\s+errors?$/);
-  const errorCount = errorMatch ? parseInt(errorMatch[1], 10) : 0;
-
-  const rehashCount = files.filter(f => f.status === 'REHASH').length;
+  const errorCount = toInt(summary.get('error_soft')) + toInt(summary.get('error_io')) + toInt(summary.get('error_data'));
+  // check reports no per-file rehash state, only a block counter
+  const rehashCount = 0;
   const totalFiles = files.length;
-  const okCount = Math.max(0, totalFiles - errorCount - rehashCount);
+  const okCount = files.filter(f => f.status === 'OK').length;
 
   return { files, totalFiles, errorCount, rehashCount, okCount };
 };

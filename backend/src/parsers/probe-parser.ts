@@ -1,19 +1,20 @@
 import type { ProbeDiskInfo } from "@shared/types.ts";
+import { parseLogTags, toInt } from "./structured-log.ts";
+
+const POWER_STATES: Record<number, ProbeDiskInfo['status']> = {
+  0: 'Standby',
+  1: 'Active',
+};
 
 /**
- * Parse probe output
+ * Parse SnapRAID structured log output of `probe`
+ * Format: probe:<device_file>:<disk_name>:<power> with power 0 = standby, 1 = active, -1 = unknown
  */
-export const parseProbeOutput = (output: string): ProbeDiskInfo[] => {
-  return output.split('\n')
-    .map(line => {
-      const match = line.trim().match(/^(\S+)\s+(\S+)\s+(Standby|Active|Idle)/i);
-      if (!match) return null;
-
-      return {
-        name: match[1],
-        device: match[2],
-        status: match[3] as ProbeDiskInfo['status'],
-      };
-    })
-    .filter((disk): disk is ProbeDiskInfo => disk !== null);
-};
+export const parseProbeOutput = (output: string): ProbeDiskInfo[] =>
+  parseLogTags(output)
+    .filter(tag => tag.name === 'probe' && tag.values.length >= 3)
+    .map(({ values: [device, name, power] }) => ({
+      name: name || '-',
+      device: device || '-',
+      status: POWER_STATES[toInt(power, -1)] ?? 'Unknown',
+    }));

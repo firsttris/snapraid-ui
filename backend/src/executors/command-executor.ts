@@ -124,6 +124,7 @@ export const executeCommand = async (
       output: fullOutput,
       timestamp,
       exitCode: status.code,
+      logPath,
     };
   } catch (error) {
     cleanupProcess(processId);
