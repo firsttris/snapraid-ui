@@ -1,35 +1,41 @@
-import type { AppConfig, ParsedSnapRaidConfig, SnapRaidCommand, RunningJob, LogFile, Schedule, SnapRaidStatus } from "@shared/types";
-import { useQuery, useMutation, useQueryClient, type UseQueryOptions, type UseMutationOptions } from '@tanstack/react-query';
+import type {
+  AppConfig,
+  LogFile,
+  ParsedSnapRaidConfig,
+  RunningJob,
+  Schedule,
+  SnapRaidCommand,
+  SnapRaidStatus,
+} from '@shared/types'
 import {
-  getConfig,
-  saveConfig,
+  skipToken,
+  type UseMutationOptions,
+  type UseQueryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
+import {
   addConfig,
+  getConfig,
   removeConfig,
-} from '../lib/api/config';
+  saveConfig,
+} from '../lib/api/config'
+import { browseFilesystem, readFile, writeFile } from '../lib/api/filesystem'
+import { deleteLog, getLogContent, getLogs, rotateLogs } from '../lib/api/logs'
+import { schedulesApi } from '../lib/api/schedules'
 import {
-  parseSnapRaidConfig,
+  addDataDisk,
+  addExclude,
+  addParityDisk,
   executeCommand,
   getCurrentJob,
   getStatus,
-  addDataDisk,
-  addParityDisk,
+  parseSnapRaidConfig,
   removeDisk,
-  addExclude,
   removeExclude,
   setPool,
-} from '../lib/api/snapraid';
-import {
-  browseFilesystem,
-  readFile,
-  writeFile,
-} from '../lib/api/filesystem';
-import {
-  getLogs,
-  getLogContent,
-  deleteLog,
-  rotateLogs,
-} from '../lib/api/logs';
-import { schedulesApi } from '../lib/api/schedules';
+} from '../lib/api/snapraid'
 
 // ====================
 // Query Keys
@@ -42,313 +48,444 @@ export const queryKeys = {
   status: ['status'] as const,
   logs: ['logs'] as const,
   logContent: (filename: string) => ['log-content', filename] as const,
-  filesystem: (path: string | undefined, filter: 'conf' | 'directories') => ['filesystem', path, filter] as const,
+  filesystem: (path: string | undefined, filter: 'conf' | 'directories') =>
+    ['filesystem', path, filter] as const,
   fileContent: (path: string) => ['file-content', path] as const,
   schedules: ['schedules'] as const,
   schedule: (id: string) => ['schedule', id] as const,
-};
+}
 
 // ====================
 // Config Queries
 // ====================
 
-export const useConfig = (options?: Omit<UseQueryOptions<AppConfig>, 'queryKey' | 'queryFn'>) => {
+export const useConfig = (
+  options?: Omit<UseQueryOptions<AppConfig>, 'queryKey' | 'queryFn'>,
+) => {
   return useQuery({
     queryKey: queryKeys.config,
     queryFn: getConfig,
     ...options,
-  });
+  })
 }
 
-export const useSnapRaidConfig = (path: string | undefined, options?: Omit<UseQueryOptions<ParsedSnapRaidConfig>, 'queryKey' | 'queryFn'>) => {
+export const useSnapRaidConfig = (
+  path: string | undefined,
+  options?: Omit<UseQueryOptions<ParsedSnapRaidConfig>, 'queryKey' | 'queryFn'>,
+) => {
   return useQuery({
-    queryKey: queryKeys.snapraidConfig(path!),
-    queryFn: () => parseSnapRaidConfig(path!),
-    enabled: !!path,
+    queryKey: queryKeys.snapraidConfig(path ?? ''),
+    queryFn: path ? () => parseSnapRaidConfig(path) : skipToken,
     ...options,
-  });
+  })
 }
 
-export const useCurrentJob = (options?: Omit<UseQueryOptions<RunningJob | null>, 'queryKey' | 'queryFn'>) => {
+export const useCurrentJob = (
+  options?: Omit<UseQueryOptions<RunningJob | null>, 'queryKey' | 'queryFn'>,
+) => {
   return useQuery({
     queryKey: queryKeys.currentJob,
     queryFn: getCurrentJob,
     ...options,
-  });
+  })
 }
 
-export const useStatus = (configPath?: string, options?: Omit<UseQueryOptions<{ status: SnapRaidStatus; timestamp: string; exitCode: number | null }>, 'queryKey' | 'queryFn'>) => {
+export const useStatus = (
+  configPath?: string,
+  options?: Omit<
+    UseQueryOptions<{
+      status: SnapRaidStatus
+      timestamp: string
+      exitCode: number | null
+    }>,
+    'queryKey' | 'queryFn'
+  >,
+) => {
   return useQuery({
     queryKey: [...queryKeys.status, configPath],
     queryFn: () => getStatus(configPath),
     ...options,
-  });
+  })
 }
 
 // ====================
 // Logs Queries
 // ====================
 
-export const useLogs = (options?: Omit<UseQueryOptions<LogFile[]>, 'queryKey' | 'queryFn'>) => {
+export const useLogs = (
+  options?: Omit<UseQueryOptions<LogFile[]>, 'queryKey' | 'queryFn'>,
+) => {
   return useQuery({
     queryKey: queryKeys.logs,
     queryFn: getLogs,
     ...options,
-  });
+  })
 }
 
-export const useLogContent = (filename: string | undefined, options?: Omit<UseQueryOptions<string>, 'queryKey' | 'queryFn'>) => {
+export const useLogContent = (
+  filename: string | undefined,
+  options?: Omit<UseQueryOptions<string>, 'queryKey' | 'queryFn'>,
+) => {
   return useQuery({
-    queryKey: queryKeys.logContent(filename!),
-    queryFn: () => getLogContent(filename!),
-    enabled: !!filename,
+    queryKey: queryKeys.logContent(filename ?? ''),
+    queryFn: filename ? () => getLogContent(filename) : skipToken,
     ...options,
-  });
+  })
 }
 
 // ====================
 // Filesystem Queries
 // ====================
 
-export const useFilesystem = (path: string | undefined, filter: 'conf' | 'directories' = 'conf', options?: Omit<UseQueryOptions<{ path: string; entries: Array<{ name: string; isDirectory: boolean; path: string }> }>, 'queryKey' | 'queryFn'>) => {
+export const useFilesystem = (
+  path: string | undefined,
+  filter: 'conf' | 'directories' = 'conf',
+  options?: Omit<
+    UseQueryOptions<{
+      path: string
+      entries: Array<{ name: string; isDirectory: boolean; path: string }>
+    }>,
+    'queryKey' | 'queryFn'
+  >,
+) => {
   return useQuery({
     queryKey: queryKeys.filesystem(path, filter),
     queryFn: () => browseFilesystem(path, filter),
     ...options,
-  });
+  })
 }
 
-export const useFileContent = (path: string | undefined, options?: Omit<UseQueryOptions<string>, 'queryKey' | 'queryFn'>) => {
+export const useFileContent = (
+  path: string | undefined,
+  options?: Omit<UseQueryOptions<string>, 'queryKey' | 'queryFn'>,
+) => {
   return useQuery({
-    queryKey: queryKeys.fileContent(path!),
-    queryFn: () => readFile(path!),
-    enabled: !!path,
+    queryKey: queryKeys.fileContent(path ?? ''),
+    queryFn: path ? () => readFile(path) : skipToken,
     ...options,
-  });
+  })
 }
 
 // ====================
 // Config Mutations
 // ====================
 
-export const useSaveConfig = (options?: UseMutationOptions<void, Error, AppConfig>) => {
-  const queryClient = useQueryClient();
+export const useSaveConfig = (
+  options?: UseMutationOptions<void, Error, AppConfig>,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: saveConfig,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.config });
+      queryClient.invalidateQueries({ queryKey: queryKeys.config })
     },
     ...options,
-  });
+  })
 }
 
-export const useAddConfig = (options?: UseMutationOptions<AppConfig, Error, { name: string; path: string; enabled?: boolean }>) => {
-  const queryClient = useQueryClient();
+export const useAddConfig = (
+  options?: UseMutationOptions<
+    AppConfig,
+    Error,
+    { name: string; path: string; enabled?: boolean }
+  >,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ name, path, enabled = true }) => addConfig(name, path, enabled),
+    mutationFn: ({ name, path, enabled = true }) =>
+      addConfig(name, path, enabled),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.config });
+      queryClient.invalidateQueries({ queryKey: queryKeys.config })
     },
     ...options,
-  });
+  })
 }
 
-export const useRemoveConfig = (options?: UseMutationOptions<AppConfig, Error, string>) => {
-  const queryClient = useQueryClient();
+export const useRemoveConfig = (
+  options?: UseMutationOptions<AppConfig, Error, string>,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: removeConfig,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.config });
+      queryClient.invalidateQueries({ queryKey: queryKeys.config })
     },
     ...options,
-  });
+  })
 }
 
 // ====================
 // SnapRAID Mutations
 // ====================
 
-export const useExecuteCommand = (options?: UseMutationOptions<void, Error, { command: SnapRaidCommand; configPath: string; args?: string[] }>) => {
-  const queryClient = useQueryClient();
+export const useExecuteCommand = (
+  options?: UseMutationOptions<
+    void,
+    Error,
+    { command: SnapRaidCommand; configPath: string; args?: string[] }
+  >,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ command, configPath, args = [] }) => executeCommand(command, configPath, args),
+    mutationFn: ({ command, configPath, args = [] }) =>
+      executeCommand(command, configPath, args),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.currentJob });
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentJob })
     },
     ...options,
-  });
+  })
 }
 
-export const useAddDataDisk = (options?: UseMutationOptions<ParsedSnapRaidConfig, Error, { configPath: string; diskName: string; diskPath: string }>) => {
-  const queryClient = useQueryClient();
+export const useAddDataDisk = (
+  options?: UseMutationOptions<
+    ParsedSnapRaidConfig,
+    Error,
+    { configPath: string; diskName: string; diskPath: string }
+  >,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ configPath, diskName, diskPath }) => addDataDisk(configPath, diskName, diskPath),
+    mutationFn: ({ configPath, diskName, diskPath }) =>
+      addDataDisk(configPath, diskName, diskPath),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.snapraidConfig(variables.configPath) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.snapraidConfig(variables.configPath),
+      })
     },
     ...options,
-  });
+  })
 }
 
-export const useAddParityDisk = (options?: UseMutationOptions<ParsedSnapRaidConfig, Error, { configPath: string; parityPath: string }>) => {
-  const queryClient = useQueryClient();
+export const useAddParityDisk = (
+  options?: UseMutationOptions<
+    ParsedSnapRaidConfig,
+    Error,
+    { configPath: string; parityPath: string }
+  >,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ configPath, parityPath }) => addParityDisk(configPath, parityPath),
+    mutationFn: ({ configPath, parityPath }) =>
+      addParityDisk(configPath, parityPath),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.snapraidConfig(variables.configPath) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.snapraidConfig(variables.configPath),
+      })
     },
     ...options,
-  });
+  })
 }
 
-export const useRemoveDisk = (options?: UseMutationOptions<ParsedSnapRaidConfig, Error, { configPath: string; diskName: string | null; diskType: 'data' | 'parity' }>) => {
-  const queryClient = useQueryClient();
+export const useRemoveDisk = (
+  options?: UseMutationOptions<
+    ParsedSnapRaidConfig,
+    Error,
+    { configPath: string; diskName: string | null; diskType: 'data' | 'parity' }
+  >,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ configPath, diskName, diskType }) => removeDisk(configPath, diskName, diskType),
+    mutationFn: ({ configPath, diskName, diskType }) =>
+      removeDisk(configPath, diskName, diskType),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.snapraidConfig(variables.configPath) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.snapraidConfig(variables.configPath),
+      })
     },
     ...options,
-  });
+  })
 }
 
-export const useAddExclude = (options?: UseMutationOptions<ParsedSnapRaidConfig, Error, { configPath: string; pattern: string }>) => {
-  const queryClient = useQueryClient();
+export const useAddExclude = (
+  options?: UseMutationOptions<
+    ParsedSnapRaidConfig,
+    Error,
+    { configPath: string; pattern: string }
+  >,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ configPath, pattern }) => addExclude(configPath, pattern),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.snapraidConfig(variables.configPath) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.snapraidConfig(variables.configPath),
+      })
     },
     ...options,
-  });
+  })
 }
 
-export const useRemoveExclude = (options?: UseMutationOptions<ParsedSnapRaidConfig, Error, { configPath: string; pattern: string }>) => {
-  const queryClient = useQueryClient();
+export const useRemoveExclude = (
+  options?: UseMutationOptions<
+    ParsedSnapRaidConfig,
+    Error,
+    { configPath: string; pattern: string }
+  >,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ configPath, pattern }) => removeExclude(configPath, pattern),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.snapraidConfig(variables.configPath) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.snapraidConfig(variables.configPath),
+      })
     },
     ...options,
-  });
+  })
 }
 
-export const useSetPool = (options?: UseMutationOptions<ParsedSnapRaidConfig, Error, { configPath: string; poolPath: string | undefined }>) => {
-  const queryClient = useQueryClient();
+export const useSetPool = (
+  options?: UseMutationOptions<
+    ParsedSnapRaidConfig,
+    Error,
+    { configPath: string; poolPath: string | undefined }
+  >,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ configPath, poolPath }) => setPool(configPath, poolPath),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.snapraidConfig(variables.configPath) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.snapraidConfig(variables.configPath),
+      })
     },
     ...options,
-  });
+  })
 }
 
-export const useWriteFile = (options?: UseMutationOptions<void, Error, { path: string; content: string }>) => {
-  const queryClient = useQueryClient();
+export const useWriteFile = (
+  options?: UseMutationOptions<void, Error, { path: string; content: string }>,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ path, content }) => writeFile(path, content),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.fileContent(variables.path) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.fileContent(variables.path),
+      })
     },
     ...options,
-  });
+  })
 }
 
 // ====================
 // Logs Mutations
 // ====================
 
-export const useDeleteLog = (options?: UseMutationOptions<void, Error, string>) => {
-  const queryClient = useQueryClient();
+export const useDeleteLog = (
+  options?: UseMutationOptions<void, Error, string>,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: deleteLog,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.logs });
+      queryClient.invalidateQueries({ queryKey: queryKeys.logs })
     },
     ...options,
-  });
+  })
 }
 
-export const useRotateLogs = (options?: UseMutationOptions<{ deleted: number }, Error, void>) => {
-  const queryClient = useQueryClient();
+export const useRotateLogs = (
+  options?: UseMutationOptions<{ deleted: number }, Error, void>,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: rotateLogs,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.logs });
+      queryClient.invalidateQueries({ queryKey: queryKeys.logs })
     },
     ...options,
-  });
+  })
 }
 
 // ====================
 // Schedules Queries
 // ====================
 
-export const useSchedules = (options?: Omit<UseQueryOptions<Schedule[]>, 'queryKey' | 'queryFn'>) => {
+export const useSchedules = (
+  options?: Omit<UseQueryOptions<Schedule[]>, 'queryKey' | 'queryFn'>,
+) => {
   return useQuery({
     queryKey: queryKeys.schedules,
     queryFn: schedulesApi.getAll,
     ...options,
-  });
+  })
 }
 
-export const useSchedule = (id: string | undefined, options?: Omit<UseQueryOptions<Schedule>, 'queryKey' | 'queryFn'>) => {
+export const useSchedule = (
+  id: string | undefined,
+  options?: Omit<UseQueryOptions<Schedule>, 'queryKey' | 'queryFn'>,
+) => {
   return useQuery({
-    queryKey: queryKeys.schedule(id!),
-    queryFn: () => schedulesApi.getById(id!),
-    enabled: !!id,
+    queryKey: queryKeys.schedule(id ?? ''),
+    queryFn: id ? () => schedulesApi.getById(id) : skipToken,
     ...options,
-  });
+  })
 }
 
 // ====================
 // Schedules Mutations
 // ====================
 
-export const useCreateSchedule = (options?: UseMutationOptions<Schedule, Error, Omit<Schedule, 'id' | 'createdAt' | 'updatedAt' | 'lastRun' | 'nextRun'>>) => {
-  const queryClient = useQueryClient();
+export const useCreateSchedule = (
+  options?: UseMutationOptions<
+    Schedule,
+    Error,
+    Omit<Schedule, 'id' | 'createdAt' | 'updatedAt' | 'lastRun' | 'nextRun'>
+  >,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: schedulesApi.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.schedules });
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedules })
     },
     ...options,
-  });
+  })
 }
 
-export const useUpdateSchedule = (options?: UseMutationOptions<Schedule, Error, { id: string; updates: Partial<Omit<Schedule, 'id' | 'createdAt'>> }>) => {
-  const queryClient = useQueryClient();
+export const useUpdateSchedule = (
+  options?: UseMutationOptions<
+    Schedule,
+    Error,
+    { id: string; updates: Partial<Omit<Schedule, 'id' | 'createdAt'>> }
+  >,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, updates }) => schedulesApi.update(id, updates),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.schedules });
-      queryClient.invalidateQueries({ queryKey: queryKeys.schedule(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedules })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.schedule(variables.id),
+      })
     },
     ...options,
-  });
+  })
 }
 
-export const useDeleteSchedule = (options?: UseMutationOptions<void, Error, string>) => {
-  const queryClient = useQueryClient();
+export const useDeleteSchedule = (
+  options?: UseMutationOptions<void, Error, string>,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: schedulesApi.delete,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.schedules });
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedules })
     },
     ...options,
-  });
+  })
 }
 
-export const useToggleSchedule = (options?: UseMutationOptions<Schedule, Error, string>) => {
-  const queryClient = useQueryClient();
+export const useToggleSchedule = (
+  options?: UseMutationOptions<Schedule, Error, string>,
+) => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: schedulesApi.toggle,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.schedules });
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedules })
     },
     ...options,
-  });
+  })
 }
-

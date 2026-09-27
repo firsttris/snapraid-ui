@@ -1,20 +1,32 @@
 import { useState } from 'react'
+import * as m from '../paraglide/messages'
 import { DirectoryBrowser } from './DirectoryBrowser'
+import { UndeleteAdvancedOptions } from './UndeleteAdvancedOptions'
 import { UndeleteModeSelector } from './UndeleteModeSelector'
 import { UndeletePathInput } from './UndeletePathInput'
-import { UndeleteAdvancedOptions } from './UndeleteAdvancedOptions'
-import * as m from '../paraglide/messages'
 
 interface UndeleteDialogProps {
   dataDisk: Record<string, string>
-  onExecute: (mode: 'all-missing' | 'directory-missing' | 'specific', path?: string, diskFilter?: string) => void
+  onExecute: (
+    mode: 'all-missing' | 'directory-missing' | 'specific',
+    path?: string,
+    diskFilter?: string,
+  ) => void
   onClose: () => void
 }
 
-export const UndeleteDialog = ({ dataDisk, onExecute, onClose }: UndeleteDialogProps) => {
-  const [mode, setMode] = useState<'all-missing' | 'directory-missing' | 'specific'>('specific')
+export const UndeleteDialog = ({
+  dataDisk,
+  onExecute,
+  onClose,
+}: UndeleteDialogProps) => {
+  const [mode, setMode] = useState<
+    'all-missing' | 'directory-missing' | 'specific'
+  >('specific')
   const [filePath, setFilePath] = useState<string>('')
-  const [selectedDisk, setSelectedDisk] = useState<string>(Object.keys(dataDisk)[0] || '')
+  const [selectedDisk, setSelectedDisk] = useState<string>(
+    Object.keys(dataDisk)[0] || '',
+  )
   const [diskFilter, setDiskFilter] = useState<string>()
   const [showBrowser, setShowBrowser] = useState<boolean>(false)
 
@@ -40,15 +52,15 @@ export const UndeleteDialog = ({ dataDisk, onExecute, onClose }: UndeleteDialogP
 
   const getRelativePath = (absolutePath: string): string => {
     // Ensure trailing slash
-    const path = absolutePath.trim().endsWith('/') 
-      ? absolutePath.trim() 
-      : absolutePath.trim() + '/'
-    
+    const path = absolutePath.trim().endsWith('/')
+      ? absolutePath.trim()
+      : `${absolutePath.trim()}/`
+
     // If already relative (no leading /), return as is
     if (!path.startsWith('/')) {
       return path
     }
-    
+
     // Try to find which data disk this path belongs to
     for (const [, diskPath] of Object.entries(dataDisk)) {
       if (path.startsWith(diskPath)) {
@@ -57,7 +69,7 @@ export const UndeleteDialog = ({ dataDisk, onExecute, onClose }: UndeleteDialogP
         return relative || './'
       }
     }
-    
+
     // If no match, return as is (user might have entered relative path)
     return path
   }
@@ -75,9 +87,12 @@ export const UndeleteDialog = ({ dataDisk, onExecute, onClose }: UndeleteDialogP
           <div className="p-6 border-b flex justify-between items-center">
             <div>
               <h3 className="text-xl font-semibold">{m.undelete_title()}</h3>
-              <p className="text-sm text-gray-600 mt-1">{m.undelete_description()}</p>
+              <p className="text-sm text-gray-600 mt-1">
+                {m.undelete_description()}
+              </p>
             </div>
             <button
+              type="button"
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
             >
@@ -111,12 +126,14 @@ export const UndeleteDialog = ({ dataDisk, onExecute, onClose }: UndeleteDialogP
           {/* Footer */}
           <div className="p-6 border-t flex justify-end gap-3">
             <button
+              type="button"
               onClick={onClose}
               className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
             >
               {m.common_cancel()}
             </button>
             <button
+              type="button"
               onClick={handleExecute}
               className="px-4 py-2 text-white bg-orange-600 rounded hover:bg-orange-700 transition-colors"
             >
@@ -131,7 +148,9 @@ export const UndeleteDialog = ({ dataDisk, onExecute, onClose }: UndeleteDialogP
         <DirectoryBrowser
           onSelect={handleBrowserSelect}
           onClose={() => setShowBrowser(false)}
-          currentValue={dataDisk[selectedDisk] || Object.values(dataDisk)[0] || '/'}
+          currentValue={
+            dataDisk[selectedDisk] || Object.values(dataDisk)[0] || '/'
+          }
           title={m.undelete_browse_files()}
         />
       )}

@@ -12,16 +12,15 @@ interface UndeletePathInputProps {
   onBrowse: () => void
 }
 
-export const UndeletePathInput = ({ 
-  mode, 
-  dataDisk, 
+export const UndeletePathInput = ({
+  mode,
+  dataDisk,
   filePath,
   selectedDisk,
   onSelectedDiskChange,
   onFilePathChange,
-  onBrowse 
+  onBrowse,
 }: UndeletePathInputProps) => {
-
   if (mode === 'all-missing') {
     return null
   }
@@ -31,10 +30,14 @@ export const UndeletePathInput = ({
       {/* Data Disk Selector - for browsing */}
       {Object.keys(dataDisk).length > 1 && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="undelete-disk"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             {m.undelete_browse_from_disk()}
           </label>
           <select
+            id="undelete-disk"
             value={selectedDisk}
             onChange={(e) => onSelectedDiskChange(e.target.value)}
             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -50,13 +53,17 @@ export const UndeletePathInput = ({
           </p>
         </div>
       )}
-      
+
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label
+          htmlFor="undelete-file-path"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
           {m.undelete_file_path_label()}
         </label>
         <div className="flex gap-2">
           <input
+            id="undelete-file-path"
             type="text"
             value={filePath}
             onChange={(e) => onFilePathChange(e.target.value)}
@@ -64,6 +71,7 @@ export const UndeletePathInput = ({
             className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
+            type="button"
             onClick={onBrowse}
             disabled={!selectedDisk}
             className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -72,8 +80,8 @@ export const UndeletePathInput = ({
           </button>
         </div>
         <p className="mt-2 text-sm text-gray-500">
-          {mode === 'directory-missing' 
-            ? m.undelete_path_help_directory() 
+          {mode === 'directory-missing'
+            ? m.undelete_path_help_directory()
             : m.undelete_path_help_file()}
         </p>
         {selectedDisk && dataDisk[selectedDisk] && (

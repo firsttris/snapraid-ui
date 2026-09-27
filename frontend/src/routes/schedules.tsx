@@ -1,8 +1,15 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
-import { useSchedules, useCreateSchedule, useUpdateSchedule, useDeleteSchedule, useToggleSchedule, useConfig } from '../hooks/queries'
 import type { Schedule, SnapRaidCommand } from '@shared/types'
-import { Calendar, Play, Pause, Edit, Trash2 } from 'lucide-react'
+import { createFileRoute } from '@tanstack/react-router'
+import { Calendar, Edit, Pause, Play, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import {
+  useConfig,
+  useCreateSchedule,
+  useDeleteSchedule,
+  useSchedules,
+  useToggleSchedule,
+  useUpdateSchedule,
+} from '../hooks/queries'
 
 export const Route = createFileRoute('/schedules')({
   component: SchedulesPage,
@@ -19,7 +26,12 @@ function SchedulesPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  const handleCreate = async (schedule: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt' | 'lastRun' | 'nextRun'>) => {
+  const handleCreate = async (
+    schedule: Omit<
+      Schedule,
+      'id' | 'createdAt' | 'updatedAt' | 'lastRun' | 'nextRun'
+    >,
+  ) => {
     try {
       await createSchedule.mutateAsync(schedule)
       setIsCreating(false)
@@ -28,7 +40,10 @@ function SchedulesPage() {
     }
   }
 
-  const handleUpdate = async (id: string, updates: Partial<Omit<Schedule, 'id' | 'createdAt'>>) => {
+  const handleUpdate = async (
+    id: string,
+    updates: Partial<Omit<Schedule, 'id' | 'createdAt'>>,
+  ) => {
     try {
       await updateSchedule.mutateAsync({ id, updates })
       setEditingId(null)
@@ -79,7 +94,8 @@ function SchedulesPage() {
             <Calendar className="w-8 h-8" />
             Scheduled Jobs
           </h1>
-          <button 
+          <button
+            type="button"
             onClick={() => setIsCreating(true)}
             disabled={isCreating}
             className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -103,7 +119,8 @@ function SchedulesPage() {
             <div className="bg-white rounded-lg shadow p-12 text-center">
               <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-400" />
               <p className="text-xl text-gray-600">
-                No schedules configured yet. Create one to automate your SnapRAID tasks.
+                No schedules configured yet. Create one to automate your
+                SnapRAID tasks.
               </p>
             </div>
           ) : (
@@ -132,20 +149,38 @@ function SchedulesPage() {
 interface ScheduleFormProps {
   schedule?: Schedule
   configs: Array<{ name: string; path: string }>
-  onSubmit: (schedule: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt' | 'lastRun' | 'nextRun'>) => void
+  onSubmit: (
+    schedule: Omit<
+      Schedule,
+      'id' | 'createdAt' | 'updatedAt' | 'lastRun' | 'nextRun'
+    >,
+  ) => void
   onCancel: () => void
 }
 
-function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormProps) {
+function ScheduleForm({
+  schedule,
+  configs,
+  onSubmit,
+  onCancel,
+}: ScheduleFormProps) {
   const [name, setName] = useState(schedule?.name || '')
-  const [command, setCommand] = useState<SnapRaidCommand>(schedule?.command || 'sync')
-  const [configPath, setConfigPath] = useState(schedule?.configPath || configs[0]?.path || '')
+  const [command, setCommand] = useState<SnapRaidCommand>(
+    schedule?.command || 'sync',
+  )
+  const [configPath, setConfigPath] = useState(
+    schedule?.configPath || configs[0]?.path || '',
+  )
   const [enabled, setEnabled] = useState(schedule?.enabled ?? true)
-  
+
   // Schedule builder state
-  const [scheduleType, setScheduleType] = useState<'preset' | 'custom'>('preset')
+  const [scheduleType, setScheduleType] = useState<'preset' | 'custom'>(
+    'preset',
+  )
   const [preset, setPreset] = useState('daily')
-  const [customFrequency, setCustomFrequency] = useState<'hourly' | 'daily' | 'weekly' | 'monthly'>('daily')
+  const [customFrequency, setCustomFrequency] = useState<
+    'hourly' | 'daily' | 'weekly' | 'monthly'
+  >('daily')
   const [hour, setHour] = useState(2)
   const [minute, setMinute] = useState(0)
   const [dayOfWeek, setDayOfWeek] = useState(0) // Sunday
@@ -155,17 +190,29 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
   const [useEveryHour, setUseEveryHour] = useState(false)
   const [useEveryMinute, setUseEveryMinute] = useState(false)
 
-  const commands: SnapRaidCommand[] = ['sync', 'scrub', 'status', 'diff', 'check', 'smart']
+  const commands: SnapRaidCommand[] = [
+    'sync',
+    'scrub',
+    'status',
+    'diff',
+    'check',
+    'smart',
+  ]
 
   // Generate cron expression based on settings
   const generateCronExpression = (): string => {
     if (scheduleType === 'preset') {
       switch (preset) {
-        case 'daily': return '0 2 * * *'
-        case 'weekly': return '0 2 * * 0'
-        case 'monthly': return '0 2 1 * *'
-        case 'every6h': return '0 */6 * * *'
-        default: return '0 2 * * *'
+        case 'daily':
+          return '0 2 * * *'
+        case 'weekly':
+          return '0 2 * * 0'
+        case 'monthly':
+          return '0 2 1 * *'
+        case 'every6h':
+          return '0 */6 * * *'
+        default:
+          return '0 2 * * *'
       }
     }
 
@@ -173,18 +220,27 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
     switch (customFrequency) {
       case 'hourly':
         return `${minute} */${everyNHours} * * *`
-      case 'daily':
-        const minutePart = useEveryMinute ? `*/${everyNMinutes}` : minute.toString()
+      case 'daily': {
+        const minutePart = useEveryMinute
+          ? `*/${everyNMinutes}`
+          : minute.toString()
         const hourPart = useEveryHour ? '*' : hour.toString()
         return `${minutePart} ${hourPart} * * *`
-      case 'weekly':
-        const weeklyMinutePart = useEveryMinute ? `*/${everyNMinutes}` : minute.toString()
+      }
+      case 'weekly': {
+        const weeklyMinutePart = useEveryMinute
+          ? `*/${everyNMinutes}`
+          : minute.toString()
         const weeklyHourPart = useEveryHour ? '*' : hour.toString()
         return `${weeklyMinutePart} ${weeklyHourPart} * * ${dayOfWeek}`
-      case 'monthly':
-        const monthlyMinutePart = useEveryMinute ? `*/${everyNMinutes}` : minute.toString()
+      }
+      case 'monthly': {
+        const monthlyMinutePart = useEveryMinute
+          ? `*/${everyNMinutes}`
+          : minute.toString()
         const monthlyHourPart = useEveryHour ? '*' : hour.toString()
         return `${monthlyMinutePart} ${monthlyHourPart} ${dayOfMonth} * *`
+      }
       default:
         return '0 2 * * *'
     }
@@ -205,10 +261,15 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
 
   return (
     <div className="bg-white rounded-lg shadow p-6 mb-6">
-      <h3 className="text-xl font-semibold mb-4">{schedule ? 'Edit Schedule' : 'Create New Schedule'}</h3>
+      <h3 className="text-xl font-semibold mb-4">
+        {schedule ? 'Edit Schedule' : 'Create New Schedule'}
+      </h3>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="name"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             Name
           </label>
           <input
@@ -223,7 +284,10 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
         </div>
 
         <div>
-          <label htmlFor="command" className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="command"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             Command
           </label>
           <select
@@ -233,13 +297,18 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
           >
             {commands.map((cmd) => (
-              <option key={cmd} value={cmd}>{cmd}</option>
+              <option key={cmd} value={cmd}>
+                {cmd}
+              </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label htmlFor="config" className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="config"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             Configuration
           </label>
           <select
@@ -249,16 +318,18 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
           >
             {configs.map((cfg) => (
-              <option key={cfg.path} value={cfg.path}>{cfg.name}</option>
+              <option key={cfg.path} value={cfg.path}>
+                {cfg.name}
+              </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <span className="block text-sm font-medium text-gray-700 mb-2">
             Schedule
-          </label>
-          
+          </span>
+
           {/* Preset vs Custom Toggle */}
           <div className="flex gap-2 mb-3">
             <button
@@ -311,12 +382,18 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
             <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
               {/* Frequency Selector */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
+                <label
+                  htmlFor="schedule-frequency"
+                  className="block text-xs font-medium text-gray-600 mb-1"
+                >
                   Frequency
                 </label>
                 <select
+                  id="schedule-frequency"
                   value={customFrequency}
-                  onChange={(e) => setCustomFrequency(e.target.value as any)}
+                  onChange={(e) =>
+                    setCustomFrequency(e.target.value as typeof customFrequency)
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm"
                 >
                   <option value="hourly">Every N hours</option>
@@ -330,10 +407,14 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
               {customFrequency === 'hourly' ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                    <label
+                      htmlFor="schedule-every-n-hours"
+                      className="block text-xs font-medium text-gray-600 mb-1"
+                    >
                       Every N hours
                     </label>
                     <input
+                      id="schedule-every-n-hours"
                       type="number"
                       min="1"
                       max="23"
@@ -343,10 +424,14 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                    <label
+                      htmlFor="schedule-minute"
+                      className="block text-xs font-medium text-gray-600 mb-1"
+                    >
                       At minute
                     </label>
                     <input
+                      id="schedule-minute"
                       type="number"
                       min="0"
                       max="59"
@@ -397,7 +482,9 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
                           min="1"
                           max="59"
                           value={everyNMinutes}
-                          onChange={(e) => setEveryNMinutes(Number(e.target.value))}
+                          onChange={(e) =>
+                            setEveryNMinutes(Number(e.target.value))
+                          }
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
                           placeholder="Every N min"
                         />
@@ -420,10 +507,14 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
               {/* Day Selector for Weekly */}
               {customFrequency === 'weekly' && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                  <label
+                    htmlFor="schedule-day-of-week"
+                    className="block text-xs font-medium text-gray-600 mb-1"
+                  >
                     Day of week
                   </label>
                   <select
+                    id="schedule-day-of-week"
                     value={dayOfWeek}
                     onChange={(e) => setDayOfWeek(Number(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
@@ -442,10 +533,14 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
               {/* Day Selector for Monthly */}
               {customFrequency === 'monthly' && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                  <label
+                    htmlFor="schedule-day-of-month"
+                    className="block text-xs font-medium text-gray-600 mb-1"
+                  >
                     Day of month (1-31)
                   </label>
                   <input
+                    id="schedule-day-of-month"
                     type="number"
                     min="1"
                     max="31"
@@ -460,10 +555,14 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
 
           {/* Show generated cron expression */}
           <div className="mt-3">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label
+              htmlFor="schedule-cron-expression"
+              className="block text-xs font-medium text-gray-600 mb-1"
+            >
               Generated Cron Expression
             </label>
             <input
+              id="schedule-cron-expression"
               type="text"
               value={cronExpression}
               readOnly
@@ -485,15 +584,15 @@ function ScheduleForm({ schedule, configs, onSubmit, onCancel }: ScheduleFormPro
         </div>
 
         <div className="flex gap-2 justify-end pt-4">
-          <button 
-            type="button" 
-            onClick={onCancel} 
+          <button
+            type="button"
+            onClick={onCancel}
             className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel
           </button>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
           >
             {schedule ? 'Save' : 'Create'}
@@ -515,8 +614,19 @@ interface ScheduleCardProps {
   onToggle: () => void
 }
 
-function ScheduleCard({ schedule, configs, isEditing, onEdit, onUpdate, onCancelEdit, onDelete, onToggle }: ScheduleCardProps) {
-  const configName = configs.find(c => c.path === schedule.configPath)?.name || schedule.configPath
+function ScheduleCard({
+  schedule,
+  configs,
+  isEditing,
+  onEdit,
+  onUpdate,
+  onCancelEdit,
+  onDelete,
+  onToggle,
+}: ScheduleCardProps) {
+  const configName =
+    configs.find((c) => c.path === schedule.configPath)?.name ||
+    schedule.configPath
 
   if (isEditing) {
     return (
@@ -530,7 +640,9 @@ function ScheduleCard({ schedule, configs, isEditing, onEdit, onUpdate, onCancel
   }
 
   return (
-    <div className={`bg-white rounded-lg shadow p-6 ${!schedule.enabled ? 'opacity-60' : ''}`}>
+    <div
+      className={`bg-white rounded-lg shadow p-6 ${!schedule.enabled ? 'opacity-60' : ''}`}
+    >
       <div className="flex justify-between items-start gap-4">
         <div className="flex-1">
           <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -543,21 +655,25 @@ function ScheduleCard({ schedule, configs, isEditing, onEdit, onUpdate, onCancel
           </h3>
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm text-gray-600">
             <strong className="text-gray-700">Command:</strong>
-            <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">{schedule.command}</span>
-            
+            <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">
+              {schedule.command}
+            </span>
+
             <strong className="text-gray-700">Config:</strong>
             <span>{configName}</span>
-            
+
             <strong className="text-gray-700">Schedule:</strong>
-            <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">{schedule.cronExpression}</span>
-            
+            <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">
+              {schedule.cronExpression}
+            </span>
+
             {schedule.nextRun && (
               <>
                 <strong className="text-gray-700">Next Run:</strong>
                 <span>{new Date(schedule.nextRun).toLocaleString()}</span>
               </>
             )}
-            
+
             {schedule.lastRun && (
               <>
                 <strong className="text-gray-700">Last Run:</strong>
@@ -569,19 +685,26 @@ function ScheduleCard({ schedule, configs, isEditing, onEdit, onUpdate, onCancel
 
         <div className="flex gap-2 shrink-0">
           <button
+            type="button"
             onClick={onToggle}
             title={schedule.enabled ? 'Disable' : 'Enable'}
             className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            {schedule.enabled ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+            {schedule.enabled ? (
+              <Pause className="w-5 h-5" />
+            ) : (
+              <Play className="w-5 h-5" />
+            )}
           </button>
-          <button 
+          <button
+            type="button"
             onClick={onEdit}
             className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <Edit className="w-5 h-5" />
           </button>
-          <button 
+          <button
+            type="button"
             onClick={onDelete}
             className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors"
           >

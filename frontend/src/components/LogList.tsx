@@ -1,17 +1,19 @@
-import { useState } from 'react'
 import type { SnapRaidCommand } from '@shared/types'
+import { useState } from 'react'
+import { useDeleteLog, useLogs, useRotateLogs } from '../hooks/queries'
+import * as m from '../paraglide/messages'
 import { LogFilters } from './LogFilters'
 import { LogListItem } from './LogListItem'
-import { useLogs, useDeleteLog, useRotateLogs } from '../hooks/queries'
-import * as m from '../paraglide/messages'
 
 interface LogListProps {
   selectedLog: string | null
-  onSelectLog: (filename: string) => void
+  onSelectLog: (filename: string | null) => void
 }
 
 export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
-  const [filterCommand, setFilterCommand] = useState<SnapRaidCommand | 'all'>('all')
+  const [filterCommand, setFilterCommand] = useState<SnapRaidCommand | 'all'>(
+    'all',
+  )
   const [searchTerm, setSearchTerm] = useState('')
 
   const { data: logs = [], isLoading, refetch } = useLogs()
@@ -24,12 +26,12 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
     deleteLogMutation.mutate(filename, {
       onSuccess: () => {
         if (selectedLog === filename) {
-          onSelectLog(null as any)
+          onSelectLog(null)
         }
       },
       onError: (error) => {
         alert(`Failed to delete log: ${error}`)
-      }
+      },
     })
   }
 
@@ -40,13 +42,16 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
       },
       onError: (error) => {
         alert(`Failed to rotate logs: ${error}`)
-      }
+      },
     })
   }
 
-  const filteredLogs = logs.filter(log => {
-    const matchesCommand = filterCommand === 'all' || log.command === filterCommand
-    const matchesSearch = log.filename.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredLogs = logs.filter((log) => {
+    const matchesCommand =
+      filterCommand === 'all' || log.command === filterCommand
+    const matchesSearch = log.filename
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
     return matchesCommand && matchesSearch
   })
 
@@ -59,12 +64,14 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
           </h2>
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => refetch()}
               className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium"
             >
               {m.log_list_refresh()}
             </button>
             <button
+              type="button"
               onClick={handleRotateLogs}
               className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all text-sm font-medium"
             >
@@ -83,12 +90,16 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
 
       <div className="overflow-auto max-h-[calc(100vh-300px)]">
         {isLoading ? (
-          <div className="p-6 text-center text-gray-500">{m.log_list_loading()}</div>
+          <div className="p-6 text-center text-gray-500">
+            {m.log_list_loading()}
+          </div>
         ) : filteredLogs.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">{m.log_list_no_logs()}</div>
+          <div className="p-6 text-center text-gray-500">
+            {m.log_list_no_logs()}
+          </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {filteredLogs.map(log => (
+            {filteredLogs.map((log) => (
               <LogListItem
                 key={log.filename}
                 log={log}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { DirectoryBrowser } from './DirectoryBrowser'
 import * as m from '../paraglide/messages'
+import { DirectoryBrowser } from './DirectoryBrowser'
 
 interface DataDiskSectionProps {
   data: Record<string, string>
@@ -8,7 +8,11 @@ interface DataDiskSectionProps {
   onRemove: (diskName: string) => Promise<void>
 }
 
-export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps) => {
+export const DataDiskSection = ({
+  data,
+  onAdd,
+  onRemove,
+}: DataDiskSectionProps) => {
   const [showAddDataDisk, setShowAddDataDisk] = useState(false)
   const [newDataDiskName, setNewDataDiskName] = useState('')
   const [newDataDiskPath, setNewDataDiskPath] = useState('')
@@ -51,12 +55,24 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
     <div className="bg-green-50 rounded-lg p-4 border border-green-200">
       <div className="flex justify-between items-center mb-3">
         <h3 className="font-semibold text-green-900 flex items-center gap-2">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+          <svg
+            aria-hidden="true"
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
+            />
           </svg>
           {m.data_disk_title()} ({Object.keys(data).length})
         </h3>
         <button
+          type="button"
           onClick={() => setShowAddDataDisk(!showAddDataDisk)}
           className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
         >
@@ -74,8 +90,14 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
         <div className="mb-3 p-3 bg-white rounded border border-green-300">
           <div className="grid grid-cols-2 gap-3 mb-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{m.data_disk_name_label()}</label>
+              <label
+                htmlFor="data-disk-name"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                {m.data_disk_name_label()}
+              </label>
               <input
+                id="data-disk-name"
                 type="text"
                 value={newDataDiskName}
                 onChange={(e) => setNewDataDiskName(e.target.value)}
@@ -84,9 +106,15 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{m.data_disk_path_label()}</label>
+              <label
+                htmlFor="data-disk-path"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                {m.data_disk_path_label()}
+              </label>
               <div className="flex gap-2">
                 <input
+                  id="data-disk-path"
                   type="text"
                   value={newDataDiskPath}
                   onChange={(e) => setNewDataDiskPath(e.target.value)}
@@ -94,6 +122,7 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono text-sm"
                 />
                 <button
+                  type="button"
                   onClick={() => setShowDataDiskBrowser(true)}
                   className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
                   title={m.data_disk_browse()}
@@ -105,6 +134,7 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
           </div>
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={handleAddDataDisk}
               disabled={addingDataDisk}
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm"
@@ -112,6 +142,7 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
               {addingDataDisk ? `${m.common_add()}...` : m.common_add()}
             </button>
             <button
+              type="button"
               onClick={() => {
                 setShowAddDataDisk(false)
                 setNewDataDiskName('')
@@ -128,15 +159,23 @@ export const DataDiskSection = ({ data, onAdd, onRemove }: DataDiskSectionProps)
 
       <div className="space-y-2">
         {Object.keys(data).length === 0 ? (
-          <div className="text-sm text-green-600 italic">{m.data_disk_no_disks()}</div>
+          <div className="text-sm text-green-600 italic">
+            {m.data_disk_no_disks()}
+          </div>
         ) : (
           Object.entries(data).map(([name, path]) => (
-            <div key={name} className="flex justify-between items-center bg-white p-3 rounded border border-green-200">
+            <div
+              key={name}
+              className="flex justify-between items-center bg-white p-3 rounded border border-green-200"
+            >
               <div className="flex items-center gap-3 flex-1">
-                <span className="font-semibold text-purple-600 text-sm">{name}</span>
+                <span className="font-semibold text-purple-600 text-sm">
+                  {name}
+                </span>
                 <span className="font-mono text-sm text-gray-700">{path}</span>
               </div>
               <button
+                type="button"
                 onClick={() => handleRemoveDisk(name)}
                 className="ml-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
               >

@@ -1,5 +1,5 @@
-import { API_BASE } from './constants'
 import type { Schedule } from '@shared/types'
+import { API_BASE } from './constants'
 
 export const schedulesApi = {
   getAll: async (): Promise<Schedule[]> => {
@@ -14,7 +14,12 @@ export const schedulesApi = {
     return res.json()
   },
 
-  create: async (schedule: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt' | 'lastRun' | 'nextRun'>): Promise<Schedule> => {
+  create: async (
+    schedule: Omit<
+      Schedule,
+      'id' | 'createdAt' | 'updatedAt' | 'lastRun' | 'nextRun'
+    >,
+  ): Promise<Schedule> => {
     const res = await fetch(`${API_BASE}/schedules`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -27,7 +32,10 @@ export const schedulesApi = {
     return res.json()
   },
 
-  update: async (id: string, updates: Partial<Omit<Schedule, 'id' | 'createdAt'>>): Promise<Schedule> => {
+  update: async (
+    id: string,
+    updates: Partial<Omit<Schedule, 'id' | 'createdAt'>>,
+  ): Promise<Schedule> => {
     const res = await fetch(`${API_BASE}/schedules/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },

@@ -1,14 +1,6 @@
 import { Link } from '@tanstack/react-router'
-
+import { Calendar, FileText, Home, Languages, Menu, X } from 'lucide-react'
 import { useState } from 'react'
-import {
-  Home,
-  Menu,
-  FileText,
-  X,
-  Languages,
-  Calendar,
-} from 'lucide-react'
 import * as m from '../paraglide/messages'
 import { getLocale, setLocale } from '../paraglide/runtime'
 
@@ -26,6 +18,7 @@ export const Header = () => {
     <>
       <header className="p-4 flex items-center bg-gray-800 text-white shadow-lg">
         <button
+          type="button"
           onClick={() => setIsOpen(true)}
           className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
           aria-label="Open menu"
@@ -42,12 +35,15 @@ export const Header = () => {
           </Link>
         </h1>
         <button
+          type="button"
           onClick={toggleLocale}
           className="ml-auto p-2 hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2"
           aria-label="Switch language"
         >
           <Languages size={20} />
-          <span className="text-sm font-medium">{currentLocale.toUpperCase()}</span>
+          <span className="text-sm font-medium">
+            {currentLocale.toUpperCase()}
+          </span>
         </button>
       </header>
 
@@ -59,6 +55,7 @@ export const Header = () => {
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h2 className="text-xl font-bold">{m.navigation()}</h2>
           <button
+            type="button"
             onClick={() => setIsOpen(false)}
             className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
             aria-label="Close menu"

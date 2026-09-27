@@ -1,3 +1,5 @@
 // vite proxy not forwards POST request bodys correctly, using localhost directly for dev
-export const API_BASE = import.meta.env.PROD ? '/api' : 'http://localhost:8080/api';
-export const WS_URL = import.meta.env.PROD ? '/ws' : 'ws://localhost:8080/ws';
+export const API_BASE = import.meta.env.PROD
+  ? '/api'
+  : 'http://localhost:8080/api'
+export const WS_URL = import.meta.env.PROD ? '/ws' : 'ws://localhost:8080/ws'

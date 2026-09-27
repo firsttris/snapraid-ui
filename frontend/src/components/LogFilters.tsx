@@ -8,7 +8,12 @@ interface LogFiltersProps {
   onFilterChange: (value: SnapRaidCommand | 'all') => void
 }
 
-export const LogFilters = ({ searchTerm, onSearchChange, filterCommand, onFilterChange }: LogFiltersProps) => {
+export const LogFilters = ({
+  searchTerm,
+  onSearchChange,
+  filterCommand,
+  onFilterChange,
+}: LogFiltersProps) => {
   return (
     <div className="space-y-3">
       <input
@@ -18,10 +23,11 @@ export const LogFilters = ({ searchTerm, onSearchChange, filterCommand, onFilter
         onChange={(e) => onSearchChange(e.target.value)}
         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
       />
-      
+
       <div className="flex gap-2 flex-wrap">
-        {(['all', 'status', 'sync', 'scrub', 'diff'] as const).map(cmd => (
+        {(['all', 'status', 'sync', 'scrub', 'diff'] as const).map((cmd) => (
           <button
+            type="button"
             key={cmd}
             onClick={() => onFilterChange(cmd)}
             className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${

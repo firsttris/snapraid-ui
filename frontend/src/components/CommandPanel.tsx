@@ -11,16 +11,26 @@ interface CommandPanelProps {
 
 const getCommandLabel = (id: SnapRaidCommand) => {
   switch (id) {
-    case 'status': return m.commands_status()
-    case 'diff': return m.commands_diff()
-    case 'sync': return m.commands_sync()
-    case 'scrub': return m.commands_scrub()
-    case 'fix': return m.commands_fix()
-    case 'check': return m.commands_check()
-    case 'pool': return m.commands_pool()
-    case 'devices': return m.commands_devices()
-    case 'list': return m.commands_list()
-    default: return id
+    case 'status':
+      return m.commands_status()
+    case 'diff':
+      return m.commands_diff()
+    case 'sync':
+      return m.commands_sync()
+    case 'scrub':
+      return m.commands_scrub()
+    case 'fix':
+      return m.commands_fix()
+    case 'check':
+      return m.commands_check()
+    case 'pool':
+      return m.commands_pool()
+    case 'devices':
+      return m.commands_devices()
+    case 'list':
+      return m.commands_list()
+    default:
+      return id
   }
 }
 
@@ -38,13 +48,20 @@ const COMMANDS: Array<{
   { id: 'list', color: 'bg-pink-600 hover:bg-pink-700' },
 ]
 
-export const CommandPanel = ({ onExecute, onUndelete, disabled, isRunning, currentCommand }: CommandPanelProps) => {
+export const CommandPanel = ({
+  onExecute,
+  onUndelete,
+  disabled,
+  isRunning,
+  currentCommand,
+}: CommandPanelProps) => {
   return (
     <div className="bg-white shadow rounded-lg p-6 mb-6">
       <h2 className="text-xl font-semibold mb-4">{m.commands_title()}</h2>
       <div className="flex flex-wrap gap-3">
         {COMMANDS.map(({ id, color }) => (
           <button
+            type="button"
             key={id}
             onClick={() => onExecute(id)}
             disabled={disabled || isRunning}
@@ -54,6 +71,7 @@ export const CommandPanel = ({ onExecute, onUndelete, disabled, isRunning, curre
           </button>
         ))}
         <button
+          type="button"
           onClick={onUndelete}
           disabled={disabled || isRunning}
           className="px-4 py-2 text-white rounded transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed bg-orange-600 hover:bg-orange-700"
@@ -63,7 +81,8 @@ export const CommandPanel = ({ onExecute, onUndelete, disabled, isRunning, curre
       </div>
       {isRunning && currentCommand && (
         <div className="mt-4 text-sm text-gray-600">
-          {m.commands_running()}: <span className="font-medium">{currentCommand}</span>
+          {m.commands_running()}:{' '}
+          <span className="font-medium">{currentCommand}</span>
           <span className="animate-pulse ml-2">...</span>
         </div>
       )}

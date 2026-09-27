@@ -1,13 +1,17 @@
-import { HeadContent, Scripts, createRootRoute, Link } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  createRootRoute,
+  HeadContent,
+  Link,
+  Scripts,
+} from '@tanstack/react-router'
+import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
-import { connectWebSocket, disconnectWebSocket } from '../lib/api/websocket'
-import { getLocale } from '../paraglide/runtime'
-import * as m from '../paraglide/messages'
-
 import { Header } from '../components/Header'
+import { connectWebSocket, disconnectWebSocket } from '../lib/api/websocket'
+import * as m from '../paraglide/messages'
+import { getLocale } from '../paraglide/runtime'
 
 import appCss from '../styles.css?url'
 
@@ -25,8 +29,12 @@ const queryClient = new QueryClient({
 export const Route = createRootRoute({
   notFoundComponent: () => (
     <div style={{ padding: '2rem', textAlign: 'center' }}>
-      <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>{m.not_found_title()}</h1>
-      <p style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>{m.not_found_message()}</p>
+      <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+        {m.not_found_title()}
+      </h1>
+      <p style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>
+        {m.not_found_message()}
+      </p>
       <Link to="/" style={{ color: '#0066cc', textDecoration: 'underline' }}>
         {m.not_found_go_home()}
       </Link>

@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react'
-import { validateConfig } from '../lib/api/snapraid'
+import { useEffect, useState } from 'react'
 import { useFileContent, useWriteFile } from '../hooks/queries'
+import { validateConfig } from '../lib/api/snapraid'
+import * as m from '../paraglide/messages'
+import { ConfigEditorFooter } from './ConfigEditorFooter'
+import { ConfigTextEditor } from './ConfigTextEditor'
 import { DiskManager } from './DiskManager'
-import { ViewModeToggle } from './ViewModeToggle'
 import { ErrorAlert } from './ErrorAlert'
 import { ValidationResultAlert } from './ValidationResultAlert'
-import { ConfigTextEditor } from './ConfigTextEditor'
-import { ConfigEditorFooter } from './ConfigEditorFooter'
-import * as m from '../paraglide/messages'
+import { ViewModeToggle } from './ViewModeToggle'
 
 interface ConfigEditorProps {
   configPath: string
@@ -16,17 +16,29 @@ interface ConfigEditorProps {
   onSaved?: () => void
 }
 
-export const ConfigEditor = ({ configPath, configName, onClose, onSaved }: ConfigEditorProps) => {
+export const ConfigEditor = ({
+  configPath,
+  configName,
+  onClose,
+  onSaved,
+}: ConfigEditorProps) => {
   const [content, setContent] = useState<string>('')
   const [originalContent, setOriginalContent] = useState<string>('')
   const [validating, setValidating] = useState(false)
   const [error, setError] = useState<string>('')
-  const [validationResult, setValidationResult] = useState<{ valid: boolean; output: string } | null>(null)
+  const [validationResult, setValidationResult] = useState<{
+    valid: boolean
+    output: string
+  } | null>(null)
   const [hasChanges, setHasChanges] = useState(false)
   const [viewMode, setViewMode] = useState<'text' | 'visual'>('visual')
 
   // TanStack Query hooks
-  const { data: fileContent, isLoading: loading, refetch: refetchFile } = useFileContent(configPath)
+  const {
+    data: fileContent,
+    isLoading: loading,
+    refetch: refetchFile,
+  } = useFileContent(configPath)
   const writeFileMutation = useWriteFile()
 
   // Initialize content when file is loaded
@@ -59,8 +71,8 @@ export const ConfigEditor = ({ configPath, configName, onClose, onSaved }: Confi
         },
         onError: (err) => {
           setError(String(err))
-        }
-      }
+        },
+      },
     )
   }
 
@@ -93,20 +105,36 @@ export const ConfigEditor = ({ configPath, configName, onClose, onSaved }: Confi
         {/* Header */}
         <div className="p-6 border-b flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900">{m.config_editor_title()}</h2>
-            <p className="text-sm text-gray-600 mt-1 font-mono">{configName} — {configPath}</p>
+            <h2 className="text-2xl font-semibold text-gray-900">
+              {m.config_editor_title()}
+            </h2>
+            <p className="text-sm text-gray-600 mt-1 font-mono">
+              {configName} — {configPath}
+            </p>
           </div>
           <div className="flex items-center gap-4">
-            <ViewModeToggle 
+            <ViewModeToggle
               viewMode={viewMode}
               onViewModeChange={setViewMode}
             />
             <button
+              type="button"
               onClick={handleClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                aria-hidden="true"
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -116,7 +144,9 @@ export const ConfigEditor = ({ configPath, configName, onClose, onSaved }: Confi
         <div className="flex-1 overflow-hidden flex flex-col p-6 min-h-0">
           {error && <ErrorAlert error={error} />}
 
-          {validationResult && <ValidationResultAlert validationResult={validationResult} />}
+          {validationResult && (
+            <ValidationResultAlert validationResult={validationResult} />
+          )}
 
           {loading ? (
             <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -124,10 +154,13 @@ export const ConfigEditor = ({ configPath, configName, onClose, onSaved }: Confi
             </div>
           ) : viewMode === 'visual' ? (
             <div className="flex-1 overflow-y-auto">
-              <DiskManager configPath={configPath} onUpdate={handleDiskUpdate} />
+              <DiskManager
+                configPath={configPath}
+                onUpdate={handleDiskUpdate}
+              />
             </div>
           ) : (
-            <ConfigTextEditor 
+            <ConfigTextEditor
               content={content}
               hasChanges={hasChanges}
               onContentChange={setContent}
@@ -136,7 +169,7 @@ export const ConfigEditor = ({ configPath, configName, onClose, onSaved }: Confi
         </div>
 
         {/* Footer */}
-        <ConfigEditorFooter 
+        <ConfigEditorFooter
           viewMode={viewMode}
           hasChanges={hasChanges}
           validating={validating}

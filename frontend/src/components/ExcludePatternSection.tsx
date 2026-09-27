@@ -7,7 +7,11 @@ interface ExcludePatternSectionProps {
   onRemove: (pattern: string) => Promise<void>
 }
 
-export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatternSectionProps) => {
+export const ExcludePatternSection = ({
+  exclude,
+  onAdd,
+  onRemove,
+}: ExcludePatternSectionProps) => {
   const [showAddExclude, setShowAddExclude] = useState(false)
   const [newExcludePattern, setNewExcludePattern] = useState('')
   const [addingExclude, setAddingExclude] = useState(false)
@@ -47,12 +51,24 @@ export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatte
     <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
       <div className="flex justify-between items-center mb-3">
         <h3 className="font-semibold text-orange-900 flex items-center gap-2">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+          <svg
+            aria-hidden="true"
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+            />
           </svg>
           {m.exclude_pattern_title()} ({exclude.length})
         </h3>
         <button
+          type="button"
           onClick={() => setShowAddExclude(!showAddExclude)}
           className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 transition-colors"
         >
@@ -68,11 +84,17 @@ export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatte
 
       {showAddExclude && (
         <div className="mb-3 p-3 bg-white rounded border border-orange-300">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            htmlFor="exclude-pattern"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
             {m.exclude_pattern_label()}
-            <span className="text-xs text-gray-500 ml-2">({m.exclude_pattern_hint()})</span>
+            <span className="text-xs text-gray-500 ml-2">
+              ({m.exclude_pattern_hint()})
+            </span>
           </label>
           <input
+            id="exclude-pattern"
             type="text"
             value={newExcludePattern}
             onChange={(e) => setNewExcludePattern(e.target.value)}
@@ -81,6 +103,7 @@ export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatte
           />
           <div className="flex gap-2 mt-2">
             <button
+              type="button"
               onClick={handleAddExclude}
               disabled={addingExclude}
               className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50 text-sm"
@@ -88,6 +111,7 @@ export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatte
               {addingExclude ? `${m.common_adding()}` : m.common_add()}
             </button>
             <button
+              type="button"
               onClick={() => {
                 setShowAddExclude(false)
                 setNewExcludePattern('')
@@ -103,12 +127,21 @@ export const ExcludePatternSection = ({ exclude, onAdd, onRemove }: ExcludePatte
 
       <div className="space-y-2">
         {exclude.length === 0 ? (
-          <div className="text-sm text-orange-600 italic">{m.exclude_pattern_no_patterns()}</div>
+          <div className="text-sm text-orange-600 italic">
+            {m.exclude_pattern_no_patterns()}
+          </div>
         ) : (
           exclude.map((pattern, index) => (
-            <div key={index} className="flex justify-between items-center bg-white p-3 rounded border border-orange-200">
-              <div className="font-mono text-sm text-gray-700 flex-1">{pattern}</div>
+            <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: patterns are not guaranteed unique
+              key={index}
+              className="flex justify-between items-center bg-white p-3 rounded border border-orange-200"
+            >
+              <div className="font-mono text-sm text-gray-700 flex-1">
+                {pattern}
+              </div>
               <button
+                type="button"
                 onClick={() => handleRemoveExclude(pattern)}
                 className="ml-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
               >

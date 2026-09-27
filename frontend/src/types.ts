@@ -1,76 +1,76 @@
 export interface SnapRaidConfig {
-  name: string;
-  path: string;
-  enabled: boolean;
+  name: string
+  path: string
+  enabled: boolean
 }
 
 export interface AppConfig {
-  version: string;
-  snapraidConfigs: SnapRaidConfig[];
+  version: string
+  snapraidConfigs: SnapRaidConfig[]
   backend: {
-    host: string;
-    port: number;
-  };
+    host: string
+    port: number
+  }
   logs: {
-    maxHistoryEntries: number;
-    directory: string;
-    maxFiles: number;
-    maxAge: number;
-  };
+    maxHistoryEntries: number
+    directory: string
+    maxFiles: number
+    maxAge: number
+  }
 }
 
 export interface ParsedSnapRaidConfig {
-  parity: string[];
-  content: string[];
-  data: Record<string, string>;
-  exclude: string[];
+  parity: string[]
+  content: string[]
+  data: Record<string, string>
+  exclude: string[]
 }
 
 export interface DiskInfo {
-  name: string;
-  path: string;
-  type: 'data' | 'parity';
+  name: string
+  path: string
+  type: 'data' | 'parity'
 }
 
 export interface SnapRaidStatus {
-  hasErrors: boolean;
-  parityUpToDate: boolean;
-  newFiles: number;
-  modifiedFiles: number;
-  deletedFiles: number;
-  rawOutput: string;
+  hasErrors: boolean
+  parityUpToDate: boolean
+  newFiles: number
+  modifiedFiles: number
+  deletedFiles: number
+  rawOutput: string
 }
 
 export interface CommandOutput {
-  command: string;
-  output: string;
-  timestamp: string;
-  exitCode: number | null;
+  command: string
+  output: string
+  timestamp: string
+  exitCode: number | null
 }
 
-export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff';
+export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff'
 
 export interface LogFile {
-  filename: string;
-  path: string;
-  command: SnapRaidCommand;
-  timestamp: string;
-  size: number;
+  filename: string
+  path: string
+  command: SnapRaidCommand
+  timestamp: string
+  size: number
 }
 
 export interface RunningJob {
-  command: SnapRaidCommand;
-  configPath: string;
-  startTime: string;
-  processId: string;
+  command: SnapRaidCommand
+  configPath: string
+  startTime: string
+  processId: string
 }
 
 export interface WSMessage {
-  type: 'output' | 'complete' | 'error' | 'status';
-  command?: string;
-  chunk?: string;
-  exitCode?: number;
-  timestamp?: string;
-  error?: string;
-  status?: SnapRaidStatus;
+  type: 'output' | 'complete' | 'error' | 'status'
+  command?: string
+  chunk?: string
+  exitCode?: number
+  timestamp?: string
+  error?: string
+  status?: SnapRaidStatus
 }

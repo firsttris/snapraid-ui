@@ -7,12 +7,15 @@ interface UndeleteModeSelectProps {
   onChange: (mode: UndeleteMode) => void
 }
 
-export const UndeleteModeSelector = ({ mode, onChange }: UndeleteModeSelectProps) => {
+export const UndeleteModeSelector = ({
+  mode,
+  onChange,
+}: UndeleteModeSelectProps) => {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-3">
+      <span className="block text-sm font-medium text-gray-700 mb-3">
         {m.undelete_mode_label()}
-      </label>
+      </span>
       <div className="space-y-2">
         <label className="flex items-center p-3 border rounded cursor-pointer hover:bg-gray-50">
           <input

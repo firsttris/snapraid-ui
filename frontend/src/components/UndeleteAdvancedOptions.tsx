@@ -6,7 +6,10 @@ interface UndeleteAdvancedOptionsProps {
   onDiskFilterChange: (filter: string | undefined) => void
 }
 
-export const UndeleteAdvancedOptions = ({ diskFilter, onDiskFilterChange }: UndeleteAdvancedOptionsProps) => {
+export const UndeleteAdvancedOptions = ({
+  diskFilter,
+  onDiskFilterChange,
+}: UndeleteAdvancedOptionsProps) => {
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false)
 
   return (
@@ -19,13 +22,17 @@ export const UndeleteAdvancedOptions = ({ diskFilter, onDiskFilterChange }: Unde
         <span>{showAdvanced ? '▼' : '▶'}</span>
         <span>{m.undelete_advanced_options()}</span>
       </button>
-      
+
       {showAdvanced && (
         <div className="mt-3 p-4 bg-gray-50 rounded">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="undelete-disk-filter"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             {m.undelete_disk_filter_label()}
           </label>
           <input
+            id="undelete-disk-filter"
             type="text"
             value={diskFilter}
             onChange={(e) => onDiskFilterChange(e.target.value)}

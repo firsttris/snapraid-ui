@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { DirectoryBrowser } from './DirectoryBrowser'
 import * as m from '../paraglide/messages'
+import { DirectoryBrowser } from './DirectoryBrowser'
 
 interface PoolSectionProps {
   pool?: string
@@ -41,6 +41,7 @@ export const PoolSection = ({ pool, onPoolChange }: PoolSectionProps) => {
           <h3 className="text-lg font-semibold">{m.pool_section_title()}</h3>
           {!editMode && !pool && (
             <button
+              type="button"
               onClick={() => setEditMode(true)}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
             >
@@ -56,11 +57,15 @@ export const PoolSection = ({ pool, onPoolChange }: PoolSectionProps) => {
         ) : editMode || pool ? (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="pool-directory"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 {m.pool_directory_label()}
               </label>
               <div className="flex gap-2">
                 <input
+                  id="pool-directory"
                   type="text"
                   value={editMode ? localPool : pool}
                   onChange={(e) => editMode && setLocalPool(e.target.value)}
@@ -70,6 +75,7 @@ export const PoolSection = ({ pool, onPoolChange }: PoolSectionProps) => {
                 />
                 {editMode && (
                   <button
+                    type="button"
                     onClick={() => setShowBrowser(true)}
                     className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
                   >
@@ -85,6 +91,7 @@ export const PoolSection = ({ pool, onPoolChange }: PoolSectionProps) => {
             {editMode ? (
               <div className="flex gap-2 justify-end">
                 <button
+                  type="button"
                   onClick={() => {
                     setEditMode(false)
                     setLocalPool(pool || '')
@@ -94,6 +101,7 @@ export const PoolSection = ({ pool, onPoolChange }: PoolSectionProps) => {
                   {m.common_cancel()}
                 </button>
                 <button
+                  type="button"
                   onClick={handleAdd}
                   className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors"
                 >
@@ -103,6 +111,7 @@ export const PoolSection = ({ pool, onPoolChange }: PoolSectionProps) => {
             ) : (
               <div className="flex gap-2 justify-end">
                 <button
+                  type="button"
                   onClick={() => {
                     setLocalPool(pool || '')
                     setEditMode(true)
@@ -112,6 +121,7 @@ export const PoolSection = ({ pool, onPoolChange }: PoolSectionProps) => {
                   {m.common_edit()}
                 </button>
                 <button
+                  type="button"
                   onClick={handleRemove}
                   className="px-3 py-1 text-sm text-red-600 hover:text-red-800"
                 >

@@ -15,9 +15,9 @@ interface DiffViewerProps {
   onClose: () => void
 }
 
-export function DiffViewer({ 
-  files, 
-  totalFiles, 
+export function DiffViewer({
+  files,
+  totalFiles,
   equalFiles,
   newFiles,
   modifiedFiles,
@@ -25,8 +25,8 @@ export function DiffViewer({
   movedFiles,
   copiedFiles,
   restoredFiles,
-  isLoading, 
-  onClose 
+  isLoading,
+  onClose,
 }: DiffViewerProps) {
   const getStatusColor = (status: DiffFileInfo['status']) => {
     switch (status) {
@@ -70,7 +70,13 @@ export function DiffViewer({
     }
   }
 
-  const totalChanges = newFiles + modifiedFiles + deletedFiles + movedFiles + copiedFiles + restoredFiles
+  const totalChanges =
+    newFiles +
+    modifiedFiles +
+    deletedFiles +
+    movedFiles +
+    copiedFiles +
+    restoredFiles
   const hasChanges = totalChanges > 0
 
   return (
@@ -82,64 +88,90 @@ export function DiffViewer({
             {!isLoading && (
               <div className="flex gap-4 mt-2 flex-wrap">
                 <p className="text-sm text-gray-500">
-                  {m.diff_report_total()}: <span className="font-semibold">{totalFiles}</span>
+                  {m.diff_report_total()}:{' '}
+                  <span className="font-semibold">{totalFiles}</span>
                 </p>
                 {equalFiles > 0 && (
                   <p className="text-sm text-green-600">
-                    {m.diff_report_equal()}: <span className="font-semibold">{equalFiles}</span>
+                    {m.diff_report_equal()}:{' '}
+                    <span className="font-semibold">{equalFiles}</span>
                   </p>
                 )}
                 {newFiles > 0 && (
                   <p className="text-sm text-blue-600">
-                    {m.diff_report_new()}: <span className="font-semibold">{newFiles}</span>
+                    {m.diff_report_new()}:{' '}
+                    <span className="font-semibold">{newFiles}</span>
                   </p>
                 )}
                 {modifiedFiles > 0 && (
                   <p className="text-sm text-orange-600">
-                    {m.diff_report_modified()}: <span className="font-semibold">{modifiedFiles}</span>
+                    {m.diff_report_modified()}:{' '}
+                    <span className="font-semibold">{modifiedFiles}</span>
                   </p>
                 )}
                 {deletedFiles > 0 && (
                   <p className="text-sm text-red-600">
-                    {m.diff_report_deleted()}: <span className="font-semibold">{deletedFiles}</span>
+                    {m.diff_report_deleted()}:{' '}
+                    <span className="font-semibold">{deletedFiles}</span>
                   </p>
                 )}
                 {movedFiles > 0 && (
                   <p className="text-sm text-purple-600">
-                    {m.diff_report_moved()}: <span className="font-semibold">{movedFiles}</span>
+                    {m.diff_report_moved()}:{' '}
+                    <span className="font-semibold">{movedFiles}</span>
                   </p>
                 )}
                 {copiedFiles > 0 && (
                   <p className="text-sm text-cyan-600">
-                    {m.diff_report_copied()}: <span className="font-semibold">{copiedFiles}</span>
+                    {m.diff_report_copied()}:{' '}
+                    <span className="font-semibold">{copiedFiles}</span>
                   </p>
                 )}
                 {restoredFiles > 0 && (
                   <p className="text-sm text-green-600">
-                    {m.diff_report_restored()}: <span className="font-semibold">{restoredFiles}</span>
+                    {m.diff_report_restored()}:{' '}
+                    <span className="font-semibold">{restoredFiles}</span>
                   </p>
                 )}
               </div>
             )}
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              aria-hidden="true"
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
           {isLoading ? (
-            <p className="text-sm text-gray-600 text-center py-8">{m.common_loading()}</p>
+            <p className="text-sm text-gray-600 text-center py-8">
+              {m.common_loading()}
+            </p>
           ) : !hasChanges && files.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">✓</div>
-              <p className="text-lg font-semibold text-green-600">{m.diff_report_all_sync()}</p>
-              <p className="text-sm text-gray-500 mt-2">{m.diff_report_no_changes()}</p>
+              <p className="text-lg font-semibold text-green-600">
+                {m.diff_report_all_sync()}
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                {m.diff_report_no_changes()}
+              </p>
             </div>
           ) : (
             <table className="min-w-full divide-y divide-gray-200">
@@ -158,14 +190,22 @@ export function DiffViewer({
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {files.map((file, index) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: read-only report rows, never reordered; names may repeat
                   <tr key={index} className="hover:bg-gray-50">
                     <td className="px-4 py-2 whitespace-nowrap text-center">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(file.status)}`}>
-                        <span className="mr-1">{getStatusIcon(file.status)}</span>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(file.status)}`}
+                      >
+                        <span className="mr-1">
+                          {getStatusIcon(file.status)}
+                        </span>
                         {file.status}
                       </span>
                     </td>
-                    <td className="px-4 py-2 font-mono text-sm truncate max-w-[500px]" title={file.name}>
+                    <td
+                      className="px-4 py-2 font-mono text-sm truncate max-w-[500px]"
+                      title={file.name}
+                    >
                       {file.name}
                     </td>
                     <td className="px-4 py-2 text-sm text-gray-600">
@@ -181,7 +221,14 @@ export function DiffViewer({
         {!isLoading && hasChanges && (
           <div className="p-4 bg-orange-50 border-t border-orange-100">
             <p className="text-sm text-orange-800">
-              <span className="font-semibold">⚠️ {m.diff_report_changes_detected()}:</span> {m.diff_report_changes_message({ count: totalChanges, plural: totalChanges !== 1 ? 's' : '', singular: totalChanges === 1 ? 's' : '' })}
+              <span className="font-semibold">
+                ⚠️ {m.diff_report_changes_detected()}:
+              </span>{' '}
+              {m.diff_report_changes_message({
+                count: totalChanges,
+                plural: totalChanges !== 1 ? 's' : '',
+                singular: totalChanges === 1 ? 's' : '',
+              })}
             </p>
           </div>
         )}

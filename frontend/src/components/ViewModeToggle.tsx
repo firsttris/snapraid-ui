@@ -5,10 +5,14 @@ interface ViewModeToggleProps {
   onViewModeChange: (mode: 'text' | 'visual') => void
 }
 
-export const ViewModeToggle = ({ viewMode, onViewModeChange }: ViewModeToggleProps) => {
+export const ViewModeToggle = ({
+  viewMode,
+  onViewModeChange,
+}: ViewModeToggleProps) => {
   return (
     <div className="flex bg-gray-100 rounded-lg p-1">
       <button
+        type="button"
         onClick={() => onViewModeChange('visual')}
         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
           viewMode === 'visual'
@@ -19,6 +23,7 @@ export const ViewModeToggle = ({ viewMode, onViewModeChange }: ViewModeTogglePro
         {m.config_editor_visual_mode()}
       </button>
       <button
+        type="button"
         onClick={() => onViewModeChange('text')}
         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
           viewMode === 'text'

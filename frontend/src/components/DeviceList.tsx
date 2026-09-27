@@ -14,23 +14,41 @@ export function DeviceList({ devices, isLoading, onClose }: DeviceListProps) {
         <div className="flex items-center justify-between p-6 border-b">
           <div>
             <h2 className="text-xl font-semibold">{m.devices_title()}</h2>
-            <p className="text-sm text-gray-500 mt-1">{m.devices_description()}</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {m.devices_description()}
+            </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              aria-hidden="true"
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
           {isLoading ? (
-            <p className="text-sm text-gray-600 text-center py-8">{m.common_loading()}</p>
+            <p className="text-sm text-gray-600 text-center py-8">
+              {m.common_loading()}
+            </p>
           ) : devices.length === 0 ? (
-            <p className="text-sm text-gray-600 text-center py-8">{m.devices_no_devices()}</p>
+            <p className="text-sm text-gray-600 text-center py-8">
+              {m.devices_no_devices()}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -51,14 +69,16 @@ export function DeviceList({ devices, isLoading, onClose }: DeviceListProps) {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {devices.map((device, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
+                  {devices.map((device) => (
+                    <tr key={device.partition} className="hover:bg-gray-50">
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                          device.diskName.includes('parity') 
-                            ? 'text-red-600 bg-red-50' 
-                            : 'text-blue-600 bg-blue-50'
-                        }`}>
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-semibold ${
+                            device.diskName.includes('parity')
+                              ? 'text-red-600 bg-red-50'
+                              : 'text-blue-600 bg-blue-50'
+                          }`}
+                        >
                           {device.diskName}
                         </span>
                       </td>

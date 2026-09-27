@@ -1,13 +1,13 @@
-import type { AppConfig } from "@shared/types";
-import { API_BASE } from "./constants";
+import type { AppConfig } from '@shared/types'
+import { API_BASE } from './constants'
 
 /**
  * Get app configuration
  */
 export const getConfig = async (): Promise<AppConfig> => {
-  const response = await fetch(`${API_BASE}/config`);
-  if (!response.ok) throw new Error('Failed to fetch config');
-  return response.json();
+  const response = await fetch(`${API_BASE}/config`)
+  if (!response.ok) throw new Error('Failed to fetch config')
+  return response.json()
 }
 
 /**
@@ -18,25 +18,29 @@ export const saveConfig = async (config: AppConfig): Promise<void> => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(config),
-  });
-  if (!response.ok) throw new Error('Failed to save config');
+  })
+  if (!response.ok) throw new Error('Failed to save config')
 }
 
 /**
  * Add a new SnapRAID config
  */
-export const addConfig = async (name: string, path: string, enabled: boolean = true): Promise<AppConfig> => {
+export const addConfig = async (
+  name: string,
+  path: string,
+  enabled: boolean = true,
+): Promise<AppConfig> => {
   const response = await fetch(`${API_BASE}/config/add`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, path: path.replace(/^.*[\/\\]/, ''), enabled }),
-  });
+    body: JSON.stringify({ name, path: path.replace(/^.*[/\\]/, ''), enabled }),
+  })
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to add config');
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to add config')
   }
-  const result = await response.json();
-  return result.config;
+  const result = await response.json()
+  return result.config
 }
 
 /**
@@ -47,8 +51,8 @@ export const removeConfig = async (path: string): Promise<AppConfig> => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path }),
-  });
-  if (!response.ok) throw new Error('Failed to remove config');
-  const result = await response.json();
-  return result.config;
+  })
+  if (!response.ok) throw new Error('Failed to remove config')
+  const result = await response.json()
+  return result.config
 }

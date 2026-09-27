@@ -1,10 +1,18 @@
 import { useState } from 'react'
-import { useSnapRaidConfig, useAddDataDisk, useRemoveDisk, useAddParityDisk, useAddExclude, useRemoveExclude, useSetPool } from '../hooks/queries'
-import { ParityDiskSection } from './ParityDiskSection'
+import {
+  useAddDataDisk,
+  useAddExclude,
+  useAddParityDisk,
+  useRemoveDisk,
+  useRemoveExclude,
+  useSetPool,
+  useSnapRaidConfig,
+} from '../hooks/queries'
+import * as m from '../paraglide/messages'
 import { DataDiskSection } from './DataDiskSection'
 import { ExcludePatternSection } from './ExcludePatternSection'
+import { ParityDiskSection } from './ParityDiskSection'
 import { PoolSection } from './PoolSection'
-import * as m from '../paraglide/messages'
 
 interface DiskManagerProps {
   configPath: string
@@ -33,8 +41,8 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
         onError: (err) => {
           setError(String(err))
           throw err
-        }
-      }
+        },
+      },
     )
   }
 
@@ -47,8 +55,8 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
         onError: (err) => {
           setError(String(err))
           throw err
-        }
-      }
+        },
+      },
     )
   }
 
@@ -61,8 +69,8 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
         onError: (err) => {
           setError(String(err))
           throw err
-        }
-      }
+        },
+      },
     )
   }
 
@@ -75,8 +83,8 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
         onError: (err) => {
           setError(String(err))
           throw err
-        }
-      }
+        },
+      },
     )
   }
 
@@ -89,8 +97,8 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
         onError: (err) => {
           setError(String(err))
           throw err
-        }
-      }
+        },
+      },
     )
   }
   const handleRemoveExclude = async (pattern: string) => {
@@ -102,8 +110,8 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
         onError: (err) => {
           setError(String(err))
           throw err
-        }
-      }
+        },
+      },
     )
   }
 
@@ -116,8 +124,8 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
         onError: (err) => {
           setError(String(err))
           throw err
-        }
-      }
+        },
+      },
     )
   }
 
@@ -163,10 +171,7 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
         onRemove={handleRemoveExclude}
       />
 
-      <PoolSection
-        pool={config.pool}
-        onPoolChange={handleSetPool}
-      />
+      <PoolSection pool={config.pool} onPoolChange={handleSetPool} />
     </div>
   )
 }

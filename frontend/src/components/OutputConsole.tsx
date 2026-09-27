@@ -9,6 +9,7 @@ export const OutputConsole = ({ output }: OutputConsoleProps) => {
   const outputRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to bottom when output changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: output is the trigger, not read inside
   useEffect(() => {
     if (outputRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight

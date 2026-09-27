@@ -1,5 +1,5 @@
+import type { SmartDiskInfo, SmartReport } from '@shared/types'
 import { useState } from 'react'
-import type { SmartReport, SmartDiskInfo } from '@shared/types'
 import * as m from '../paraglide/messages'
 
 interface SmartMonitorProps {
@@ -9,13 +9,20 @@ interface SmartMonitorProps {
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'OK': return 'text-green-600 bg-green-50'
-    case 'FAIL': return 'text-red-600 bg-red-50'
-    case 'PREFAIL': return 'text-orange-600 bg-orange-50'
-    case 'LOGFAIL': return 'text-yellow-600 bg-yellow-50'
-    case 'LOGERR': return 'text-yellow-600 bg-yellow-50'
-    case 'SELFERR': return 'text-yellow-600 bg-yellow-50'
-    default: return 'text-gray-600 bg-gray-50'
+    case 'OK':
+      return 'text-green-600 bg-green-50'
+    case 'FAIL':
+      return 'text-red-600 bg-red-50'
+    case 'PREFAIL':
+      return 'text-orange-600 bg-orange-50'
+    case 'LOGFAIL':
+      return 'text-yellow-600 bg-yellow-50'
+    case 'LOGERR':
+      return 'text-yellow-600 bg-yellow-50'
+    case 'SELFERR':
+      return 'text-yellow-600 bg-yellow-50'
+    default:
+      return 'text-gray-600 bg-gray-50'
   }
 }
 
@@ -38,7 +45,7 @@ const getFailureProbabilityColor = (probability?: number) => {
 
 const DiskCard = ({ disk }: { disk: SmartDiskInfo }) => {
   const [expanded, setExpanded] = useState(false)
-  
+
   return (
     <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-3">
@@ -52,17 +59,23 @@ const DiskCard = ({ disk }: { disk: SmartDiskInfo }) => {
             <p className="text-xs text-gray-500 mt-1">{disk.model}</p>
           )}
         </div>
-        
+
         {disk.temperature !== undefined && (
           <div className="text-right">
-            <div className={`text-2xl font-bold ${
-              disk.temperature > 50 ? 'text-red-600' : 
-              disk.temperature > 40 ? 'text-orange-600' : 
-              'text-green-600'
-            }`}>
+            <div
+              className={`text-2xl font-bold ${
+                disk.temperature > 50
+                  ? 'text-red-600'
+                  : disk.temperature > 40
+                    ? 'text-orange-600'
+                    : 'text-green-600'
+              }`}
+            >
               {disk.temperature}°C
             </div>
-            <div className="text-xs text-gray-500">{m.smart_monitor_temperature()}</div>
+            <div className="text-xs text-gray-500">
+              {m.smart_monitor_temperature()}
+            </div>
           </div>
         )}
       </div>
@@ -70,32 +83,39 @@ const DiskCard = ({ disk }: { disk: SmartDiskInfo }) => {
       <div className="grid grid-cols-2 gap-4 text-sm">
         {disk.failureProbability !== undefined && (
           <div>
-            <div className="text-gray-500">{m.smart_monitor_failure_probability()}</div>
-            <div className={`font-semibold ${getFailureProbabilityColor(disk.failureProbability)}`}>
+            <div className="text-gray-500">
+              {m.smart_monitor_failure_probability()}
+            </div>
+            <div
+              className={`font-semibold ${getFailureProbabilityColor(disk.failureProbability)}`}
+            >
               {disk.failureProbability.toFixed(2)}%
             </div>
           </div>
         )}
-        
+
         {disk.powerOnHours !== undefined && (
           <div>
-            <div className="text-gray-500">{m.smart_monitor_power_on_hours()}</div>
+            <div className="text-gray-500">
+              {m.smart_monitor_power_on_hours()}
+            </div>
             <div className="font-semibold">
               {disk.powerOnHours.toLocaleString()} {m.smart_monitor_hours()}
               <span className="text-xs text-gray-500 ml-1">
-                ({Math.floor(disk.powerOnHours / 24 / 365)} {m.smart_monitor_years()})
+                ({Math.floor(disk.powerOnHours / 24 / 365)}{' '}
+                {m.smart_monitor_years()})
               </span>
             </div>
           </div>
         )}
-        
+
         {disk.size && (
           <div>
             <div className="text-gray-500">{m.smart_monitor_capacity()}</div>
             <div className="font-semibold text-sm">{disk.size}</div>
           </div>
         )}
-        
+
         {disk.serial && (
           <div>
             <div className="text-gray-500">{m.smart_monitor_serial()}</div>
@@ -107,23 +127,37 @@ const DiskCard = ({ disk }: { disk: SmartDiskInfo }) => {
       {disk.attributes && disk.attributes.length > 0 && (
         <div className="mt-3">
           <button
+            type="button"
             onClick={() => setExpanded(!expanded)}
             className="text-sm text-blue-600 hover:text-blue-700 font-medium"
           >
-            {expanded ? '▼' : '▶'} {m.smart_monitor_attributes()} ({disk.attributes.length})
+            {expanded ? '▼' : '▶'} {m.smart_monitor_attributes()} (
+            {disk.attributes.length})
           </button>
-          
+
           {expanded && (
             <div className="mt-2 overflow-x-auto">
               <table className="min-w-full text-xs">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-2 py-1 text-left">{m.smart_monitor_id()}</th>
-                    <th className="px-2 py-1 text-left">{m.smart_monitor_name()}</th>
-                    <th className="px-2 py-1 text-right">{m.smart_monitor_value()}</th>
-                    <th className="px-2 py-1 text-right">{m.smart_monitor_worst()}</th>
-                    <th className="px-2 py-1 text-right">{m.smart_monitor_threshold()}</th>
-                    <th className="px-2 py-1 text-right">{m.smart_monitor_raw()}</th>
+                    <th className="px-2 py-1 text-left">
+                      {m.smart_monitor_id()}
+                    </th>
+                    <th className="px-2 py-1 text-left">
+                      {m.smart_monitor_name()}
+                    </th>
+                    <th className="px-2 py-1 text-right">
+                      {m.smart_monitor_value()}
+                    </th>
+                    <th className="px-2 py-1 text-right">
+                      {m.smart_monitor_worst()}
+                    </th>
+                    <th className="px-2 py-1 text-right">
+                      {m.smart_monitor_threshold()}
+                    </th>
+                    <th className="px-2 py-1 text-right">
+                      {m.smart_monitor_raw()}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -134,7 +168,9 @@ const DiskCard = ({ disk }: { disk: SmartDiskInfo }) => {
                       <td className="px-2 py-1 text-right">{attr.value}</td>
                       <td className="px-2 py-1 text-right">{attr.worst}</td>
                       <td className="px-2 py-1 text-right">{attr.threshold}</td>
-                      <td className="px-2 py-1 text-right font-mono">{attr.raw}</td>
+                      <td className="px-2 py-1 text-right font-mono">
+                        {attr.raw}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -166,16 +202,23 @@ export const SmartMonitor = ({ onRefresh }: SmartMonitorProps) => {
     }
   }
 
-  const criticalDisks = report?.disks.filter(d => 
-    d.status === 'FAIL' || d.status === 'PREFAIL' || (d.failureProbability && d.failureProbability > 5)
-  ) || []
+  const criticalDisks =
+    report?.disks.filter(
+      (d) =>
+        d.status === 'FAIL' ||
+        d.status === 'PREFAIL' ||
+        (d.failureProbability && d.failureProbability > 5),
+    ) || []
 
-  const warningDisks = report?.disks.filter(d => 
-    !criticalDisks.includes(d) && (
-      d.status === 'LOGFAIL' || d.status === 'LOGERR' || d.status === 'SELFERR' ||
-      (d.failureProbability && d.failureProbability > 1)
-    )
-  ) || []
+  const warningDisks =
+    report?.disks.filter(
+      (d) =>
+        !criticalDisks.includes(d) &&
+        (d.status === 'LOGFAIL' ||
+          d.status === 'LOGERR' ||
+          d.status === 'SELFERR' ||
+          (d.failureProbability && d.failureProbability > 1)),
+    ) || []
 
   return (
     <div className="bg-white shadow rounded-lg p-6">
@@ -184,11 +227,13 @@ export const SmartMonitor = ({ onRefresh }: SmartMonitorProps) => {
           <h2 className="text-xl font-semibold">{m.smart_monitor_title()}</h2>
           {report && (
             <p className="text-sm text-gray-500 mt-1">
-              {m.smart_monitor_last_updated()}: {new Date(report.timestamp).toLocaleString()}
+              {m.smart_monitor_last_updated()}:{' '}
+              {new Date(report.timestamp).toLocaleString()}
             </p>
           )}
         </div>
         <button
+          type="button"
           onClick={handleRefresh}
           disabled={loading}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
@@ -205,7 +250,12 @@ export const SmartMonitor = ({ onRefresh }: SmartMonitorProps) => {
 
       {criticalDisks.length > 0 && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded">
-          <h3 className="font-semibold text-red-800 mb-2">⚠️ {m.smart_monitor_critical_disks_count({ count: criticalDisks.length })}</h3>
+          <h3 className="font-semibold text-red-800 mb-2">
+            ⚠️{' '}
+            {m.smart_monitor_critical_disks_count({
+              count: criticalDisks.length,
+            })}
+          </h3>
           <p className="text-sm text-red-700">
             {m.smart_monitor_critical_message()}
           </p>
@@ -214,7 +264,12 @@ export const SmartMonitor = ({ onRefresh }: SmartMonitorProps) => {
 
       {warningDisks.length > 0 && (
         <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
-          <h3 className="font-semibold text-yellow-800 mb-2">⚡ {m.smart_monitor_warning_disks_count({ count: warningDisks.length })}</h3>
+          <h3 className="font-semibold text-yellow-800 mb-2">
+            ⚡{' '}
+            {m.smart_monitor_warning_disks_count({
+              count: warningDisks.length,
+            })}
+          </h3>
           <p className="text-sm text-yellow-700">
             {m.smart_monitor_warning_message()}
           </p>
@@ -231,6 +286,7 @@ export const SmartMonitor = ({ onRefresh }: SmartMonitorProps) => {
 
           <div className="mt-6 border-t pt-4">
             <button
+              type="button"
               onClick={() => setShowRawOutput(!showRawOutput)}
               className="text-sm text-gray-600 hover:text-gray-800"
             >
@@ -243,10 +299,13 @@ export const SmartMonitor = ({ onRefresh }: SmartMonitorProps) => {
             )}
           </div>
         </>
-      ) : !loading && !error && (
-        <div className="text-center py-8 text-gray-500">
-          {m.smart_monitor_no_data()}
-        </div>
+      ) : (
+        !loading &&
+        !error && (
+          <div className="text-center py-8 text-gray-500">
+            {m.smart_monitor_no_data()}
+          </div>
+        )
       )}
     </div>
   )
