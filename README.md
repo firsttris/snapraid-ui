@@ -59,7 +59,9 @@ SnapRAID Web Manager is a complete toolkit for SnapRAID users that replaces comm
 
 #### Stopping the servers
 
-`start.sh` runs backend and frontend in the background, so closing the terminal or pressing `Ctrl+C` does not always stop both. Starting it twice leaves two backends running.
+Press `Ctrl+C` in the terminal running `start.sh` to stop backend and frontend together. If one of them stops on its own, `start.sh` stops the other as well.
+
+Leftovers from a crashed terminal or from starting it twice can be stopped by hand:
 
 ```bash
 # Show running backends

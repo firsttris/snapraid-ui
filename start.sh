@@ -27,16 +27,37 @@ if not command -q deno
     exit 1
 end
 
+# Stop a process and everything it started
+function kill_tree
+    for child in (pgrep -P $argv[1])
+        kill_tree $child
+    end
+    kill $argv[1] 2>/dev/null
+end
+
+# deno run --watch ignores the SIGINT of Ctrl+C, so stop both servers with SIGTERM
+function stop_servers --on-event fish_exit
+    for pid in $backend_pid $frontend_pid
+        kill_tree $pid
+    end
+end
+
+function on_interrupt --on-signal INT --on-signal TERM
+    exit 130
+end
+
 # Starte Backend im Hintergrund
 cd $root/backend
 deno task dev &
-set backend_pid $last_pid
+set -g backend_pid $last_pid
 
 # Starte Frontend im Hintergrund
 cd $root/frontend
 npm run dev &
-set frontend_pid $last_pid
+set -g frontend_pid $last_pid
 
-# Warte auf beide Prozesse
-wait $backend_pid
-wait $frontend_pid
+# Warte auf beide Prozesse. Polling statt wait, weil fish wait nur bei SIGINT unterbricht;
+# endet einer, stoppt fish_exit den anderen
+while kill -0 $backend_pid 2>/dev/null; and kill -0 $frontend_pid 2>/dev/null
+    sleep 1
+end
