@@ -6,6 +6,8 @@
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "serve": "vite preview",
+    "paraglide": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --silent",
+    "typecheck": "npm run paraglide && tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "format": "biome format",
     "lint": "biome lint",
