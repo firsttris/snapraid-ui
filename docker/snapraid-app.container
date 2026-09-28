@@ -1,45 +1,39 @@
 # Quadlet file for Podman systemd integration
-# Place this file in ~/.config/containers/systemd/ or /etc/containers/systemd/
+# Place this file (and snapraid-net.network) in ~/.config/containers/systemd/ or /etc/containers/systemd/
 # Then run: systemctl --user daemon-reload (or systemctl daemon-reload for system)
 # Start with: systemctl --user start snapraid-app (or systemctl start for system)
-# Enable on boot: systemctl --user enable snapraid-app
 
 [Unit]
-Description=SnapRAID Application Service
+Description=SnapRAID Web UI
 After=network-online.target
 Wants=network-online.target
 
 [Container]
-Image=localhost/snapraid-app:latest
-ContainerName=snapraid-app
+Image=docker.io/tristanteu/snapraid-ui:latest
+ContainerName=snapraid-ui
+AutoUpdate=registry
 
-# Volumes - adjust paths to match your system
-Volume=/usr/bin/snapraid:/usr/bin/snapraid:ro,Z
-Volume=/home/tristan/snapraid/:/snapraid/:Z  # conf must be writable!
-# Mount your data disks (uncomment and adjust as needed)
-# Volume=/mnt/disk1:/mnt/disk1:ro,Z
-# Volume=/mnt/disk1/SnapRAID.content:/mnt/disk1/SnapRAID.content:Z  # content must be writable!
-# Volume=/mnt/disk2:/mnt/disk2:ro,Z
-# Volume=/mnt/disk2/SnapRAID.content:/mnt/disk2/SnapRAID.content:Z  # content must be writable!
-# Volume=/mnt/parity:/mnt/parity:Z  # Parity disks must be writable!
+# App data: config.json, snapraid.conf, schedules, logs
+Volume=%h/snapraid:/app/snapraid:Z
 
-# Environment variables
-Environment=DENO_ENV=production
-Environment=SNAPRAID_BASE_PATH=/app/snapraid
+# Data, content and parity disks, mounted at the same paths as on the host
+# so the paths in snapraid.conf stay valid. Content and parity must be writable.
+# No :Z here, relabeling would touch every file on the disk (labels are disabled below instead)
+# Volume=/mnt/disk1:/mnt/disk1
+# Volume=/mnt/disk2:/mnt/disk2
+# Volume=/mnt/parity:/mnt/parity
 
-# Network
+# Optional: use the host's snapraid binary instead of the bundled one
+# Volume=/usr/bin/snapraid:/usr/bin/snapraid:ro
+# Environment=SNAPRAID_BIN=/usr/bin/snapraid
+
 PublishPort=3000:80
-PublishPort=8080:8080
 Network=snapraid-net
 
-# Security options
-SecurityLabelDisable=false
-# Privileged access for disk operations and SMART data
+# Access to disks and SMART data
+SecurityLabelDisable=true
 AddCapability=CAP_SYS_ADMIN
 AddCapability=CAP_SYS_RAWIO
-
-# Restart policy
-Restart=unless-stopped
 
 [Service]
 Restart=always

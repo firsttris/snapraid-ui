@@ -1,63 +1,70 @@
-# Build everything in one image (standalone version)
-FROM denoland/deno:2.5.6 AS backend-builder
+# SnapRAID bundled in the image; override with SNAPRAID_BIN to use a mounted binary
+FROM docker.io/library/debian:bookworm-slim AS snapraid-builder
+
+ARG SNAPRAID_VERSION=14.9
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates curl gcc make libc6-dev \
+  && curl -fsSL "https://github.com/amadvance/snapraid/releases/download/v${SNAPRAID_VERSION}/snapraid-${SNAPRAID_VERSION}.tar.gz" \
+    | tar -xz -C /tmp \
+  && cd /tmp/snapraid-${SNAPRAID_VERSION} \
+  && ./configure && make -j"$(nproc)" \
+  && install -m 0755 snapraid /usr/local/bin/snapraid
+
+FROM docker.io/denoland/deno:2.5.6 AS backend-builder
 
 WORKDIR /app/backend
 
-# Cache dependencies
-COPY backend/deno.json .
+# Cache dependencies (DENO_DIR=/deno-dir, copied into the final image)
+COPY backend/deno.json backend/deno.lock ./
 COPY shared/ ../shared/
 RUN deno install --entrypoint deno.json
 
-# Copy backend application code
+# Copy backend application code and warm the module cache
 COPY backend/src/ ./src/
+RUN deno cache src/main.ts
 
-FROM node:22-alpine AS frontend-builder
+FROM docker.io/library/node:22-bookworm-slim AS frontend-builder
 
 WORKDIR /app/frontend
 
-# Copy package files
-COPY frontend/package.json frontend/package-lock.json* ./
-
-# Install dependencies
+COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 
-# Copy application code
+COPY shared/ ../shared/
 COPY frontend/ ./
-
-# Build the application
 RUN npm run build
 
 # Final combined image
-FROM denoland/deno:latest
+FROM docker.io/denoland/deno:2.5.6
 
-# Install nginx and supervisor
-RUN apt-get update && apt-get install -y nginx supervisor nodejs libgcc-s1 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends nginx supervisor curl \
+  && rm -rf /var/lib/apt/lists/* \
+  && rm -f /etc/nginx/sites-enabled/default \
+  && mkdir -p /app/snapraid /var/log/supervisor /run/nginx
 
-# Create directories
-RUN mkdir -p /app/backend /app/frontend /app/snapraid /var/log/supervisor /run/nginx
+COPY --from=snapraid-builder /usr/local/bin/snapraid /usr/local/bin/snapraid
 
-# Copy backend from builder
+# Node runtime for the frontend server
+COPY --from=frontend-builder /usr/local/bin/node /usr/local/bin/node
+
+COPY --from=backend-builder /deno-dir /deno-dir
 COPY --from=backend-builder /app/backend /app/backend
-
-# Copy frontend build
+COPY --from=backend-builder /app/shared /app/shared
 COPY --from=frontend-builder /app/frontend/.output /app/frontend/.output
 
-# Copy nginx configuration
-COPY docker/nginx.conf /etc/nginx/sites-available/default
-
-# Copy supervisor configuration
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
-
-# Copy entrypoint script
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Expose ports
+ENV SNAPRAID_BASE_PATH=/app/snapraid \
+    SNAPRAID_BIN=/usr/local/bin/snapraid
+VOLUME /app/snapraid
+
 EXPOSE 80 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
   CMD curl -f http://localhost/ || exit 1
 
-# Start services
 ENTRYPOINT ["/entrypoint.sh"]

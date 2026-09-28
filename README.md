@@ -1,183 +1,133 @@
-# SnapRAID Web Manager
+<div align="center">
 
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://www.docker.com/)
-[![Deno](https://img.shields.io/badge/Deno-2.5.6+-green)](https://deno.com/)
-[![React](https://img.shields.io/badge/React-19+-blue)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue)](https://www.typescriptlang.org/)
+# SnapRAID UI
 
-A modern, user-friendly web interface for managing [SnapRAID](https://www.snapraid.it/) installations. Allows you to execute SnapRAID commands, manage configurations, monitor disks, and more – all through a web browser.
+**A modern web interface for [SnapRAID](https://www.snapraid.it/).**<br>
+Run sync and scrub, schedule jobs and keep an eye on disk health, all from your browser.
 
-**Note: This project is currently in early development.**
+[![CI](https://github.com/firsttris/snapraid-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/firsttris/snapraid-ui/actions/workflows/ci.yml)
+[![Docker Pulls](https://img.shields.io/docker/pulls/tristanteu/snapraid-ui?logo=docker&logoColor=white)](https://hub.docker.com/r/tristanteu/snapraid-ui)
+[![Image Size](https://img.shields.io/docker/image-size/tristanteu/snapraid-ui/latest?logo=docker&logoColor=white&label=image)](https://hub.docker.com/r/tristanteu/snapraid-ui)
+[![Platforms](https://img.shields.io/badge/platform-amd64%20%7C%20arm64-lightgrey)](https://hub.docker.com/r/tristanteu/snapraid-ui/tags)
+[![SnapRAID](https://img.shields.io/badge/SnapRAID-14.x-2ea44f)](https://www.snapraid.it/)
 
-## 🚀 Overview
+<img src="docs/screenshot.png" alt="SnapRAID UI dashboard" width="900">
 
-SnapRAID Web Manager is a complete toolkit for SnapRAID users that replaces command-line complexity with an intuitive web UI. The project consists of a Deno-based backend and a React frontend that can be deployed in a Docker container.
+</div>
 
-### Key Features
+## ✨ Features
 
-- **Configuration Management**: Easy management of multiple SnapRAID configurations
-- **Disk Monitoring**: Real-time status of data and parity disks
-- **Automated Tasks**: Schedulable SnapRAID operations (Sync, Scrub, Check)
-- **Log Management**: Centralized logs with filter and search functions
-- **Reports and Analytics**: Detailed reports on disk status and fragmentation
-- **SMART Monitoring**: Monitoring of disk health
-- **File Browser**: Navigate and restore files
-- **Docker Integration**: Easy deployment with Docker Compose or Podman
+- **Array health at a glance**: last sync and scrub, scrub coverage, next scheduled job
+- **One-click commands**: sync, scrub, status, diff, check, fix, with live output over WebSocket
+- **Scheduler**: cron-based sync and scrub jobs, no crontab editing
+- **Disk overview**: usage, file counts, fragmentation and parity headroom per disk
+- **SMART monitoring** and **disk power** control (spin down / up)
+- **Logs**: history of every run with full output
+- **Config management**: edit multiple `snapraid.conf` files, excludes and pool settings
+- **English and German UI**
 
-## 📋 Prerequisites
+## 🐳 Quick start with Docker
 
-- Docker and Docker Compose (recommended)
-- Node.js 18+ and Deno 2.5.6+ (for local development)
-- SnapRAID 14.0+ installed on the host system (the backend parses SnapRAID's structured log output, `--log ">&2"`)
-- Access to SnapRAID configuration files and disks
-
-## 🛠️ Installation
-
-### Local Development (Recommended for Development)
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/firsttris/snapraid-ui
-   cd snapraid-ui
-   ```
-
-2. **Install dependencies:** (requires Node.js and Deno)
-   ```bash
-   ./install.sh
-   ```
-
-3. **Start the application:**
-   ```bash
-   ./start.sh
-   ```
-
-   This will start both the backend (Deno) and frontend (React/Vite) servers in the background.
-
-4. **Access the application:**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8080
-
-#### Stopping the servers
-
-Press `Ctrl+C` in the terminal running `start.sh` to stop backend and frontend together. If one of them stops on its own, `start.sh` stops the other as well.
-
-Leftovers from a crashed terminal or from starting it twice can be stopped by hand:
+The image ships with SnapRAID 14.9, so nothing needs to be installed on the host.
 
 ```bash
-# Show running backends
-pgrep -af "src/main.ts"
+docker run -d --name snapraid-ui \
+  --privileged \
+  -p 3000:80 \
+  -v ./snapraid:/app/snapraid \
+  -v /mnt/disk1:/mnt/disk1 \
+  -v /mnt/disk2:/mnt/disk2 \
+  -v /mnt/parity:/mnt/parity \
+  tristanteu/snapraid-ui:latest
+```
 
-# Stop backend and frontend
+Open **http://localhost:3000** and add your `snapraid.conf` in *Manage Configurations*.
+
+**Mount your disks at the same paths as on the host**, so the paths in `snapraid.conf` stay valid. Parity and content locations must be writable. `--privileged` is only needed for SMART data and disk power.
+
+### Docker Compose
+
+```bash
+curl -O https://raw.githubusercontent.com/firsttris/snapraid-ui/master/docker/docker-compose.yml
+# add your disks under volumes:, then
+docker compose up -d
+```
+
+For Podman with systemd, use the Quadlet files in [docker/](docker/).
+
+### Configuration
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `SNAPRAID_BASE_PATH` | `/app/snapraid` | Holds `config.json`, `schedules.json`, logs and your SnapRAID configs. Mount it as a volume. |
+| `SNAPRAID_BIN` | `/usr/local/bin/snapraid` | SnapRAID binary. The bundled one is used unless you point this elsewhere. |
+| `SNAPRAID_EXTRA_ARGS` | *(empty)* | Extra arguments for every SnapRAID call |
+
+**Using your own SnapRAID binary:** mount it and point `SNAPRAID_BIN` at it. It needs to be version 14.0 or newer, because the UI parses SnapRAID's structured log output.
+
+```bash
+  -v /usr/bin/snapraid:/usr/bin/snapraid:ro \
+  -e SNAPRAID_BIN=/usr/bin/snapraid \
+```
+
+### Image tags
+
+| Tag | Content |
+|---|---|
+| `latest` | Latest release |
+| `1.2.3`, `1.2` | Specific release |
+
+## 🛠️ Development
+
+Requires Node.js 22+ and Deno 2.5+.
+
+```bash
+git clone https://github.com/firsttris/snapraid-ui
+cd snapraid-ui
+./install.sh
+./start.sh           # uses ./snapraid and the snapraid binary on your PATH
+./start.sh --demo    # sandbox with fake disks, no real array or SnapRAID install needed
+```
+
+Frontend runs on http://localhost:3000, backend API on http://localhost:8080. `Ctrl+C` stops both.
+
+`--demo` runs `dev/setup.sh`, which builds a pinned SnapRAID into `dev/bin/` (needs `curl`, `gcc`, `make`) and creates `dev/sandbox/` with three data disks, a parity disk and a few pending changes. `dev/setup.sh --reset` starts over.
+
+<details>
+<summary>Stopping leftover processes</summary>
+
+```bash
+pgrep -af "src/main.ts"                                   # show running backends
 pkill -f "deno task dev"; pkill -f "deno run.*src/main.ts"
 pkill -f "vite dev"
 ```
 
-To stop a single process, use `kill <pid>` with a PID from `pgrep`; add `-9` if it does not react.
+</details>
 
-#### Demo sandbox (no real disks or SnapRAID install needed)
+### Building the image locally
 
 ```bash
-./start.sh --demo
+docker build -f docker/Dockerfile -t snapraid-ui .
 ```
 
-On first run this calls `dev/setup.sh`, which builds a pinned SnapRAID binary into `dev/bin/` (needs `curl`, `gcc`, `make`) and creates `dev/sandbox/` with three fake data disks, a parity disk, an initial sync and a few pending changes. Run `dev/setup.sh --reset` to start over with a fresh sandbox. Everything under `dev/` except the script is gitignored.
+Pushing a `v*` tag publishes a multi-arch image to Docker Hub via GitHub Actions.
 
-The backend reads these environment variables, which `--demo` sets for you:
+### Stack
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `SNAPRAID_BASE_PATH` | `../snapraid` | Directory holding `config.json`, `schedules.json`, logs and SnapRAID configs |
-| `SNAPRAID_BIN` | `snapraid` | SnapRAID binary to execute |
-| `SNAPRAID_EXTRA_ARGS` | *(empty)* | Extra args for every SnapRAID call. The demo uses `--test-skip-device` because all sandbox disks share one filesystem |
-
-### With Docker (For Production Deployment)
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/firsttris/snapraid-ui
-   cd snapraid-ui
-   ```
-
-2. **Adjust configuration:**
-   Edit `docker/docker-compose.yml` to adjust the paths to your SnapRAID configurations and disks.
-
-3. **Start the container:**
-   ```bash
-   docker-compose -f docker/docker-compose.yml up --build -d
-   ```
-
-4. **Access the application:**
-   - Frontend: http://localhost:3001 (what you define in docker-compose.yml)
-   - Backend API: http://localhost:8080
-
-## 📖 Usage
-
-After installation:
-
-1. Open http://localhost:3000 in your browser
-2. Add your SnapRAID configurations
-3. Monitor your disks and perform maintenance tasks
-4. Schedule automatic sync and scrub operations
-
-### Getting Started
-
-- **Add Configuration**: Use the Config Manager to import your `snapraid.conf` files
-- **Scan Disks**: Perform an initial status check
-- **Set Up Schedules**: Automate regular SnapRAID operations
-
-## 🏗️ Architecture
-
-- **Backend**: Deno with Hono framework, WebSocket support
-- **Frontend**: React with TanStack Router, Tailwind CSS for styling
-- **Database**: File-based (no external DB required)
-- **Containerization**: Docker with Nginx as reverse proxy
-
-## 📸 Screenshots
-
-### Dashboard
-![Dashboard](docs/ui-screenshot.png)
-
-### Logs
-![Logs](docs/ui-screenshot2.png)
-
-### Scheduler
-![Scheduler](docs/ui-screenshot3.png)
-
+- **Backend**: Deno + Hono, WebSocket for live output, file-based storage
+- **Frontend**: React 19, TanStack Start/Router/Query, Tailwind CSS, Paraglide i18n
+- **Container**: Nginx reverse proxy, Supervisor, bundled SnapRAID
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Use TypeScript for all new code
-- Run tests before committing
-- Adhere to existing code styles (Biome for linting)
+Issues and pull requests are welcome. Please run `npx biome check`, `npm run typecheck` and the tests (`deno test` in `backend/`, `npm test` in `frontend/`) before opening a PR.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [SnapRAID](https://www.snapraid.it/) for the underlying tool
-- [Deno](https://deno.com/) for the runtime
-- [React](https://reactjs.org/) and [TanStack](https://tanstack.com/) for the UI frameworks
-
-## 📞 Support
-
-For questions or issues:
-- Open an issue on GitHub
-- Check the logs in the Docker container
-- Ensure SnapRAID is correctly installed
+MIT
 
 ---
 
-**Note**: This tool is not officially affiliated with SnapRAID and is developed by the community.</content>
-<parameter name="filePath">/home/tristan/Projects/snapraid/README.md
+<div align="center">
+<sub>Not affiliated with the SnapRAID project. SnapRAID is developed by Andrea Mazzoleni.</sub>
+</div>

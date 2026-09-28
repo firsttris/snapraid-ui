@@ -1,34 +1,24 @@
 services:
-  app:
+  snapraid-ui:
+    image: tristanteu/snapraid-ui:latest
+    # To build from source instead: docker compose -f docker/docker-compose.yml up --build
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: snapraid-app
+    container_name: snapraid-ui
     restart: unless-stopped
-    volumes:
-      # SnapRAID binary
-      - /usr/bin/snapraid:/usr/bin/snapraid:ro
-      # SnapRAID config and data
-      - /home/tristan/snapraid/:/app/snapraid
-      # Mount your data disks (adjust paths as needed)
-      - /home/tristan/Downloads/:/home/tristan/Downloads/
-      - /mnt/4TB-NVME/TestSnap/:/mnt/4TB-NVME/TestSnap/
-      - /run/media/tristan/Backup/paritytest/:/run/media/tristan/Backup/paritytest/
-      # - /mnt/disk1:/mnt/disk1:ro
-      # - /mnt/disk1/SnapRAID.content:/mnt/disk1/SnapRAID.content # content disks must be writable!
-      # - /mnt/disk2:/mnt/disk2:ro
-      # - /mnt/disk2/SnapRAID.content:/mnt/disk2/SnapRAID.content # content disks must be writable!
-      # - /mnt/parity:/mnt/parity  # Parity disks must be writable!
-    environment:
-      - DENO_ENV=production
-      - SNAPRAID_BASE_PATH=/app/snapraid
     ports:
-      - "3001:80"  # Frontend on port 3001, Nginx listens on port 80 internally
-      - "8080:8080"  # Backend API on port 8080 (optional, for direct API access)
-    privileged: true  # Required for disk operations and SMART data
-    networks:
-      - snapraid-net
-
-networks:
-  snapraid-net:
-    driver: bridge
+      - "3000:80"
+    volumes:
+      # App data: config.json, snapraid.conf, schedules, logs
+      - ./snapraid:/app/snapraid
+      # Data, content and parity disks, mounted at the same paths as on the host
+      # so the paths in snapraid.conf stay valid. Content and parity must be writable.
+      # - /mnt/disk1:/mnt/disk1
+      # - /mnt/disk2:/mnt/disk2
+      # - /mnt/parity:/mnt/parity
+      # Optional: use the host's snapraid binary instead of the bundled one
+      # - /usr/bin/snapraid:/usr/bin/snapraid:ro
+    # environment:
+    #   - SNAPRAID_BIN=/usr/bin/snapraid
+    privileged: true  # Needed for SMART data and disk info

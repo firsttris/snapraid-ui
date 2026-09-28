@@ -16,8 +16,8 @@ backend/.cache
 **/test
 **/tests
 
-# Docker files
-docker/
-Dockerfile*
-docker-compose*.yml
-.dockerignore
+# Local data and dev sandbox
+snapraid/
+dev/
+frontend/.output
+frontend/.vinxi
