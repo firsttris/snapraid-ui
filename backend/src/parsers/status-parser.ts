@@ -146,6 +146,7 @@ export const parseStatusOutput = (output: string, rawOutput: string = output): S
     scrubPercentage: parseScrubPercentage(blocks.total, blocks.unscrubbed),
     ...parseScrubAge(summary),
     ...totals,
+    zeroSubsecondFiles: toInt(summary.get('zerosubsecond_file_count')),
     ...diffStats,
     freeSpaceGB: totals.totalFreeGB,
   };

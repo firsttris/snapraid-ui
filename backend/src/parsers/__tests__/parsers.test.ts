@@ -3,6 +3,7 @@ import { parseStatusOutput } from "../status-parser.ts";
 import { parseDiffOutput } from "../diff-parser.ts";
 import { parseListOutput } from "../list-parser.ts";
 import { parseCheckOutput } from "../check-parser.ts";
+import { parseDupOutput } from "../dup-parser.ts";
 import { parseSmartOutput } from "../smart-parser.ts";
 import { parseProbeOutput } from "../probe-parser.ts";
 import { parseDfOutput } from "../df-parser.ts";
@@ -174,4 +175,20 @@ Deno.test("parseDfOutput - size, free space and mount point", () => {
   const output = "     1B-blocks         Avail Mounted on\n4000787030016 1234567890123 /mnt/parity 1\n";
   assertEquals(parseDfOutput(output), { totalBytes: 4000787030016, freeBytes: 1234567890123, mount: "/mnt/parity 1" });
   assertEquals(parseDfOutput("df: /missing: No such file or directory\n"), null);
+});
+
+Deno.test("parseDupOutput - duplicate pairs with escaped paths", () => {
+  const { duplicates, totalSize } = parseDupOutput(fixture("dup.log"));
+
+  assertEquals(duplicates, [
+    { disk: "d1", name: "documents/contract-backup.pdf", originalDisk: "d1", originalName: "documents/contract.pdf", size: 122880 },
+    { disk: "d3", name: "projects/copy of: contract.pdf", originalDisk: "d1", originalName: "documents/contract.pdf", size: 122880 },
+  ]);
+  assertEquals(totalSize, 245760);
+});
+
+Deno.test("parseStatusOutput - files without sub-second timestamp", () => {
+  const status = parseStatusOutput("summary:disk_zerosubsecond_file_count:d3:1\nsummary:zerosubsecond_file_count:1");
+  assertEquals(status.zeroSubsecondFiles, 1);
+  assertEquals(parseStatusOutput(fixture("status.log")).zeroSubsecondFiles, 0);
 });

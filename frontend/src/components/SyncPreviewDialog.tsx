@@ -7,12 +7,31 @@ import { Button } from './Button'
 // How many deleted files are listed before collapsing into "… and N more"
 const MAX_DELETED_SHOWN = 20
 
+const PRE_HASH_KEY = 'snapraid:sync-pre-hash'
+
+// Remembered per browser, storage may be unavailable (private mode, blocked site data)
+const loadPreHash = () => {
+  try {
+    return localStorage.getItem(PRE_HASH_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+const savePreHash = (value: boolean) => {
+  try {
+    localStorage.setItem(PRE_HASH_KEY, String(value))
+  } catch {
+    // Only a convenience
+  }
+}
+
 interface SyncPreviewDialogProps {
   configPath: string
   // An interrupted sync already recorded the file list, so diff looks clean
   // while parity still lags behind
   hasUnsyncedParity: boolean
-  onConfirm: () => void
+  onConfirm: (args: string[]) => void
   onClose: () => void
 }
 
@@ -24,6 +43,7 @@ export const SyncPreviewDialog = ({
 }: SyncPreviewDialogProps) => {
   const [diff, setDiff] = useState<DiffReport | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [preHash, setPreHash] = useState(loadPreHash)
 
   useEffect(() => {
     let cancelled = false
@@ -163,13 +183,36 @@ export const SyncPreviewDialog = ({
           )}
         </div>
 
+        <div className="px-6 pb-4">
+          <label className="flex cursor-pointer gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <input
+              type="checkbox"
+              checked={preHash}
+              onChange={(e) => {
+                setPreHash(e.target.checked)
+                savePreHash(e.target.checked)
+              }}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              <span className="block text-sm font-medium text-gray-800">
+                {m.sync_pre_hash()}{' '}
+                <code className="text-xs text-gray-500">-h</code>
+              </span>
+              <span className="block text-xs text-gray-600">
+                {m.sync_pre_hash_hint()}
+              </span>
+            </span>
+          </label>
+        </div>
+
         <div className="flex justify-end gap-3 p-6 border-t">
           <Button onClick={onClose} variant="secondary">
             {m.sync_preview_cancel()}
           </Button>
           <button
             type="button"
-            onClick={onConfirm}
+            onClick={() => onConfirm(preHash ? ['-h'] : [])}
             disabled={isLoading}
             className={`px-4 py-2 rounded text-white disabled:bg-gray-300 disabled:cursor-not-allowed ${
               error || (diff && diff.deletedFiles > 0)

@@ -10,6 +10,7 @@ import {configOperationsRoutes} from "./config-operations.ts";
 import {hardwareRoutes} from "./hardware.ts";
 import { setReportsRunner, reportsRoutes } from "./reports.ts";
 import { parseStatusOutput } from "../parsers/status-parser.ts";
+import { parseCheckOutput } from "../parsers/check-parser.ts";
 import { isLockedOutput, STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
 import { createDiskReplacementRoutes } from "./disk-replacement.ts";
 import { readRunReport } from "../run-report.ts";
@@ -122,6 +123,34 @@ snapraid.get("/last-runs", async (c) => {
       state.logManager.findLastRun("scrub", configPath),
     ]);
     return c.json({ sync, scrub });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// GET /api/snapraid/check-report - Files the last check of a config found, read from its log.
+// check reads the whole array and runs as a job, so the report comes afterwards
+snapraid.get("/check-report", async (c) => {
+  const relativePath = c.req.query("path");
+
+  if (!relativePath) {
+    return c.json({ error: "Missing path parameter" }, 400);
+  }
+  if (!state.logManager) {
+    return c.json({ error: "Log manager not initialized" }, 500);
+  }
+
+  try {
+    const lastRun = await state.logManager.findLastRun("check", resolveFromBase(relativePath));
+    if (!lastRun) {
+      return c.json({ error: "No check has run for this configuration yet" }, 404);
+    }
+    const log = await state.logManager.readLog(lastRun.logFile);
+    return c.json({
+      ...parseCheckOutput(log),
+      timestamp: lastRun.timestamp,
+      rawOutput: "",
+    });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }

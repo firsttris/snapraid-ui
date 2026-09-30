@@ -29,6 +29,7 @@ interface ArrayHealthPanelProps {
   onShowDetails: () => void
   onFixErrors: () => void
   onScrubBad: () => void
+  onTouch: () => void
   refreshDisabled: boolean
 }
 
@@ -168,6 +169,7 @@ export const ArrayHealthPanel = ({
   onShowDetails,
   onFixErrors,
   onScrubBad,
+  onTouch,
   refreshDisabled,
 }: ArrayHealthPanelProps) => {
   // status only reads the content file, so it still looks healthy when the last
@@ -268,6 +270,25 @@ export const ArrayHealthPanel = ({
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {(status?.zeroSubsecondFiles ?? 0) > 0 && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          <span>
+            {m.health_zero_subsecond({
+              count: status?.zeroSubsecondFiles ?? 0,
+            })}
+          </span>
+          <Button
+            onClick={onTouch}
+            disabled={refreshDisabled}
+            variant="secondary"
+            size="sm"
+            className="bg-white"
+          >
+            {m.health_run_touch()}
+          </Button>
         </div>
       )}
 

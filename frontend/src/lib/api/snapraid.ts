@@ -4,6 +4,7 @@ import type {
   DevicesReport,
   DiffReport,
   DiskReplacement,
+  DupReport,
   LastRuns,
   ListReport,
   ParityLevelUsage,
@@ -351,15 +352,31 @@ export const getFileList = async (configPath: string): Promise<ListReport> => {
 }
 
 /**
- * Get check report from SnapRAID
+ * Report of the last check job of a config, read from its log
  */
-export const getCheck = async (configPath: string): Promise<CheckReport> => {
+export const getCheckReport = async (
+  configPath: string,
+): Promise<CheckReport> => {
   const response = await apiFetch(
-    `${API_BASE}/snapraid/check?path=${encodeURIComponent(configPath)}`,
+    `${API_BASE}/snapraid/check-report?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {
     const error = await response.json()
     throw new Error(error.error || 'Failed to get check report')
+  }
+  return response.json()
+}
+
+/**
+ * Get duplicate files, from the hashes SnapRAID already stored
+ */
+export const getDup = async (configPath: string): Promise<DupReport> => {
+  const response = await apiFetch(
+    `${API_BASE}/snapraid/dup?path=${encodeURIComponent(configPath)}`,
+  )
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to get duplicates')
   }
   return response.json()
 }

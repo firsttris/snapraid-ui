@@ -1,9 +1,9 @@
-import type { SnapRaidCommand, CommandOutput, RunningJob, DevicesReport, ListReport, CheckReport, DiffReport } from "@shared/types.ts";
+import type { SnapRaidCommand, CommandOutput, RunningJob, DevicesReport, ListReport, DiffReport, DupReport } from "@shared/types.ts";
 import type { LogManager } from "./log-manager.ts";
 import { executeCommand, abortCommand, getCurrentJob, executeSnapraidCommand, setLogManager } from "./executors/command-executor.ts";
 import { parseDevicesOutput } from "./parsers/devices-parser.ts";
 import { parseListOutput } from "./parsers/list-parser.ts";
-import { parseCheckOutput } from "./parsers/check-parser.ts";
+import { parseDupOutput } from "./parsers/dup-parser.ts";
 import { parseDiffOutput } from "./parsers/diff-parser.ts";
 import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "./parsers/structured-log.ts";
 import { LIST_ARGS } from "./parsers/list-parser.ts";
@@ -89,19 +89,17 @@ export const createSnapRaidRunner = () => {
     },
 
     /**
-     * Run check command
+     * Run dup command, it only reads the content file
      */
-    runCheck: async (configPath: string): Promise<CheckReport> => {
-      const { log, text } = await runStructured(["check", "-c", configPath]);
+    runDup: async (configPath: string): Promise<DupReport> => {
+      const { log, text } = await runStructured(["dup", "-c", configPath]);
 
-      const { files, totalFiles, errorCount, rehashCount, okCount } = parseCheckOutput(log);
+      const { duplicates, totalSize } = parseDupOutput(log);
 
       return {
-        files,
-        totalFiles,
-        errorCount,
-        rehashCount,
-        okCount,
+        duplicates,
+        totalDuplicates: duplicates.length,
+        totalSize,
         timestamp: new Date().toISOString(),
         rawOutput: text,
       };

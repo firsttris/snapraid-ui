@@ -9,6 +9,7 @@ interface CommandPanelProps {
   onExecute: (command: SnapRaidCommand) => void
   onUndelete: () => void
   onAbort: () => void
+  onShowCheckReport: () => void
   disabled: boolean
   isRunning: boolean
   isAborting: boolean
@@ -38,6 +39,10 @@ const getCommandLabel = (id: SnapRaidCommand) => {
       return m.commands_devices()
     case 'list':
       return m.commands_list()
+    case 'dup':
+      return m.commands_dup()
+    case 'touch':
+      return m.commands_touch()
     default:
       return id
   }
@@ -63,6 +68,10 @@ const getCommandDescription = (id: SnapRaidCommand) => {
       return m.commands_desc_devices()
     case 'list':
       return m.commands_desc_list()
+    case 'dup':
+      return m.commands_desc_dup()
+    case 'touch':
+      return m.commands_desc_touch()
     default:
       return ''
   }
@@ -79,12 +88,12 @@ const MENU_GROUPS: Array<{
   {
     title: m.commands_group_info,
     description: m.commands_group_info_desc,
-    commands: ['status', 'diff', 'list', 'devices'],
+    commands: ['status', 'diff', 'list', 'dup', 'devices'],
   },
   {
     title: m.commands_group_maintenance,
     description: m.commands_group_maintenance_desc,
-    commands: ['check', 'pool'],
+    commands: ['check', 'touch', 'pool'],
   },
   {
     title: m.commands_group_recovery,
@@ -292,6 +301,7 @@ export const CommandPanel = ({
   onExecute,
   onUndelete,
   onAbort,
+  onShowCheckReport,
   disabled,
   isRunning,
   isAborting,
@@ -361,7 +371,18 @@ export const CommandPanel = ({
         <div
           className={`mt-4 flex items-start justify-between gap-3 rounded-lg border p-4 text-sm ${banner.className}`}
         >
-          <span>{banner.text}</span>
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {banner.text}
+            {lastResult?.command === 'check' && !lastResult.aborted && (
+              <button
+                type="button"
+                onClick={onShowCheckReport}
+                className="font-medium underline hover:no-underline"
+              >
+                {m.check_show_report()}
+              </button>
+            )}
+          </span>
           <button
             type="button"
             onClick={onDismissResult}

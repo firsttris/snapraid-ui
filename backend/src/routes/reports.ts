@@ -47,8 +47,8 @@ reports.get("/list", async (c) => {
   }
 });
 
-// GET /api/snapraid/check - Get check report
-reports.get("/check", async (c) => {
+// GET /api/snapraid/dup - Duplicate files, from the hashes in the content file
+reports.get("/dup", async (c) => {
   const relativePath = c.req.query("path");
   
   if (!relativePath) {
@@ -58,7 +58,7 @@ reports.get("/check", async (c) => {
   const configPath = resolveFromBase(relativePath);
 
   try {
-    const result = await runner.runCheck(configPath);
+    const result = await runner.runDup(configPath);
     return c.json(result);
   } catch (error) {
     return c.json({ error: String(error) }, 500);

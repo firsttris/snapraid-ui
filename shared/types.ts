@@ -81,6 +81,7 @@ export interface SnapRaidStatus {
   totalFreeGB?: number;
   disks?: DiskStatusInfo[]; // Individual disk stats
   scrubHistory?: ScrubHistoryPoint[]; // Scrub history chart data
+  zeroSubsecondFiles?: number; // Files with a zero sub-second timestamp, fixed by `touch`
   rawOutput: string;
 }
 
@@ -93,7 +94,7 @@ export interface CommandOutput {
   aborted?: boolean; // Stopped on user request
 }
 
-export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff' | 'fix' | 'check' | 'pool' | 'smart' | 'probe' | 'up' | 'down' | 'devices' | 'list' | 'touch';
+export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff' | 'fix' | 'check' | 'pool' | 'smart' | 'probe' | 'devices' | 'list' | 'touch' | 'dup';
 
 export interface LogFile {
   filename: string;
@@ -299,6 +300,23 @@ export interface DiffReport {
   copiedFiles: number;
   restoredFiles: number;
   failed?: boolean;        // SnapRAID stopped before writing a summary, counts are not reliable
+  timestamp: string;       // ISO string
+  rawOutput: string;
+}
+
+// Duplicate files (from snapraid dup command), found by comparing the stored hashes
+export interface DuplicateFile {
+  disk: string;
+  name: string;            // Path relative to the disk
+  originalDisk: string;    // The earlier file with the same content
+  originalName: string;
+  size: number;            // Bytes
+}
+
+export interface DupReport {
+  duplicates: DuplicateFile[];
+  totalDuplicates: number;
+  totalSize: number;       // Bytes the duplicates take up
   timestamp: string;       // ISO string
   rawOutput: string;
 }

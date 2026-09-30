@@ -2,6 +2,7 @@ import type {
   CheckReport,
   DevicesReport,
   DiffReport,
+  DupReport,
   ListReport,
   SnapRaidCommand,
 } from '@shared/types'
@@ -9,12 +10,14 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrayHealthPanel } from '../components/ArrayHealthPanel'
+import { CheckDialog } from '../components/CheckDialog'
 import { CheckViewer } from '../components/CheckViewer'
 import { CommandPanel } from '../components/CommandPanel'
 import { ConfigBar } from '../components/ConfigBar'
 import { DeviceList } from '../components/DeviceList'
 import { DiffViewer } from '../components/DiffViewer'
 import { DisksPanel } from '../components/DisksPanel'
+import { DupViewer } from '../components/DupViewer'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { FileListViewer } from '../components/FileListViewer'
 import { OutputConsole } from '../components/OutputConsole'
@@ -38,9 +41,10 @@ import {
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
 import { useWebSocketConnection } from '../hooks/useWebSocketConnection'
 import {
-  getCheck,
+  getCheckReport,
   getDevices,
   getDiff,
+  getDup,
   getFileList,
   SnapRaidBusyError,
 } from '../lib/api/snapraid'
@@ -57,12 +61,15 @@ type Report =
   | { kind: 'list'; data: ListReport | null }
   | { kind: 'check'; data: CheckReport | null }
   | { kind: 'diff'; data: DiffReport | null }
+  | { kind: 'dup'; data: DupReport | null }
 
 const REPORT_LOADERS = {
   devices: getDevices,
   list: getFileList,
-  check: getCheck,
+  // check runs as a job, its report is read from the log afterwards
+  check: getCheckReport,
   diff: getDiff,
+  dup: getDup,
 } as const
 
 // Probe does not wake disks, so polling it keeps the power state fresh
@@ -78,6 +85,7 @@ function Dashboard() {
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showSyncPreview, setShowSyncPreview] = useState(false)
   const [showScrubDialog, setShowScrubDialog] = useState(false)
+  const [showCheckDialog, setShowCheckDialog] = useState(false)
   const [report, setReport] = useState<Report | null>(null)
 
   // TanStack Query hooks
@@ -217,6 +225,11 @@ function Dashboard() {
         return
       }
 
+      if (command === 'check') {
+        setShowCheckDialog(true)
+        return
+      }
+
       if (command === 'status') {
         setShowStatusModal(true)
         await refetchStatus()
@@ -293,6 +306,7 @@ function Dashboard() {
           onShowDetails={() => setShowStatusModal(true)}
           onFixErrors={handleFixErrors}
           onScrubBad={() => runCommand('scrub', ['-p', 'bad'])}
+          onTouch={() => runCommand('touch')}
           refreshDisabled={wsState.isRunning}
         />
 
@@ -310,6 +324,7 @@ function Dashboard() {
               ? null
               : wsState.lastResult
           }
+          onShowCheckReport={() => openReport('check')}
           onDismissResult={() =>
             setDismissedResult(wsState.lastResult?.finishedAt ?? null)
           }
@@ -333,9 +348,9 @@ function Dashboard() {
             configPath={selectedConfig}
             hasUnsyncedParity={!!statusData?.status.syncInProgress}
             onClose={() => setShowSyncPreview(false)}
-            onConfirm={() => {
+            onConfirm={(args) => {
               setShowSyncPreview(false)
-              runCommand('sync')
+              runCommand('sync', args)
             }}
           />
         )}
@@ -347,6 +362,17 @@ function Dashboard() {
             onConfirm={(args) => {
               setShowScrubDialog(false)
               runCommand('scrub', args)
+            }}
+          />
+        )}
+
+        {showCheckDialog && parsedConfig && (
+          <CheckDialog
+            dataDisks={Object.keys(parsedConfig.data)}
+            onClose={() => setShowCheckDialog(false)}
+            onConfirm={(args) => {
+              setShowCheckDialog(false)
+              runCommand('check', args)
             }}
           />
         )}
@@ -401,6 +427,15 @@ function Dashboard() {
             movedFiles={report.data?.movedFiles || 0}
             copiedFiles={report.data?.copiedFiles || 0}
             restoredFiles={report.data?.restoredFiles || 0}
+            isLoading={!report.data}
+            onClose={closeReport}
+          />
+        )}
+
+        {report?.kind === 'dup' && (
+          <DupViewer
+            duplicates={report.data?.duplicates || []}
+            totalSize={report.data?.totalSize || 0}
             isLoading={!report.data}
             onClose={closeReport}
           />

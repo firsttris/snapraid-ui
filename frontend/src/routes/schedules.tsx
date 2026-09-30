@@ -282,6 +282,9 @@ function ScheduleForm({
   const [scrubOptions, setScrubOptions] = useState<ScrubOptions>(() =>
     parseScrubArgs(schedule?.command === 'scrub' ? schedule.args : []),
   )
+  const [preHash, setPreHash] = useState(
+    schedule?.command === 'sync' && !!schedule.args?.includes('-h'),
+  )
   const [syncGuard, setSyncGuard] = useState(
     schedule ? schedule.maxDeletedFiles != null : true,
   )
@@ -371,7 +374,12 @@ function ScheduleForm({
       configPath,
       cronExpression,
       enabled,
-      args: command === 'scrub' ? scrubArgs(scrubOptions) : [],
+      args:
+        command === 'scrub'
+          ? scrubArgs(scrubOptions)
+          : command === 'sync' && preHash
+            ? ['-h']
+            : [],
       maxDeletedFiles: command === 'sync' && syncGuard ? maxDeletedValue : null,
       touchBefore: command === 'sync' && touchBefore,
       scrubAfter:
@@ -538,6 +546,22 @@ function ScheduleForm({
                 </span>
                 <span className="block text-xs text-gray-500">
                   {m.schedules_touch_before_hint()}
+                </span>
+              </span>
+            </label>
+            <label className="flex gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={preHash}
+                onChange={(e) => setPreHash(e.target.checked)}
+                className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span>
+                <span className="block text-sm font-medium text-gray-700">
+                  {m.sync_pre_hash()}
+                </span>
+                <span className="block text-xs text-gray-500">
+                  {m.sync_pre_hash_hint()}
                 </span>
               </span>
             </label>
@@ -881,6 +905,12 @@ function ScheduleCard({
                 <>{m.commands_touch()} → </>
               )}
               {getCommandLabel(schedule.command)}
+              {schedule.command === 'sync' && schedule.args?.includes('-h') && (
+                <span className="text-gray-500">
+                  {' · '}
+                  {m.sync_pre_hash()}
+                </span>
+              )}
               {schedule.command === 'scrub' && (
                 <span className="text-gray-500">
                   {' · '}
