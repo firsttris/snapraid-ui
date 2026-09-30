@@ -26,8 +26,8 @@ Run sync and scrub, schedule jobs and keep an eye on disk health, all from your 
 - **Notifications** via ntfy push, e-mail or webhook (Discord, Slack, Home Assistant …) when a job fails, scrub finds damaged data, a scheduled sync is skipped or a disk shows SMART problems
 - **Disk replacement wizard**: restores a failed data or parity disk step by step (`fix -d`, `check -a`, `sync`) and pauses scheduled jobs meanwhile
 - **Disk overview**: usage, file counts, fragmentation and parity headroom per disk
-- **SMART monitoring**: health, temperature and failure probability per disk
-- **Logs**: history of every run with full output
+- **SMART monitoring**: health, temperature, failure probability and SSD wear per disk; flags reallocated/pending sectors, read and CRC errors, highlights the affected attributes and tells you what to do (replace the disk, check the cable, improve cooling)
+- **Logs**: history of every run with full output, searchable and filterable; old logs are rotated automatically (100 files / 30 days by default) or on demand
 - **Config management**: add existing or create new `snapraid.conf` files, rename, enable/disable, and edit disks, content files, excludes, pool and options visually or as text
 - **Login** via environment variables, no database needed
 - **English and German UI**, light and dark theme (follows the system or switch in the header)
