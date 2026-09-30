@@ -37,8 +37,9 @@ RUN npm run build
 # Final combined image
 FROM docker.io/denoland/deno:2.5.6
 
+# smartmontools: SnapRAID calls smartctl for smart, probe (power state) and down (spin down)
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends nginx supervisor curl \
+  && apt-get install -y --no-install-recommends nginx supervisor curl smartmontools \
   && rm -rf /var/lib/apt/lists/* \
   && rm -f /etc/nginx/sites-enabled/default \
   && mkdir -p /app/snapraid /var/log/supervisor /run/nginx

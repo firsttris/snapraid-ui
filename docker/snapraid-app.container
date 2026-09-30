@@ -30,10 +30,10 @@ Volume=%h/snapraid:/app/snapraid:Z
 PublishPort=3000:80
 Network=snapraid-net
 
-# Access to disks and SMART data
+# Access to disks and SMART data: SnapRAID runs smartctl on the /dev/sdX node behind each mount,
+# which only exists in the container with --privileged (needs rootful Podman)
 SecurityLabelDisable=true
-AddCapability=CAP_SYS_ADMIN
-AddCapability=CAP_SYS_RAWIO
+PodmanArgs=--privileged
 
 [Service]
 Restart=always
