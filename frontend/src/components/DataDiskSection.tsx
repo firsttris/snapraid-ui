@@ -1,6 +1,8 @@
+import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useDiskReplacement } from '../hooks/queries'
 import * as m from '../paraglide/messages'
+import { Button } from './Button'
 import { DirectoryBrowser } from './DirectoryBrowser'
 import { RemoveDataDiskWizard } from './RemoveDataDiskWizard'
 import { ReplaceDiskWizard } from './ReplaceDiskWizard'
@@ -78,13 +80,14 @@ export const DataDiskSection = ({
           </svg>
           {m.data_disk_title()} ({Object.keys(data).length})
         </h3>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setShowAddDataDisk(!showAddDataDisk)}
-          className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
         >
-          + {m.data_disk_add_disk()}
-        </button>
+          <Plus size={14} />
+          {m.data_disk_add_disk()}
+        </Button>
       </div>
 
       {error && (
@@ -128,38 +131,36 @@ export const DataDiskSection = ({
                   placeholder={m.data_disk_path_placeholder()}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono text-sm"
                 />
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={() => setShowDataDiskBrowser(true)}
-                  className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
                   title={m.data_disk_browse()}
                 >
-                  📁 {m.config_manager_browse()}
-                </button>
+                  {m.config_manager_browse()}
+                </Button>
               </div>
             </div>
           </div>
           <div className="flex gap-2">
-            <button
-              type="button"
+            <Button
+              size="sm"
               onClick={handleAddDataDisk}
               disabled={addingDataDisk}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm"
             >
-              {addingDataDisk ? `${m.common_add()}...` : m.common_add()}
-            </button>
-            <button
-              type="button"
+              {addingDataDisk ? m.common_adding() : m.common_add()}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => {
                 setShowAddDataDisk(false)
                 setNewDataDiskName('')
                 setNewDataDiskPath('')
                 setError('')
               }}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
             >
               {m.common_cancel()}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -196,25 +197,33 @@ export const DataDiskSection = ({
                   )}
                 </div>
                 {!pending && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setReplacing({ name, path })}
                     title={m.replace_disk_button_title()}
-                    className="ml-3 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                    className="ml-3"
                   >
                     {replacingDisk === name
                       ? m.replace_disk_resume()
                       : m.replace_disk_button()}
-                  </button>
+                  </Button>
                 )}
-                <button
-                  type="button"
+                <Button
+                  variant="ghostDanger"
+                  size={pending ? 'sm' : 'iconSm'}
                   onClick={() => setRemoving({ name, path, pending })}
                   disabled={replacingDisk === name}
-                  className="ml-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label={m.common_remove()}
+                  title={m.common_remove()}
+                  className="ml-2"
                 >
-                  {pending ? m.data_disk_resume_removal() : m.common_remove()}
-                </button>
+                  {pending ? (
+                    m.data_disk_resume_removal()
+                  ) : (
+                    <Trash2 size={16} />
+                  )}
+                </Button>
               </div>
             )
           })

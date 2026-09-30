@@ -1,7 +1,9 @@
 import type { SnapRaidCommand } from '@shared/types'
+import { RefreshCw, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useDeleteLog, useLogs, useRotateLogs } from '../hooks/queries'
 import * as m from '../paraglide/messages'
+import { Button } from './Button'
 import { errorMessage, useFeedback } from './Feedback'
 import { LogFilters } from './LogFilters'
 import { LogListItem } from './LogListItem'
@@ -70,20 +72,19 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
             {m.log_list_title()} ({filteredLogs.length})
           </h2>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => refetch()}
-              className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium"
-            >
+            <Button variant="secondary" size="sm" onClick={() => refetch()}>
+              <RefreshCw size={14} />
               {m.log_list_refresh()}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="ghostDanger"
+              size="sm"
               onClick={handleRotateLogs}
-              className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all text-sm font-medium"
+              disabled={rotateLogsMutation.isPending}
             >
+              <Trash2 size={14} />
               {m.log_list_clean_old()}
-            </button>
+            </Button>
           </div>
         </div>
 

@@ -1,4 +1,5 @@
 import type { ParityLevel } from '@shared/types'
+import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useDiskReplacement } from '../hooks/queries'
 import * as m from '../paraglide/messages'
@@ -108,15 +109,16 @@ export const ParityDiskSection = ({
           </svg>
           {m.parity_disk_title()} ({parity.length})
         </h3>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setShowAddParity(!showAddParity)}
           disabled={!canAdd}
           title={canAdd ? undefined : m.parity_disk_max_reached()}
-          className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          + {m.parity_disk_add_parity()}
-        </button>
+          <Plus size={14} />
+          {m.parity_disk_add_parity()}
+        </Button>
       </div>
 
       {error && (
@@ -147,14 +149,13 @@ export const ParityDiskSection = ({
                   placeholder={m.parity_disk_directory_placeholder()}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
                 />
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={() => setShowParityBrowser(true)}
-                  className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
                   title={m.parity_disk_browse()}
                 >
-                  📁 {m.config_manager_browse()}
-                </button>
+                  {m.config_manager_browse()}
+                </Button>
               </div>
             </div>
             <div>
@@ -178,25 +179,21 @@ export const ParityDiskSection = ({
             </div>
           </div>
           <div className="flex gap-2 mt-2">
-            <Button
-              onClick={handleAddParity}
-              disabled={addingParity}
-              className="text-sm"
-            >
-              {addingParity ? `${m.common_adding()}` : m.common_add()}
+            <Button size="sm" onClick={handleAddParity} disabled={addingParity}>
+              {addingParity ? m.common_adding() : m.common_add()}
             </Button>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => {
                 setShowAddParity(false)
                 setNewParityPath('')
                 setNewParityFilename('snapraid.parity')
                 setError('')
               }}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
             >
               {m.common_cancel()}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -236,18 +233,21 @@ export const ParityDiskSection = ({
                   </div>
                 ))}
               </div>
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setReplacing(p)}
                 title={m.replace_disk_button_title()}
-                className="ml-3 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                className="ml-3"
               >
                 {replacingDisk === p.keyword
                   ? m.replace_disk_resume()
                   : m.replace_disk_button()}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="ghostDanger"
+                size="iconSm"
+                aria-label={m.common_remove()}
                 onClick={() => handleRemove(p.level)}
                 disabled={
                   p.level !== highestLevel || replacingDisk === p.keyword
@@ -255,12 +255,12 @@ export const ParityDiskSection = ({
                 title={
                   p.level !== highestLevel
                     ? m.parity_disk_remove_highest_only()
-                    : undefined
+                    : m.common_remove()
                 }
-                className="ml-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-500"
+                className="ml-2"
               >
-                {m.common_remove()}
-              </button>
+                <Trash2 size={16} />
+              </Button>
             </div>
           ))
         )}

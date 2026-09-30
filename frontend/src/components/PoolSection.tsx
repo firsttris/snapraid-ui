@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
 import { Button } from './Button'
@@ -47,7 +48,12 @@ export const PoolSection = ({ pool, onPoolChange }: PoolSectionProps) => {
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold">{m.pool_section_title()}</h3>
           {!editMode && !pool && (
-            <Button onClick={() => setEditMode(true)} className="text-sm">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setEditMode(true)}
+            >
+              <Plus size={14} />
               {m.common_add()}
             </Button>
           )}
@@ -77,13 +83,12 @@ export const PoolSection = ({ pool, onPoolChange }: PoolSectionProps) => {
                   className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
                 {editMode && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
                     onClick={() => setShowBrowser(true)}
-                    className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
                   >
                     {m.pool_directory_browse()}
-                  </button>
+                  </Button>
                 )}
               </div>
               <p className="mt-2 text-sm text-gray-500">
@@ -93,43 +98,35 @@ export const PoolSection = ({ pool, onPoolChange }: PoolSectionProps) => {
 
             {editMode ? (
               <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => {
                     setEditMode(false)
                     setLocalPool(pool || '')
                   }}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
                 >
                   {m.common_cancel()}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAdd}
-                  className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors"
-                >
+                </Button>
+                <Button size="sm" onClick={handleAdd}>
                   {m.common_save()}
-                </button>
+                </Button>
               </div>
             ) : (
               <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setLocalPool(pool || '')
                     setEditMode(true)
                   }}
-                  className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800"
                 >
                   {m.common_edit()}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRemove}
-                  className="px-3 py-1 text-sm text-red-600 hover:text-red-800"
-                >
+                </Button>
+                <Button variant="ghostDanger" size="sm" onClick={handleRemove}>
                   {m.common_remove()}
-                </button>
+                </Button>
               </div>
             )}
           </div>

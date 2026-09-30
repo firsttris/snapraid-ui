@@ -210,18 +210,15 @@ export const SyncPreviewDialog = ({
           <Button onClick={onClose} variant="secondary">
             {m.sync_preview_cancel()}
           </Button>
-          <button
-            type="button"
+          <Button
             onClick={() => onConfirm(preHash ? ['-h'] : [])}
             disabled={isLoading}
-            className={`px-4 py-2 rounded text-white disabled:bg-gray-300 disabled:cursor-not-allowed ${
-              error || (diff && diff.deletedFiles > 0)
-                ? 'bg-red-600 hover:bg-red-700'
-                : 'bg-green-600 hover:bg-green-700'
-            }`}
+            variant={
+              error || (diff && diff.deletedFiles > 0) ? 'danger' : 'primary'
+            }
           >
             {error ? m.sync_preview_start_anyway() : m.sync_preview_start()}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -1,5 +1,7 @@
+import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
+import { Button } from './Button'
 import { useFeedback } from './Feedback'
 
 interface ExcludePatternSectionProps {
@@ -74,13 +76,14 @@ export const ExcludePatternSection = ({
           </svg>
           {m.exclude_pattern_title()} ({exclude.length})
         </h3>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setShowAddExclude(!showAddExclude)}
-          className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 transition-colors"
         >
-          + {m.exclude_pattern_add_pattern()}
-        </button>
+          <Plus size={14} />
+          {m.exclude_pattern_add_pattern()}
+        </Button>
       </div>
 
       {error && (
@@ -109,25 +112,24 @@ export const ExcludePatternSection = ({
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
           />
           <div className="flex gap-2 mt-2">
-            <button
-              type="button"
+            <Button
+              size="sm"
               onClick={handleAddExclude}
               disabled={addingExclude}
-              className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50 text-sm"
             >
-              {addingExclude ? `${m.common_adding()}` : m.common_add()}
-            </button>
-            <button
-              type="button"
+              {addingExclude ? m.common_adding() : m.common_add()}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => {
                 setShowAddExclude(false)
                 setNewExcludePattern('')
                 setError('')
               }}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
             >
               {m.common_cancel()}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -147,13 +149,16 @@ export const ExcludePatternSection = ({
               <div className="font-mono text-sm text-gray-700 flex-1">
                 {pattern}
               </div>
-              <button
-                type="button"
+              <Button
+                variant="ghostDanger"
+                size="iconSm"
                 onClick={() => handleRemoveExclude(pattern)}
-                className="ml-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                aria-label={m.common_remove()}
+                title={m.common_remove()}
+                className="ml-3"
               >
-                {m.common_remove()}
-              </button>
+                <Trash2 size={16} />
+              </Button>
             </div>
           ))
         )}

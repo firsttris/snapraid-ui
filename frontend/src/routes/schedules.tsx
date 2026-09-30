@@ -194,10 +194,18 @@ function SchedulesPage() {
     <PageLayout
       title={m.schedules_title()}
       actions={
-        <Button onClick={() => setIsCreating(true)} disabled={isCreating}>
-          <Plus size={18} />
-          {m.schedules_create_new()}
-        </Button>
+        // The empty state has its own button, one is enough
+        schedules.length > 0 && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsCreating(true)}
+            disabled={isCreating}
+          >
+            <Plus size={16} />
+            {m.schedules_create_new()}
+          </Button>
+        )
       }
     >
       {isCreating && (

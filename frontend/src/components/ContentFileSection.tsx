@@ -76,9 +76,9 @@ export const ContentFileSection = ({
         </h3>
         {!showAdd && (
           <Button
+            variant="secondary"
             size="sm"
             onClick={() => setShowAdd(true)}
-            className="bg-purple-600 hover:bg-purple-700"
           >
             <Plus size={14} />
             {m.common_add()}
@@ -118,7 +118,6 @@ export const ContentFileSection = ({
               type="submit"
               size="sm"
               disabled={addMutation.isPending || !newPath.trim()}
-              className="bg-purple-600 hover:bg-purple-700"
             >
               {addMutation.isPending ? m.common_adding() : m.common_add()}
             </Button>

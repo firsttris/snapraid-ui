@@ -15,7 +15,8 @@ const VARIANTS: Record<ButtonVariant, string> = {
   danger: 'bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-300',
   ghost:
     'text-gray-600 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50',
-  ghostDanger: 'text-red-600 hover:bg-red-50 hover:text-red-700',
+  ghostDanger:
+    'text-red-600 enabled:hover:bg-red-50 enabled:hover:text-red-700 disabled:opacity-40',
 }
 
 const SIZES: Record<ButtonSize, string> = {

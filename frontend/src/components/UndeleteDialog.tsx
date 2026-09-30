@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
+import { Button } from './Button'
 import { DirectoryBrowser } from './DirectoryBrowser'
 import { useFeedback } from './Feedback'
 import { UndeleteAdvancedOptions } from './UndeleteAdvancedOptions'
@@ -127,20 +128,10 @@ export const UndeleteDialog = ({
 
           {/* Footer */}
           <div className="p-6 border-t flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
-            >
+            <Button variant="secondary" onClick={onClose}>
               {m.common_cancel()}
-            </button>
-            <button
-              type="button"
-              onClick={handleExecute}
-              className="px-4 py-2 text-white bg-orange-600 rounded hover:bg-orange-700 transition-colors"
-            >
-              {m.undelete_execute()}
-            </button>
+            </Button>
+            <Button onClick={handleExecute}>{m.undelete_execute()}</Button>
           </div>
         </div>
       </div>
