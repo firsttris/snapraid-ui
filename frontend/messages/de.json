@@ -720,5 +720,7 @@
   "log_raw_hide_noise_hint": "Blendet Fortschritt, Speicher und Geräteerkennung aus",
   "log_raw_wrap": "Umbruch",
   "log_raw_no_matches": "Keine passenden Zeilen",
-  "log_raw_show_all": "Alle {count} Zeilen anzeigen"
+  "log_raw_show_all": "Alle {count} Zeilen anzeigen",
+  "health_hint_scrub_oldest": "Manche Blöcke wurden seit {days} Tagen nicht mehr geprüft. Ein Scrub verifiziert sie, solange die Parität stille Datenfehler noch reparieren kann.",
+  "health_no_log": "Kein Log"
 }

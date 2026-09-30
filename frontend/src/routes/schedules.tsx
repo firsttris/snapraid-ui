@@ -15,6 +15,7 @@ import {
   ScrubPlanPicker,
   scrubArgs,
 } from '../components/ScrubPlanPicker'
+import { SegmentedControl } from '../components/SegmentedControl'
 import { Select } from '../components/Select'
 import {
   useConfig,
@@ -389,23 +390,11 @@ function ScheduleForm({
     })
   }
 
-  const modeButton = (mode: typeof scheduleType, label: string) => (
-    <button
-      type="button"
-      onClick={() => {
-        // Start raw editing from what the other modes currently produce
-        if (mode === 'cron') setRawCron(cronExpression)
-        setScheduleType(mode)
-      }}
-      className={`px-4 py-2 rounded transition-colors ${
-        scheduleType === mode
-          ? 'bg-blue-600 text-white'
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-      }`}
-    >
-      {label}
-    </button>
-  )
+  const changeMode = (mode: typeof scheduleType) => {
+    // Start raw editing from what the other modes currently produce
+    if (mode === 'cron') setRawCron(cronExpression)
+    setScheduleType(mode)
+  }
 
   return (
     <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -594,10 +583,16 @@ function ScheduleForm({
             {m.schedules_field_schedule()}
           </span>
 
-          <div className="flex flex-wrap gap-2 mb-3">
-            {modeButton('preset', m.schedules_mode_presets())}
-            {modeButton('custom', m.schedules_mode_custom())}
-            {modeButton('cron', m.schedules_mode_cron())}
+          <div className="mb-3">
+            <SegmentedControl
+              options={[
+                { value: 'preset', label: m.schedules_mode_presets() },
+                { value: 'custom', label: m.schedules_mode_custom() },
+                { value: 'cron', label: m.schedules_mode_cron() },
+              ]}
+              value={scheduleType}
+              onChange={changeMode}
+            />
           </div>
 
           {scheduleType === 'preset' && (
@@ -606,11 +601,12 @@ function ScheduleForm({
                 <button
                   key={p.id}
                   type="button"
+                  aria-pressed={preset === p.id}
                   onClick={() => setPreset(p.id)}
-                  className={`px-3 py-2 text-sm rounded transition-colors ${
+                  className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
                     preset === p.id
-                      ? 'bg-blue-50 border-2 border-blue-600 text-blue-900'
-                      : 'bg-gray-50 border border-gray-300 text-gray-700 hover:bg-gray-100'
+                      ? 'border-blue-500 bg-blue-50 font-medium text-blue-900'
+                      : 'border-gray-200 text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   {p.label()}

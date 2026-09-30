@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   CircleHelp,
   FileText,
+  Hourglass,
   Loader2,
   type LucideIcon,
   RefreshCw,
@@ -22,6 +23,7 @@ import { getResultLabel, RESULT_STYLES } from '../lib/run-result'
 import {
   daysSince,
   formatRelativeTime,
+  SCRUB_OLDEST_STALE_DAYS,
   SCRUB_STALE_DAYS,
   SYNC_STALE_DAYS,
 } from '../lib/utils'
@@ -167,6 +169,25 @@ const staleDays = (run: LastRun | null | undefined, limit: number) => {
   return days > limit ? Math.floor(days) : undefined
 }
 
+// Recent partial scrubs can leave old blocks behind, the status knows their age
+const oldestBlockStale = (status: SnapRaidStatus | undefined) =>
+  status?.oldestScrubDays !== undefined &&
+  status.oldestScrubDays > SCRUB_OLDEST_STALE_DAYS
+    ? status.oldestScrubDays
+    : undefined
+
+const LogLink = ({ logFile }: { logFile: string }) => (
+  <Link
+    to="/logs"
+    search={{ file: logFile }}
+    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+    title={logFile}
+  >
+    <FileText size={12} />
+    {m.health_view_log()}
+  </Link>
+)
+
 interface Hint {
   key: string
   text: string
@@ -211,12 +232,14 @@ const LastRunTile = ({
   run,
   staleDays,
   running,
+  missingLabel,
   children,
 }: {
   label: string
   run: LastRun | null | undefined
   staleDays: number
   running: boolean
+  missingLabel: string // No log found, "never" or just cleaned up logs
   children?: ReactNode
 }) => {
   if (running) {
@@ -248,9 +271,7 @@ const LastRunTile = ({
   if (run === null) {
     return (
       <Tile label={label}>
-        <p className="text-lg font-semibold text-gray-500">
-          {m.health_never()}
-        </p>
+        <p className="text-lg font-semibold text-gray-500">{missingLabel}</p>
         {children}
       </Tile>
     )
@@ -276,15 +297,7 @@ const LastRunTile = ({
             {m.health_stale()}
           </span>
         )}
-        <Link
-          to="/logs"
-          search={{ file: run.logFile }}
-          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
-          title={run.logFile}
-        >
-          <FileText size={12} />
-          {m.health_view_log()}
-        </Link>
+        <LogLink logFile={run.logFile} />
       </div>
       {children}
     </Tile>
@@ -292,14 +305,40 @@ const LastRunTile = ({
 }
 
 // Scrub coverage from the status: how much of the array was ever verified, and how long ago the oldest block
-const ScrubCoverage = ({ status }: { status: SnapRaidStatus | undefined }) =>
-  status?.scrubPercentage !== undefined ? (
-    <p className="mt-2 text-xs text-gray-500">
-      {m.health_scrubbed_share({ percent: status.scrubPercentage })}
-      {status.oldestScrubDays !== undefined &&
-        ` · ${m.health_oldest_block({ days: status.oldestScrubDays })}`}
-    </p>
-  ) : null
+const ScrubCoverage = ({ status }: { status: SnapRaidStatus | undefined }) => {
+  if (status?.scrubPercentage === undefined) return null
+  const oldestStale = oldestBlockStale(status) !== undefined
+  return (
+    <div className="mt-3">
+      <div
+        className="h-1.5 overflow-hidden rounded-full bg-gray-100"
+        role="progressbar"
+        aria-valuenow={status.scrubPercentage}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={m.health_scrubbed_share({
+          percent: status.scrubPercentage,
+        })}
+      >
+        <div
+          className="h-full rounded-full bg-green-500 transition-[width] duration-500"
+          style={{ width: `${status.scrubPercentage}%` }}
+        />
+      </div>
+      <p className="mt-1.5 text-xs text-gray-500">
+        {m.health_scrubbed_share({ percent: status.scrubPercentage })}
+        {status.oldestScrubDays !== undefined && (
+          <>
+            {' · '}
+            <span className={oldestStale ? 'font-medium text-orange-600' : ''}>
+              {m.health_oldest_block({ days: status.oldestScrubDays })}
+            </span>
+          </>
+        )}
+      </p>
+    </div>
+  )
+}
 
 export const ArrayHealthPanel = ({
   status,
@@ -326,6 +365,7 @@ export const ArrayHealthPanel = ({
     !!lastSync && lastSync.result !== 'ok' && lastSync.result !== 'warning'
   const syncOverdue = staleDays(lastSync, SYNC_STALE_DAYS)
   const scrubOverdue = staleDays(lastScrub, SCRUB_STALE_DAYS)
+  const oldestOverdue = oldestBlockStale(status)
   // While a job holds SnapRAID's lock the last known status (kept across reloads) stands in
   const health: Health = !status
     ? isBusy
@@ -337,7 +377,9 @@ export const ArrayHealthPanel = ({
         ? 'errors'
         : status.syncIncomplete || lastSyncFailed
           ? 'sync_incomplete'
-          : syncOverdue !== undefined || scrubOverdue !== undefined
+          : syncOverdue !== undefined ||
+              scrubOverdue !== undefined ||
+              oldestOverdue !== undefined
             ? 'attention'
             : 'healthy'
   const badBlocks = health === 'errors' ? (status?.badBlocks ?? 0) : 0
@@ -355,10 +397,16 @@ export const ArrayHealthPanel = ({
       onAction: () => onExecute('sync'),
     })
   }
-  if (health === 'attention' && scrubOverdue !== undefined) {
+  if (
+    health === 'attention' &&
+    (scrubOverdue !== undefined || oldestOverdue !== undefined)
+  ) {
     hints.push({
       key: 'scrub',
-      text: m.health_hint_scrub_stale({ days: scrubOverdue }),
+      text:
+        scrubOverdue !== undefined
+          ? m.health_hint_scrub_stale({ days: scrubOverdue })
+          : m.health_hint_scrub_oldest({ days: oldestOverdue ?? 0 }),
       actionLabel: m.health_start_scrub(),
       onAction: () => onExecute('scrub'),
     })
@@ -414,13 +462,8 @@ export const ArrayHealthPanel = ({
           <Button
             onClick={() => onExecute('sync')}
             disabled={!!runningJob || actionsDisabled}
-            variant={syncDue ? 'primary' : 'secondary'}
+            variant={syncDue ? 'success' : 'secondary'}
             size="sm"
-            className={
-              syncDue
-                ? 'bg-green-600 hover:bg-green-700 disabled:bg-gray-300'
-                : ''
-            }
             title={getCommandDescription('sync')}
           >
             {getCommandLabel('sync')}
@@ -450,6 +493,8 @@ export const ArrayHealthPanel = ({
       ) : (
         <div
           key={health}
+          role="status"
+          aria-live="polite"
           className={`ui-fade-in flex items-start gap-4 rounded-lg border p-4 ${HEALTH_STYLES[health].box}`}
         >
           <HealthBadge health={health} />
@@ -457,22 +502,25 @@ export const ArrayHealthPanel = ({
             <p className="font-semibold">{getHealthTitle(health)}</p>
             <p className="text-sm">{getHealthMessage(health, status)}</p>
             {isBusy && status && statusTimestamp && (
-              <p className="mt-1 text-xs opacity-80">
-                ⏳{' '}
+              <p className="mt-1 flex items-center gap-1 text-xs opacity-80">
+                <Hourglass size={12} className="shrink-0" />
                 {m.health_busy_stale({
                   time: formatRelativeTime(statusTimestamp, getLocale()),
                 })}
               </p>
             )}
             {health === 'sync_incomplete' && (
-              <button
-                type="button"
-                onClick={() => onExecute('sync')}
-                disabled={actionsDisabled}
-                className="mt-3 rounded bg-orange-600 px-3 py-1.5 text-sm text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-              >
-                {m.health_restart_sync()}
-              </button>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button
+                  onClick={() => onExecute('sync')}
+                  disabled={actionsDisabled}
+                  variant="warning"
+                  size="sm"
+                >
+                  {m.health_restart_sync()}
+                </Button>
+                {lastSyncFailed && <LogLink logFile={lastSync.logFile} />}
+              </div>
             )}
             {badBlocks > 0 && (
               <div className="mt-3">
@@ -480,22 +528,22 @@ export const ArrayHealthPanel = ({
                   {m.health_bad_blocks({ count: badBlocks })}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
+                  <Button
                     onClick={onFixErrors}
                     disabled={actionsDisabled}
-                    className="rounded bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    variant="danger"
+                    size="sm"
                   >
                     {m.health_fix_errors()}
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
                     onClick={onScrubBad}
                     disabled={actionsDisabled}
-                    className="rounded border border-red-300 bg-white px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    variant="dangerOutline"
+                    size="sm"
                   >
                     {m.health_scrub_bad()}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -517,12 +565,17 @@ export const ArrayHealthPanel = ({
           run={lastSync}
           staleDays={SYNC_STALE_DAYS}
           running={runningJob?.command === 'sync'}
+          // A readable status needs a content file, so a sync ran before
+          missingLabel={status ? m.health_no_log() : m.health_never()}
         />
         <LastRunTile
           label={m.health_last_scrub()}
           run={lastScrub}
           staleDays={SCRUB_STALE_DAYS}
           running={runningJob?.command === 'scrub'}
+          missingLabel={
+            status?.scrubPercentage ? m.health_no_log() : m.health_never()
+          }
         >
           <ScrubCoverage status={status} />
         </LastRunTile>
@@ -538,7 +591,7 @@ export const ArrayHealthPanel = ({
                 {formatRelativeTime(nextSchedule.nextRun, getLocale())}
               </p>
               <p className="text-xs text-gray-500 truncate">
-                {nextSchedule.name} ({nextSchedule.command})
+                {nextSchedule.name} ({getCommandLabel(nextSchedule.command)})
               </p>
             </>
           ) : (

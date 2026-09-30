@@ -1,4 +1,5 @@
 import * as m from '../paraglide/messages'
+import { SegmentedControl } from './SegmentedControl'
 
 interface ViewModeToggleProps {
   viewMode: 'text' | 'visual'
@@ -8,31 +9,13 @@ interface ViewModeToggleProps {
 export const ViewModeToggle = ({
   viewMode,
   onViewModeChange,
-}: ViewModeToggleProps) => {
-  return (
-    <div className="flex bg-gray-100 rounded-lg p-1">
-      <button
-        type="button"
-        onClick={() => onViewModeChange('visual')}
-        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-          viewMode === 'visual'
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-600 hover:text-gray-900'
-        }`}
-      >
-        {m.config_editor_visual_mode()}
-      </button>
-      <button
-        type="button"
-        onClick={() => onViewModeChange('text')}
-        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-          viewMode === 'text'
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-600 hover:text-gray-900'
-        }`}
-      >
-        {m.config_editor_text_mode()}
-      </button>
-    </div>
-  )
-}
+}: ViewModeToggleProps) => (
+  <SegmentedControl
+    options={[
+      { value: 'visual', label: m.config_editor_visual_mode() },
+      { value: 'text', label: m.config_editor_text_mode() },
+    ]}
+    value={viewMode}
+    onChange={onViewModeChange}
+  />
+)

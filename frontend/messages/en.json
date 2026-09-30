@@ -720,5 +720,7 @@
   "log_raw_hide_noise_hint": "Hides progress, memory and device lookup lines",
   "log_raw_wrap": "Wrap",
   "log_raw_no_matches": "No lines match",
-  "log_raw_show_all": "Show all {count} lines"
+  "log_raw_show_all": "Show all {count} lines",
+  "health_hint_scrub_oldest": "Some blocks were last verified {days} days ago. A scrub checks them while parity can still repair silent data errors.",
+  "health_no_log": "No log"
 }

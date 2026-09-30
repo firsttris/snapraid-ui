@@ -51,6 +51,9 @@ export const formatGB = (gb: number): string =>
 // A run or block older than this is flagged as overdue
 export const SYNC_STALE_DAYS = 7
 export const SCRUB_STALE_DAYS = 30
+// The default plan (8 % of blocks per run) takes about three months to verify the
+// whole array with weekly scrubs, so the oldest block gets more slack
+export const SCRUB_OLDEST_STALE_DAYS = 120
 
 /**
  * Tailwind classes for disk usage, shared so all views use the same thresholds
