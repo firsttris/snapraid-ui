@@ -211,10 +211,23 @@ function SchedulesPage() {
       {isLoading ? (
         <p className="text-gray-600">{m.common_loading()}</p>
       ) : schedules.length === 0 && !isCreating ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <p className="text-xl text-gray-600">{m.schedules_empty()}</p>
-          <Button onClick={() => setIsCreating(true)} className="mt-6">
+        <div className="ui-fade-in flex flex-col items-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-10 text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <Calendar size={24} />
+          </div>
+          <h3 className="font-semibold text-gray-900">
+            {m.schedules_empty_title()}
+          </h3>
+          <p className="mt-1 max-w-md text-sm text-gray-500">
+            {m.schedules_empty()}
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsCreating(true)}
+            className="mt-5"
+          >
+            <Plus size={16} />
             {m.schedules_create_new()}
           </Button>
         </div>
