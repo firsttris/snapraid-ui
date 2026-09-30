@@ -15,6 +15,7 @@ import {
   ScrubPlanPicker,
   scrubArgs,
 } from '../components/ScrubPlanPicker'
+import { Select } from '../components/Select'
 import {
   useConfig,
   useCreateSchedule,
@@ -417,18 +418,15 @@ function ScheduleForm({
             >
               {m.schedules_field_command()}
             </label>
-            <select
+            <Select
               id="command"
               value={command}
-              onChange={(e) => setCommand(e.target.value as SnapRaidCommand)}
-              className={inputClass}
-            >
-              {SCHEDULE_COMMANDS.map((cmd) => (
-                <option key={cmd} value={cmd}>
-                  {getCommandLabel(cmd)}
-                </option>
-              ))}
-            </select>
+              onChange={setCommand}
+              options={SCHEDULE_COMMANDS.map((cmd) => ({
+                value: cmd,
+                label: getCommandLabel(cmd),
+              }))}
+            />
           </div>
 
           <div>
@@ -438,18 +436,15 @@ function ScheduleForm({
             >
               {m.schedules_field_config()}
             </label>
-            <select
+            <Select
               id="config"
               value={configPath}
-              onChange={(e) => setConfigPath(e.target.value)}
-              className={inputClass}
-            >
-              {configs.map((cfg) => (
-                <option key={cfg.path} value={cfg.path}>
-                  {cfg.name}
-                </option>
-              ))}
-            </select>
+              onChange={setConfigPath}
+              options={configs.map((cfg) => ({
+                value: cfg.path,
+                label: cfg.name,
+              }))}
+            />
           </div>
         </div>
 
@@ -626,19 +621,18 @@ function ScheduleForm({
                 <label htmlFor="schedule-frequency" className={smallLabelClass}>
                   {m.schedules_frequency()}
                 </label>
-                <select
+                <Select
                   id="schedule-frequency"
+                  size="sm"
                   value={customFrequency}
-                  onChange={(e) =>
-                    setCustomFrequency(e.target.value as typeof customFrequency)
-                  }
-                  className={`${inputClass} text-sm`}
-                >
-                  <option value="hourly">{m.schedules_freq_hourly()}</option>
-                  <option value="daily">{m.schedules_freq_daily()}</option>
-                  <option value="weekly">{m.schedules_freq_weekly()}</option>
-                  <option value="monthly">{m.schedules_freq_monthly()}</option>
-                </select>
+                  onChange={setCustomFrequency}
+                  options={[
+                    { value: 'hourly', label: m.schedules_freq_hourly() },
+                    { value: 'daily', label: m.schedules_freq_daily() },
+                    { value: 'weekly', label: m.schedules_freq_weekly() },
+                    { value: 'monthly', label: m.schedules_freq_monthly() },
+                  ]}
+                />
               </div>
 
               {customFrequency === 'hourly' ? (
@@ -749,18 +743,15 @@ function ScheduleForm({
                   >
                     {m.schedules_day_of_week()}
                   </label>
-                  <select
+                  <Select
                     id="schedule-day-of-week"
                     value={dayOfWeek}
-                    onChange={(e) => setDayOfWeek(Number(e.target.value))}
-                    className={inputClass}
-                  >
-                    {[0, 1, 2, 3, 4, 5, 6].map((day) => (
-                      <option key={day} value={day}>
-                        {weekdayName(day)}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setDayOfWeek}
+                    options={[0, 1, 2, 3, 4, 5, 6].map((day) => ({
+                      value: day,
+                      label: weekdayName(day),
+                    }))}
+                  />
                 </div>
               )}
 

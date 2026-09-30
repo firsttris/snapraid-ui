@@ -4,6 +4,7 @@ import { useConfig } from '../hooks/queries'
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
 import * as m from '../paraglide/messages'
 import { ConfigManager } from './ConfigManager'
+import { Select } from './Select'
 
 interface ConfigBarProps {
   disabled?: boolean
@@ -58,19 +59,19 @@ export const ConfigBar = ({ disabled = false, children }: ConfigBarProps) => {
           >
             {m.config_selector_title()}
           </label>
-          <select
-            id="config-select"
-            value={selectedConfig}
-            onChange={(e) => setSelectedConfig(e.target.value)}
-            disabled={disabled || !config}
-            className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {enabledConfigs.map((cfg) => (
-              <option key={cfg.path} value={cfg.path}>
-                {cfg.name} — {cfg.path}
-              </option>
-            ))}
-          </select>
+          <div className="min-w-0 flex-1">
+            <Select
+              id="config-select"
+              value={selectedConfig}
+              onChange={setSelectedConfig}
+              disabled={disabled || !config}
+              options={enabledConfigs.map((cfg) => ({
+                value: cfg.path,
+                label: cfg.name,
+                hint: cfg.path,
+              }))}
+            />
+          </div>
           <button
             type="button"
             onClick={() => setManagerMode('list')}

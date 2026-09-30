@@ -10,6 +10,7 @@ import { type ReactNode, useState } from 'react'
 import { Button } from '../components/Button'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { PageLayout } from '../components/PageLayout'
+import { Select } from '../components/Select'
 import {
   useNotificationSettings,
   useSaveNotificationSettings,
@@ -275,12 +276,11 @@ function NotificationForm({ initial }: { initial: NotificationSettings }) {
               <label htmlFor="smtp-security" className={labelClass}>
                 {m.notifications_email_security()}
               </label>
-              <select
+              <Select
                 id="smtp-security"
+                size="sm"
                 value={email.security}
-                onChange={(e) => {
-                  const security = e.target
-                    .value as NotificationSettings['email']['security']
+                onChange={(security) => {
                   // Follow the port while it is still the default of the previous choice
                   const port =
                     email.port === SMTP_PORTS[email.security]
@@ -288,14 +288,15 @@ function NotificationForm({ initial }: { initial: NotificationSettings }) {
                       : email.port
                   update('email', { security, port })
                 }}
-                className={inputClass}
-              >
-                <option value="starttls">STARTTLS</option>
-                <option value="tls">SSL/TLS</option>
-                <option value="none">
-                  {m.notifications_email_security_none()}
-                </option>
-              </select>
+                options={[
+                  { value: 'starttls', label: 'STARTTLS' },
+                  { value: 'tls', label: 'SSL/TLS' },
+                  {
+                    value: 'none',
+                    label: m.notifications_email_security_none(),
+                  },
+                ]}
+              />
             </div>
             <div>
               <label htmlFor="smtp-port" className={labelClass}>
@@ -493,20 +494,16 @@ function NotificationForm({ initial }: { initial: NotificationSettings }) {
             <label htmlFor="notify-language" className={labelClass}>
               {m.notifications_language()}
             </label>
-            <select
+            <Select
               id="notify-language"
+              size="sm"
               value={settings.language}
-              onChange={(e) =>
-                setSettings((s) => ({
-                  ...s,
-                  language: e.target.value as NotificationSettings['language'],
-                }))
-              }
-              className={inputClass}
-            >
-              <option value="de">Deutsch</option>
-              <option value="en">English</option>
-            </select>
+              onChange={(language) => setSettings((s) => ({ ...s, language }))}
+              options={[
+                { value: 'de', label: 'Deutsch' },
+                { value: 'en', label: 'English' },
+              ]}
+            />
           </div>
           <div className="sm:col-span-2">
             <label htmlFor="notify-ui-url" className={labelClass}>

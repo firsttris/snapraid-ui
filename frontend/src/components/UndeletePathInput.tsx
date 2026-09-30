@@ -1,4 +1,5 @@
 import * as m from '../paraglide/messages'
+import { Select } from './Select'
 
 type UndeleteMode = 'all-missing' | 'directory-missing' | 'specific'
 
@@ -36,18 +37,16 @@ export const UndeletePathInput = ({
           >
             {m.undelete_browse_from_disk()}
           </label>
-          <select
+          <Select
             id="undelete-disk"
             value={selectedDisk}
-            onChange={(e) => onSelectedDiskChange(e.target.value)}
-            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {Object.entries(dataDisk).map(([name, path]) => (
-              <option key={name} value={name}>
-                {name} ({path})
-              </option>
-            ))}
-          </select>
+            onChange={onSelectedDiskChange}
+            options={Object.entries(dataDisk).map(([name, path]) => ({
+              value: name,
+              label: name,
+              hint: path,
+            }))}
+          />
           <p className="mt-1 text-xs text-gray-500">
             {m.undelete_select_disk_help()}
           </p>
