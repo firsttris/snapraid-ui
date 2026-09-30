@@ -109,9 +109,15 @@ export const getStatus = async (
     ? `${API_BASE}/snapraid/status?path=${encodeURIComponent(relativePath)}`
     : `${API_BASE}/snapraid/status`
   const response = await fetch(url)
+  if (response.status === 409) throw new SnapRaidBusyError('SnapRAID is busy')
   if (!response.ok) throw new Error('Failed to fetch status')
   return response.json()
 }
+
+/**
+ * SnapRAID holds its lock for a running job, so status cannot be read until it has finished
+ */
+export class SnapRaidBusyError extends Error {}
 
 /**
  * Get size and free space of the parity disks, which status does not report

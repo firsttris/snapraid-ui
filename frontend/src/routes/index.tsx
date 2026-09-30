@@ -37,7 +37,13 @@ import {
 } from '../hooks/queries'
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
 import { useWebSocketConnection } from '../hooks/useWebSocketConnection'
-import { getCheck, getDevices, getDiff, getFileList } from '../lib/api/snapraid'
+import {
+  getCheck,
+  getDevices,
+  getDiff,
+  getFileList,
+  SnapRaidBusyError,
+} from '../lib/api/snapraid'
 import { parseProgress } from '../lib/progress'
 import * as m from '../paraglide/messages'
 
@@ -83,7 +89,12 @@ function Dashboard() {
     refetch: refetchStatus,
     isFetching: isStatusFetching,
     isError: isStatusError,
-  } = useStatus(selectedConfig, { enabled: !!selectedConfig })
+    error: statusError,
+  } = useStatus(selectedConfig, {
+    enabled: !!selectedConfig,
+    // Busy clears up when the job finishes, which refetches the status anyway
+    retry: (count, error) => !(error instanceof SnapRaidBusyError) && count < 3,
+  })
   const { data: lastRuns } = useLastRuns(selectedConfig)
   const { data: parityUsage } = useParityUsage(selectedConfig)
   const { data: schedules } = useSchedules()
@@ -273,6 +284,7 @@ function Dashboard() {
           status={statusData?.status}
           isStatusLoading={isStatusFetching}
           isStatusError={isStatusError}
+          isBusy={statusError instanceof SnapRaidBusyError}
           lastSync={lastRuns?.sync}
           lastScrub={lastRuns?.scrub}
           nextSchedule={nextSchedule}

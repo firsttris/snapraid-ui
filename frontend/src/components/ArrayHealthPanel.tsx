@@ -20,6 +20,7 @@ interface ArrayHealthPanelProps {
   status: SnapRaidStatus | undefined
   isStatusLoading: boolean
   isStatusError: boolean
+  isBusy: boolean
   lastSync: LastRun | null | undefined
   lastScrub: LastRun | null | undefined
   nextSchedule: Schedule | undefined
@@ -30,7 +31,13 @@ interface ArrayHealthPanelProps {
   refreshDisabled: boolean
 }
 
-type Health = 'healthy' | 'needs_sync' | 'sync_failed' | 'errors' | 'unknown'
+type Health =
+  | 'healthy'
+  | 'needs_sync'
+  | 'sync_failed'
+  | 'errors'
+  | 'busy'
+  | 'unknown'
 
 const HEALTH_STYLES: Record<Health, { box: string; icon: string }> = {
   healthy: { box: 'bg-green-50 border-green-200 text-green-800', icon: '✅' },
@@ -43,6 +50,7 @@ const HEALTH_STYLES: Record<Health, { box: string; icon: string }> = {
     icon: '⚠️',
   },
   errors: { box: 'bg-red-50 border-red-200 text-red-800', icon: '❌' },
+  busy: { box: 'bg-blue-50 border-blue-200 text-blue-800', icon: '⏳' },
   unknown: { box: 'bg-gray-50 border-gray-200 text-gray-700', icon: '❔' },
 }
 
@@ -56,6 +64,8 @@ const getHealthText = (health: Health): [string, string] => {
       return [m.health_sync_failed(), m.health_sync_failed_msg()]
     case 'errors':
       return [m.health_errors(), m.health_errors_msg()]
+    case 'busy':
+      return [m.health_busy(), m.health_busy_msg()]
     case 'unknown':
       return [m.health_unknown(), m.health_unknown_msg()]
   }
@@ -148,6 +158,7 @@ export const ArrayHealthPanel = ({
   status,
   isStatusLoading,
   isStatusError,
+  isBusy,
   lastSync,
   lastScrub,
   nextSchedule,
@@ -161,8 +172,9 @@ export const ArrayHealthPanel = ({
   // sync failed before recording new files
   const lastSyncFailed =
     !!lastSync && lastSync.result !== 'ok' && lastSync.result !== 'warning'
-  const health: Health =
-    !status || isStatusError
+  const health: Health = isBusy
+    ? 'busy'
+    : !status || isStatusError
       ? 'unknown'
       : status.hasErrors
         ? 'errors'

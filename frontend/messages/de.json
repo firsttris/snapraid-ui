@@ -343,6 +343,8 @@
   "health_needs_sync_msg": "Seit dem letzten Sync gibt es Änderungen, die noch nicht durch Parität geschützt sind.",
   "health_errors": "Fehler gefunden",
   "health_errors_msg": "SnapRAID meldet fehlerhafte Blöcke. Details prüfen und ggf. Fix ausführen.",
+  "health_busy": "Job läuft",
+  "health_busy_msg": "SnapRAID ist gerade beschäftigt. Der Status wird aktualisiert, sobald der laufende Job fertig ist.",
   "health_unknown": "Status unbekannt",
   "health_unknown_msg": "Der Status konnte nicht gelesen werden. Wurde bereits ein erster Sync ausgeführt?",
   "health_loading": "Status wird geladen…",

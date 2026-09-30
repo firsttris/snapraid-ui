@@ -6,7 +6,7 @@ import { parseCheckOutput } from "../check-parser.ts";
 import { parseSmartOutput } from "../smart-parser.ts";
 import { parseProbeOutput } from "../probe-parser.ts";
 import { parseDfOutput } from "../df-parser.ts";
-import { parseLogTags, splitStructuredOutput, unescapeTagValue } from "../structured-log.ts";
+import { isLockedOutput, parseLogTags, splitStructuredOutput, unescapeTagValue } from "../structured-log.ts";
 import { parseParityLine } from "../../config-parser.ts";
 
 // Fixtures are the stderr of `snapraid --log ">&2" <command>` (SnapRAID 14.9) on a demo array.
@@ -24,6 +24,14 @@ Deno.test("structured-log - separates tags from text lines", () => {
   assertEquals(log, "summary:exit:ok\nmsg:progress: Loading");
   assertEquals(text, "Loading state from x...");
   assertEquals(parseLogTags(log)[0], { name: "summary", values: ["exit", "ok"] });
+});
+
+Deno.test("structured-log - detects a lock held by another SnapRAID instance", () => {
+  // stderr of `status` while a sync is running (SnapRAID 14.9)
+  const locked = "command:status\nmsg:fatal: The lock file '/p/snapraid.content.lock' is already in use!\nmsg:fatal: SnapRAID is already in use!";
+
+  assertEquals(isLockedOutput(locked), true);
+  assertEquals(isLockedOutput(fixture("status-bad.log")), false);
 });
 
 Deno.test("parseStatusOutput - healthy array", () => {

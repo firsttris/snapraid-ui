@@ -85,3 +85,9 @@ export const splitStructuredOutput = (output: string): { log: string, text: stri
     text: lines.filter(line => !isTagLine(line)).join('\n'),
   };
 };
+
+/**
+ * SnapRAID refused to run because another instance holds the lock, e.g. a sync started by cron
+ */
+export const isLockedOutput = (log: string): boolean =>
+  /^msg:fatal:.*already in use/m.test(log);

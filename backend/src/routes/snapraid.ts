@@ -10,7 +10,7 @@ import {configOperationsRoutes} from "./config-operations.ts";
 import {hardwareRoutes} from "./hardware.ts";
 import { setReportsRunner, reportsRoutes } from "./reports.ts";
 import { parseStatusOutput } from "../parsers/status-parser.ts";
-import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
+import { isLockedOutput, STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
 
 const snapraid = new Hono();
 
@@ -255,6 +255,11 @@ snapraid.get("/status", async (c) => {
     });
   }
 
+  // A running job holds SnapRAID's lock, status would only fail with a fatal error
+  if (runner.getCurrentJob()) {
+    return c.json({ error: "SnapRAID is busy with another job", busy: true }, 409);
+  }
+
   // Execute new status command
   try {
     const configPath = resolveFromBase(relativePath);
@@ -262,6 +267,9 @@ snapraid.get("/status", async (c) => {
 
     const { code, stdout, stderr } = await cmd.output();
     const { log, text } = splitStructuredOutput(new TextDecoder().decode(stderr));
+    if (isLockedOutput(log)) {
+      return c.json({ error: "SnapRAID is already in use", busy: true }, 409);
+    }
     const parsedStatus = parseStatusOutput(log, code === 0 ? new TextDecoder().decode(stdout) : text);
     
     return c.json({

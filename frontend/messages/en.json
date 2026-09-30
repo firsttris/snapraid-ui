@@ -343,6 +343,8 @@
   "health_needs_sync_msg": "There are changes since the last sync that are not yet protected by parity.",
   "health_errors": "Errors found",
   "health_errors_msg": "SnapRAID reports bad blocks. Check the details and run a fix if needed.",
+  "health_busy": "Job running",
+  "health_busy_msg": "SnapRAID is busy right now. The status is updated once the running job has finished.",
   "health_unknown": "Status unknown",
   "health_unknown_msg": "The status could not be read. Has an initial sync been run yet?",
   "health_loading": "Loading status…",
