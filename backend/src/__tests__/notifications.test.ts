@@ -9,6 +9,8 @@ import {
 import { buildRunNotification, buildSkipNotification, diffSmartProblems } from "../notification-events.ts";
 import { failedReport, parseRunReport } from "../run-report.ts";
 import { combineResults, scheduleSteps } from "../scheduler.ts";
+import { assessSmart } from "@shared/smart-health.ts";
+import { parseSmartOutput } from "../parsers/smart-parser.ts";
 
 const SYNC_LOG = `summary:added:12
 summary:removed:1
@@ -118,16 +120,34 @@ Deno.test("diffSmartProblems - reports a disk once per problem and forgets it wh
   const failing = disk({ status: "PREFAIL", failureProbability: 40 });
 
   const first = diffSmartProblems(cfg, [failing, disk({ name: "d2", serial: "S2" })], 25, {});
-  assertEquals(first.report.map((d) => d.name), ["d1"]);
+  assertEquals(first.report.map((r) => r.disk.name), ["d1"]);
 
   const again = diffSmartProblems(cfg, [failing], 25, first.state);
   assertEquals(again.report, []);
 
   const worse = diffSmartProblems(cfg, [{ ...failing, status: "FAIL" }], 25, again.state);
-  assertEquals(worse.report.map((d) => d.status), ["FAIL"]);
+  assertEquals(worse.report.map((r) => r.disk.status), ["FAIL"]);
 
   const healthy = diffSmartProblems(cfg, [disk({})], 25, worse.state);
   assertEquals(healthy.state, {});
+});
+
+const sectors = (reallocated: number) =>
+  disk({
+    attributes: [
+      { id: 5, name: "Reallocated_Sector_Ct", value: 100, worst: 100, threshold: 10, raw: String(reallocated), flag: "" },
+    ],
+  });
+
+Deno.test("diffSmartProblems - a growing sector count is reported again, a drifting temperature is not", () => {
+  const cfg = "/cfg/a.conf";
+  const first = diffSmartProblems(cfg, [sectors(8)], 25, {});
+  assertEquals(first.report[0].assessment.reasons, [{ kind: "sectors", attribute: "reallocated", count: 8 }]);
+  assertEquals(diffSmartProblems(cfg, [sectors(8)], 25, first.state).report, []);
+  assertEquals(diffSmartProblems(cfg, [sectors(16)], 25, first.state).report.length, 1);
+
+  const hot = diffSmartProblems(cfg, [disk({ temperature: 52 })], 25, {});
+  assertEquals(diffSmartProblems(cfg, [disk({ temperature: 54 })], 25, hot.state).report, []);
 });
 
 Deno.test("diffSmartProblems - keeps the state of other configs", () => {
@@ -199,4 +219,21 @@ Deno.test("combineResults - first failure, otherwise the worst of ok and warning
   assertEquals(combineResults(["ok", "warning", "ok"]), "warning");
   assertEquals(combineResults(["warning", "error"]), "error");
   assertEquals(combineResults(["ok", "aborted"]), "aborted");
+});
+
+Deno.test("assessSmart - a few percent failure probability is normal, sectors and status are not", () => {
+  const disks = parseSmartOutput(Deno.readTextFileSync(new URL("../parsers/__tests__/fixtures/smart.log", import.meta.url)));
+  const byName = Object.fromEntries(disks.map((d) => [d.name, assessSmart(d)]));
+
+  // 4.46% per year, no errors
+  assertEquals(byName.d1, { level: "ok", reasons: [] });
+  // Failing prefail attribute, 1024 reallocated sectors and 40.5% per year
+  assertEquals(byName.d2.level, "critical");
+  assertEquals(byName.d2.reasons, [
+    { kind: "status", status: "FAIL" },
+    { kind: "sectors", attribute: "reallocated", count: 1024 },
+    { kind: "failure_probability", percent: 40.55 },
+  ]);
+  // Error log entries only
+  assertEquals(byName.parity, { level: "warning", reasons: [{ kind: "status", status: "LOGERR" }] });
 });

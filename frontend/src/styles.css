@@ -211,6 +211,12 @@ code {
   background-color: color-mix(in oklab, var(--surface) 95%, transparent);
 }
 
+/* The option list of a <select> is drawn by the browser on a light background unless told otherwise */
+[data-theme="dark"] :is(option, optgroup) {
+  background-color: var(--surface);
+  color: var(--color-gray-900);
+}
+
 /* Shadows vanish on a dark page, an outline keeps cards apart */
 [data-theme="dark"] :is(.shadow, .shadow-lg, .shadow-xl) {
   box-shadow: 0 0 0 1px var(--color-gray-200), 0 4px 16px rgb(0 0 0 / 0.35);

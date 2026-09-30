@@ -6,6 +6,7 @@ import type {
   SmartDiskInfo,
   SnapRaidCommand,
 } from "@shared/types.ts";
+import { assessSmart, type SmartAssessment, type SmartReason, smartSignature } from "@shared/smart-health.ts";
 import { resolveFromBase } from "./config.ts";
 import { loadNotificationSettings, type Notification, notify } from "./notifications.ts";
 import { isSuccessful, type RunReport } from "./run-report.ts";
@@ -37,12 +38,26 @@ const TEXT = {
       diff_failed: (error: string) => `diff failed: ${error}`,
       recovery_in_progress: "A disk is being replaced; scheduled jobs are paused until its sync is done.",
     },
-    smartDisk: (disk: SmartDiskInfo) =>
-      [
-        `${disk.name} (${[disk.device, disk.model, disk.serial].filter(Boolean).join(", ")})`,
-        disk.status !== "OK" && disk.status !== "UNKNOWN" ? `status ${disk.status}` : "",
-        disk.failureProbability !== undefined ? `failure probability ${disk.failureProbability}%` : "",
-      ].filter(Boolean).join(": "),
+    smartReason: (reason: SmartReason) => {
+      switch (reason.kind) {
+        case "status":
+          return {
+            FAIL: "the disk reports itself as failing",
+            PREFAIL: "a pre-failure value is below its limit",
+            LOGFAIL: "a pre-failure value was below its limit in the past",
+            LOGERR: "errors in the disk's error log",
+            SELFERR: "a SMART self-test failed",
+          }[reason.status as string] + ` (SMART ${reason.status})`;
+        case "failure_probability":
+          return `failure probability ${reason.percent}% per year`;
+        case "temperature":
+          return `${reason.celsius} °C`;
+        case "sectors":
+          return `${reason.count} ${
+            { reallocated: "reallocated", pending: "pending", uncorrectable: "uncorrectable" }[reason.attribute]
+          } sectors`;
+      }
+    },
     smartHint: "Consider replacing the disk before it fails.",
   },
   de: {
@@ -74,14 +89,28 @@ const TEXT = {
       diff_failed: (error: string) => `diff ist fehlgeschlagen: ${error}`,
       recovery_in_progress: "Eine Platte wird gerade ersetzt, geplante Jobs pausieren bis zu ihrem Sync.",
     },
-    smartDisk: (disk: SmartDiskInfo) =>
-      [
-        `${disk.name} (${[disk.device, disk.model, disk.serial].filter(Boolean).join(", ")})`,
-        disk.status !== "OK" && disk.status !== "UNKNOWN" ? `Status ${disk.status}` : "",
-        disk.failureProbability !== undefined
-          ? `Ausfallwahrscheinlichkeit ${String(disk.failureProbability).replace(".", ",")} %`
-          : "",
-      ].filter(Boolean).join(": "),
+    smartReason: (reason: SmartReason) => {
+      switch (reason.kind) {
+        case "status":
+          return {
+            FAIL: "die Platte meldet selbst einen Defekt",
+            PREFAIL: "ein Frühwarnwert liegt unter seinem Grenzwert",
+            LOGFAIL: "ein Frühwarnwert lag früher unter seinem Grenzwert",
+            LOGERR: "Einträge im Fehlerprotokoll der Platte",
+            SELFERR: "ein SMART-Selbsttest ist fehlgeschlagen",
+          }[reason.status as string] + ` (SMART ${reason.status})`;
+        case "failure_probability":
+          return `Ausfallwahrscheinlichkeit ${String(reason.percent).replace(".", ",")} % pro Jahr`;
+        case "temperature":
+          return `${reason.celsius} °C`;
+        case "sectors":
+          return `${reason.count} ${
+            { reallocated: "reallozierte", pending: "ausstehende", uncorrectable: "nicht korrigierbare" }[
+              reason.attribute
+            ]
+          } Sektoren`;
+      }
+    },
     smartHint: "Die Platte sollte ersetzt werden, bevor sie ausfällt.",
   },
 } as const;
@@ -194,7 +223,6 @@ export const buildSkipNotification = (
 // ====================
 
 const STATE_FILE = "notifications-state.json";
-const FAILING_STATUSES: SmartDiskInfo["status"][] = ["FAIL", "PREFAIL", "LOGFAIL", "LOGERR", "SELFERR"];
 
 interface NotificationState {
   // Last reported problem per disk, a disk is reported again only when it changes
@@ -205,15 +233,6 @@ const smartKey = (configPath: string, disk: SmartDiskInfo) =>
   `${configPath}|${disk.name}|${disk.serial ?? disk.device}`;
 
 /**
- * Signature of a disk's problem, null for a healthy disk
- */
-export const smartProblem = (disk: SmartDiskInfo, threshold: number): string | null => {
-  const failing = FAILING_STATUSES.includes(disk.status);
-  const likelyToFail = (disk.failureProbability ?? 0) >= threshold;
-  return failing || likelyToFail ? `${disk.status}|${likelyToFail}` : null;
-};
-
-/**
  * Disks with a new or changed problem, and the state to remember for the config
  */
 export const diffSmartProblems = (
@@ -221,17 +240,18 @@ export const diffSmartProblems = (
   disks: SmartDiskInfo[],
   threshold: number,
   previous: Record<string, string>,
-): { report: SmartDiskInfo[]; state: Record<string, string> } => {
+): { report: Array<{ disk: SmartDiskInfo; assessment: SmartAssessment }>; state: Record<string, string> } => {
   const ownKeys = (key: string) => key.startsWith(`${configPath}|`);
   const state = Object.fromEntries(Object.entries(previous).filter(([key]) => !ownKeys(key)));
-  const report: SmartDiskInfo[] = [];
+  const report: Array<{ disk: SmartDiskInfo; assessment: SmartAssessment }> = [];
 
   disks.forEach((disk) => {
-    const problem = smartProblem(disk, threshold);
+    const assessment = assessSmart(disk, threshold);
+    const problem = smartSignature(assessment);
     if (!problem) return;
     const key = smartKey(configPath, disk);
     state[key] = problem;
-    if (previous[key] !== problem) report.push(disk);
+    if (previous[key] !== problem) report.push({ disk, assessment });
   });
   return { report, state };
 };
@@ -310,10 +330,14 @@ export const notifySmart = (configPath: string, disks: SmartDiskInfo[]): Promise
     if (report.length === 0) return;
 
     const t = TEXT[settings.language];
+    const lines = report.map(({ disk, assessment }) =>
+      `${disk.name} (${[disk.device, disk.model, disk.serial].filter(Boolean).join(", ")}): ` +
+      assessment.reasons.map(t.smartReason).join(", ")
+    );
     await notify({
       event: "smart_warning",
-      severity: report.some((disk) => disk.status === "FAIL") ? "error" : "warning",
+      severity: report.some(({ assessment }) => assessment.level === "critical") ? "error" : "warning",
       title: t.smartTitle(basename(configPath)),
-      message: [...report.map(t.smartDisk), "", t.smartHint].join("\n"),
+      message: [...lines, "", t.smartHint].join("\n"),
     });
   });
