@@ -1,68 +1,192 @@
 import type { SnapRaidStatus } from '@shared/types'
 import {
+  BarElement,
   CategoryScale,
   Chart as ChartJS,
-  Filler,
-  Legend,
   LinearScale,
-  LineElement,
-  PointElement,
-  Title,
   Tooltip,
   type TooltipItem,
 } from 'chart.js'
-import { Line } from 'react-chartjs-2'
-import { usageBarColor, usageTextColor } from '../lib/utils'
+import { RefreshCw, X } from 'lucide-react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { Bar } from 'react-chartjs-2'
+import { SCRUB_STALE_DAYS } from '../lib/utils'
 import * as m from '../paraglide/messages'
+import { getLocale } from '../paraglide/runtime'
+import { Button } from './Button'
 
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-)
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip)
 
 interface StatusModalProps {
   status: SnapRaidStatus
   onClose: () => void
-  onRefresh?: () => void
+  onRefresh?: () => Promise<unknown>
+}
+
+type Tone = 'ok' | 'warning' | 'error'
+type Finding = { tone: Tone; title: string; message: string }
+
+const TONE_BOX: Record<Tone, string> = {
+  ok: 'bg-green-50 border-green-200 text-green-800',
+  warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+  error: 'bg-red-50 border-red-200 text-red-800',
+}
+
+const TONE_ICON: Record<Tone, string> = { ok: '✅', warning: '⚠️', error: '❌' }
+
+const BAR_COLOR = 'rgb(59, 130, 246)'
+const BAR_STALE_COLOR = 'rgb(249, 115, 22)'
+
+// What needs attention, most severe first, each with the step that resolves it
+const getFindings = (status: SnapRaidStatus): Finding[] => {
+  const findings: Finding[] = []
+  const badBlocks = status.badBlocks ?? 0
+
+  if (status.hasErrors) {
+    findings.push(
+      badBlocks > 0
+        ? {
+            tone: 'error',
+            title: m.status_modal_bad_blocks_title({ count: badBlocks }),
+            message: m.status_modal_bad_blocks_msg(),
+          }
+        : {
+            tone: 'error',
+            title: m.status_modal_error_title(),
+            message: m.status_modal_error_msg(),
+          },
+    )
+  }
+  if (status.syncIncomplete) {
+    findings.push({
+      tone: 'warning',
+      title: m.status_modal_sync_incomplete_title(),
+      message: m.status_modal_sync_incomplete_msg({
+        count: (status.unsyncedBlocks ?? 0).toLocaleString(getLocale()),
+      }),
+    })
+  } else if (!status.parityUpToDate && !status.hasErrors) {
+    findings.push({
+      tone: 'warning',
+      title: m.status_modal_needs_sync_title(),
+      message: m.status_modal_needs_sync_msg(),
+    })
+  }
+  if ((status.oldestScrubDays ?? 0) > SCRUB_STALE_DAYS) {
+    findings.push({
+      tone: 'warning',
+      title: m.status_modal_scrub_stale_title(),
+      message: m.status_modal_scrub_stale_msg({
+        days: String(status.oldestScrubDays),
+      }),
+    })
+  }
+
+  return findings.length > 0
+    ? findings
+    : [
+        {
+          tone: 'ok',
+          title: m.status_modal_ok_title(),
+          message: m.status_modal_ok_msg(),
+        },
+      ]
+}
+
+// "vor 890 Tagen", "heute", "yesterday", ...
+const formatDaysAgo = (days: number | undefined) =>
+  days === undefined
+    ? '–'
+    : new Intl.RelativeTimeFormat(getLocale(), { numeric: 'auto' }).format(
+        -days,
+        'day',
+      )
+
+const Stat = ({
+  label,
+  hint,
+  highlight = false,
+  children,
+}: {
+  label: string
+  hint?: string
+  highlight?: boolean
+  children: ReactNode
+}) => (
+  <div className="rounded-lg border border-gray-200 p-3" title={hint}>
+    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+      {label}
+    </p>
+    <p
+      className={`mt-1 text-lg font-semibold ${highlight ? 'text-orange-600' : 'text-gray-900'}`}
+    >
+      {children}
+    </p>
+  </div>
+)
+
+// Keeps Tab inside the dialog and closes it on Escape
+const useDialogKeys = (
+  dialogRef: React.RefObject<HTMLDivElement | null>,
+  onClose: () => void,
+) => {
+  // Latest onClose without re-running the effect, which would move the focus
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null
+    dialogRef.current?.focus()
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onCloseRef.current()
+        return
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return
+
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), summary, [href], [tabindex]:not([tabindex="-1"])',
+      )
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (!first || !last) return
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      previousFocus?.focus()
+    }
+  }, [dialogRef])
 }
 
 export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
-  // Health status color
-  const getHealthColor = () => {
-    if (status.hasErrors) return 'text-red-600 bg-red-50'
-    if (!status.parityUpToDate) return 'text-yellow-600 bg-yellow-50'
-    return 'text-green-600 bg-green-50'
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  useDialogKeys(dialogRef, onClose)
+
+  const refresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await onRefresh?.()
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
-  const getHealthIcon = () => {
-    if (status.hasErrors) return '❌'
-    if (!status.parityUpToDate) return '⚠️'
-    return '✅'
-  }
+  const findings = getFindings(status)
+  const locale = getLocale()
 
-  const getHealthText = () => {
-    if (status.hasErrors) return m.status_modal_errors_detected()
-    if (!status.parityUpToDate) return m.status_modal_needs_sync()
-    return m.status_modal_healthy()
-  }
-
-  // Scrub status color
-  const getScrubColor = () => {
-    const percentage = status.scrubPercentage || 0
-    if (percentage === 0) return 'text-red-600 bg-red-50'
-    if (percentage < 50) return 'text-yellow-600 bg-yellow-50'
-    return 'text-green-600 bg-green-50'
-  }
-
-  // Prepare chart data - sort by daysAgo descending (oldest to newest, left to right)
-  const sortedHistory = [...(status.scrubHistory || [])].sort(
+  // Oldest blocks on the left, like the graph of `snapraid status`
+  const history = [...(status.scrubHistory ?? [])].sort(
     (a, b) => b.daysAgo - a.daysAgo,
   )
 
@@ -71,25 +195,18 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
     getComputedStyle(document.documentElement).getPropertyValue(name).trim()
   const gridColor = themeColor('--color-gray-200')
   const tickColor = themeColor('--color-gray-500')
+  ChartJS.defaults.font.family = getComputedStyle(document.body).fontFamily
 
   const chartData = {
-    labels: sortedHistory.map(
-      (point) => `${point.daysAgo}${m.status_modal_days_ago()}`,
-    ),
+    labels: history.map((point) => point.daysAgo.toLocaleString(locale)),
     datasets: [
       {
-        label: m.status_modal_coverage(),
-        data: sortedHistory.map((point) => point.percentage),
-        fill: true,
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderColor: 'rgb(59, 130, 246)',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 4,
-        pointBackgroundColor: 'rgb(59, 130, 246)',
-        pointBorderColor: themeColor('--surface') || '#fff',
-        pointBorderWidth: 2,
-        pointHoverRadius: 6,
+        data: history.map((point) => point.percentage),
+        backgroundColor: history.map((point) =>
+          point.daysAgo > SCRUB_STALE_DAYS ? BAR_STALE_COLOR : BAR_COLOR,
+        ),
+        borderRadius: 2,
+        maxBarThickness: 32,
       },
     ],
   }
@@ -98,350 +215,174 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        display: false,
-      },
-      title: {
-        display: false,
-      },
+      legend: { display: false },
       tooltip: {
         callbacks: {
-          label: (context: TooltipItem<'line'>) =>
-            `${m.status_modal_coverage()}: ${context.parsed.y}%`,
+          title: (items: TooltipItem<'bar'>[]) =>
+            formatDaysAgo(history[items[0]?.dataIndex ?? 0]?.daysAgo),
+          label: (item: TooltipItem<'bar'>) =>
+            m.status_modal_bar_tooltip({ percent: String(item.parsed.y) }),
         },
       },
     },
     scales: {
       y: {
         beginAtZero: true,
-        max: 100,
         ticks: {
           color: tickColor,
           callback: (value: string | number) => `${value}%`,
         },
-        grid: {
-          color: gridColor,
-        },
+        grid: { color: gridColor },
       },
       x: {
-        grid: {
-          display: false,
-        },
+        grid: { display: false },
         ticks: {
           color: tickColor,
           maxRotation: 0,
           autoSkip: true,
-          maxTicksLimit: 8,
+          maxTicksLimit: 10,
         },
         title: {
           display: true,
-          text: m.status_modal_days_ago(),
+          text: m.status_modal_axis_days(),
           color: tickColor,
-          font: {
-            size: 12,
-          },
         },
       },
     },
   }
 
-  // Format GB values
-  const formatGB = (gb?: number) => {
-    if (gb === undefined || gb === null) return '-'
-    return `${gb.toFixed(1)} GB`
-  }
-
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="p-6 border-b flex justify-between items-center">
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click is a mouse shortcut, Escape closes too
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="status-modal-title"
+        tabIndex={-1}
+        className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-white shadow-xl outline-none"
+      >
+        <div className="flex items-start justify-between gap-4 border-b p-4 sm:p-6">
           <div>
-            <h3 className="text-xl font-semibold">{m.status_modal_title()}</h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <h3 id="status-modal-title" className="text-xl font-semibold">
+              {m.status_modal_title()}
+            </h3>
+            <p className="mt-1 text-sm text-gray-600">
               {m.status_modal_description()}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             {onRefresh && (
-              <button
-                type="button"
-                onClick={onRefresh}
-                className="px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              <Button
+                onClick={refresh}
+                disabled={isRefreshing}
+                variant="ghost"
+                size="icon"
+                aria-label={m.status_modal_refresh()}
                 title={m.status_modal_refresh()}
               >
-                🔄 {m.status_modal_refresh()}
-              </button>
+                <RefreshCw
+                  size={18}
+                  className={isRefreshing ? 'animate-spin' : ''}
+                />
+              </Button>
             )}
-            <button
-              type="button"
+            <Button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+              variant="ghost"
+              size="icon"
+              aria-label={m.common_close()}
+              title={m.common_close()}
             >
-              ✕
-            </button>
+              <X size={18} />
+            </Button>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 flex-1 overflow-y-auto space-y-6">
-          {/* Status Cards Row */}
-          <div className="grid grid-cols-3 gap-4">
-            {/* Health Card */}
-            <div className={`p-4 rounded-lg border-2 ${getHealthColor()}`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium opacity-80">
-                  {m.status_modal_array_health()}
-                </span>
-                <span className="text-2xl">{getHealthIcon()}</span>
-              </div>
-              <div className="text-2xl font-bold">{getHealthText()}</div>
-              {!status.parityUpToDate && (
-                <div className="text-xs mt-1 opacity-70">
-                  {m.status_modal_sync_required()}
-                </div>
-              )}
-            </div>
-
-            {/* Scrub Card */}
-            <div className={`p-4 rounded-lg border-2 ${getScrubColor()}`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium opacity-80">
-                  {m.status_modal_scrub_status()}
-                </span>
-                <span className="text-2xl">🔍</span>
-              </div>
-              <div className="text-2xl font-bold">
-                {status.scrubPercentage !== undefined
-                  ? `${status.scrubPercentage}%`
-                  : '-'}
-              </div>
-              <div className="text-xs mt-1 opacity-70">
-                {status.oldestScrubDays !== undefined
-                  ? `${m.status_modal_oldest()}: ${status.oldestScrubDays}${m.status_modal_days_ago()}`
-                  : m.status_modal_no_data()}
-              </div>
-            </div>
-
-            {/* Sync Card */}
-            <div
-              className={`p-4 rounded-lg border-2 ${status.syncInProgress ? 'text-blue-600 bg-blue-50' : 'text-green-600 bg-green-50'}`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium opacity-80">
-                  {m.status_modal_sync_status()}
-                </span>
-                <span className="text-2xl">
-                  {status.syncInProgress ? '⏳' : '✅'}
-                </span>
-              </div>
-              <div className="text-2xl font-bold">
-                {status.syncInProgress
-                  ? m.status_modal_in_progress()
-                  : m.status_modal_complete()}
-              </div>
-              {!status.syncInProgress && (
-                <div className="text-xs mt-1 opacity-70">
-                  {m.status_modal_up_to_date()}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Disk Cards */}
-          {status.disks && status.disks.length > 0 && (
-            <div>
-              <h4 className="text-lg font-semibold mb-3">
-                {m.status_modal_data_disks()} ({status.disks.length})
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                {status.disks.map((disk) => (
-                  <div
-                    key={disk.name}
-                    className="p-4 border rounded-lg bg-gray-50"
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h5 className="font-semibold text-lg">{disk.name}</h5>
-                        <p className="text-sm text-gray-600">
-                          {disk.files.toLocaleString()} {m.status_modal_files()}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <div
-                          className={`text-2xl font-bold ${usageTextColor(disk.usePercent)}`}
-                        >
-                          {disk.usePercent}%
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          {m.status_modal_usage()}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="mb-3">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all ${usageBarColor(disk.usePercent)}`}
-                          style={{ width: `${disk.usePercent}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-gray-600">
-                          {m.status_modal_used()}:
-                        </span>
-                        <span className="ml-1 font-medium">
-                          {formatGB(disk.usedGB)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">
-                          {m.status_modal_free()}:
-                        </span>
-                        <span className="ml-1 font-medium">
-                          {formatGB(disk.freeGB)}
-                        </span>
-                      </div>
-                      {disk.fragmentedFiles > 0 && (
-                        <div className="col-span-2">
-                          <span className="text-gray-600">
-                            {m.status_modal_fragmented()}:
-                          </span>
-                          <span className="ml-1 font-medium text-orange-600">
-                            {disk.fragmentedFiles} {m.status_modal_files()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Totals Summary */}
-          {(status.totalFiles !== undefined ||
-            status.totalUsedGB !== undefined) && (
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h4 className="font-semibold mb-2 text-blue-900">
-                {m.status_modal_total_summary()}
-              </h4>
-              <div className="grid grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="text-blue-700">
-                    {m.status_modal_files()}:
-                  </span>
-                  <span className="ml-1 font-semibold text-blue-900">
-                    {status.totalFiles?.toLocaleString() || '-'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-blue-700">
-                    {m.status_modal_used()}:
-                  </span>
-                  <span className="ml-1 font-semibold text-blue-900">
-                    {formatGB(status.totalUsedGB)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-blue-700">
-                    {m.status_modal_free()}:
-                  </span>
-                  <span className="ml-1 font-semibold text-blue-900">
-                    {formatGB(status.totalFreeGB)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-blue-700">
-                    {m.status_modal_fragmented()}:
-                  </span>
-                  <span className="ml-1 font-semibold text-blue-900">
-                    {status.fragmentedFiles || 0}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Scrub History Chart */}
-          {status.scrubHistory && status.scrubHistory.length > 0 && (
-            <div>
-              <h4 className="text-lg font-semibold mb-3">
-                {m.status_modal_scrub_history()}
-              </h4>
-              <div className="bg-gray-50 p-4 rounded-lg border">
-                <div className="h-64">
-                  <Line data={chartData} options={chartOptions} />
-                </div>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-sm text-center">
-                  <div>
-                    <span className="text-gray-600">
-                      {m.status_modal_oldest()}:
-                    </span>
-                    <span className="ml-1 font-semibold">
-                      {status.oldestScrubDays || 0} {m.status_modal_days()}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">
-                      {m.status_modal_median()}:
-                    </span>
-                    <span className="ml-1 font-semibold">
-                      {status.medianScrubDays || 0} {m.status_modal_days()}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">
-                      {m.status_modal_newest()}:
-                    </span>
-                    <span className="ml-1 font-semibold">
-                      {status.newestScrubDays || 0} {m.status_modal_days()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Status Messages */}
+        <div className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
           <div className="space-y-2">
-            {status.syncInProgress && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                ℹ️ {m.status_modal_sync_in_progress_msg()}
+            {findings.map((finding) => (
+              <div
+                key={finding.title}
+                className={`flex items-start gap-3 rounded-lg border p-3 ${TONE_BOX[finding.tone]}`}
+              >
+                <span className="text-lg leading-6">
+                  {TONE_ICON[finding.tone]}
+                </span>
+                <div>
+                  <p className="font-semibold">{finding.title}</p>
+                  <p className="text-sm">{finding.message}</p>
+                </div>
               </div>
-            )}
-            {!status.parityUpToDate && !status.syncInProgress && (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                ⚠️ {m.status_modal_parity_not_updated_msg()}
-              </div>
-            )}
-            {status.hasErrors && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-                ❌ {m.status_modal_errors_msg()}
-              </div>
-            )}
-            {!status.hasErrors && status.parityUpToDate && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
-                ✅ {m.status_modal_no_errors_msg()}
-              </div>
-            )}
+            ))}
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t bg-gray-50 flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-6 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
-          >
-            {m.common_close()}
-          </button>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <Stat
+              label={m.status_modal_oldest()}
+              highlight={(status.oldestScrubDays ?? 0) > SCRUB_STALE_DAYS}
+            >
+              {formatDaysAgo(status.oldestScrubDays)}
+            </Stat>
+            <Stat label={m.status_modal_median()}>
+              {formatDaysAgo(status.medianScrubDays)}
+            </Stat>
+            <Stat label={m.status_modal_newest()}>
+              {formatDaysAgo(status.newestScrubDays)}
+            </Stat>
+            <Stat
+              label={m.status_modal_scrubbed()}
+              hint={m.status_modal_scrubbed_hint()}
+            >
+              {status.scrubPercentage === undefined
+                ? '–'
+                : `${status.scrubPercentage}%`}
+            </Stat>
+            <Stat
+              label={m.status_modal_bad_blocks()}
+              highlight={(status.badBlocks ?? 0) > 0}
+            >
+              {(status.badBlocks ?? 0).toLocaleString(locale)}
+            </Stat>
+            <Stat
+              label={m.status_modal_unsynced_blocks()}
+              highlight={(status.unsyncedBlocks ?? 0) > 0}
+            >
+              {status.unsyncedBlocks === undefined
+                ? '–'
+                : status.unsyncedBlocks.toLocaleString(locale)}
+            </Stat>
+          </div>
+
+          {history.length > 0 && (
+            <div>
+              <h4 className="font-semibold">{m.status_modal_scrub_age()}</h4>
+              <p className="mt-1 mb-3 text-sm text-gray-600">
+                {m.status_modal_scrub_age_hint({
+                  days: String(SCRUB_STALE_DAYS),
+                })}
+              </p>
+              <div className="h-56 rounded-lg border border-gray-200 p-3">
+                <Bar data={chartData} options={chartOptions} />
+              </div>
+            </div>
+          )}
+
+          {status.rawOutput.trim() && (
+            <details className="rounded-lg border border-gray-200">
+              <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-gray-700">
+                {m.status_modal_raw_output()}
+              </summary>
+              <pre className="max-h-96 overflow-auto border-t border-gray-200 bg-gray-50 p-4 font-mono text-xs text-gray-800">
+                {status.rawOutput}
+              </pre>
+            </details>
+          )}
         </div>
       </div>
     </div>

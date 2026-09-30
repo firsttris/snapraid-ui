@@ -125,11 +125,11 @@ export const parseStatusOutput = (output: string, rawOutput: string = output): S
   const blocks = parseBlockCounters(contentInfo);
   const fatal = tags.some(tag => tag.name === 'msg' && tag.values[0]?.startsWith('fatal'));
   const hasErrors = fatal || blocks.bad > 0 || exit === 'bad';
-  const syncInProgress = blocks.unsynced > 0 || exit === 'unsynced';
+  const syncIncomplete = blocks.unsynced > 0 || exit === 'unsynced';
   const diffStats = parseDiffStats(summary);
   const parityUpToDate = diffStats.newFiles !== undefined
     ? exit === 'equal'
-    : !syncInProgress && !hasErrors;
+    : !syncIncomplete && !hasErrors;
   const totals = parseTotals(summary);
 
   return {
@@ -142,7 +142,8 @@ export const parseStatusOutput = (output: string, rawOutput: string = output): S
     disks: parseDisks(tags),
     scrubHistory: parseScrubHistory(tags, blocks.total),
     rawOutput,
-    syncInProgress,
+    syncIncomplete,
+    unsyncedBlocks: blocks.unsynced,
     scrubPercentage: parseScrubPercentage(blocks.total, blocks.unscrubbed),
     ...parseScrubAge(summary),
     ...totals,

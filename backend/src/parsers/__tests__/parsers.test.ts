@@ -40,7 +40,8 @@ Deno.test("parseStatusOutput - healthy array", () => {
 
   assertEquals(status.hasErrors, false);
   assertEquals(status.parityUpToDate, true);
-  assertEquals(status.syncInProgress, false);
+  assertEquals(status.syncIncomplete, false);
+  assertEquals(status.unsyncedBlocks, 0);
   assertEquals(status.scrubPercentage, 0);
   assertEquals(status.oldestScrubDays, 0);
   assertEquals(status.totalFiles, 5);

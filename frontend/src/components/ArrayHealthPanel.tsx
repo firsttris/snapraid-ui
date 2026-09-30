@@ -7,15 +7,16 @@ import type {
 import { Link } from '@tanstack/react-router'
 import { RefreshCw } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { daysSince, formatRelativeTime } from '../lib/utils'
+import {
+  daysSince,
+  formatRelativeTime,
+  SCRUB_STALE_DAYS,
+  SYNC_STALE_DAYS,
+} from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { Button } from './Button'
 import { LoadingHint, Skeleton } from './Skeleton'
-
-// A run older than this is flagged as overdue
-const SYNC_STALE_DAYS = 7
-const SCRUB_STALE_DAYS = 30
 
 interface ArrayHealthPanelProps {
   status: SnapRaidStatus | undefined

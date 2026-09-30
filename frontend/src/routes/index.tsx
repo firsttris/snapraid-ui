@@ -358,7 +358,7 @@ function Dashboard() {
         {showSyncPreview && (
           <SyncPreviewDialog
             configPath={selectedConfig}
-            hasUnsyncedParity={!!statusData?.status.syncInProgress}
+            hasUnsyncedParity={!!statusData?.status.syncIncomplete}
             onClose={() => setShowSyncPreview(false)}
             onConfirm={(args) => {
               setShowSyncPreview(false)

@@ -69,7 +69,8 @@ export interface SnapRaidStatus {
   restoredFiles?: number; // From diff command
   // Additional info from 'status' command
   scrubPercentage?: number; // % of array that is scrubbed
-  syncInProgress?: boolean;
+  syncIncomplete?: boolean; // Blocks without parity, the last sync was interrupted or failed
+  unsyncedBlocks?: number;
   oldestScrubDays?: number; // Days since oldest block was scrubbed
   medianScrubDays?: number; // Median days since scrubbed
   newestScrubDays?: number; // Newest days since scrubbed

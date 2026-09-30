@@ -48,6 +48,10 @@ export const daysSince = (dateString: string): number =>
 export const formatGB = (gb: number): string =>
   gb >= 1000 ? `${(gb / 1000).toFixed(1)} TB` : `${gb.toFixed(1)} GB`
 
+// A run or block older than this is flagged as overdue
+export const SYNC_STALE_DAYS = 7
+export const SCRUB_STALE_DAYS = 30
+
 /**
  * Tailwind classes for disk usage, shared so all views use the same thresholds
  */
