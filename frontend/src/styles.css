@@ -214,8 +214,10 @@ body {
 }
 
 /* Sections of a page come in one after another */
+/* backwards, not both: a kept transform would make every section its own
+   stacking context and later sections would cover open menus */
 .ui-stagger > :not(.fixed) {
-  animation: ui-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: ui-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 .ui-stagger > :nth-child(2) {
   animation-delay: 60ms;
@@ -240,7 +242,7 @@ body {
 
 /* A box that swaps its state (health, mobile menu) */
 .ui-fade-in {
-  animation: ui-rise 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: ui-rise 0.35s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 .ui-bar {

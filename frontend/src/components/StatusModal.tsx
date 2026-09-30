@@ -336,7 +336,7 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
               <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-gray-700">
                 {m.status_modal_raw_output()}
               </summary>
-              <pre className="max-h-96 overflow-auto border-t border-gray-200 bg-gray-50 p-4 font-mono text-xs text-gray-800">
+              <pre className="overflow-x-auto border-t border-gray-200 bg-gray-50 p-4 font-mono text-xs text-gray-800">
                 {status.rawOutput}
               </pre>
             </details>
