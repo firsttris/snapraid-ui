@@ -89,7 +89,7 @@ const withFreshDefaults = (
   return {
     ...settings,
     uiUrl: window.location.origin,
-    language: getLocale() === 'de' ? 'de' : 'en',
+    language: getLocale(),
   }
 }
 
@@ -503,6 +503,7 @@ function NotificationForm({ initial }: { initial: NotificationSettings }) {
               options={[
                 { value: 'de', label: 'Deutsch' },
                 { value: 'en', label: 'English' },
+                { value: 'it', label: 'Italiano' },
               ]}
             />
           </div>

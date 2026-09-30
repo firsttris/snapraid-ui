@@ -21,7 +21,7 @@ import { useJob } from '../hooks/useJob'
 import { getCommandLabel } from '../lib/commands'
 import { useTheme } from '../lib/theme'
 import * as m from '../paraglide/messages'
-import { getLocale, setLocale } from '../paraglide/runtime'
+import { getLocale, locales, setLocale } from '../paraglide/runtime'
 
 const NAV_ITEMS = [
   { to: '/', label: m.nav_dashboard, icon: LayoutDashboard },
@@ -81,7 +81,7 @@ export const Header = () => {
   const logout = useLogout()
 
   const toggleLocale = () => {
-    setLocale(currentLocale === 'en' ? 'de' : 'en')
+    setLocale(locales[(locales.indexOf(currentLocale) + 1) % locales.length])
   }
 
   const linkClass =

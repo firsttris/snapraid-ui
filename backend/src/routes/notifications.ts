@@ -21,6 +21,11 @@ const TEST_MESSAGE = {
     message:
       "Benachrichtigungen von SnapRAID UI funktionieren. Hier meldet sich die UI, wenn ein Job fehlschlägt oder eine Platte Probleme zeigt.",
   },
+  it: {
+    title: "Notifica di test",
+    message:
+      "Le notifiche di SnapRAID UI funzionano. Riceverai un messaggio qui quando un job fallisce o un disco mostra problemi.",
+  },
 };
 
 const CHANNELS: NotificationChannel[] = ["email", "ntfy", "webhook"];

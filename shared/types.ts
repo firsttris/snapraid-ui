@@ -412,7 +412,7 @@ export type NotificationChannel = 'email' | 'ntfy' | 'webhook';
 export const SECRET_MASK = '********';
 
 export interface NotificationSettings {
-  language: 'en' | 'de';
+  language: 'en' | 'de' | 'it';
   uiUrl: string;                 // Link in messages, e.g. http://nas:3000; empty for none
   events: Record<NotificationEvent, boolean>;
   includeManualJobs: boolean;    // Also report jobs started in the UI, not only scheduled ones

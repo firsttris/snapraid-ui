@@ -16,6 +16,8 @@ const config = defineConfig({
       project: './project.inlang',
       outdir: './src/paraglide',
       outputStructure: 'message-modules',
+      // An explicit choice (cookie) wins, then the browser language, then English
+      strategy: ['cookie', 'preferredLanguage', 'globalVariable', 'baseLocale'],
     }),
     devtools(),
     nitro(),

@@ -143,6 +143,72 @@ const TEXT = {
       access: "Eine nicht lesbare Platte wird nicht überwacht. Prüfe, ob sie angeschlossen ist; in Docker braucht SMART einen Container mit --privileged.",
     },
   },
+  it: {
+    result: {
+      ok: "OK",
+      warning: "OK con avvisi",
+      error: "fallito",
+      aborted: "interrotto",
+      incomplete: "incompleto",
+    },
+    manualLabel: (command: string) => `${command} manuale`,
+    failedTitle: (label: string) => `Fallito: ${label}`,
+    dataErrorsTitle: (label: string) => `Errori nei dati: ${label}`,
+    succeededTitle: (label: string) => `Completato: ${label}`,
+    skippedTitle: (label: string) => `Saltato: ${label}`,
+    smartTitle: (config: string) => `Avviso SMART: ${config}`,
+    config: (name: string) => `Configurazione: ${name}`,
+    changes: (c: NonNullable<RunReport["changes"]>) =>
+      `${c.added} aggiunti, ${c.updated} aggiornati, ${c.removed} rimossi, ${c.moved} spostati`,
+    errors: (io: number, data: number) => `${io} errori di I/O, ${data} errori nei dati`,
+    fixCounts: (recovered: number, unrecoverable: number) =>
+      `${recovered} recuperati, ${unrecoverable} non recuperabili`,
+    notRun: "non eseguito",
+    dataErrorsHint: "I blocchi segnati come danneggiati si possono riparare con «Ripara» nella dashboard.",
+    skip: {
+      job_running: "Era in esecuzione un altro job.",
+      too_many_deleted: (count: number, max: number) =>
+        `diff segnala ${count} file eliminati, più del limite di ${max}. Verifica che non manchi un disco, poi avvia il sync manualmente.`,
+      diff_failed: (error: string) => `diff non riuscito: ${error}`,
+      recovery_in_progress: "Un disco è in sostituzione; i job pianificati sono in pausa fino al suo sync.",
+    },
+    smartReason: (reason: SmartReason) => {
+      switch (reason.kind) {
+        case "status":
+          return {
+            FAIL: "il disco segnala da solo un guasto",
+            PREFAIL: "un valore di pre-guasto è sotto la sua soglia",
+            LOGFAIL: "un valore di pre-guasto è stato sotto la sua soglia in passato",
+            LOGERR: "voci nel registro errori del disco",
+            SELFERR: "un autotest SMART non è riuscito",
+          }[reason.status as string] + ` (SMART ${reason.status})`;
+        case "failure_probability":
+          return `probabilità di guasto del ${String(reason.percent).replace(".", ",")} % all'anno`;
+        case "temperature":
+          return `${reason.celsius} °C`;
+        case "sectors":
+          return `${reason.count} settori ${
+            { reallocated: "riallocati", pending: "in sospeso", uncorrectable: "non correggibili" }[reason.attribute]
+          }`;
+        case "errors":
+          return {
+            reported_uncorrectable: `${reason.count} errori di lettura non correggibili`,
+            crc: `${reason.count} errori di trasferimento (CRC)`,
+            medium: `${reason.count} errori del supporto`,
+          }[reason.attribute];
+        case "wear":
+          return `${reason.percent} % della durata prevista dell'SSD consumata`;
+        case "unreadable":
+          return "impossibile leggere i dati SMART";
+      }
+    },
+    smartHint: {
+      replace: "Conviene sostituire il disco prima che si guasti.",
+      cable: "Gli errori di trasferimento di solito dipendono dal cavo o dal backplane; sostituiscilo se il contatore continua a salire.",
+      cooling: "Migliora il raffreddamento del disco.",
+      access: "Un disco illeggibile non viene monitorato. Verifica che sia collegato; in Docker SMART richiede un container con --privileged.",
+    },
+  },
 } as const;
 
 const COMMAND_LABEL: Partial<Record<SnapRaidCommand, string>> = {

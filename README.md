@@ -30,7 +30,8 @@ Run sync and scrub, schedule jobs and keep an eye on disk health, all from your 
 - **Logs**: history of every run with full output, searchable and filterable; old logs are rotated automatically (100 files / 30 days by default) or on demand
 - **Config management**: add existing or create new `snapraid.conf` files, rename, enable/disable, and edit disks, content files, excludes, pool and options visually or as text
 - **Login** via environment variables, no database needed
-- **English and German UI**, light and dark theme (follows the system or switch in the header)
+- **Multilingual**: follows the browser language, switchable in the header
+- **Light and dark theme**: follows the system, switchable in the header
 
 ## 🐳 Quick start with Docker
 
