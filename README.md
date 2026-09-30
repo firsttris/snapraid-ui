@@ -34,7 +34,12 @@ Run sync and scrub, schedule jobs and keep an eye on disk health, all from your 
 
 ## 🐳 Quick start with Docker
 
-The image ships with SnapRAID 14.9, so nothing needs to be installed on the host.
+The image ships with SnapRAID 14.10, so nothing needs to be installed on the host.
+
+> [!IMPORTANT]
+> **Use the bundled SnapRAID, not the one from your distribution.** The UI reads SnapRAID's structured log, which exists only since SnapRAID 14.0, and current distributions still ship older versions (Debian 13: 12.4, Ubuntu 24.04 LTS: 12.3). The bundled binary is built from an official, pinned SnapRAID release that the UI is tested against.
+>
+> If cron jobs on the host run SnapRAID for the same array, move them to the UI's scheduler, so that one SnapRAID version maintains the array.
 
 ```bash
 docker run -d --name snapraid-ui \
@@ -83,7 +88,7 @@ Set `SNAPRAID_UI_USERNAME` and `SNAPRAID_UI_PASSWORD` to protect the UI. No data
 - After 5 failed attempts a client has to wait 15 minutes.
 - The cookie is marked `Secure` when the request came in over HTTPS (`X-Forwarded-Proto: https` from your reverse proxy). Use HTTPS if the UI is reachable from outside your LAN.
 
-**Using your own SnapRAID binary:** mount it and point `SNAPRAID_BIN` at it. It needs to be version 14.0 or newer, because the UI parses SnapRAID's structured log output.
+**Using your own SnapRAID binary:** only needed for special builds, the bundled one is the recommended choice. Mount the binary and point `SNAPRAID_BIN` at it. It has to be version 14.0 or newer (`snapraid --version`), otherwise status, reports and notifications stay empty, because the UI parses SnapRAID's structured log output.
 
 ```bash
   -v /usr/bin/snapraid:/usr/bin/snapraid:ro \

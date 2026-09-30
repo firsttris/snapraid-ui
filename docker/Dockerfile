@@ -1,7 +1,7 @@
 # SnapRAID bundled in the image; override with SNAPRAID_BIN to use a mounted binary
 FROM docker.io/library/debian:bookworm-slim AS snapraid-builder
 
-ARG SNAPRAID_VERSION=14.9
+ARG SNAPRAID_VERSION=14.10
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates curl gcc make libc6-dev \
   && curl -fsSL "https://github.com/amadvance/snapraid/releases/download/v${SNAPRAID_VERSION}/snapraid-${SNAPRAID_VERSION}.tar.gz" \

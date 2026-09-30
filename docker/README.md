@@ -20,7 +20,7 @@ From the repository root:
 ```bash
 docker build -f docker/Dockerfile -t snapraid-ui .
 # pin another SnapRAID release
-docker build -f docker/Dockerfile --build-arg SNAPRAID_VERSION=14.9 -t snapraid-ui .
+docker build -f docker/Dockerfile --build-arg SNAPRAID_VERSION=14.10 -t snapraid-ui .
 ```
 
 ## Podman Quadlet
