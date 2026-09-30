@@ -26,9 +26,13 @@ import {
 import { getSession, logout } from '../lib/api/auth'
 import {
   addConfig,
+  checkConfigs,
+  createConfig,
+  getBasePath,
   getConfig,
   removeConfig,
   saveConfig,
+  updateConfig,
 } from '../lib/api/config'
 import { browseFilesystem, readFile, writeFile } from '../lib/api/filesystem'
 import { deleteLog, getLogContent, getLogs, rotateLogs } from '../lib/api/logs'
@@ -36,6 +40,7 @@ import { notificationsApi } from '../lib/api/notifications'
 import { schedulesApi } from '../lib/api/schedules'
 import {
   abortJob,
+  addContentFile,
   addDataDisk,
   addExclude,
   addParityDisk,
@@ -49,10 +54,12 @@ import {
   getStatus,
   parseSnapRaidConfig,
   probe,
+  removeContentFile,
   removeDataDisk,
   removeExclude,
   removeParityDisk,
   runDiskReplacementStep,
+  setConfigOption,
   setPool,
   startDiskReplacement,
 } from '../lib/api/snapraid'
@@ -64,6 +71,8 @@ import {
 export const queryKeys = {
   session: ['auth-session'] as const,
   config: ['config'] as const,
+  // Below `config`, so invalidating the config refreshes the checks too
+  configChecks: ['config', 'check'] as const,
   snapraidConfig: (path: string) => ['snapraid-config', path] as const,
   currentJob: ['current-job'] as const,
   status: ['status'] as const,
@@ -272,9 +281,70 @@ export const useFileContent = (
   })
 }
 
+export const useBasePath = () => {
+  return useQuery({
+    queryKey: ['base-path'],
+    queryFn: getBasePath,
+    staleTime: Number.POSITIVE_INFINITY,
+  })
+}
+
+export const useConfigChecks = () => {
+  return useQuery({
+    queryKey: queryKeys.configChecks,
+    queryFn: checkConfigs,
+  })
+}
+
 // ====================
 // Config Mutations
 // ====================
+
+export const useCreateConfig = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ name, fileName }: { name: string; fileName: string }) =>
+      createConfig(name, fileName),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.config })
+    },
+  })
+}
+
+export const useUpdateConfig = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      path,
+      ...changes
+    }: {
+      path: string
+      name?: string
+      enabled?: boolean
+    }) => updateConfig(path, changes),
+    // Show the new name or switch state right away, rolled back if the backend refuses it
+    onMutate: async ({ path, ...changes }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.config })
+      const previous = queryClient.getQueryData<AppConfig>(queryKeys.config)
+      if (previous) {
+        queryClient.setQueryData<AppConfig>(queryKeys.config, {
+          ...previous,
+          snapraidConfigs: previous.snapraidConfigs.map((cfg) =>
+            cfg.path === path ? { ...cfg, ...changes } : cfg,
+          ),
+        })
+      }
+      return { previous }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous)
+        queryClient.setQueryData(queryKeys.config, context.previous)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.config })
+    },
+  })
+}
 
 export const useSaveConfig = (
   options?: UseMutationOptions<void, Error, AppConfig>,
@@ -480,6 +550,62 @@ export const useSetPool = (
   })
 }
 
+export const useAddContentFile = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      configPath,
+      contentPath,
+    }: {
+      configPath: string
+      contentPath: string
+    }) => addContentFile(configPath, contentPath),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.snapraidConfig(variables.configPath),
+      })
+    },
+  })
+}
+
+export const useRemoveContentFile = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      configPath,
+      contentPath,
+    }: {
+      configPath: string
+      contentPath: string
+    }) => removeContentFile(configPath, contentPath),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.snapraidConfig(variables.configPath),
+      })
+    },
+  })
+}
+
+export const useSetConfigOption = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      configPath,
+      option,
+      value,
+    }: {
+      configPath: string
+      option: 'autosave' | 'blocksize'
+      value: number | null
+    }) => setConfigOption(configPath, option, value),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.snapraidConfig(variables.configPath),
+      })
+    },
+  })
+}
+
 export const useWriteFile = (
   options?: UseMutationOptions<void, Error, { path: string; content: string }>,
 ) => {
@@ -489,6 +615,10 @@ export const useWriteFile = (
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.fileContent(variables.path),
+      })
+      // The visual editor reads the parsed config
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.snapraidConfig(variables.path),
       })
     },
     ...options,

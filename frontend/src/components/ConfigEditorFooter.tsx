@@ -60,7 +60,8 @@ export const ConfigEditorFooter = ({
           onClick={onClose}
           className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
         >
-          {m.common_cancel()}
+          {/* The visual editor saves every change, there is nothing to cancel */}
+          {viewMode === 'visual' ? m.common_close() : m.common_cancel()}
         </button>
         {viewMode === 'text' && (
           <button

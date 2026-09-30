@@ -28,7 +28,7 @@ Run sync and scrub, schedule jobs and keep an eye on disk health, all from your 
 - **Disk overview**: usage, file counts, fragmentation and parity headroom per disk
 - **SMART monitoring**: health, temperature and failure probability per disk
 - **Logs**: history of every run with full output
-- **Config management**: edit multiple `snapraid.conf` files, excludes and pool settings
+- **Config management**: add existing or create new `snapraid.conf` files, rename, enable/disable, and edit disks, content files, excludes, pool and options visually or as text
 - **Login** via environment variables, no database needed
 - **English and German UI**, light and dark theme (follows the system or switch in the header)
 

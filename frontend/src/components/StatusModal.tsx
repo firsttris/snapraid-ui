@@ -8,8 +8,9 @@ import {
   type TooltipItem,
 } from 'chart.js'
 import { RefreshCw, X } from 'lucide-react'
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useRef, useState } from 'react'
 import { Bar } from 'react-chartjs-2'
+import { useDialogKeys } from '../hooks/useDialogKeys'
 import { SCRUB_STALE_DAYS } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
@@ -124,49 +125,6 @@ const Stat = ({
     </p>
   </div>
 )
-
-// Keeps Tab inside the dialog and closes it on Escape
-const useDialogKeys = (
-  dialogRef: React.RefObject<HTMLDivElement | null>,
-  onClose: () => void,
-) => {
-  // Latest onClose without re-running the effect, which would move the focus
-  const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
-
-  useEffect(() => {
-    const previousFocus = document.activeElement as HTMLElement | null
-    dialogRef.current?.focus()
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onCloseRef.current()
-        return
-      }
-      if (event.key !== 'Tab' || !dialogRef.current) return
-
-      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-        'button:not(:disabled), summary, [href], [tabindex]:not([tabindex="-1"])',
-      )
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (!first || !last) return
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
-      }
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      previousFocus?.focus()
-    }
-  }, [dialogRef])
-}
 
 export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)

@@ -84,6 +84,12 @@ export const parseSnapRaidConfig = async (
         };
       }
       
+      const option = line.match(/^(autosave|blocksize|block_size)\s+(\d+)$/);
+      if (option) {
+        const key = option[1] === "autosave" ? "autosave" : "blocksize";
+        return { ...config, [key]: Number(option[2]) };
+      }
+
       if (line.startsWith("pool ")) {
         return {
           ...config,

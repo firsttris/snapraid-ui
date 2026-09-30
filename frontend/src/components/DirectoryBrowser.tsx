@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { Folder, X } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { useFilesystem } from '../hooks/queries'
+import { useDialogKeys } from '../hooks/useDialogKeys'
 import * as m from '../paraglide/messages'
 import { Button } from './Button'
 
@@ -16,6 +18,8 @@ export const DirectoryBrowser = ({
   title,
   currentValue,
 }: DirectoryBrowserProps) => {
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useDialogKeys(dialogRef, onClose)
   const [currentPath, setCurrentPath] = useState<string>(currentValue || '')
 
   // TanStack Query hook
@@ -39,16 +43,29 @@ export const DirectoryBrowser = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click is a mouse shortcut, Escape closes too
+    <div
+      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col outline-none"
+      >
         <div className="p-4 border-b flex justify-between items-center">
           <h3 className="text-lg font-semibold">{title}</h3>
           <button
             type="button"
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
+            aria-label={m.common_close()}
           >
-            ✕
+            <X size={20} />
           </button>
         </div>
 
@@ -90,7 +107,7 @@ export const DirectoryBrowser = ({
                 onClick={() => setCurrentPath(entry.path)}
                 className="w-full text-left px-3 py-2 rounded hover:bg-gray-100 flex items-center gap-2"
               >
-                <span className="text-lg">📁</span>
+                <Folder size={18} className="shrink-0 text-blue-500" />
                 <span className="font-medium">{entry.name}</span>
               </button>
             ))}

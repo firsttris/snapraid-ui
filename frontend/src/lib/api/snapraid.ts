@@ -24,9 +24,8 @@ import { API_BASE, apiFetch } from './constants'
 export const parseSnapRaidConfig = async (
   path: string,
 ): Promise<ParsedSnapRaidConfig> => {
-  const relativePath = path.replace(/^.*[/\\]/, '')
   const response = await apiFetch(
-    `${API_BASE}/snapraid/parse?path=${encodeURIComponent(relativePath)}`,
+    `${API_BASE}/snapraid/parse?path=${encodeURIComponent(path)}`,
   )
   if (!response.ok) throw new Error('Failed to parse config')
   return response.json()
@@ -40,11 +39,10 @@ export const executeCommand = async (
   configPath: string,
   args: string[] = [],
 ): Promise<void> => {
-  const relativePath = configPath.replace(/^.*[/\\]/, '')
   const response = await apiFetch(`${API_BASE}/snapraid/execute`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ command, configPath: relativePath, args }),
+    body: JSON.stringify({ command, configPath, args }),
   })
   if (!response.ok) {
     const error = await response.json().catch(() => ({}))
@@ -87,9 +85,8 @@ export const abortJob = async (): Promise<void> => {
  * Get the last sync and scrub run of a config
  */
 export const getLastRuns = async (configPath: string): Promise<LastRuns> => {
-  const relativePath = configPath.replace(/^.*[/\\]/, '')
   const response = await apiFetch(
-    `${API_BASE}/snapraid/last-runs?path=${encodeURIComponent(relativePath)}`,
+    `${API_BASE}/snapraid/last-runs?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) throw new Error('Failed to fetch last runs')
   return response.json()
@@ -105,11 +102,8 @@ export const getStatus = async (
   timestamp: string
   exitCode: number | null
 }> => {
-  const relativePath = configPath
-    ? configPath.replace(/^.*[/\\]/, '')
-    : undefined
-  const url = relativePath
-    ? `${API_BASE}/snapraid/status?path=${encodeURIComponent(relativePath)}`
+  const url = configPath
+    ? `${API_BASE}/snapraid/status?path=${encodeURIComponent(configPath)}`
     : `${API_BASE}/snapraid/status`
   const response = await apiFetch(url)
   if (response.status === 409) throw new SnapRaidBusyError('SnapRAID is busy')
@@ -128,9 +122,8 @@ export class SnapRaidBusyError extends Error {}
 export const getParityUsage = async (
   configPath: string,
 ): Promise<ParityLevelUsage[]> => {
-  const relativePath = configPath.replace(/^.*[/\\]/, '')
   const response = await apiFetch(
-    `${API_BASE}/snapraid/parity-usage?path=${encodeURIComponent(relativePath)}`,
+    `${API_BASE}/snapraid/parity-usage?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) throw new Error('Failed to fetch parity usage')
   return response.json()
@@ -292,6 +285,58 @@ export const setPool = async (
   const result = await response.json()
   return result.config
 }
+
+const configOperation = async (
+  endpoint: string,
+  body: Record<string, unknown>,
+  fallback: string,
+): Promise<ParsedSnapRaidConfig> => {
+  const response = await apiFetch(`${API_BASE}/snapraid/${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error || fallback)
+  }
+  const result = await response.json()
+  return result.config
+}
+
+/**
+ * Add a content file to SnapRAID config
+ */
+export const addContentFile = (configPath: string, contentPath: string) =>
+  configOperation(
+    'add-content',
+    { configPath, contentPath },
+    'Failed to add content file',
+  )
+
+/**
+ * Remove a content file from SnapRAID config
+ */
+export const removeContentFile = (configPath: string, contentPath: string) =>
+  configOperation(
+    'remove-content',
+    { configPath, contentPath },
+    'Failed to remove content file',
+  )
+
+/**
+ * Set autosave (GiB) or blocksize (KiB), null removes the option
+ */
+export const setConfigOption = (
+  configPath: string,
+  option: 'autosave' | 'blocksize',
+  value: number | null,
+) =>
+  configOperation(
+    'set-option',
+    { configPath, option, value },
+    'Failed to set option',
+  )
 
 /**
  * Get SMART report for all disks

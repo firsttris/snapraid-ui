@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { useDialogKeys } from '../hooks/useDialogKeys'
 import * as m from '../paraglide/messages'
 
 // How long a toast stays visible, errors stay longer so they can be read
@@ -74,23 +75,23 @@ const ConfirmDialog = ({
   pending: PendingConfirm
   onAnswer: (confirmed: boolean) => void
 }) => {
+  const dialogRef = useRef<HTMLDivElement>(null)
   const confirmRef = useRef<HTMLButtonElement>(null)
+  useDialogKeys(dialogRef, () => onAnswer(false))
 
+  // After useDialogKeys focused the dialog
   useEffect(() => {
     confirmRef.current?.focus()
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onAnswer(false)
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onAnswer])
+  }, [])
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
       <div
+        ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
-        className="w-full max-w-md rounded-lg bg-white shadow-xl"
+        tabIndex={-1}
+        className="w-full max-w-md rounded-lg bg-white shadow-xl outline-none"
       >
         <div className="p-6">
           <h2 className="text-lg font-semibold text-gray-900">

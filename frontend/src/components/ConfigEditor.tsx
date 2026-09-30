@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react'
+import { Info, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useFileContent, useWriteFile } from '../hooks/queries'
+import { useDialogKeys } from '../hooks/useDialogKeys'
 import { validateConfig } from '../lib/api/snapraid'
 import * as m from '../paraglide/messages'
+import { Button } from './Button'
 import { ConfigEditorFooter } from './ConfigEditorFooter'
 import { ConfigTextEditor } from './ConfigTextEditor'
 import { DiskManager } from './DiskManager'
@@ -24,6 +27,7 @@ export const ConfigEditor = ({
   onSaved,
 }: ConfigEditorProps) => {
   const { confirm } = useFeedback()
+  const dialogRef = useRef<HTMLDivElement>(null)
   const [content, setContent] = useState<string>('')
   const [originalContent, setOriginalContent] = useState<string>('')
   const [validating, setValidating] = useState(false)
@@ -54,6 +58,21 @@ export const ConfigEditor = ({
   useEffect(() => {
     setHasChanges(content !== originalContent)
   }, [content, originalContent])
+
+  // The visual editor writes the file itself, unsaved text would be overwritten on the next reload
+  const changeViewMode = async (mode: 'text' | 'visual') => {
+    if (mode === viewMode) return
+    if (mode === 'visual' && hasChanges) {
+      const confirmed = await confirm({
+        message: m.config_editor_switch_discard_confirm(),
+        confirmLabel: m.confirm_discard(),
+        danger: true,
+      })
+      if (!confirmed) return
+      setContent(originalContent)
+    }
+    setViewMode(mode)
+  }
 
   const handleDiskUpdate = () => {
     // Reload the file content when disks are updated
@@ -92,6 +111,19 @@ export const ConfigEditor = ({
     }
   }
 
+  // Ctrl+S / Cmd+S saves the text
+  useEffect(() => {
+    if (viewMode !== 'text') return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault()
+        if (hasChanges && !writeFileMutation.isPending) handleSave()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  })
+
   const handleClose = async () => {
     if (hasChanges) {
       const confirmed = await confirm({
@@ -104,44 +136,50 @@ export const ConfigEditor = ({
     onClose()
   }
 
+  useDialogKeys(dialogRef, handleClose)
+
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full h-full max-w-6xl max-h-[95vh] flex flex-col">
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click is a mouse shortcut, Escape closes too
+    <div
+      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) handleClose()
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="config-editor-title"
+        tabIndex={-1}
+        className="bg-white rounded-lg shadow-xl w-full h-full max-w-6xl max-h-[95vh] flex flex-col outline-none"
+      >
         {/* Header */}
-        <div className="p-6 border-b flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-semibold text-gray-900">
-              {m.config_editor_title()}
+        <div className="p-6 border-b flex justify-between items-center gap-4">
+          <div className="min-w-0">
+            <h2
+              id="config-editor-title"
+              className="text-2xl font-semibold text-gray-900"
+            >
+              {configName}
             </h2>
-            <p className="text-sm text-gray-600 mt-1 font-mono">
-              {configName} — {configPath}
+            <p className="text-sm text-gray-600 mt-1 font-mono truncate">
+              {configPath}
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 shrink-0">
             <ViewModeToggle
               viewMode={viewMode}
-              onViewModeChange={setViewMode}
+              onViewModeChange={changeViewMode}
             />
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label={m.common_close()}
             >
-              <svg
-                aria-hidden="true"
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+              <X size={22} />
+            </Button>
           </div>
         </div>
 
@@ -159,6 +197,10 @@ export const ConfigEditor = ({
             </div>
           ) : viewMode === 'visual' ? (
             <div className="flex-1 overflow-y-auto">
+              <p className="mb-4 flex items-center gap-2 text-sm text-gray-600">
+                <Info size={16} className="shrink-0 text-blue-500" />
+                {m.config_editor_visual_saves_immediately()}
+              </p>
               <DiskManager
                 configPath={configPath}
                 onUpdate={handleDiskUpdate}

@@ -1,8 +1,9 @@
-import { FolderPlus, Settings2 } from 'lucide-react'
+import { FolderPlus, Pencil, Settings2 } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { useConfig } from '../hooks/queries'
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
 import * as m from '../paraglide/messages'
+import { ConfigEditor } from './ConfigEditor'
 import { ConfigManager } from './ConfigManager'
 import { Select } from './Select'
 
@@ -17,14 +18,17 @@ interface ConfigBarProps {
  * with a first-run guide when no config exists yet
  */
 export const ConfigBar = ({ disabled = false, children }: ConfigBarProps) => {
-  const { data: config, refetch } = useConfig()
+  const { data: config } = useConfig()
   const { selectedConfig, setSelectedConfig } = useSelectedConfig()
-  const [managerMode, setManagerMode] = useState<'closed' | 'list' | 'add'>(
-    'closed',
+  const [openDialog, setOpenDialog] = useState<'manager' | 'editor' | null>(
+    null,
   )
 
   const enabledConfigs = config?.snapraidConfigs.filter((c) => c.enabled) ?? []
   const showOnboarding = config && enabledConfigs.length === 0
+  const selectedConfigEntry = enabledConfigs.find(
+    (c) => c.path === selectedConfig,
+  )
 
   return (
     <>
@@ -41,14 +45,10 @@ export const ConfigBar = ({ disabled = false, children }: ConfigBarProps) => {
           </p>
           <button
             type="button"
-            onClick={() =>
-              setManagerMode(config.snapraidConfigs.length > 0 ? 'list' : 'add')
-            }
+            onClick={() => setOpenDialog('manager')}
             className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white hover:bg-blue-700"
           >
-            {config.snapraidConfigs.length > 0
-              ? m.config_manager_title()
-              : m.config_manager_add_configuration()}
+            {m.config_manager_title()}
           </button>
         </div>
       ) : (
@@ -72,23 +72,40 @@ export const ConfigBar = ({ disabled = false, children }: ConfigBarProps) => {
               }))}
             />
           </div>
-          <button
-            type="button"
-            onClick={() => setManagerMode('list')}
-            className="flex shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            <Settings2 size={16} />
-            {m.config_manager_title()}
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={() => setOpenDialog('editor')}
+              disabled={!selectedConfig}
+              className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Pencil size={16} />
+              {m.config_manager_edit()}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpenDialog('manager')}
+              className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <Settings2 size={16} />
+              {m.config_manager_title()}
+            </button>
+          </div>
         </div>
       )}
 
-      {managerMode !== 'closed' && config && (
+      {openDialog === 'manager' && config && (
         <ConfigManager
           config={config.snapraidConfigs}
-          onConfigsChanged={refetch}
-          onClose={() => setManagerMode('closed')}
-          startWithAddForm={managerMode === 'add'}
+          onClose={() => setOpenDialog(null)}
+        />
+      )}
+
+      {openDialog === 'editor' && selectedConfigEntry && (
+        <ConfigEditor
+          configPath={selectedConfigEntry.path}
+          configName={selectedConfigEntry.name}
+          onClose={() => setOpenDialog(null)}
         />
       )}
 

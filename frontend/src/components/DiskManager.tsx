@@ -9,8 +9,10 @@ import {
   useSnapRaidConfig,
 } from '../hooks/queries'
 import * as m from '../paraglide/messages'
+import { ContentFileSection } from './ContentFileSection'
 import { DataDiskSection } from './DataDiskSection'
 import { ExcludePatternSection } from './ExcludePatternSection'
+import { OptionsSection } from './OptionsSection'
 import { ParityDiskSection } from './ParityDiskSection'
 import { PoolSection } from './PoolSection'
 
@@ -146,6 +148,12 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
         onRemove={handleRemoveParity}
       />
 
+      <ContentFileSection
+        configPath={configPath}
+        content={config.content}
+        onUpdate={onUpdate}
+      />
+
       <DataDiskSection
         configPath={configPath}
         data={config.data}
@@ -160,6 +168,13 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
       />
 
       <PoolSection pool={config.pool} onPoolChange={handleSetPool} />
+
+      <OptionsSection
+        configPath={configPath}
+        autosave={config.autosave}
+        blocksize={config.blocksize}
+        onUpdate={onUpdate}
+      />
     </div>
   )
 }

@@ -32,6 +32,18 @@ export interface ParsedSnapRaidConfig {
   pendingRemoval: string[]; // Data disks pointing to their empty removal directory, waiting for `sync -E`
   exclude: string[];
   pool?: string;
+  autosave?: number;       // GiB processed before sync/scrub saves the content file
+  blocksize?: number;      // KiB, `block_size` is the older spelling
+}
+
+// Quick check of a config file, shown in the config manager
+export interface ConfigFileCheck {
+  path: string;
+  exists: boolean;
+  error?: string;          // Unreadable file
+  dataDisks: number;
+  parityLevels: number;
+  contentFiles: number;
 }
 
 export interface DiskInfo {
