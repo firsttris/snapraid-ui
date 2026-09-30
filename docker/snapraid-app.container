@@ -23,6 +23,16 @@ Volume=%h/snapraid:/app/snapraid:Z
 # Volume=/mnt/disk2:/mnt/disk2
 # Volume=/mnt/parity:/mnt/parity
 
+# Login, leave both unset to keep the UI open (e.g. behind your own auth proxy)
+Environment=SNAPRAID_UI_USERNAME=admin
+# Password as a Podman secret, created once with:
+#   printf 'your-password' | podman secret create snapraid-ui-password -
+Secret=snapraid-ui-password,type=env,target=SNAPRAID_UI_PASSWORD
+# Or in plain text instead of the secret:
+# Environment=SNAPRAID_UI_PASSWORD=change-me
+# How long a login lasts, in hours (default 168 = 7 days)
+# Environment=SNAPRAID_UI_SESSION_HOURS=168
+
 # Optional: use the host's snapraid binary instead of the bundled one
 # Volume=/usr/bin/snapraid:/usr/bin/snapraid:ro
 # Environment=SNAPRAID_BIN=/usr/bin/snapraid

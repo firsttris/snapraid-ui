@@ -13,7 +13,7 @@ import type {
   SnapRaidCommand,
   SnapRaidStatus,
 } from '@shared/types'
-import { API_BASE } from './constants'
+import { API_BASE, apiFetch } from './constants'
 
 /**
  * Parse a SnapRAID config file
@@ -22,7 +22,7 @@ export const parseSnapRaidConfig = async (
   path: string,
 ): Promise<ParsedSnapRaidConfig> => {
   const relativePath = path.replace(/^.*[/\\]/, '')
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE}/snapraid/parse?path=${encodeURIComponent(relativePath)}`,
   )
   if (!response.ok) throw new Error('Failed to parse config')
@@ -38,7 +38,7 @@ export const executeCommand = async (
   args: string[] = [],
 ): Promise<void> => {
   const relativePath = configPath.replace(/^.*[/\\]/, '')
-  const response = await fetch(`${API_BASE}/snapraid/execute`, {
+  const response = await apiFetch(`${API_BASE}/snapraid/execute`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ command, configPath: relativePath, args }),
@@ -53,7 +53,7 @@ export const executeCommand = async (
  * Get command history
  */
 export const getHistory = async (): Promise<CommandOutput[]> => {
-  const response = await fetch(`${API_BASE}/history`)
+  const response = await apiFetch(`${API_BASE}/history`)
   if (!response.ok) throw new Error('Failed to fetch history')
   return response.json()
 }
@@ -62,7 +62,7 @@ export const getHistory = async (): Promise<CommandOutput[]> => {
  * Get current running job
  */
 export const getCurrentJob = async (): Promise<RunningJob | null> => {
-  const response = await fetch(`${API_BASE}/snapraid/current-job`)
+  const response = await apiFetch(`${API_BASE}/snapraid/current-job`)
   if (!response.ok) throw new Error('Failed to fetch current job')
   return response.json()
 }
@@ -71,7 +71,7 @@ export const getCurrentJob = async (): Promise<RunningJob | null> => {
  * Abort the running job. SnapRAID stops at the next block and saves its state.
  */
 export const abortJob = async (): Promise<void> => {
-  const response = await fetch(`${API_BASE}/snapraid/abort`, {
+  const response = await apiFetch(`${API_BASE}/snapraid/abort`, {
     method: 'POST',
   })
   if (!response.ok) {
@@ -85,7 +85,7 @@ export const abortJob = async (): Promise<void> => {
  */
 export const getLastRuns = async (configPath: string): Promise<LastRuns> => {
   const relativePath = configPath.replace(/^.*[/\\]/, '')
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE}/snapraid/last-runs?path=${encodeURIComponent(relativePath)}`,
   )
   if (!response.ok) throw new Error('Failed to fetch last runs')
@@ -108,7 +108,7 @@ export const getStatus = async (
   const url = relativePath
     ? `${API_BASE}/snapraid/status?path=${encodeURIComponent(relativePath)}`
     : `${API_BASE}/snapraid/status`
-  const response = await fetch(url)
+  const response = await apiFetch(url)
   if (response.status === 409) throw new SnapRaidBusyError('SnapRAID is busy')
   if (!response.ok) throw new Error('Failed to fetch status')
   return response.json()
@@ -126,7 +126,7 @@ export const getParityUsage = async (
   configPath: string,
 ): Promise<ParityLevelUsage[]> => {
   const relativePath = configPath.replace(/^.*[/\\]/, '')
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE}/snapraid/parity-usage?path=${encodeURIComponent(relativePath)}`,
   )
   if (!response.ok) throw new Error('Failed to fetch parity usage')
@@ -139,7 +139,7 @@ export const getParityUsage = async (
 export const validateConfig = async (
   configPath: string,
 ): Promise<{ valid: boolean; exitCode: number; output: string }> => {
-  const response = await fetch(`${API_BASE}/snapraid/validate`, {
+  const response = await apiFetch(`${API_BASE}/snapraid/validate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath }),
@@ -156,7 +156,7 @@ export const addDataDisk = async (
   diskName: string,
   diskPath: string,
 ): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/snapraid/add-data-disk`, {
+  const response = await apiFetch(`${API_BASE}/snapraid/add-data-disk`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, diskName, diskPath }),
@@ -176,7 +176,7 @@ export const addParityDisk = async (
   configPath: string,
   parityPath: string,
 ): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/snapraid/add-parity-disk`, {
+  const response = await apiFetch(`${API_BASE}/snapraid/add-parity-disk`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, parityPath }),
@@ -196,7 +196,7 @@ export const removeParityDisk = async (
   configPath: string,
   level: number,
 ): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/snapraid/remove-disk`, {
+  const response = await apiFetch(`${API_BASE}/snapraid/remove-disk`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, diskType: 'parity', level }),
@@ -217,7 +217,7 @@ export const removeDataDisk = async (
   configPath: string,
   diskName: string,
 ): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/snapraid/remove-data-disk`, {
+  const response = await apiFetch(`${API_BASE}/snapraid/remove-data-disk`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, diskName }),
@@ -237,7 +237,7 @@ export const addExclude = async (
   configPath: string,
   pattern: string,
 ): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/snapraid/add-exclude`, {
+  const response = await apiFetch(`${API_BASE}/snapraid/add-exclude`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, pattern }),
@@ -257,7 +257,7 @@ export const removeExclude = async (
   configPath: string,
   pattern: string,
 ): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/snapraid/remove-exclude`, {
+  const response = await apiFetch(`${API_BASE}/snapraid/remove-exclude`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, pattern }),
@@ -277,7 +277,7 @@ export const setPool = async (
   configPath: string,
   poolPath: string | undefined,
 ): Promise<ParsedSnapRaidConfig> => {
-  const response = await fetch(`${API_BASE}/snapraid/set-pool`, {
+  const response = await apiFetch(`${API_BASE}/snapraid/set-pool`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath, poolPath }),
@@ -294,7 +294,7 @@ export const setPool = async (
  * Get SMART report for all disks
  */
 export const getSmart = async (configPath: string): Promise<SmartReport> => {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE}/snapraid/smart?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {
@@ -308,7 +308,7 @@ export const getSmart = async (configPath: string): Promise<SmartReport> => {
  * Get power status of all disks (probe)
  */
 export const probe = async (configPath: string): Promise<ProbeReport> => {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE}/snapraid/probe?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {
@@ -324,7 +324,7 @@ export const probe = async (configPath: string): Promise<ProbeReport> => {
 export const getDevices = async (
   configPath: string,
 ): Promise<DevicesReport> => {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE}/snapraid/devices?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {
@@ -338,7 +338,7 @@ export const getDevices = async (
  * Get file list from SnapRAID
  */
 export const getFileList = async (configPath: string): Promise<ListReport> => {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE}/snapraid/list?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {
@@ -352,7 +352,7 @@ export const getFileList = async (configPath: string): Promise<ListReport> => {
  * Get check report from SnapRAID
  */
 export const getCheck = async (configPath: string): Promise<CheckReport> => {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE}/snapraid/check?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {
@@ -366,7 +366,7 @@ export const getCheck = async (configPath: string): Promise<CheckReport> => {
  * Get diff report from SnapRAID
  */
 export const getDiff = async (configPath: string): Promise<DiffReport> => {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE}/snapraid/diff?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {

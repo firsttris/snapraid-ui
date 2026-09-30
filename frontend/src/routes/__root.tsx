@@ -9,12 +9,11 @@ import {
   Scripts,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { useEffect } from 'react'
+import { AuthGate } from '../components/AuthGate'
 import { FeedbackProvider } from '../components/Feedback'
 import { Header } from '../components/Header'
 import { queryKeys, STATUS_CACHE_MAX_AGE } from '../hooks/queries'
 import { SelectedConfigProvider } from '../hooks/useSelectedConfig'
-import { connectWebSocket, disconnectWebSocket } from '../lib/api/websocket'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 
@@ -100,16 +99,6 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  // Initialize WebSocket once at root level to persist across route changes
-  useEffect(() => {
-    // Connect with empty handlers - individual routes will update them
-    connectWebSocket({})
-
-    return () => {
-      disconnectWebSocket()
-    }
-  }, [])
-
   return (
     <html lang={getLocale()}>
       <head>
@@ -120,12 +109,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           client={queryClient}
           persistOptions={persistOptions}
         >
-          <FeedbackProvider>
-            <SelectedConfigProvider>
-              <Header />
-              {children}
-            </SelectedConfigProvider>
-          </FeedbackProvider>
+          <AuthGate>
+            <FeedbackProvider>
+              <SelectedConfigProvider>
+                <Header />
+                {children}
+              </SelectedConfigProvider>
+            </FeedbackProvider>
+          </AuthGate>
           {import.meta.env.DEV && (
             <TanStackDevtools
               config={{

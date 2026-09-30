@@ -330,3 +330,10 @@ export interface ProbeDiskInfo {
   device: string;
   status: 'Standby' | 'Active' | 'Idle' | 'Unknown';
 }
+
+// Login state, auth is only enabled when username and password are set in the environment
+export interface AuthSession {
+  enabled: boolean;
+  authenticated: boolean;
+  username?: string;
+}

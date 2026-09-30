@@ -1,5 +1,6 @@
 import type {
   AppConfig,
+  AuthSession,
   LastRuns,
   LogFile,
   ParityLevelUsage,
@@ -18,6 +19,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
+import { getSession, logout } from '../lib/api/auth'
 import {
   addConfig,
   getConfig,
@@ -50,6 +52,7 @@ import {
 // ====================
 
 export const queryKeys = {
+  session: ['auth-session'] as const,
   config: ['config'] as const,
   snapraidConfig: (path: string) => ['snapraid-config', path] as const,
   currentJob: ['current-job'] as const,
@@ -64,6 +67,36 @@ export const queryKeys = {
   fileContent: (path: string) => ['file-content', path] as const,
   schedules: ['schedules'] as const,
   schedule: (id: string) => ['schedule', id] as const,
+}
+
+// ====================
+// Auth
+// ====================
+
+export const useSession = () => {
+  return useQuery({
+    queryKey: queryKeys.session,
+    queryFn: getSession,
+    staleTime: Number.POSITIVE_INFINITY,
+  })
+}
+
+export const useLogout = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      queryClient.setQueryData<AuthSession>(queryKeys.session, {
+        enabled: true,
+        authenticated: false,
+      })
+      // Drop everything cached for the logged-in user, including the persisted status.
+      // The session query stays, removing it would detach the observer of the AuthGate
+      queryClient.removeQueries({
+        predicate: (query) => query.queryKey[0] !== queryKeys.session[0],
+      })
+    },
+  })
 }
 
 // ====================

@@ -6,11 +6,12 @@ import {
   HardDrive,
   Languages,
   LayoutDashboard,
+  LogOut,
   Menu,
   X,
 } from 'lucide-react'
 import { useState } from 'react'
-import { useCurrentJob } from '../hooks/queries'
+import { useCurrentJob, useLogout, useSession } from '../hooks/queries'
 import * as m from '../paraglide/messages'
 import { getLocale, setLocale } from '../paraglide/runtime'
 
@@ -30,6 +31,8 @@ export const Header = () => {
   const { data: currentJob } = useCurrentJob({
     refetchInterval: JOB_POLL_INTERVAL_MS,
   })
+  const { data: session } = useSession()
+  const logout = useLogout()
 
   const toggleLocale = () => {
     setLocale(currentLocale === 'en' ? 'de' : 'en')
@@ -88,6 +91,25 @@ export const Header = () => {
               {currentLocale.toUpperCase()}
             </span>
           </button>
+          {session?.enabled && (
+            <button
+              type="button"
+              onClick={() => logout.mutate()}
+              disabled={logout.isPending}
+              className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-gray-700 disabled:opacity-50"
+              title={
+                session.username
+                  ? m.nav_signed_in_as({ username: session.username })
+                  : undefined
+              }
+              aria-label={m.nav_logout()}
+            >
+              <LogOut size={18} />
+              <span className="hidden text-sm font-medium lg:inline">
+                {m.nav_logout()}
+              </span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setIsOpen((prev) => !prev)}

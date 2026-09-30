@@ -15,16 +15,16 @@ const wsState = {
 }
 
 /**
- * Connect to WebSocket for live updates
+ * Connect to WebSocket for live updates; without handlers the current ones are kept
  */
-export const connectWebSocket = (handlers: {
+export const connectWebSocket = (handlers?: {
   onOutput?: (chunk: string, command: string) => void
   onComplete?: (command: string, exitCode: number, aborted: boolean) => void
   onError?: (error: string, command: string) => void
   onStatus?: (status: SnapRaidStatus) => void
 }): void => {
   // Update handlers
-  wsState.handlers = handlers
+  if (handlers) wsState.handlers = handlers
 
   // If already connected, just update handlers and return
   if (wsState.ws && wsState.ws.readyState === WebSocket.OPEN) {

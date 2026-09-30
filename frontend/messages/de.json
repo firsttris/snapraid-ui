@@ -476,5 +476,20 @@
   "schedules_outcome_skipped": "Übersprungen",
   "schedules_skip_job_running": "Ein anderer Job lief gerade.",
   "schedules_skip_too_many_deleted": "{count} gelöschte Dateien, mehr als erlaubt. Prüfe mit „Diff“, ob eine Festplatte fehlt, und starte den Sync dann manuell.",
-  "schedules_skip_diff_failed": "Diff vor dem Sync fehlgeschlagen: {error}"
+  "schedules_skip_diff_failed": "Diff vor dem Sync fehlgeschlagen: {error}",
+  "login_title": "Willkommen zurück",
+  "login_subtitle": "Melde dich an, um dein Array zu verwalten",
+  "login_username": "Benutzername",
+  "login_password": "Passwort",
+  "login_submit": "Anmelden",
+  "login_submitting": "Anmeldung läuft…",
+  "login_show_password": "Passwort anzeigen",
+  "login_hide_password": "Passwort verbergen",
+  "login_invalid": "Benutzername oder Passwort ist falsch",
+  "login_locked": "Zu viele Fehlversuche. Erneut möglich in {time}.",
+  "login_server_error": "Der Server ist nicht erreichbar",
+  "login_retry": "Erneut versuchen",
+  "login_footer": "Paritätsgeschützt. Und jetzt auch passwortgeschützt.",
+  "nav_logout": "Abmelden",
+  "nav_signed_in_as": "Angemeldet als {username}"
 }

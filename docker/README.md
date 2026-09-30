@@ -28,12 +28,16 @@ docker build -f docker/Dockerfile --build-arg SNAPRAID_VERSION=14.9 -t snapraid-
 ```bash
 mkdir -p ~/.config/containers/systemd ~/snapraid
 cp docker/snapraid-app.container docker/snapraid-net.network ~/.config/containers/systemd/
-# edit the Volume= lines for your disks
+# password for the login, read by the unit's Secret= line
+printf 'your-password' | podman secret create snapraid-ui-password -
+# edit the Volume= lines for your disks (and SNAPRAID_UI_USERNAME if you like)
 systemctl --user daemon-reload
 systemctl --user start snapraid-app
 ```
 
 For boot-time start, install into `/etc/containers/systemd/` and use `systemctl` without `--user`. Rootless Podman cannot read SMART data, so run it as root if you need that.
+
+To change the password, replace the secret (`podman secret rm snapraid-ui-password`, then create it again) and restart the unit; existing logins end with the change. To run without login, remove the `SNAPRAID_UI_USERNAME` and `Secret=` lines.
 
 The unit sets `AutoUpdate=registry`, so `podman auto-update` pulls new releases.
 

@@ -476,5 +476,20 @@
   "schedules_outcome_skipped": "Skipped",
   "schedules_skip_job_running": "Another job was running.",
   "schedules_skip_too_many_deleted": "{count} deleted files, more than allowed. Check with “Diff” whether a disk is missing, then start the sync manually.",
-  "schedules_skip_diff_failed": "Diff before sync failed: {error}"
+  "schedules_skip_diff_failed": "Diff before sync failed: {error}",
+  "login_title": "Welcome back",
+  "login_subtitle": "Sign in to manage your array",
+  "login_username": "Username",
+  "login_password": "Password",
+  "login_submit": "Sign in",
+  "login_submitting": "Signing in…",
+  "login_show_password": "Show password",
+  "login_hide_password": "Hide password",
+  "login_invalid": "Username or password is incorrect",
+  "login_locked": "Too many failed attempts. Try again in {time}.",
+  "login_server_error": "The server cannot be reached",
+  "login_retry": "Retry",
+  "login_footer": "Parity-protected. Now password-protected, too.",
+  "nav_logout": "Log out",
+  "nav_signed_in_as": "Signed in as {username}"
 }

@@ -1,15 +1,15 @@
 import type { Schedule } from '@shared/types'
-import { API_BASE } from './constants'
+import { API_BASE, apiFetch } from './constants'
 
 export const schedulesApi = {
   getAll: async (): Promise<Schedule[]> => {
-    const res = await fetch(`${API_BASE}/schedules`)
+    const res = await apiFetch(`${API_BASE}/schedules`)
     if (!res.ok) throw new Error('Failed to fetch schedules')
     return res.json()
   },
 
   getById: async (id: string): Promise<Schedule> => {
-    const res = await fetch(`${API_BASE}/schedules/${id}`)
+    const res = await apiFetch(`${API_BASE}/schedules/${id}`)
     if (!res.ok) throw new Error('Failed to fetch schedule')
     return res.json()
   },
@@ -20,7 +20,7 @@ export const schedulesApi = {
       'id' | 'createdAt' | 'updatedAt' | 'lastRun' | 'nextRun'
     >,
   ): Promise<Schedule> => {
-    const res = await fetch(`${API_BASE}/schedules`, {
+    const res = await apiFetch(`${API_BASE}/schedules`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(schedule),
@@ -36,7 +36,7 @@ export const schedulesApi = {
     id: string,
     updates: Partial<Omit<Schedule, 'id' | 'createdAt'>>,
   ): Promise<Schedule> => {
-    const res = await fetch(`${API_BASE}/schedules/${id}`, {
+    const res = await apiFetch(`${API_BASE}/schedules/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
@@ -49,7 +49,7 @@ export const schedulesApi = {
   },
 
   delete: async (id: string): Promise<void> => {
-    const res = await fetch(`${API_BASE}/schedules/${id}`, {
+    const res = await apiFetch(`${API_BASE}/schedules/${id}`, {
       method: 'DELETE',
     })
     if (!res.ok) {
@@ -59,7 +59,7 @@ export const schedulesApi = {
   },
 
   toggle: async (id: string): Promise<Schedule> => {
-    const res = await fetch(`${API_BASE}/schedules/${id}/toggle`, {
+    const res = await apiFetch(`${API_BASE}/schedules/${id}/toggle`, {
       method: 'POST',
     })
     if (!res.ok) {
@@ -70,7 +70,7 @@ export const schedulesApi = {
   },
 
   getNextRuns: async (): Promise<Record<string, string | null>> => {
-    const res = await fetch(`${API_BASE}/schedules/next-runs`)
+    const res = await apiFetch(`${API_BASE}/schedules/next-runs`)
     if (!res.ok) throw new Error('Failed to fetch next runs')
     return res.json()
   },

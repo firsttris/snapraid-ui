@@ -1,11 +1,11 @@
 import type { AppConfig } from '@shared/types'
-import { API_BASE } from './constants'
+import { API_BASE, apiFetch } from './constants'
 
 /**
  * Get app configuration
  */
 export const getConfig = async (): Promise<AppConfig> => {
-  const response = await fetch(`${API_BASE}/config`)
+  const response = await apiFetch(`${API_BASE}/config`)
   if (!response.ok) throw new Error('Failed to fetch config')
   return response.json()
 }
@@ -14,7 +14,7 @@ export const getConfig = async (): Promise<AppConfig> => {
  * Save app configuration
  */
 export const saveConfig = async (config: AppConfig): Promise<void> => {
-  const response = await fetch(`${API_BASE}/config`, {
+  const response = await apiFetch(`${API_BASE}/config`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(config),
@@ -30,7 +30,7 @@ export const addConfig = async (
   path: string,
   enabled: boolean = true,
 ): Promise<AppConfig> => {
-  const response = await fetch(`${API_BASE}/config/add`, {
+  const response = await apiFetch(`${API_BASE}/config/add`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, path: path.replace(/^.*[/\\]/, ''), enabled }),
@@ -47,7 +47,7 @@ export const addConfig = async (
  * Remove a SnapRAID config
  */
 export const removeConfig = async (path: string): Promise<AppConfig> => {
-  const response = await fetch(`${API_BASE}/config/remove`, {
+  const response = await apiFetch(`${API_BASE}/config/remove`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path }),

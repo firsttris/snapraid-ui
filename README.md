@@ -24,6 +24,7 @@ Run sync and scrub, schedule jobs and keep an eye on disk health, all from your 
 - **SMART monitoring** and disk power state (active / standby)
 - **Logs**: history of every run with full output
 - **Config management**: edit multiple `snapraid.conf` files, excludes and pool settings
+- **Login** via environment variables, no database needed
 - **English and German UI**
 
 ## 🐳 Quick start with Docker
@@ -34,6 +35,8 @@ The image ships with SnapRAID 14.9, so nothing needs to be installed on the host
 docker run -d --name snapraid-ui \
   --privileged \
   -p 3000:80 \
+  -e SNAPRAID_UI_USERNAME=admin \
+  -e SNAPRAID_UI_PASSWORD=change-me \
   -v ./snapraid:/app/snapraid \
   -v /mnt/disk1:/mnt/disk1 \
   -v /mnt/disk2:/mnt/disk2 \
@@ -62,6 +65,18 @@ For Podman with systemd, use the Quadlet files in [docker/](docker/).
 | `SNAPRAID_BASE_PATH` | `/app/snapraid` | Holds `config.json`, `schedules.json`, logs and your SnapRAID configs. Mount it as a volume. |
 | `SNAPRAID_BIN` | `/usr/local/bin/snapraid` | SnapRAID binary. The bundled one is used unless you point this elsewhere. |
 | `SNAPRAID_EXTRA_ARGS` | *(empty)* | Extra arguments for every SnapRAID call |
+| `SNAPRAID_UI_USERNAME` | *(empty)* | Username for the login. The login is active once username and password are both set. |
+| `SNAPRAID_UI_PASSWORD` | *(empty)* | Password for the login |
+| `SNAPRAID_UI_SESSION_HOURS` | `168` | How long a login lasts (7 days by default) |
+
+### Login
+
+Set `SNAPRAID_UI_USERNAME` and `SNAPRAID_UI_PASSWORD` to protect the UI. No database is involved: the credentials come from the environment, and a login is a signed, HTTP-only session cookie. Without both variables the UI stays open as before, e.g. if you already run it behind an auth proxy; the backend logs a warning then.
+
+- The key that signs sessions is stored in `SNAPRAID_BASE_PATH/.session-secret`, so logins survive restarts. Delete the file to log everyone out.
+- Changing the password also ends all existing logins.
+- After 5 failed attempts a client has to wait 15 minutes.
+- The cookie is marked `Secure` when the request came in over HTTPS (`X-Forwarded-Proto: https` from your reverse proxy). Use HTTPS if the UI is reachable from outside your LAN.
 
 **Using your own SnapRAID binary:** mount it and point `SNAPRAID_BIN` at it. It needs to be version 14.0 or newer, because the UI parses SnapRAID's structured log output.
 

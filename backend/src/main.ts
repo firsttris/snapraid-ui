@@ -13,11 +13,39 @@ import { snapraidRoutes } from "./routes/snapraid.ts";
 import { logsRoutes } from "./routes/logs.ts";
 import { schedulesRoutes } from "./routes/schedules.ts";
 import { resolveFromBase } from "./config.ts";
+import { createAuth, disabledAuthRoutes, loadSessionSecret, readAuthEnv } from "./auth.ts";
 
 const app = new Hono();
 
 // Middleware
-app.use("*", cors());
+// Credentials (the session cookie) are only accepted from the same host, e.g. the dev frontend on :3000
+app.use("*", cors({
+  origin: (origin, c) => {
+    try {
+      return new URL(origin).hostname === new URL(c.req.url).hostname ? origin : null;
+    } catch {
+      return null;
+    }
+  },
+  credentials: true,
+}));
+
+// Login, enabled by SNAPRAID_UI_USERNAME and SNAPRAID_UI_PASSWORD
+const authEnv = readAuthEnv();
+if (authEnv) {
+  const auth = createAuth({
+    ...authEnv,
+    secret: await loadSessionSecret(authEnv.username, authEnv.password),
+  });
+  // Registered before all other routes, so it guards them including the WebSocket
+  app.use("/api/*", auth.middleware);
+  app.use("/ws", auth.middleware);
+  app.route("/api/auth", auth.routes);
+  console.log(`🔒 Login enabled for user "${authEnv.username}"`);
+} else {
+  app.route("/api/auth", disabledAuthRoutes);
+  console.warn("⚠️  Login disabled: set SNAPRAID_UI_USERNAME and SNAPRAID_UI_PASSWORD to protect the UI");
+}
 
 // WebSocket endpoint (must be handled before Hono routes)
 app.get("/ws", (c) => {

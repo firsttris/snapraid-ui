@@ -9,6 +9,123 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Login page */
+@keyframes login-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes login-shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(3px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-5px);
+  }
+  40%,
+  60% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes login-glow {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(40px, 30px) scale(1.15);
+  }
+}
+
+@keyframes login-disk-fill {
+  0%,
+  100% {
+    height: 20%;
+  }
+  50% {
+    height: 85%;
+  }
+}
+
+@keyframes login-disk-led {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+  }
+  70% {
+    opacity: 1;
+  }
+}
+
+@keyframes login-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.login-card {
+  animation: login-card-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.login-shake {
+  animation: login-shake 0.45s ease-in-out;
+}
+
+.login-glow {
+  animation: login-glow 12s ease-in-out infinite;
+}
+
+.login-disk-fill {
+  animation: login-disk-fill 3.2s ease-in-out infinite;
+}
+
+.login-disk-led {
+  animation: login-disk-led 1.6s steps(1) infinite;
+}
+
+.login-sheen {
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgb(255 255 255 / 0.25) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+}
+
+.group:hover:not(:disabled) .login-sheen {
+  animation: login-sheen 0.9s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-card,
+  .login-shake,
+  .login-glow,
+  .login-disk-fill,
+  .login-disk-led,
+  .login-sheen {
+    animation: none !important;
+  }
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;

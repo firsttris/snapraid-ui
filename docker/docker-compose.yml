@@ -19,6 +19,10 @@ services:
       # - /mnt/parity:/mnt/parity
       # Optional: use the host's snapraid binary instead of the bundled one
       # - /usr/bin/snapraid:/usr/bin/snapraid:ro
-    # environment:
-    #   - SNAPRAID_BIN=/usr/bin/snapraid
+    environment:
+      # Login, remove both lines to leave the UI open (e.g. behind your own auth proxy)
+      - SNAPRAID_UI_USERNAME=admin
+      - SNAPRAID_UI_PASSWORD=change-me
+      # - SNAPRAID_UI_SESSION_HOURS=168
+      # - SNAPRAID_BIN=/usr/bin/snapraid
     privileged: true  # Needed for SMART data and disk info
