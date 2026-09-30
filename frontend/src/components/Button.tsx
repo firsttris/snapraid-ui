@@ -39,7 +39,7 @@ export const Button = ({
 }: ButtonProps) => (
   <button
     type={type}
-    className={`inline-flex items-center justify-center gap-2 rounded transition-colors disabled:cursor-not-allowed ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
+    className={`inline-flex items-center justify-center gap-2 rounded transition enabled:active:scale-[0.97] disabled:cursor-not-allowed ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
     {...props}
   />
 )

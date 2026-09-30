@@ -6,7 +6,15 @@ import type {
   SnapRaidStatus,
 } from '@shared/types'
 import { Link } from '@tanstack/react-router'
-import { RefreshCw } from 'lucide-react'
+import {
+  AlertTriangle,
+  CircleHelp,
+  Loader2,
+  type LucideIcon,
+  RefreshCw,
+  ShieldAlert,
+  ShieldCheck,
+} from 'lucide-react'
 import type { ReactNode } from 'react'
 import { getCommandDescription, getCommandLabel } from '../lib/commands'
 import type { JobProgress } from '../lib/progress'
@@ -57,19 +65,58 @@ type Health =
   | 'busy'
   | 'unknown'
 
-const HEALTH_STYLES: Record<Health, { box: string; icon: string }> = {
-  healthy: { box: 'bg-green-50 border-green-200 text-green-800', icon: '✅' },
+const HEALTH_STYLES: Record<
+  Health,
+  { box: string; badge: string; icon: LucideIcon }
+> = {
+  healthy: {
+    box: 'bg-green-50 border-green-200 text-green-800',
+    badge: 'bg-green-500',
+    icon: ShieldCheck,
+  },
   attention: {
     box: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-    icon: '⚠️',
+    badge: 'bg-yellow-500',
+    icon: AlertTriangle,
   },
   sync_incomplete: {
     box: 'bg-orange-50 border-orange-200 text-orange-800',
-    icon: '⚠️',
+    badge: 'bg-orange-500',
+    icon: AlertTriangle,
   },
-  errors: { box: 'bg-red-50 border-red-200 text-red-800', icon: '❌' },
-  busy: { box: 'bg-blue-50 border-blue-200 text-blue-800', icon: '⏳' },
-  unknown: { box: 'bg-gray-50 border-gray-200 text-gray-700', icon: '❔' },
+  errors: {
+    box: 'bg-red-50 border-red-200 text-red-800',
+    badge: 'bg-red-500',
+    icon: ShieldAlert,
+  },
+  busy: {
+    box: 'bg-blue-50 border-blue-200 text-blue-800',
+    badge: 'bg-blue-500',
+    icon: Loader2,
+  },
+  unknown: {
+    box: 'bg-gray-50 border-gray-200 text-gray-700',
+    badge: 'bg-gray-400',
+    icon: CircleHelp,
+  },
+}
+
+// Colored badge; a calm ring pulses while all is well, errors pulse to draw the eye
+const HealthBadge = ({ health }: { health: Health }) => {
+  const { badge, icon: Icon } = HEALTH_STYLES[health]
+  const pulses = health === 'healthy' || health === 'errors'
+  return (
+    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">
+      {pulses && (
+        <span className={`ui-ping absolute inset-0 rounded-full ${badge}`} />
+      )}
+      <span
+        className={`relative flex h-9 w-9 items-center justify-center rounded-full text-white shadow-sm ${badge}`}
+      >
+        <Icon size={18} className={health === 'busy' ? 'animate-spin' : ''} />
+      </span>
+    </span>
+  )
 }
 
 const getHealthTitle = (health: Health): string => {
@@ -173,7 +220,7 @@ const TileSkeleton = () => (
 )
 
 const Tile = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="rounded-lg border border-gray-200 p-4">
+  <div className="rounded-lg border border-gray-200 p-4 transition-colors hover:border-gray-300">
     <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
       {label}
     </p>
@@ -407,7 +454,7 @@ export const ArrayHealthPanel = ({
         />
       ) : isStatusLoading && !status ? (
         <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
-          <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+          <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
           <div className="flex-1 space-y-2">
             <LoadingHint>{m.health_loading()}</LoadingHint>
             <Skeleton className="h-4 w-2/3 max-w-md" />
@@ -415,11 +462,10 @@ export const ArrayHealthPanel = ({
         </div>
       ) : (
         <div
-          className={`flex items-start gap-3 rounded-lg border p-4 ${HEALTH_STYLES[health].box}`}
+          key={health}
+          className={`ui-fade-in flex items-start gap-4 rounded-lg border p-4 ${HEALTH_STYLES[health].box}`}
         >
-          <span className="text-2xl leading-none">
-            {HEALTH_STYLES[health].icon}
-          </span>
+          <HealthBadge health={health} />
           <div className="min-w-0 flex-1">
             <p className="font-semibold">{getHealthTitle(health)}</p>
             <p className="text-sm">{getHealthMessage(health, status)}</p>

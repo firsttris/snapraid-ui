@@ -61,7 +61,10 @@ const PowerDot = ({
       ? ['border-2 border-gray-400', m.disks_power_standby()]
       : state === 'Idle'
         ? ['bg-green-300', m.disks_power_idle()]
-        : ['bg-green-500', m.disks_power_active()]
+        : [
+            'ui-led bg-green-500 shadow-[0_0_6px] shadow-green-500/60',
+            m.disks_power_active(),
+          ]
   return (
     <span
       className={`h-2.5 w-2.5 shrink-0 rounded-full ${className}`}
@@ -81,7 +84,7 @@ const UsageBar = ({
 }) => (
   <div className="h-2 overflow-hidden rounded-full bg-gray-200">
     <div
-      className={`h-full rounded-full ${barClass}`}
+      className={`ui-bar h-full rounded-full ${barClass}`}
       style={{ width: `${Math.min(percent, 100)}%` }}
     />
   </div>

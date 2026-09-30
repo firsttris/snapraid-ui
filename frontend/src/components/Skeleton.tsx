@@ -4,7 +4,7 @@
 export const Skeleton = ({ className = '' }: { className?: string }) => (
   <span
     aria-hidden="true"
-    className={`block animate-pulse rounded bg-gray-200 ${className}`}
+    className={`ui-shimmer block rounded bg-gray-200 ${className}`}
   />
 )
 

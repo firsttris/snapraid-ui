@@ -17,7 +17,7 @@ const ProgressBar = ({ progress }: { progress: JobProgress }) => (
   <div className="mt-3">
     <div className="h-2 overflow-hidden rounded-full bg-blue-100">
       <div
-        className="h-full rounded-full bg-blue-600 transition-[width] duration-500"
+        className="ui-stripes h-full rounded-full bg-blue-600 transition-[width] duration-500"
         style={{ width: `${Math.min(progress.percent, 100)}%` }}
       />
     </div>
@@ -41,7 +41,7 @@ export const RunningJobBox = ({
   isAborting,
   onAbort,
 }: RunningJobBoxProps) => (
-  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-900">
+  <div className="ui-fade-in rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-900">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-3">
         <div className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-blue-300 border-t-blue-700" />

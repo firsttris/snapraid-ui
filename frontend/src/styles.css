@@ -137,6 +137,165 @@ body {
   }
 }
 
+/* App: same motion language as the login, kept quieter for daily use */
+@keyframes ui-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ui-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes ui-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ui-bar-grow {
+  from {
+    width: 0;
+  }
+}
+
+@keyframes ui-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+@keyframes ui-stripes {
+  to {
+    background-position: 20px 0;
+  }
+}
+
+@keyframes ui-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  70%,
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+
+/* Activity blink of a spinning disk: mostly lit, a short flicker */
+@keyframes ui-led {
+  0%,
+  80%,
+  90%,
+  100% {
+    opacity: 1;
+  }
+  85%,
+  95% {
+    opacity: 0.35;
+  }
+}
+
+/* Sections of a page come in one after another */
+.ui-stagger > :not(.fixed) {
+  animation: ui-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.ui-stagger > :nth-child(2) {
+  animation-delay: 60ms;
+}
+.ui-stagger > :nth-child(3) {
+  animation-delay: 120ms;
+}
+.ui-stagger > :nth-child(4) {
+  animation-delay: 180ms;
+}
+.ui-stagger > :nth-child(n + 5) {
+  animation-delay: 240ms;
+}
+
+/* All dialogs share this overlay, so they open alike without touching each one */
+.fixed.inset-0.backdrop-blur-sm {
+  animation: ui-fade 0.2s ease-out both;
+}
+.fixed.inset-0.backdrop-blur-sm > * {
+  animation: ui-dialog-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* A box that swaps its state (health, mobile menu) */
+.ui-fade-in {
+  animation: ui-rise 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.ui-bar {
+  animation: ui-bar-grow 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ui-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--color-gray-50) 70%, transparent),
+    transparent
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: ui-shimmer 1.4s linear infinite;
+}
+
+.ui-stripes {
+  background-image: linear-gradient(
+    45deg,
+    rgb(255 255 255 / 0.2) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgb(255 255 255 / 0.2) 50%,
+    rgb(255 255 255 / 0.2) 75%,
+    transparent 75%
+  );
+  background-size: 20px 20px;
+  animation: ui-stripes 0.8s linear infinite;
+}
+
+.ui-ping {
+  animation: ui-ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.ui-led {
+  animation: ui-led 2.4s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-stagger > *,
+  .fixed.inset-0.backdrop-blur-sm,
+  .fixed.inset-0.backdrop-blur-sm > *,
+  .ui-fade-in,
+  .ui-bar,
+  .ui-shimmer,
+  .ui-stripes,
+  .ui-ping,
+  .ui-led {
+    animation: none !important;
+  }
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;

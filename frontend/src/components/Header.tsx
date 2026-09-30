@@ -50,13 +50,13 @@ const JobChip = () => {
   return (
     <Link
       to="/"
-      className="relative flex items-center gap-2 overflow-hidden rounded-full bg-cyan-800 px-3 py-1 text-xs font-medium hover:bg-cyan-700"
+      className="relative flex items-center gap-2 overflow-hidden rounded-full bg-cyan-900 px-3 py-1 text-xs font-medium ring-1 ring-cyan-400/30 ring-inset hover:bg-cyan-800"
       title={title}
       aria-label={title}
     >
       {progress && (
         <span
-          className="absolute inset-y-0 left-0 bg-cyan-600 transition-[width] duration-500"
+          className="ui-stripes absolute inset-y-0 left-0 bg-cyan-600 transition-[width] duration-500"
           style={{ width: `${Math.min(progress.percent, 100)}%` }}
         />
       )}
@@ -85,9 +85,9 @@ export const Header = () => {
   }
 
   const linkClass =
-    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors'
+    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-colors [&>svg]:transition-colors'
   const activeLinkClass =
-    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium bg-gray-900 text-white'
+    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium bg-white/10 text-white ring-1 ring-inset ring-white/10 [&>svg]:text-cyan-300'
 
   const links = NAV_ITEMS.map(({ to, label, icon: Icon }) => (
     <Link
@@ -104,10 +104,17 @@ export const Header = () => {
   ))
 
   return (
-    <header className="theme-fixed bg-gray-800 text-white shadow-lg">
+    <header className="theme-fixed relative bg-gray-900 text-white shadow-md">
+      {/* Accent line in the colors of the login */}
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-cyan-400/60 via-indigo-500/40 to-transparent" />
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-8">
-        <Link to="/" className="flex items-center gap-2 font-semibold">
-          <HardDrive size={22} className="text-cyan-400" />
+        <Link to="/" className="group flex items-center gap-2.5 font-semibold">
+          <span className="relative">
+            <span className="absolute inset-0 rounded-lg bg-cyan-400/30 opacity-0 blur-md transition-opacity group-hover:opacity-100" />
+            <span className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-400/30 bg-gradient-to-br from-cyan-400/20 to-indigo-500/20">
+              <HardDrive size={17} className="text-cyan-300" />
+            </span>
+          </span>
           <span className="text-lg">{m.app_title()}</span>
         </Link>
 
@@ -118,7 +125,7 @@ export const Header = () => {
           <button
             type="button"
             onClick={theme.cycle}
-            className="rounded-lg p-2 transition-colors hover:bg-gray-700"
+            className="rounded-lg p-2 transition-colors hover:bg-white/10"
             title={m.theme_switch({ theme: THEME_LABELS[theme.preference]() })}
             aria-label={m.theme_switch({
               theme: THEME_LABELS[theme.preference](),
@@ -129,7 +136,7 @@ export const Header = () => {
           <button
             type="button"
             onClick={toggleLocale}
-            className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-gray-700"
+            className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-white/10"
             aria-label="Switch language"
           >
             <Languages size={18} />
@@ -142,7 +149,7 @@ export const Header = () => {
               type="button"
               onClick={() => logout.mutate()}
               disabled={logout.isPending}
-              className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-gray-700 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-white/10 disabled:opacity-50"
               title={
                 session.username
                   ? m.nav_signed_in_as({ username: session.username })
@@ -159,7 +166,7 @@ export const Header = () => {
           <button
             type="button"
             onClick={() => setIsOpen((prev) => !prev)}
-            className="rounded-lg p-2 transition-colors hover:bg-gray-700 md:hidden"
+            className="rounded-lg p-2 transition-colors hover:bg-white/10 md:hidden"
             aria-label={m.navigation()}
             aria-expanded={isOpen}
           >
@@ -169,7 +176,7 @@ export const Header = () => {
       </div>
 
       {isOpen && (
-        <nav className="flex flex-col gap-1 border-t border-gray-700 px-4 py-3 md:hidden">
+        <nav className="ui-fade-in flex flex-col gap-1 border-t border-white/10 px-4 py-3 md:hidden">
           {links}
         </nav>
       )}
