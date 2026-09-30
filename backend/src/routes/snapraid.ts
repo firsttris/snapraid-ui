@@ -1,10 +1,9 @@
 import { Hono } from "hono";
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { createSnapRaidRunner, type SnapRaidRunner } from "../snapraid-runner.ts";
-import { join } from "@std/path";
 import type { LogManager } from "../log-manager.ts";
 import type { CommandOutput } from "@shared/types.ts";
-import { BASE_PATH, snapraidCommand } from "../config.ts";
+import { snapraidCommand, resolveFromBase } from "../config.ts";
 import {diskManagementRoutes} from "./disk-management.ts";
 import {configOperationsRoutes} from "./config-operations.ts";
 import {hardwareRoutes} from "./hardware.ts";
@@ -66,7 +65,7 @@ snapraid.get("/parse", async (c) => {
     return c.json({ error: "Missing path parameter" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     const parsed = await parseSnapRaidConfig(configPath);
@@ -104,7 +103,7 @@ snapraid.get("/last-runs", async (c) => {
     return c.json({ error: "Log manager not initialized" }, 500);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     const [sync, scrub] = await Promise.all([
@@ -129,7 +128,7 @@ snapraid.post("/execute", async (c) => {
     return c.json({ error: "Another job is already running" }, 409);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   // Execute command and stream output via WebSocket
   (async () => {
@@ -211,7 +210,7 @@ snapraid.get("/status", async (c) => {
 
   // Execute new status command
   try {
-    const configPath = join(BASE_PATH, relativePath);
+    const configPath = resolveFromBase(relativePath);
     const cmd = snapraidCommand(["-c", configPath, ...STRUCTURED_LOG_ARGS, "status"]);
 
     const { code, stdout, stderr } = await cmd.output();
@@ -238,7 +237,7 @@ snapraid.post("/validate", async (c) => {
   }
 
   try {
-    const configPath = join(BASE_PATH, relativePath);
+    const configPath = resolveFromBase(relativePath);
     // Run snapraid status to validate the config
     // We only care about whether it succeeds or fails, not the actual status output
     const command = snapraidCommand(["-c", configPath, "status"]);

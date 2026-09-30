@@ -1,7 +1,6 @@
 import { Hono } from "hono";
-import { join } from "@std/path";
 import type { SnapRaidRunner } from "../snapraid-runner.ts";
-import { BASE_PATH } from "../config.ts";
+import { resolveFromBase } from "../config.ts";
 
 const reports = new Hono();
 
@@ -20,7 +19,7 @@ reports.get("/devices", async (c) => {
     return c.json({ error: "Missing path parameter" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     const result = await runner.runDevices(configPath);
@@ -38,7 +37,7 @@ reports.get("/list", async (c) => {
     return c.json({ error: "Missing path parameter" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     const result = await runner.runList(configPath);
@@ -56,7 +55,7 @@ reports.get("/check", async (c) => {
     return c.json({ error: "Missing path parameter" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     const result = await runner.runCheck(configPath);
@@ -74,7 +73,7 @@ reports.get("/diff", async (c) => {
     return c.json({ error: "Missing path parameter" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     const result = await runner.runDiff(configPath);
