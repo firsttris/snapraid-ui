@@ -12,6 +12,7 @@ import {
   type TooltipItem,
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
+import { usageBarColor, usageTextColor } from '../lib/utils'
 import * as m from '../paraglide/messages'
 
 // Register Chart.js components
@@ -268,7 +269,7 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
                       </div>
                       <div className="text-right">
                         <div
-                          className={`text-2xl font-bold ${disk.usePercent > 80 ? 'text-red-600' : disk.usePercent > 60 ? 'text-yellow-600' : 'text-green-600'}`}
+                          className={`text-2xl font-bold ${usageTextColor(disk.usePercent)}`}
                         >
                           {disk.usePercent}%
                         </div>
@@ -282,7 +283,7 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
                     <div className="mb-3">
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
-                          className={`h-2 rounded-full transition-all ${disk.usePercent > 80 ? 'bg-red-500' : disk.usePercent > 60 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                          className={`h-2 rounded-full transition-all ${usageBarColor(disk.usePercent)}`}
                           style={{ width: `${disk.usePercent}%` }}
                         />
                       </div>

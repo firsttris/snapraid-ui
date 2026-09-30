@@ -7,7 +7,7 @@ import type {
 } from '@shared/types'
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { formatGB } from '../lib/utils'
+import { formatGB, usageBarColor } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { LoadingHint, Skeleton } from './Skeleton'
@@ -41,12 +41,6 @@ const TONE_BADGE: Record<Warning['tone'], string> = {
 }
 
 const TONE_ICON: Record<Tone, string> = { ok: '✓', warning: '⚠', error: '⚠' }
-
-const usageColor = (percent: number) => {
-  if (percent >= 95) return 'bg-red-500'
-  if (percent >= 85) return 'bg-yellow-500'
-  return 'bg-blue-500'
-}
 
 const usageWarning = (percent: number): Warning | null => {
   if (percent >= 95) return { tone: 'error', text: m.disks_almost_full() }
@@ -328,7 +322,7 @@ export const DisksPanel = ({
               paths={[path]}
               power={powerByName.get(name)}
               percent={stats?.usePercent}
-              barClass={usageColor(stats?.usePercent ?? 0)}
+              barClass={usageBarColor(stats?.usePercent ?? 0)}
               free={stats?.freeGB}
               warning={stats ? usageWarning(stats.usePercent) : null}
               details={<DataDetails stats={stats} />}

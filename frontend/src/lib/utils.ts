@@ -47,3 +47,18 @@ export const daysSince = (dateString: string): number =>
  */
 export const formatGB = (gb: number): string =>
   gb >= 1000 ? `${(gb / 1000).toFixed(1)} TB` : `${gb.toFixed(1)} GB`
+
+/**
+ * Tailwind classes for disk usage, shared so all views use the same thresholds
+ */
+export const usageBarColor = (percent: number) => {
+  if (percent >= 95) return 'bg-red-500'
+  if (percent >= 85) return 'bg-yellow-500'
+  return 'bg-blue-500'
+}
+
+export const usageTextColor = (percent: number) => {
+  if (percent >= 95) return 'text-red-600'
+  if (percent >= 85) return 'text-yellow-600'
+  return 'text-gray-900'
+}
