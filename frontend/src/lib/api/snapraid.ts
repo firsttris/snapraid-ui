@@ -184,21 +184,40 @@ export const addParityDisk = async (
 }
 
 /**
- * Remove a disk from SnapRAID config
+ * Remove the highest parity level from SnapRAID config
  */
-export const removeDisk = async (
+export const removeParityDisk = async (
   configPath: string,
-  diskName: string | null,
-  diskType: 'data' | 'parity',
-  level?: number,
+  level: number,
 ): Promise<ParsedSnapRaidConfig> => {
   const response = await fetch(`${API_BASE}/snapraid/remove-disk`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ configPath, diskName, diskType, level }),
+    body: JSON.stringify({ configPath, diskType: 'parity', level }),
   })
   if (!response.ok) {
     const error = await response.json()
+    throw new Error(error.error || 'Failed to remove disk')
+  }
+  const result = await response.json()
+  return result.config
+}
+
+/**
+ * Remove a data disk: points it to an empty directory and starts `sync -E` as a job,
+ * the backend drops the disk from the config once the sync succeeded
+ */
+export const removeDataDisk = async (
+  configPath: string,
+  diskName: string,
+): Promise<ParsedSnapRaidConfig> => {
+  const response = await fetch(`${API_BASE}/snapraid/remove-data-disk`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configPath, diskName }),
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
     throw new Error(error.error || 'Failed to remove disk')
   }
   const result = await response.json()

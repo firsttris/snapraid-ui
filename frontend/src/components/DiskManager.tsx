@@ -3,8 +3,8 @@ import {
   useAddDataDisk,
   useAddExclude,
   useAddParityDisk,
-  useRemoveDisk,
   useRemoveExclude,
+  useRemoveParityDisk,
   useSetPool,
   useSnapRaidConfig,
 } from '../hooks/queries'
@@ -25,7 +25,7 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
   // TanStack Query hooks
   const { data: config, isLoading: loading } = useSnapRaidConfig(configPath)
   const addDataDiskMutation = useAddDataDisk()
-  const removeDiskMutation = useRemoveDisk()
+  const removeParityDiskMutation = useRemoveParityDisk()
   const addParityDiskMutation = useAddParityDisk()
   const addExcludeMutation = useAddExclude()
   const removeExcludeMutation = useRemoveExclude()
@@ -36,20 +36,6 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
     setError('')
     addDataDiskMutation.mutate(
       { configPath, diskName: name, diskPath: path },
-      {
-        onSuccess: () => onUpdate?.(),
-        onError: (err) => {
-          setError(String(err))
-          throw err
-        },
-      },
-    )
-  }
-
-  const handleRemoveDataDisk = async (diskName: string) => {
-    setError('')
-    removeDiskMutation.mutate(
-      { configPath, diskName, diskType: 'data' },
       {
         onSuccess: () => onUpdate?.(),
         onError: (err) => {
@@ -76,8 +62,8 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
 
   const handleRemoveParity = async (level: number) => {
     setError('')
-    removeDiskMutation.mutate(
-      { configPath, diskName: null, diskType: 'parity', level },
+    removeParityDiskMutation.mutate(
+      { configPath, level },
       {
         onSuccess: () => onUpdate?.(),
         onError: (err) => {
@@ -160,9 +146,10 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
       />
 
       <DataDiskSection
+        configPath={configPath}
         data={config.data}
+        pendingRemoval={config.pendingRemoval}
         onAdd={handleAddDataDisk}
-        onRemove={handleRemoveDataDisk}
       />
 
       <ExcludePatternSection

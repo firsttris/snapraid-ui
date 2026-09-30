@@ -29,6 +29,7 @@ export interface ParsedSnapRaidConfig {
   parity: ParityLevel[];   // Sorted by level
   content: string[];
   data: Record<string, string>;
+  pendingRemoval: string[]; // Data disks pointing to their empty removal directory, waiting for `sync -E`
   exclude: string[];
   pool?: string;
 }

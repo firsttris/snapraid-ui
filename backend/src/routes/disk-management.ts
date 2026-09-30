@@ -145,12 +145,16 @@ diskManagement.post("/add-parity-disk", async (c) => {
   }
 });
 
-// POST /api/snapraid/remove-disk - Remove a disk from SnapRAID config
+// POST /api/snapraid/remove-disk - Remove the highest parity level from SnapRAID config.
+// Data disks need a `sync -E` in between, see POST /api/snapraid/remove-data-disk
 diskManagement.post("/remove-disk", async (c) => {
-  const { configPath: relativePath, diskName, diskType, level } = await c.req.json();
+  const { configPath: relativePath, diskType, level } = await c.req.json();
 
-  if (!relativePath || (!diskName && diskType !== "parity")) {
+  if (!relativePath) {
     return c.json({ error: "Missing required parameters" }, 400);
+  }
+  if (diskType !== "parity") {
+    return c.json({ error: "Data disks are removed with /remove-data-disk" }, 400);
   }
 
   const configPath = resolveFromBase(relativePath);
@@ -160,44 +164,22 @@ diskManagement.post("/remove-disk", async (c) => {
     const content = await Deno.readTextFile(configPath);
     const lines = content.split("\n");
 
-    const updatedLines = (() => {
-      if (diskType === "data") {
-        // Find the data disk path to identify associated content file
-        const diskPath = lines
-          .map(line => line.trim())
-          .find(line => line.startsWith(`data ${diskName} `))
-          ?.substring(`data ${diskName} `.length)
-          .trim();
-
-        // Remove the data line and associated content file
-        const contentPath = diskPath ? `${diskPath}/.snapraid.content` : null;
-        return lines.filter(line => {
-          const trimmed = line.trim();
-          return !trimmed.startsWith(`data ${diskName} `) &&
-                 !(contentPath && trimmed.startsWith(`content ${contentPath}`));
-        });
-      }
-      
-      if (diskType === "parity") {
-        // Only the highest level can go, SnapRAID needs the levels without gaps
-        const parityLines = lines
-          .map((line, index) => ({ parity: parseParityLine(line), index }))
-          .filter(({ parity }) => parity !== null);
-        const highest = parityLines.reduce<typeof parityLines[number] | null>(
-          (max, entry) => (!max || entry.parity!.level > max.parity!.level ? entry : max),
-          null,
-        );
-        if (!highest) return lines;
-        if (level !== undefined && level !== highest.parity!.level) {
-          throw new ParityLevelError(
-            `Only the highest parity level (${highest.parity!.keyword}) can be removed`,
-          );
-        }
-        return [...lines.slice(0, highest.index), ...lines.slice(highest.index + 1)];
-      }
-      
-      return lines;
-    })();
+    // Only the highest level can go, SnapRAID needs the levels without gaps
+    const parityLines = lines
+      .map((line, index) => ({ parity: parseParityLine(line), index }))
+      .filter(({ parity }) => parity !== null);
+    const highest = parityLines.reduce<typeof parityLines[number] | null>(
+      (max, entry) => (!max || entry.parity!.level > max.parity!.level ? entry : max),
+      null,
+    );
+    if (highest && level !== undefined && level !== highest.parity!.level) {
+      throw new ParityLevelError(
+        `Only the highest parity level (${highest.parity!.keyword}) can be removed`,
+      );
+    }
+    const updatedLines = highest
+      ? [...lines.slice(0, highest.index), ...lines.slice(highest.index + 1)]
+      : lines;
 
     // Write back to file
     await Deno.writeTextFile(configPath, updatedLines.join("\n"));

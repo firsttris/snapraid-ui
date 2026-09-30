@@ -96,6 +96,8 @@ function Dashboard() {
     queryClient.invalidateQueries({ queryKey: queryKeys.status })
     queryClient.invalidateQueries({ queryKey: ['last-runs'] })
     queryClient.invalidateQueries({ queryKey: ['parity-usage'] })
+    // Removing a data disk edits the config once its sync -E has finished
+    queryClient.invalidateQueries({ queryKey: ['snapraid-config'] })
   }, [refetchCurrentJob, queryClient])
 
   // WebSocket connection hook

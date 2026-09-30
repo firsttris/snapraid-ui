@@ -39,8 +39,9 @@ import {
   getStatus,
   parseSnapRaidConfig,
   probe,
-  removeDisk,
+  removeDataDisk,
   removeExclude,
+  removeParityDisk,
   setPool,
 } from '../lib/api/snapraid'
 
@@ -320,26 +321,42 @@ export const useAddParityDisk = (
   })
 }
 
-export const useRemoveDisk = (
+export const useRemoveParityDisk = (
   options?: UseMutationOptions<
     ParsedSnapRaidConfig,
     Error,
-    {
-      configPath: string
-      diskName: string | null
-      diskType: 'data' | 'parity'
-      level?: number
-    }
+    { configPath: string; level: number }
   >,
 ) => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ configPath, diskName, diskType, level }) =>
-      removeDisk(configPath, diskName, diskType, level),
+    mutationFn: ({ configPath, level }) => removeParityDisk(configPath, level),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.snapraidConfig(variables.configPath),
       })
+    },
+    ...options,
+  })
+}
+
+export const useRemoveDataDisk = (
+  options?: UseMutationOptions<
+    ParsedSnapRaidConfig,
+    Error,
+    { configPath: string; diskName: string }
+  >,
+) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ configPath, diskName }) =>
+      removeDataDisk(configPath, diskName),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.snapraidConfig(variables.configPath),
+      })
+      // The sync -E runs as a regular job, so the dashboard picks it up
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentJob })
     },
     ...options,
   })

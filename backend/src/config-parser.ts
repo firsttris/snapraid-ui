@@ -1,4 +1,4 @@
-import { join } from "@std/path";
+import { basename, join } from "@std/path";
 import type { AppConfig, ParityLevel, ParsedSnapRaidConfig } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
 
@@ -18,6 +18,15 @@ export const parseParityLine = (line: string): ParityLevel | null => {
   const paths = value.split(",").map(path => path.trim()).filter(Boolean);
   return { level, keyword, paths };
 };
+
+// Empty directory a data disk points to while it is being removed, see disk-removal.ts
+export const REMOVAL_DIR = ".snapraid-removal";
+
+/**
+ * A data disk whose `data` line points to its empty removal directory, waiting for `sync -E`
+ */
+export const isPendingRemoval = (diskPath: string): boolean =>
+  basename(diskPath.replace(/\/+$/, "")) === REMOVAL_DIR;
 
 /**
  * Config keyword for a parity level
@@ -61,6 +70,9 @@ export const parseSnapRaidConfig = async (
           return {
             ...config,
             data: { ...config.data, [diskName]: diskPath },
+            pendingRemoval: isPendingRemoval(diskPath)
+              ? [...config.pendingRemoval, diskName]
+              : config.pendingRemoval,
           };
         }
       }
@@ -84,6 +96,7 @@ export const parseSnapRaidConfig = async (
       parity: [],
       content: [],
       data: {},
+      pendingRemoval: [],
       exclude: [],
     });
 };

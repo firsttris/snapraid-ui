@@ -2,9 +2,10 @@ import { Hono } from "hono";
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { createSnapRaidRunner, type SnapRaidRunner } from "../snapraid-runner.ts";
 import type { LogManager } from "../log-manager.ts";
-import type { CommandOutput } from "@shared/types.ts";
+import type { CommandOutput, SnapRaidCommand } from "@shared/types.ts";
 import { snapraidCommand, resolveFromBase } from "../config.ts";
 import {diskManagementRoutes} from "./disk-management.ts";
+import { DiskRemovalError, ensureEmptyDir, finalizeDataDiskRemoval, prepareDataDiskRemoval } from "../disk-removal.ts";
 import {configOperationsRoutes} from "./config-operations.ts";
 import {hardwareRoutes} from "./hardware.ts";
 import { setReportsRunner, reportsRoutes } from "./reports.ts";
@@ -116,21 +117,15 @@ snapraid.get("/last-runs", async (c) => {
   }
 });
 
-// POST /api/snapraid/execute - Execute SnapRAID command
-snapraid.post("/execute", async (c) => {
-  const { command, configPath: relativePath, args = [] } = await c.req.json();
-
-  if (!command || !relativePath) {
-    return c.json({ error: "Missing command or configPath" }, 400);
-  }
-
-  if (runner.getCurrentJob()) {
-    return c.json({ error: "Another job is already running" }, 409);
-  }
-
-  const configPath = resolveFromBase(relativePath);
-
-  // Execute command and stream output via WebSocket
+/**
+ * Run a command in the background, streaming output and result via WebSocket
+ */
+const startJob = (
+  command: SnapRaidCommand,
+  configPath: string,
+  args: string[],
+  afterRun?: (result: CommandOutput) => Promise<void>,
+): void => {
   (async () => {
     try {
       const result = await runner.executeCommand(
@@ -144,7 +139,8 @@ snapraid.post("/execute", async (c) => {
             timestamp: new Date().toISOString(),
           });
         },
-        args
+        args,
+        afterRun
       );
 
       // Add to history
@@ -179,8 +175,59 @@ snapraid.post("/execute", async (c) => {
       });
     }
   })();
+};
 
+// POST /api/snapraid/execute - Execute SnapRAID command
+snapraid.post("/execute", async (c) => {
+  const { command, configPath: relativePath, args = [] } = await c.req.json();
+
+  if (!command || !relativePath) {
+    return c.json({ error: "Missing command or configPath" }, 400);
+  }
+
+  if (runner.getCurrentJob()) {
+    return c.json({ error: "Another job is already running" }, 409);
+  }
+
+  startJob(command, resolveFromBase(relativePath), args);
   return c.json({ success: true, message: "Command started" });
+});
+
+// POST /api/snapraid/remove-data-disk - Remove a data disk the way the SnapRAID FAQ describes:
+// point it to an empty directory, `sync -E`, then drop it from the config once the sync succeeded
+snapraid.post("/remove-data-disk", async (c) => {
+  const { configPath: relativePath, diskName } = await c.req.json();
+
+  if (!relativePath || !diskName) {
+    return c.json({ error: "Missing configPath or diskName" }, 400);
+  }
+
+  if (runner.getCurrentJob()) {
+    return c.json({ error: "Another job is already running" }, 409);
+  }
+
+  const configPath = resolveFromBase(relativePath);
+
+  try {
+    const { config, emptyDir } = prepareDataDiskRemoval(await Deno.readTextFile(configPath), diskName);
+    await ensureEmptyDir(emptyDir);
+    await Deno.writeTextFile(configPath, config);
+
+    // A failed or aborted sync leaves the disk pending, the wizard can retry it
+    startJob("sync", configPath, ["-E"], async (result) => {
+      if (result.exitCode !== 0 || result.aborted) return;
+      const current = await Deno.readTextFile(configPath);
+      await Deno.writeTextFile(configPath, finalizeDataDiskRemoval(current, diskName));
+      await Deno.remove(emptyDir).catch(() => {});
+    });
+
+    return c.json({ success: true, config: await parseSnapRaidConfig(configPath) });
+  } catch (error) {
+    if (error instanceof DiskRemovalError) {
+      return c.json({ error: error.message }, 400);
+    }
+    return c.json({ error: String(error) }, 500);
+  }
 });
 
 // GET /api/history - Get command history

@@ -37,9 +37,10 @@ export const createSnapRaidRunner = () => {
       command: SnapRaidCommand,
       configPath: string,
       onOutput: (chunk: string) => void,
-      additionalArgs: string[] = []
+      additionalArgs: string[] = [],
+      afterRun?: (result: CommandOutput) => Promise<void>
     ): Promise<CommandOutput> => {
-      return executeCommand(command, configPath, onOutput, additionalArgs);
+      return executeCommand(command, configPath, onOutput, additionalArgs, afterRun);
     },
 
     /**

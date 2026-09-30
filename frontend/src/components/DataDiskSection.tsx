@@ -1,20 +1,27 @@
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
 import { DirectoryBrowser } from './DirectoryBrowser'
-import { useFeedback } from './Feedback'
+import { RemoveDataDiskWizard } from './RemoveDataDiskWizard'
 
 interface DataDiskSectionProps {
+  configPath: string
   data: Record<string, string>
+  pendingRemoval: string[]
   onAdd: (name: string, path: string) => Promise<void>
-  onRemove: (diskName: string) => Promise<void>
 }
 
 export const DataDiskSection = ({
+  configPath,
   data,
+  pendingRemoval,
   onAdd,
-  onRemove,
 }: DataDiskSectionProps) => {
-  const { confirm } = useFeedback()
+  // Captured on open, the wizard outlives the disk disappearing from the list
+  const [removing, setRemoving] = useState<{
+    name: string
+    path: string
+    pending: boolean
+  } | null>(null)
   const [showAddDataDisk, setShowAddDataDisk] = useState(false)
   const [newDataDiskName, setNewDataDiskName] = useState('')
   const [newDataDiskPath, setNewDataDiskPath] = useState('')
@@ -39,22 +46,6 @@ export const DataDiskSection = ({
       setError(String(err))
     } finally {
       setAddingDataDisk(false)
-    }
-  }
-
-  const handleRemoveDisk = async (diskName: string) => {
-    const confirmed = await confirm({
-      message: m.data_disk_confirm_remove({ diskName }),
-      confirmLabel: m.confirm_remove(),
-      danger: true,
-    })
-    if (!confirmed) return
-
-    setError('')
-    try {
-      await onRemove(diskName)
-    } catch (err) {
-      setError(String(err))
     }
   }
 
@@ -170,28 +161,48 @@ export const DataDiskSection = ({
             {m.data_disk_no_disks()}
           </div>
         ) : (
-          Object.entries(data).map(([name, path]) => (
-            <div
-              key={name}
-              className="flex justify-between items-center bg-white p-3 rounded border border-green-200"
-            >
-              <div className="flex items-center gap-3 flex-1">
-                <span className="font-semibold text-purple-600 text-sm">
-                  {name}
-                </span>
-                <span className="font-mono text-sm text-gray-700">{path}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleRemoveDisk(name)}
-                className="ml-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+          Object.entries(data).map(([name, path]) => {
+            const pending = pendingRemoval.includes(name)
+            return (
+              <div
+                key={name}
+                className="flex justify-between items-center bg-white p-3 rounded border border-green-200"
               >
-                {m.common_remove()}
-              </button>
-            </div>
-          ))
+                <div className="flex items-center gap-3 flex-1">
+                  <span className="font-semibold text-purple-600 text-sm">
+                    {name}
+                  </span>
+                  <span className="font-mono text-sm text-gray-700">
+                    {path}
+                  </span>
+                  {pending && (
+                    <span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs">
+                      {m.data_disk_pending_removal()}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRemoving({ name, path, pending })}
+                  className="ml-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                >
+                  {pending ? m.data_disk_resume_removal() : m.common_remove()}
+                </button>
+              </div>
+            )
+          })
         )}
       </div>
+
+      {removing && (
+        <RemoveDataDiskWizard
+          configPath={configPath}
+          diskName={removing.name}
+          diskPath={removing.path}
+          pending={removing.pending}
+          onClose={() => setRemoving(null)}
+        />
+      )}
 
       {showDataDiskBrowser && (
         <DirectoryBrowser

@@ -96,7 +96,8 @@ export const executeCommand = async (
   command: SnapRaidCommand,
   configPath: string,
   onOutput: (chunk: string) => void,
-  additionalArgs: string[] = []
+  additionalArgs: string[] = [],
+  afterRun?: (result: CommandOutput) => Promise<void>
 ): Promise<CommandOutput> => {
   const processId = `${command}-${Date.now()}`;
   const logPath = state.logManager ? await prepareLogPath(command) : undefined;
@@ -119,9 +120,7 @@ export const executeCommand = async (
     const fullOutput = await readProcessStreams(process, onOutput);
     const status = await process.status;
     const aborted = state.abortRequested.has(processId);
-    cleanupProcess(processId);
-
-    return {
+    const result = {
       command: `snapraid ${args.join(" ")}`,
       output: fullOutput,
       timestamp,
@@ -129,6 +128,11 @@ export const executeCommand = async (
       logPath,
       aborted,
     };
+    // Still counts as the current job, so nothing else starts before the follow-up is done
+    await afterRun?.(result);
+    cleanupProcess(processId);
+
+    return result;
   } catch (error) {
     cleanupProcess(processId);
     throw error;
