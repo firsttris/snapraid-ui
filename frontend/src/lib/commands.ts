@@ -1,5 +1,54 @@
 import type { SnapRaidCommand } from '@shared/types'
+import {
+  Activity,
+  Clock,
+  Copy,
+  FileDiff,
+  HardDrive,
+  Layers,
+  List,
+  type LucideIcon,
+  Radar,
+  RefreshCw,
+  SearchCheck,
+  ShieldCheck,
+  Stethoscope,
+  Terminal,
+  Wrench,
+} from 'lucide-react'
 import * as m from '../paraglide/messages'
+
+const COMMAND_ICONS: Record<SnapRaidCommand, LucideIcon> = {
+  sync: RefreshCw,
+  scrub: ShieldCheck,
+  status: Activity,
+  diff: FileDiff,
+  check: SearchCheck,
+  fix: Wrench,
+  smart: Stethoscope,
+  probe: Radar,
+  devices: HardDrive,
+  list: List,
+  dup: Copy,
+  touch: Clock,
+  pool: Layers,
+}
+
+export const getCommandIcon = (command: SnapRaidCommand | string): LucideIcon =>
+  COMMAND_ICONS[command as SnapRaidCommand] ?? Terminal
+
+// Icon tile colors, the commands that change the array stand out
+const COMMAND_TONES: Partial<Record<SnapRaidCommand, string>> = {
+  sync: 'bg-blue-50 text-blue-600',
+  scrub: 'bg-purple-50 text-purple-600',
+  check: 'bg-indigo-50 text-indigo-600',
+  fix: 'bg-orange-50 text-orange-600',
+  diff: 'bg-cyan-50 text-cyan-600',
+  smart: 'bg-emerald-50 text-emerald-600',
+}
+
+export const getCommandTone = (command: SnapRaidCommand | string): string =>
+  COMMAND_TONES[command as SnapRaidCommand] ?? 'bg-gray-100 text-gray-600'
 
 export const getCommandLabel = (command: SnapRaidCommand | string): string => {
   switch (command) {

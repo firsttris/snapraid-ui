@@ -112,6 +112,9 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
     queryClient.invalidateQueries({ queryKey: queryKeys.status })
     queryClient.invalidateQueries({ queryKey: ['last-runs'] })
     queryClient.invalidateQueries({ queryKey: ['parity-usage'] })
+    // The job's log got its result
+    queryClient.invalidateQueries({ queryKey: queryKeys.logs })
+    queryClient.invalidateQueries({ queryKey: ['log-content'] })
     // Removing a data disk edits the config once its sync -E has finished
     queryClient.invalidateQueries({ queryKey: ['snapraid-config'] })
 

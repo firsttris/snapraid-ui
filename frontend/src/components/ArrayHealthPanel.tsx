@@ -1,6 +1,5 @@
 import type {
   LastRun,
-  RunResult,
   Schedule,
   SnapRaidCommand,
   SnapRaidStatus,
@@ -9,6 +8,7 @@ import { Link } from '@tanstack/react-router'
 import {
   AlertTriangle,
   CircleHelp,
+  FileText,
   Loader2,
   type LucideIcon,
   RefreshCw,
@@ -18,6 +18,7 @@ import {
 import type { ReactNode } from 'react'
 import { getCommandDescription, getCommandLabel } from '../lib/commands'
 import type { JobProgress } from '../lib/progress'
+import { getResultLabel, RESULT_STYLES } from '../lib/run-result'
 import {
   daysSince,
   formatRelativeTime,
@@ -188,29 +189,6 @@ const HintRow = ({ hint, disabled }: { hint: Hint; disabled: boolean }) => (
   </div>
 )
 
-const RESULT_STYLES: Record<RunResult, string> = {
-  ok: 'bg-green-100 text-green-700',
-  warning: 'bg-yellow-100 text-yellow-800',
-  error: 'bg-red-100 text-red-700',
-  aborted: 'bg-gray-200 text-gray-700',
-  incomplete: 'bg-gray-200 text-gray-700',
-}
-
-const getResultLabel = (result: RunResult): string => {
-  switch (result) {
-    case 'ok':
-      return m.run_result_ok()
-    case 'warning':
-      return m.run_result_warning()
-    case 'error':
-      return m.run_result_error()
-    case 'aborted':
-      return m.run_result_aborted()
-    case 'incomplete':
-      return m.run_result_incomplete()
-  }
-}
-
 // Shape of a tile's value and its caption
 const TileSkeleton = () => (
   <>
@@ -298,6 +276,15 @@ const LastRunTile = ({
             {m.health_stale()}
           </span>
         )}
+        <Link
+          to="/logs"
+          search={{ file: run.logFile }}
+          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+          title={run.logFile}
+        >
+          <FileText size={12} />
+          {m.health_view_log()}
+        </Link>
       </div>
       {children}
     </Tile>

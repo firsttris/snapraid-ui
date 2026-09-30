@@ -66,3 +66,59 @@ export const usageTextColor = (percent: number) => {
   if (percent >= 85) return 'text-yellow-600'
   return 'text-gray-900'
 }
+
+/**
+ * Format a duration in milliseconds, e.g. "45 s" or "1 h 12 min"
+ */
+export const formatDuration = (ms: number): string => {
+  const seconds = Math.round(ms / 1000)
+  if (seconds < 1) return '< 1 s'
+  if (seconds < 60) return `${seconds} s`
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  return minutes % 60 ? `${hours} h ${minutes % 60} min` : `${hours} h`
+}
+
+/**
+ * Local calendar day of an ISO date string, for grouping
+ */
+export const dayKey = (dateString: string): string =>
+  new Date(dateString).toDateString()
+
+/**
+ * Heading of a day: "Today", "Yesterday" or the date
+ */
+export const formatDayHeading = (
+  dateString: string,
+  locale: string,
+): string => {
+  const date = new Date(dateString)
+  const today = new Date()
+  const days = Math.round(
+    (new Date(today.toDateString()).getTime() -
+      new Date(date.toDateString()).getTime()) /
+      (24 * 60 * 60 * 1000),
+  )
+  if (days === 0 || days === 1) {
+    const text = new Intl.RelativeTimeFormat(locale, {
+      numeric: 'auto',
+    }).format(-days, 'day')
+    return text.charAt(0).toUpperCase() + text.slice(1)
+  }
+  return new Intl.DateTimeFormat(locale, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: date.getFullYear() === today.getFullYear() ? undefined : 'numeric',
+  }).format(date)
+}
+
+/**
+ * Time of day of an ISO date string, e.g. "14:05"
+ */
+export const formatTime = (dateString: string, locale: string): string =>
+  new Intl.DateTimeFormat(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(dateString))

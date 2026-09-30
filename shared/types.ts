@@ -115,6 +115,9 @@ export interface LogFile {
   command: SnapRaidCommand;
   timestamp: string; // ISO string
   size: number;
+  modified?: string; // ISO string, last write; the end of the run once it has finished
+  result?: RunResult; // Outcome read from the structured log, missing if it could not be read
+  configPath?: string; // `conf:file` of the run
 }
 
 export interface RunningJob {

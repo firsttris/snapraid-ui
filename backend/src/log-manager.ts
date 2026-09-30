@@ -35,6 +35,8 @@ export const parseRunResult = (log: string): RunResult => {
   // SnapRAID bails out on fatal errors before writing the summary
   if (!exit) return /^msg:fatal:/m.test(log) ? "error" : "incomplete";
   if (exit === "ok" || exit === "warning") return exit;
+  // diff and dup report what they found, finding something is no failure
+  if (["equal", "diff", "nodup", "dup"].includes(exit)) return "ok";
   // fix and check report what happened to the errors they found
   if (exit === "recovered") return "ok";
   if (exit === "recoverable") return "warning";
@@ -42,6 +44,27 @@ export const parseRunResult = (log: string): RunResult => {
 };
 
 export const createLogManager = (logDirectory: string): LogManager => {
+  // Outcome and config of each log, read once per file version; the list is reloaded often
+  const summaryCache = new Map<string, { key: string; result: RunResult; configPath?: string }>();
+
+  const readLogSummary = async (path: string, stat: Deno.FileInfo) => {
+    const key = `${stat.mtime?.getTime()}:${stat.size}`;
+    const cached = summaryCache.get(path);
+    if (cached?.key === key) return cached;
+    try {
+      const content = await Deno.readTextFile(path);
+      const summary = {
+        key,
+        result: parseRunResult(content),
+        configPath: content.match(/^conf:file:(.*)$/m)?.[1],
+      };
+      summaryCache.set(path, summary);
+      return summary;
+    } catch {
+      return undefined;
+    }
+  };
+
   /**
    * Ensure log directory exists
    */
@@ -80,7 +103,7 @@ export const createLogManager = (logDirectory: string): LogManager => {
       }
 
       const logs = await Promise.all(
-        entries.map(async ({ name: filename, path }) => {
+        entries.map(async ({ name: filename, path }): Promise<LogFile | null> => {
           const stat = await Deno.stat(path);
           const match = filename.match(/^([\w-]+)-(\d{8})-(\d{6})\.log$/);
           
@@ -88,16 +111,25 @@ export const createLogManager = (logDirectory: string): LogManager => {
           
           const [, command, dateStr, timeStr] = match;
           const timestamp = parseLogTimestamp(dateStr, timeStr);
-          
+          const summary = await readLogSummary(path, stat);
+
           return {
             filename,
             path,
             command: command as SnapRaidCommand,
             timestamp,
             size: stat.size,
+            modified: stat.mtime?.toISOString(),
+            result: summary?.result,
+            configPath: summary?.configPath,
           };
         })
       );
+
+      const listed = new Set(entries.map((entry) => entry.path));
+      for (const path of summaryCache.keys()) {
+        if (!listed.has(path)) summaryCache.delete(path);
+      }
 
       return logs
         .filter((log): log is LogFile => log !== null)
