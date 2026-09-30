@@ -5,16 +5,17 @@ import {
   type SmartLevel,
   type SmartReason,
 } from '@shared/smart-health'
-import type { SmartDiskInfo, SmartReport } from '@shared/types'
+import type { SmartDiskInfo } from '@shared/types'
+import { RefreshCw } from 'lucide-react'
 import { useState } from 'react'
-import { useNotificationSettings } from '../hooks/queries'
+import { useNotificationSettings, useSmart } from '../hooks/queries'
+import { formatRelativeTime } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { Button } from './Button'
 
 interface SmartMonitorProps {
   configPath: string
-  onRefresh: () => Promise<SmartReport>
 }
 
 const getStatusColor = (status: string) => {
@@ -142,11 +143,22 @@ const DiskCard = ({
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-semibold text-lg">{disk.name}</h3>
-            {getStatusBadge(disk.status)}
+            {disk.standby ? (
+              <span className="px-2 py-1 rounded text-xs font-semibold text-blue-700 bg-blue-50">
+                💤 {m.smart_monitor_standby()}
+              </span>
+            ) : (
+              getStatusBadge(disk.status)
+            )}
           </div>
           <p className="text-sm text-gray-600">{disk.device}</p>
           {disk.model && (
             <p className="text-xs text-gray-500 mt-1">{disk.model}</p>
+          )}
+          {disk.standby && (
+            <p className="text-xs text-gray-500 mt-1">
+              {m.smart_monitor_standby_hint()}
+            </p>
           )}
         </div>
 
@@ -281,24 +293,16 @@ const DiskCard = ({
   )
 }
 
-export const SmartMonitor = ({ onRefresh }: SmartMonitorProps) => {
-  const [report, setReport] = useState<SmartReport | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export const SmartMonitor = ({ configPath }: SmartMonitorProps) => {
   const [showRawOutput, setShowRawOutput] = useState(false)
-
-  const handleRefresh = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await onRefresh()
-      setReport(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setLoading(false)
-    }
-  }
+  const {
+    data: report,
+    isLoading: loading,
+    isFetching,
+    error: queryError,
+    refetch,
+  } = useSmart(configPath || undefined)
+  const error = queryError?.message
 
   // Same threshold as the SMART notifications, so the page and the messages agree
   const { data: notificationSettings } = useNotificationSettings()
@@ -326,16 +330,32 @@ export const SmartMonitor = ({ onRefresh }: SmartMonitorProps) => {
         <div>
           <h2 className="text-xl font-semibold">{m.smart_monitor_title()}</h2>
           {report && (
-            <p className="text-sm text-gray-500 mt-1">
+            <p
+              className="text-sm text-gray-500 mt-1"
+              title={new Date(report.timestamp).toLocaleString(getLocale())}
+            >
               {m.smart_monitor_last_updated()}:{' '}
-              {new Date(report.timestamp).toLocaleString()}
+              {formatRelativeTime(report.timestamp, getLocale())}
             </p>
           )}
         </div>
-        <Button onClick={handleRefresh} disabled={loading}>
-          {loading ? m.smart_monitor_loading() : m.smart_monitor_refresh()}
+        <Button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          variant="secondary"
+          size="iconSm"
+          aria-label={m.smart_monitor_refresh()}
+          title={m.smart_monitor_refresh()}
+        >
+          <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} />
         </Button>
       </div>
+
+      {loading && (
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+          {m.smart_monitor_loading_hint()}
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded text-red-700">
@@ -420,7 +440,7 @@ export const SmartMonitor = ({ onRefresh }: SmartMonitorProps) => {
         !loading &&
         !error && (
           <div className="text-center py-8 text-gray-500">
-            {m.smart_monitor_no_data()}
+            {m.smart_monitor_no_disks()}
           </div>
         )
       )}

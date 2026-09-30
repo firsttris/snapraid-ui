@@ -60,6 +60,7 @@ export const parseSmartOutput = (output: string): SmartDiskInfo[] => {
       case 'size': d.size = formatSize(toInt(rest[0])); break;
       case 'temperature': d.temperature = toInt(rest[0]); break;
       case 'flags': d.flags = toInt(rest[0]); break;
+      case 'power': if (rest[0] === 'standby') d.standby = true; break;
       // attr:<device>:<disk>:afr:<afr>:<prob>
       case 'afr': d.failureProbability = Math.round(parseFloat(rest[1]) * 10000) / 100; break;
       default: {

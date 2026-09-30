@@ -192,3 +192,8 @@ Deno.test("parseStatusOutput - files without sub-second timestamp", () => {
   assertEquals(status.zeroSubsecondFiles, 1);
   assertEquals(parseStatusOutput(fixture("status.log")).zeroSubsecondFiles, 0);
 });
+
+Deno.test("parseSmartOutput - a sleeping disk is reported as standby, not woken up", () => {
+  const [disk] = parseSmartOutput("info:/dev/sdc:d3\nattr:/dev/sdc:d3:power:standby");
+  assertEquals([disk.name, disk.status, disk.standby], ["d3", "UNKNOWN", true]);
+});

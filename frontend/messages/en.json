@@ -182,8 +182,7 @@
   "output_console_title": "Output",
   "output_console_no_output": "No output yet. Run a command to see results.",
   "smart_monitor_title": "SMART Disk Health Monitor",
-  "smart_monitor_refresh": "Refresh SMART Data",
-  "smart_monitor_loading": "Loading...",
+  "smart_monitor_refresh": "Refresh SMART data",
   "smart_monitor_last_updated": "Last updated",
   "smart_monitor_critical_message": "Replace these disks soon, they show signs of failing:",
   "smart_monitor_warning_message": "Keep an eye on these disks:",
@@ -195,7 +194,6 @@
   "smart_monitor_serial": "Serial",
   "smart_monitor_attributes": "SMART Attributes",
   "smart_monitor_show_raw_output": "Show Raw Output",
-  "smart_monitor_no_data": "Click \"Refresh SMART Data\" to load disk health information",
   "tab_dashboard": "Dashboard",
   "tab_smart_monitor": "SMART Monitor",
   "tab_disk_power": "Disk Power",
@@ -623,5 +621,9 @@
   "smart_reason_status_prefail": "a pre-failure value is below its limit (SMART PREFAIL)",
   "smart_reason_status_logfail": "a pre-failure value was below its limit in the past (SMART LOGFAIL)",
   "smart_reason_status_logerr": "errors in the disk's error log, often a loose cable or a past power cut (SMART LOGERR)",
-  "smart_reason_status_selferr": "a SMART self-test failed (SMART SELFERR)"
+  "smart_reason_status_selferr": "a SMART self-test failed (SMART SELFERR)",
+  "smart_monitor_standby": "Standby",
+  "smart_monitor_standby_hint": "The disk is asleep. SMART data is not read, so it is not woken up.",
+  "smart_monitor_loading_hint": "Reading SMART data from the disks, this takes a few seconds…",
+  "smart_monitor_no_disks": "SnapRAID found no disks with SMART data. Inside Docker, SMART needs the container to run with --privileged."
 }

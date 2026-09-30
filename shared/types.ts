@@ -157,6 +157,7 @@ export interface SmartDiskInfo {
   model?: string;
   serial?: string;
   size?: string;
+  standby?: boolean; // Asleep; smartctl leaves it alone instead of spinning it up, so there is no data
   attributes?: SmartAttribute[];
 }
 

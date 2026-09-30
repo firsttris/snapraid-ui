@@ -183,7 +183,6 @@
   "output_console_no_output": "Noch keine Ausgabe. Führen Sie einen Befehl aus, um Ergebnisse zu sehen.",
   "smart_monitor_title": "SMART Festplatten-Gesundheitsmonitor",
   "smart_monitor_refresh": "SMART-Daten aktualisieren",
-  "smart_monitor_loading": "Lädt...",
   "smart_monitor_last_updated": "Zuletzt aktualisiert",
   "smart_monitor_critical_message": "Diese Platten zeigen Ausfallzeichen und sollten bald ersetzt werden:",
   "smart_monitor_warning_message": "Diese Platten solltest du im Auge behalten:",
@@ -195,7 +194,6 @@
   "smart_monitor_serial": "Seriennummer",
   "smart_monitor_attributes": "SMART-Attribute",
   "smart_monitor_show_raw_output": "Rohdaten anzeigen",
-  "smart_monitor_no_data": "Klicke auf \"SMART-Daten aktualisieren\", um Festplatten-Gesundheitsinformationen zu laden",
   "tab_dashboard": "Dashboard",
   "tab_smart_monitor": "SMART-Monitor",
   "tab_disk_power": "Festplatten-Energie",
@@ -623,5 +621,9 @@
   "smart_reason_status_prefail": "ein Frühwarnwert liegt unter seinem Grenzwert (SMART PREFAIL)",
   "smart_reason_status_logfail": "ein Frühwarnwert lag früher unter seinem Grenzwert (SMART LOGFAIL)",
   "smart_reason_status_logerr": "Einträge im Fehlerprotokoll der Platte, oft ein Wackelkontakt am Kabel oder ein früherer Stromausfall (SMART LOGERR)",
-  "smart_reason_status_selferr": "ein SMART-Selbsttest ist fehlgeschlagen (SMART SELFERR)"
+  "smart_reason_status_selferr": "ein SMART-Selbsttest ist fehlgeschlagen (SMART SELFERR)",
+  "smart_monitor_standby": "Standby",
+  "smart_monitor_standby_hint": "Die Platte schläft. SMART-Daten werden nicht gelesen, damit sie nicht aufgeweckt wird.",
+  "smart_monitor_loading_hint": "SMART-Daten werden von den Platten gelesen, das dauert ein paar Sekunden…",
+  "smart_monitor_no_disks": "SnapRAID hat keine Platten mit SMART-Daten gefunden. In Docker braucht SMART einen Container mit --privileged."
 }

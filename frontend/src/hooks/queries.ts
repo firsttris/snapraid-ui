@@ -11,6 +11,7 @@ import type {
   ReplacementStep,
   RunningJob,
   Schedule,
+  SmartReport,
   SnapRaidCommand,
   SnapRaidStatus,
 } from '@shared/types'
@@ -44,6 +45,7 @@ import {
   getDiskReplacement,
   getLastRuns,
   getParityUsage,
+  getSmart,
   getStatus,
   parseSnapRaidConfig,
   probe,
@@ -68,6 +70,7 @@ export const queryKeys = {
   lastRuns: (path: string) => ['last-runs', path] as const,
   parityUsage: (path: string) => ['parity-usage', path] as const,
   probe: (path: string) => ['probe', path] as const,
+  smart: (path: string) => ['smart', path] as const,
   logs: ['logs'] as const,
   logContent: (filename: string) => ['log-content', filename] as const,
   filesystem: (path: string | undefined, filter: 'conf' | 'directories') =>
@@ -197,6 +200,17 @@ export const useProbe = (
     queryKey: queryKeys.probe(configPath ?? ''),
     queryFn: configPath ? () => probe(configPath) : skipToken,
     ...options,
+  })
+}
+
+// smartctl leaves sleeping disks alone, so loading it with the page does not spin them up
+const SMART_STALE_MS = 5 * 60 * 1000
+
+export const useSmart = (configPath: string | undefined) => {
+  return useQuery<SmartReport>({
+    queryKey: queryKeys.smart(configPath ?? ''),
+    queryFn: configPath ? () => getSmart(configPath) : skipToken,
+    staleTime: SMART_STALE_MS,
   })
 }
 
