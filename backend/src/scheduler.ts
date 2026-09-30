@@ -2,8 +2,7 @@ import { Cron } from "@hexagon/croner";
 import type { CommandOutput, Schedule, ScheduleConfig, ScheduleOutcome } from "@shared/types.ts";
 import type { SnapRaidRunner } from "./snapraid-runner.ts";
 import { existsSync } from "@std/fs";
-import { join } from "@std/path";
-import { BASE_PATH } from "./config.ts";
+import { resolveFromBase } from "./config.ts";
 import { parseRunResult } from "./log-manager.ts";
 
 // Module-level storage for active jobs
@@ -138,7 +137,7 @@ const executeScheduledCommand = async (
   if (!schedule) return;
 
   const nextRun = activeJobs.get(scheduleId)?.nextRun()?.toISOString();
-  const snapraidConfigPath = join(BASE_PATH, schedule.configPath);
+  const snapraidConfigPath = resolveFromBase(schedule.configPath);
 
   const skip = runner.getCurrentJob()
     ? skipped({ skipReason: "job_running" })

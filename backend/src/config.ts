@@ -1,6 +1,11 @@
-import { join } from "@std/path";
+import { join, resolve } from "@std/path";
 
 export const BASE_PATH = Deno.env.get("SNAPRAID_BASE_PATH") || join(Deno.cwd(), "..", "snapraid");
+
+/**
+ * Resolve a path against BASE_PATH; absolute paths (e.g. /mnt/parity/snapraid.conf) are kept as is
+ */
+export const resolveFromBase = (path: string): string => resolve(BASE_PATH, path);
 
 // Binary to invoke, e.g. a locally built one for development
 export const SNAPRAID_BIN = Deno.env.get("SNAPRAID_BIN") || "snapraid";

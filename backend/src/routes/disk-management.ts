@@ -6,7 +6,7 @@ import {
   parseParityLine,
   parseSnapRaidConfig,
 } from "../config-parser.ts";
-import { BASE_PATH } from "../config.ts";
+import { resolveFromBase } from "../config.ts";
 
 const diskManagement = new Hono();
 
@@ -20,7 +20,7 @@ diskManagement.post("/add-data-disk", async (c) => {
     return c.json({ error: "Missing configPath, diskName, or diskPath" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     // Read the config file
@@ -93,7 +93,7 @@ diskManagement.post("/add-parity-disk", async (c) => {
     return c.json({ error: "Missing configPath or parityPath" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   // Validate that parityPath ends with .parity
   if (!parityPath.endsWith(".parity")) {
@@ -153,7 +153,7 @@ diskManagement.post("/remove-disk", async (c) => {
     return c.json({ error: "Missing required parameters" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     // Read the config file

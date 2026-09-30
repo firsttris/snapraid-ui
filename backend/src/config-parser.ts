@@ -1,6 +1,6 @@
 import { join } from "@std/path";
 import type { AppConfig, ParityLevel, ParsedSnapRaidConfig } from "@shared/types.ts";
-import { BASE_PATH } from "./config.ts";
+import { resolveFromBase } from "./config.ts";
 
 export const MAX_PARITY_LEVEL = 6;
 
@@ -92,7 +92,7 @@ export const parseSnapRaidConfig = async (
  * Load the application config
  */
 export const loadAppConfig = async (): Promise<AppConfig> => {
-  const configPath = join(BASE_PATH, "config.json");
+  const configPath = resolveFromBase("config.json");
   
   try {
     const content = await Deno.readTextFile(configPath);
@@ -134,6 +134,6 @@ export const loadAppConfig = async (): Promise<AppConfig> => {
  * Save the application config
  */
 export const saveAppConfig = async (config: AppConfig): Promise<void> => {
-  const configPath = join(BASE_PATH, "config.json");
+  const configPath = resolveFromBase("config.json");
   await Deno.writeTextFile(configPath, JSON.stringify(config, null, 2));
 };

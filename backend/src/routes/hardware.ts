@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { join } from "@std/path";
 import { parseProbeOutput } from "../parsers/probe-parser.ts";
 import { parseSmartOutput } from "../parsers/smart-parser.ts";
-import { BASE_PATH, snapraidCommand } from "../config.ts";
+import { snapraidCommand, resolveFromBase } from "../config.ts";
 import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { getParityUsage } from "../parity-usage.ts";
@@ -17,7 +17,7 @@ hardware.get("/smart", async (c) => {
     return c.json({ error: "Missing path parameter" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     const command = snapraidCommand(["-c", configPath, ...STRUCTURED_LOG_ARGS, "smart"]);
@@ -54,7 +54,7 @@ hardware.get("/probe", async (c) => {
     return c.json({ error: "Missing path parameter" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     const command = snapraidCommand(["-c", configPath, ...STRUCTURED_LOG_ARGS, "probe"]);
@@ -104,7 +104,7 @@ hardware.get("/parity-usage", async (c) => {
     return c.json({ error: "Missing path parameter" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     const config = await parseSnapRaidConfig(configPath);
@@ -122,7 +122,7 @@ hardware.post("/up", async (c) => {
     return c.json({ error: "Missing configPath" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     const args = ["-c", configPath];
@@ -171,7 +171,7 @@ hardware.post("/down", async (c) => {
     return c.json({ error: "Missing configPath" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     const args = ["-c", configPath];

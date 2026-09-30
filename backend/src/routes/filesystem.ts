@@ -1,13 +1,13 @@
 import { Hono } from "hono";
 import { join } from "@std/path";
-import { BASE_PATH } from "../config.ts";
+import { BASE_PATH, resolveFromBase } from "../config.ts";
 
 const filesystem = new Hono();
 
 // GET /api/filesystem/browse - Browse directories for .conf files
 filesystem.get("/browse", async (c) => {
   const relativePath = c.req.query("path");
-  const dirPath = relativePath ? join(BASE_PATH, relativePath) : BASE_PATH;
+  const dirPath = relativePath ? resolveFromBase(relativePath) : BASE_PATH;
   const filterType = c.req.query("filter") || "conf"; // "conf" or "directories"
 
   try {
@@ -40,7 +40,7 @@ filesystem.get("/read", async (c) => {
     return c.json({ error: "Missing path parameter" }, 400);
   }
 
-  const filePath = join(BASE_PATH, relativePath);
+  const filePath = resolveFromBase(relativePath);
 
   try {
     const content = await Deno.readTextFile(filePath);
@@ -58,7 +58,7 @@ filesystem.post("/write", async (c) => {
     return c.json({ error: "Missing path or content" }, 400);
   }
 
-  const filePath = join(BASE_PATH, path);
+  const filePath = resolveFromBase(path);
 
   try {
     await Deno.writeTextFile(filePath, content);

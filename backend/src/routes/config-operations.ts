@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { join } from "@std/path";
 import { parseSnapRaidConfig } from "../config-parser.ts";
-import { BASE_PATH } from "../config.ts";
+import { resolveFromBase } from "../config.ts";
 
 const configOperations = new Hono();
 
@@ -13,7 +13,7 @@ configOperations.post("/add-exclude", async (c) => {
     return c.json({ error: "Missing configPath or pattern" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     // Read the config file
@@ -74,7 +74,7 @@ configOperations.post("/remove-exclude", async (c) => {
     return c.json({ error: "Missing configPath or pattern" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     // Read the config file
@@ -103,7 +103,7 @@ configOperations.post("/set-pool", async (c) => {
     return c.json({ error: "Missing configPath" }, 400);
   }
 
-  const configPath = join(BASE_PATH, relativePath);
+  const configPath = resolveFromBase(relativePath);
 
   try {
     // Read the config file

@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { join } from "@std/path";
 import { loadAppConfig } from "./config-parser.ts";
 import { broadcast, handleWebSocketUpgrade } from "./websocket.ts";
 import { setBroadcast } from "./routes/snapraid.ts";
@@ -13,7 +12,7 @@ import { filesystemRoutes } from "./routes/filesystem.ts";
 import { snapraidRoutes } from "./routes/snapraid.ts";
 import { logsRoutes } from "./routes/logs.ts";
 import { schedulesRoutes } from "./routes/schedules.ts";
-import { BASE_PATH } from "./config.ts";
+import { resolveFromBase } from "./config.ts";
 
 const app = new Hono();
 
@@ -50,7 +49,7 @@ const main = async (): Promise<void> => {
   const port = 8080;
 
   // Initialize log manager
-  const logManager = createLogManager(join(BASE_PATH, config.logs.directory));
+  const logManager = createLogManager(resolveFromBase(config.logs.directory));
   await logManager.ensureLogDirectory();
 
   // Inject broadcast function into snapraid routes
@@ -64,7 +63,7 @@ const main = async (): Promise<void> => {
   setRunnerLogManager(logManager);
 
   // Initialize scheduler
-  const schedulesConfigPath = join(BASE_PATH, "schedules.json");
+  const schedulesConfigPath = resolveFromBase("schedules.json");
   const runner = getRunner();
   // Report the end of scheduled jobs like manual ones, so clients stop showing them as running
   const scheduler = createScheduler(schedulesConfigPath, {
