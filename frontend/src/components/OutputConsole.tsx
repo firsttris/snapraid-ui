@@ -10,12 +10,17 @@ const FOLLOW_THRESHOLD_PX = 40
 interface OutputConsoleProps {
   output: string
   command?: string
+  isRunning: boolean
+  // The last job failed, its output stays open to read what went wrong
+  lastFailed: boolean
   onClear: () => void
 }
 
 export const OutputConsole = ({
   output,
   command,
+  isRunning,
+  lastFailed,
   onClear,
 }: OutputConsoleProps) => {
   const outputRef = useRef<HTMLDivElement>(null)
@@ -24,6 +29,12 @@ export const OutputConsole = ({
   const [collapsed, setCollapsed] = useState(false)
   const { toast } = useFeedback()
   const text = useMemo(() => renderConsoleOutput(output), [output])
+
+  // Open while a job runs, fold away once it succeeded so the dashboard stays compact
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only react to a job starting or ending
+  useEffect(() => {
+    setCollapsed(!isRunning && !lastFailed)
+  }, [isRunning])
 
   // Follow new output only while the user hasn't scrolled up to read something
   // biome-ignore lint/correctness/useExhaustiveDependencies: text is the trigger, not read inside

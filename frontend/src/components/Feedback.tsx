@@ -16,10 +16,16 @@ const ERROR_TOAST_DURATION_MS = 10000
 
 type ToastKind = 'success' | 'error' | 'info'
 
+interface ToastAction {
+  label: string
+  onClick: () => void
+}
+
 interface Toast {
   id: number
   kind: ToastKind
   message: string
+  action?: ToastAction
 }
 
 interface ConfirmOptions {
@@ -35,7 +41,7 @@ interface PendingConfirm extends ConfirmOptions {
 
 interface FeedbackContextValue {
   confirm: (options: ConfirmOptions) => Promise<boolean>
-  toast: Record<ToastKind, (message: string) => void>
+  toast: Record<ToastKind, (message: string, action?: ToastAction) => void>
 }
 
 const FeedbackContext = createContext<FeedbackContextValue | null>(null)
@@ -132,9 +138,9 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
   }, [])
 
   const show = useCallback(
-    (kind: ToastKind, message: string) => {
+    (kind: ToastKind, message: string, action?: ToastAction) => {
       const id = nextId.current++
-      setToasts((prev) => [...prev, { id, kind, message }])
+      setToasts((prev) => [...prev, { id, kind, message, action }])
       setTimeout(
         () => dismiss(id),
         kind === 'error' ? ERROR_TOAST_DURATION_MS : TOAST_DURATION_MS,
@@ -149,9 +155,9 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
         setPendingConfirm({ ...options, resolve }),
       ),
     toast: {
-      success: (message) => show('success', message),
-      error: (message) => show('error', message),
-      info: (message) => show('info', message),
+      success: (message, action) => show('success', message, action),
+      error: (message, action) => show('error', message, action),
+      info: (message, action) => show('info', message, action),
     },
   }))
 
@@ -181,7 +187,21 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
             <span className="mt-0.5 shrink-0">
               {TOAST_STYLES[toast.kind].icon}
             </span>
-            <span className="flex-1 break-words">{toast.message}</span>
+            <span className="flex-1 break-words">
+              {toast.message}
+              {toast.action && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    dismiss(toast.id)
+                    toast.action?.onClick()
+                  }}
+                  className="ml-2 font-medium underline hover:no-underline"
+                >
+                  {toast.action.label}
+                </button>
+              )}
+            </span>
             <button
               type="button"
               onClick={() => dismiss(toast.id)}

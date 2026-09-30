@@ -2,11 +2,14 @@ import type {
   LastRun,
   RunResult,
   Schedule,
+  SnapRaidCommand,
   SnapRaidStatus,
 } from '@shared/types'
 import { Link } from '@tanstack/react-router'
 import { RefreshCw } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { getCommandDescription, getCommandLabel } from '../lib/commands'
+import type { JobProgress } from '../lib/progress'
 import {
   daysSince,
   formatRelativeTime,
@@ -16,7 +19,15 @@ import {
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { Button } from './Button'
+import { CommandMenu } from './CommandMenu'
+import { RunningJobBox } from './RunningJobBox'
 import { LoadingHint, Skeleton } from './Skeleton'
+
+interface RunningJobInfo {
+  command: string
+  progress: JobProgress | null
+  isAborting: boolean
+}
 
 interface ArrayHealthPanelProps {
   status: SnapRaidStatus | undefined
@@ -28,30 +39,31 @@ interface ArrayHealthPanelProps {
   lastScrub: LastRun | null | undefined
   nextSchedule: Schedule | undefined
   isSchedulesLoading: boolean
-  runningCommand: string | undefined // Job of this config that is running right now
+  runningJob: RunningJobInfo | undefined // Job of this config that is running right now
   onRefresh: () => void
-  onShowDetails: () => void
+  onExecute: (command: SnapRaidCommand) => void
+  onAbort: () => void
   onFixErrors: () => void
   onScrubBad: () => void
   onTouch: () => void
-  refreshDisabled: boolean
+  actionsDisabled: boolean
 }
 
 type Health =
   | 'healthy'
-  | 'needs_sync'
-  | 'sync_failed'
+  | 'attention'
+  | 'sync_incomplete'
   | 'errors'
   | 'busy'
   | 'unknown'
 
 const HEALTH_STYLES: Record<Health, { box: string; icon: string }> = {
   healthy: { box: 'bg-green-50 border-green-200 text-green-800', icon: '✅' },
-  needs_sync: {
+  attention: {
     box: 'bg-yellow-50 border-yellow-200 text-yellow-800',
     icon: '⚠️',
   },
-  sync_failed: {
+  sync_incomplete: {
     box: 'bg-orange-50 border-orange-200 text-orange-800',
     icon: '⚠️',
   },
@@ -60,22 +72,74 @@ const HEALTH_STYLES: Record<Health, { box: string; icon: string }> = {
   unknown: { box: 'bg-gray-50 border-gray-200 text-gray-700', icon: '❔' },
 }
 
-const getHealthText = (health: Health): [string, string] => {
+const getHealthTitle = (health: Health): string => {
   switch (health) {
     case 'healthy':
-      return [m.health_healthy(), m.health_healthy_msg()]
-    case 'needs_sync':
-      return [m.health_needs_sync(), m.health_needs_sync_msg()]
-    case 'sync_failed':
-      return [m.health_sync_failed(), m.health_sync_failed_msg()]
+      return m.health_healthy()
+    case 'attention':
+      return m.health_attention()
+    case 'sync_incomplete':
+      return m.health_sync_incomplete()
     case 'errors':
-      return [m.health_errors(), m.health_errors_msg()]
+      return m.health_errors()
     case 'busy':
-      return [m.health_busy(), m.health_busy_msg()]
+      return m.health_busy()
     case 'unknown':
-      return [m.health_unknown(), m.health_unknown_msg()]
+      return m.health_unknown()
   }
 }
+
+const getHealthMessage = (
+  health: Health,
+  status: SnapRaidStatus | undefined,
+): string => {
+  switch (health) {
+    case 'healthy':
+      return m.health_healthy_msg()
+    case 'attention':
+      return m.health_attention_msg()
+    case 'sync_incomplete':
+      // Unsynced blocks come from the content file, a failed run from its log
+      return status?.unsyncedBlocks
+        ? m.health_sync_incomplete_blocks({ count: status.unsyncedBlocks })
+        : m.health_sync_incomplete_msg()
+    case 'errors':
+      return m.health_errors_msg()
+    case 'busy':
+      return m.health_busy_msg()
+    case 'unknown':
+      return m.health_unknown_msg()
+  }
+}
+
+// Overdue runs; the tiles flag them too, the hints add the action
+const staleDays = (run: LastRun | null | undefined, limit: number) => {
+  if (!run) return undefined
+  const days = daysSince(run.timestamp)
+  return days > limit ? Math.floor(days) : undefined
+}
+
+interface Hint {
+  key: string
+  text: string
+  actionLabel: string
+  onAction: () => void
+}
+
+const HintRow = ({ hint, disabled }: { hint: Hint; disabled: boolean }) => (
+  <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+    <span className="min-w-0 flex-1">{hint.text}</span>
+    <Button
+      onClick={hint.onAction}
+      disabled={disabled}
+      variant="secondary"
+      size="sm"
+      className="bg-white"
+    >
+      {hint.actionLabel}
+    </Button>
+  </div>
+)
 
 const RESULT_STYLES: Record<RunResult, string> = {
   ok: 'bg-green-100 text-green-700',
@@ -122,11 +186,13 @@ const LastRunTile = ({
   run,
   staleDays,
   running,
+  children,
 }: {
   label: string
   run: LastRun | null | undefined
   staleDays: number
   running: boolean
+  children?: ReactNode
 }) => {
   if (running) {
     return (
@@ -143,6 +209,7 @@ const LastRunTile = ({
             })}
           </p>
         )}
+        {children}
       </Tile>
     )
   }
@@ -159,6 +226,7 @@ const LastRunTile = ({
         <p className="text-lg font-semibold text-gray-500">
           {m.health_never()}
         </p>
+        {children}
       </Tile>
     )
   }
@@ -184,9 +252,20 @@ const LastRunTile = ({
           </span>
         )}
       </div>
+      {children}
     </Tile>
   )
 }
+
+// Scrub coverage from the status: how much of the array was ever verified, and how long ago the oldest block
+const ScrubCoverage = ({ status }: { status: SnapRaidStatus | undefined }) =>
+  status?.scrubPercentage !== undefined ? (
+    <p className="mt-2 text-xs text-gray-500">
+      {m.health_scrubbed_share({ percent: status.scrubPercentage })}
+      {status.oldestScrubDays !== undefined &&
+        ` · ${m.health_oldest_block({ days: status.oldestScrubDays })}`}
+    </p>
+  ) : null
 
 export const ArrayHealthPanel = ({
   status,
@@ -198,18 +277,21 @@ export const ArrayHealthPanel = ({
   lastScrub,
   nextSchedule,
   isSchedulesLoading,
-  runningCommand,
+  runningJob,
   onRefresh,
-  onShowDetails,
+  onExecute,
+  onAbort,
   onFixErrors,
   onScrubBad,
   onTouch,
-  refreshDisabled,
+  actionsDisabled,
 }: ArrayHealthPanelProps) => {
   // status only reads the content file, so it still looks healthy when the last
   // sync failed before recording new files
   const lastSyncFailed =
     !!lastSync && lastSync.result !== 'ok' && lastSync.result !== 'warning'
+  const syncOverdue = staleDays(lastSync, SYNC_STALE_DAYS)
+  const scrubOverdue = staleDays(lastScrub, SCRUB_STALE_DAYS)
   // While a job holds SnapRAID's lock the last known status (kept across reloads) stands in
   const health: Health = !status
     ? isBusy
@@ -219,44 +301,111 @@ export const ArrayHealthPanel = ({
       ? 'unknown'
       : status.hasErrors
         ? 'errors'
-        : !status.parityUpToDate
-          ? 'needs_sync'
-          : lastSyncFailed
-            ? 'sync_failed'
+        : status.syncIncomplete || lastSyncFailed
+          ? 'sync_incomplete'
+          : syncOverdue !== undefined || scrubOverdue !== undefined
+            ? 'attention'
             : 'healthy'
-  const [title, message] = getHealthText(health)
   const badBlocks = health === 'errors' ? (status?.badBlocks ?? 0) : 0
+  // Sync is the fix for most problems, it only stands out when it is due
+  const syncDue =
+    health === 'sync_incomplete' ||
+    (health === 'attention' && syncOverdue !== undefined)
+
+  const hints: Hint[] = []
+  if (health === 'attention' && syncOverdue !== undefined) {
+    hints.push({
+      key: 'sync',
+      text: m.health_hint_sync_stale({ days: syncOverdue }),
+      actionLabel: m.health_start_sync(),
+      onAction: () => onExecute('sync'),
+    })
+  }
+  if (health === 'attention' && scrubOverdue !== undefined) {
+    hints.push({
+      key: 'scrub',
+      text: m.health_hint_scrub_stale({ days: scrubOverdue }),
+      actionLabel: m.health_start_scrub(),
+      onAction: () => onExecute('scrub'),
+    })
+  }
+  if ((status?.zeroSubsecondFiles ?? 0) > 0) {
+    hints.push({
+      key: 'touch',
+      text: m.health_zero_subsecond({ count: status?.zeroSubsecondFiles ?? 0 }),
+      actionLabel: m.health_run_touch(),
+      onAction: onTouch,
+    })
+  }
 
   return (
     <div className="bg-white shadow rounded-lg p-6 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">{m.health_title()}</h2>
-        <div className="flex gap-2">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold">{m.health_title()}</h2>
+          <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
+            {statusTimestamp && (
+              <span title={new Date(statusTimestamp).toLocaleString()}>
+                {m.health_updated({
+                  time: formatRelativeTime(statusTimestamp, getLocale()),
+                })}
+              </span>
+            )}
+            <Button
+              onClick={onRefresh}
+              disabled={!!runningJob || actionsDisabled || isStatusLoading}
+              variant="ghost"
+              size="iconSm"
+              className="p-1"
+              aria-label={m.health_refresh()}
+              title={m.health_refresh()}
+            >
+              <RefreshCw
+                size={14}
+                className={isStatusLoading ? 'animate-spin' : ''}
+              />
+            </Button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
           <Button
-            onClick={onShowDetails}
-            disabled={!status}
+            onClick={() => onExecute('scrub')}
+            disabled={!!runningJob || actionsDisabled}
             variant="secondary"
             size="sm"
+            title={getCommandDescription('scrub')}
           >
-            {m.health_details()}
+            {getCommandLabel('scrub')}
           </Button>
           <Button
-            onClick={onRefresh}
-            disabled={refreshDisabled || isStatusLoading}
-            variant="secondary"
-            size="iconSm"
-            aria-label={m.health_refresh()}
-            title={m.health_refresh()}
+            onClick={() => onExecute('sync')}
+            disabled={!!runningJob || actionsDisabled}
+            variant={syncDue ? 'primary' : 'secondary'}
+            size="sm"
+            className={
+              syncDue
+                ? 'bg-green-600 hover:bg-green-700 disabled:bg-gray-300'
+                : ''
+            }
+            title={getCommandDescription('sync')}
           >
-            <RefreshCw
-              size={16}
-              className={isStatusLoading ? 'animate-spin' : ''}
-            />
+            {getCommandLabel('sync')}
           </Button>
+          <CommandMenu
+            onSelect={onExecute}
+            disabled={!!runningJob || actionsDisabled}
+          />
         </div>
       </div>
 
-      {isStatusLoading && !status ? (
+      {runningJob ? (
+        <RunningJobBox
+          command={runningJob.command}
+          progress={runningJob.progress}
+          isAborting={runningJob.isAborting}
+          onAbort={onAbort}
+        />
+      ) : isStatusLoading && !status ? (
         <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
           <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
           <div className="flex-1 space-y-2">
@@ -271,9 +420,9 @@ export const ArrayHealthPanel = ({
           <span className="text-2xl leading-none">
             {HEALTH_STYLES[health].icon}
           </span>
-          <div>
-            <p className="font-semibold">{title}</p>
-            <p className="text-sm">{message}</p>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">{getHealthTitle(health)}</p>
+            <p className="text-sm">{getHealthMessage(health, status)}</p>
             {isBusy && status && statusTimestamp && (
               <p className="mt-1 text-xs opacity-80">
                 ⏳{' '}
@@ -281,6 +430,16 @@ export const ArrayHealthPanel = ({
                   time: formatRelativeTime(statusTimestamp, getLocale()),
                 })}
               </p>
+            )}
+            {health === 'sync_incomplete' && (
+              <button
+                type="button"
+                onClick={() => onExecute('sync')}
+                disabled={actionsDisabled}
+                className="mt-3 rounded bg-orange-600 px-3 py-1.5 text-sm text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+              >
+                {m.health_restart_sync()}
+              </button>
             )}
             {badBlocks > 0 && (
               <div className="mt-3">
@@ -291,7 +450,7 @@ export const ArrayHealthPanel = ({
                   <button
                     type="button"
                     onClick={onFixErrors}
-                    disabled={refreshDisabled}
+                    disabled={actionsDisabled}
                     className="rounded bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     {m.health_fix_errors()}
@@ -299,7 +458,7 @@ export const ArrayHealthPanel = ({
                   <button
                     type="button"
                     onClick={onScrubBad}
-                    disabled={refreshDisabled}
+                    disabled={actionsDisabled}
                     className="rounded border border-red-300 bg-white px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {m.health_scrub_bad()}
@@ -311,56 +470,29 @@ export const ArrayHealthPanel = ({
         </div>
       )}
 
-      {(status?.zeroSubsecondFiles ?? 0) > 0 && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-          <span>
-            {m.health_zero_subsecond({
-              count: status?.zeroSubsecondFiles ?? 0,
-            })}
-          </span>
-          <Button
-            onClick={onTouch}
-            disabled={refreshDisabled}
-            variant="secondary"
-            size="sm"
-            className="bg-white"
-          >
-            {m.health_run_touch()}
-          </Button>
+      {!runningJob && hints.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {hints.map((hint) => (
+            <HintRow key={hint.key} hint={hint} disabled={actionsDisabled} />
+          ))}
         </div>
       )}
 
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <LastRunTile
           label={m.health_last_sync()}
           run={lastSync}
           staleDays={SYNC_STALE_DAYS}
-          running={runningCommand === 'sync'}
+          running={runningJob?.command === 'sync'}
         />
         <LastRunTile
           label={m.health_last_scrub()}
           run={lastScrub}
           staleDays={SCRUB_STALE_DAYS}
-          running={runningCommand === 'scrub'}
-        />
-        <Tile label={m.health_scrub_coverage()}>
-          {isStatusLoading && !status ? (
-            <TileSkeleton />
-          ) : status?.scrubPercentage !== undefined ? (
-            <>
-              <p className="text-lg font-semibold text-gray-900">
-                {status.scrubPercentage}%
-              </p>
-              {status.oldestScrubDays !== undefined && (
-                <p className="text-xs text-gray-500">
-                  {m.health_oldest_block({ days: status.oldestScrubDays })}
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="text-lg font-semibold text-gray-400">–</p>
-          )}
-        </Tile>
+          running={runningJob?.command === 'scrub'}
+        >
+          <ScrubCoverage status={status} />
+        </LastRunTile>
         <Tile label={m.health_next_job()}>
           {isSchedulesLoading ? (
             <TileSkeleton />

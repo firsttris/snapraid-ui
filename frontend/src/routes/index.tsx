@@ -6,13 +6,11 @@ import type {
   ListReport,
   SnapRaidCommand,
 } from '@shared/types'
-import { useQueryClient } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrayHealthPanel } from '../components/ArrayHealthPanel'
 import { CheckDialog } from '../components/CheckDialog'
 import { CheckViewer } from '../components/CheckViewer'
-import { CommandPanel } from '../components/CommandPanel'
 import { ConfigBar } from '../components/ConfigBar'
 import { DeviceList } from '../components/DeviceList'
 import { DiffViewer } from '../components/DiffViewer'
@@ -27,9 +25,6 @@ import { StatusModal } from '../components/StatusModal'
 import { SyncPreviewDialog } from '../components/SyncPreviewDialog'
 import { UndeleteDialog } from '../components/UndeleteDialog'
 import {
-  queryKeys,
-  useAbortJob,
-  useCurrentJob,
   useExecuteCommand,
   useLastRuns,
   useParityUsage,
@@ -38,8 +33,8 @@ import {
   useSnapRaidConfig,
   useStatus,
 } from '../hooks/queries'
+import { useJob } from '../hooks/useJob'
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
-import { useWebSocketConnection } from '../hooks/useWebSocketConnection'
 import {
   getCheckReport,
   getDevices,
@@ -48,11 +43,13 @@ import {
   getFileList,
   SnapRaidBusyError,
 } from '../lib/api/snapraid'
-import { parseProgress } from '../lib/progress'
 import * as m from '../paraglide/messages'
 
 export const Route = createFileRoute('/')({
   component: Dashboard,
+  // Lets the result toast of a check, shown on any page, open its report here
+  validateSearch: (search: Record<string, unknown>): { report?: 'check' } =>
+    search.report === 'check' ? { report: 'check' } : {},
 })
 
 // Commands answered by a report dialog instead of streamed console output
@@ -81,6 +78,9 @@ const isReportCommand = (command: SnapRaidCommand): command is Report['kind'] =>
 function Dashboard() {
   const { selectedConfig, selectConfigByFile } = useSelectedConfig()
   const { confirm, toast } = useFeedback()
+  const { report: requestedReport } = Route.useSearch()
+  const navigate = useNavigate()
+  const job = useJob()
   const [showUndeleteDialog, setShowUndeleteDialog] = useState(false)
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showSyncPreview, setShowSyncPreview] = useState(false)
@@ -88,11 +88,8 @@ function Dashboard() {
   const [showCheckDialog, setShowCheckDialog] = useState(false)
   const [report, setReport] = useState<Report | null>(null)
 
-  // TanStack Query hooks
-  const queryClient = useQueryClient()
   const { data: parsedConfig, isLoading: isConfigLoading } =
     useSnapRaidConfig(selectedConfig)
-  const { data: currentJob, refetch: refetchCurrentJob } = useCurrentJob()
   const {
     data: statusData,
     refetch: refetchStatus,
@@ -109,32 +106,13 @@ function Dashboard() {
     useParityUsage(selectedConfig)
   const { data: schedules, isLoading: isSchedulesLoading } = useSchedules()
   const executeCommandMutation = useExecuteCommand()
-  const abortMutation = useAbortJob()
-
-  // A finished job changes status and run history, so reload them
-  const handleJobComplete = useCallback(() => {
-    refetchCurrentJob()
-    queryClient.invalidateQueries({ queryKey: queryKeys.status })
-    queryClient.invalidateQueries({ queryKey: ['last-runs'] })
-    queryClient.invalidateQueries({ queryKey: ['parity-usage'] })
-    // Removing a data disk edits the config once its sync -E has finished
-    queryClient.invalidateQueries({ queryKey: ['snapraid-config'] })
-  }, [refetchCurrentJob, queryClient])
-
-  // WebSocket connection hook
-  const wsState = useWebSocketConnection(handleJobComplete)
+  const { currentJob } = job
   // Unsupported on some controllers, the panel then just shows no power state
   const { data: probeReport } = useProbe(selectedConfig, {
-    enabled: !wsState.isRunning,
+    enabled: !job.isRunning,
     refetchInterval: PROBE_INTERVAL_MS,
     retry: false,
   })
-  const [dismissedResult, setDismissedResult] = useState<string | null>(null)
-  const isAborting = abortMutation.isPending || !!currentJob?.aborting
-  const progress = useMemo(
-    () => (wsState.isRunning ? parseProgress(wsState.output) : null),
-    [wsState.isRunning, wsState.output],
-  )
 
   const configFile = selectedConfig.replace(/^.*[/\\]/, '')
   const nextSchedule = useMemo(
@@ -155,45 +133,23 @@ function Dashboard() {
     [schedules, configFile],
   )
 
-  const handleAbort = useCallback(async () => {
-    const confirmed = await confirm({
-      message: m.commands_abort_confirm({ command: wsState.currentCommand }),
-      confirmLabel: m.commands_abort(),
-      danger: true,
-    })
-    if (!confirmed) return
-    abortMutation.mutate(undefined, {
-      onError: (error) => toast.error(error.message),
-    })
-  }, [abortMutation, confirm, toast, wsState.currentCommand])
-
-  // Pick up a job that was started elsewhere (other tab, schedule) or before a reload
+  // A job started elsewhere (other tab, schedule, before a reload) belongs to its config
   // biome-ignore lint/correctness/useExhaustiveDependencies: only react to a newly detected job
   useEffect(() => {
-    if (currentJob && !wsState.isRunning) {
-      wsState.setIsRunning(true)
-      wsState.setCurrentCommand(currentJob.command)
-      selectConfigByFile(currentJob.configPath)
-      wsState.appendOutput(
-        `\n[Reconnected to running job: ${currentJob.command}]\n`,
-      )
-    }
-  }, [currentJob])
+    if (currentJob) selectConfigByFile(currentJob.configPath)
+  }, [currentJob?.processId])
 
   const runCommand = useCallback(
     (command: SnapRaidCommand, args: string[] = []) => {
-      wsState.setIsRunning(true)
-      wsState.clearOutput()
-      wsState.setCurrentCommand(command)
-
+      job.start(command)
       executeCommandMutation.mutate(
         { command, configPath: selectedConfig, args },
         {
-          onError: (error) => wsState.setError(command, error.message),
+          onError: (error) => job.fail(command, error.message),
         },
       )
     },
-    [selectedConfig, wsState, executeCommandMutation],
+    [selectedConfig, job.start, job.fail, executeCommandMutation],
   )
 
   const openReport = useCallback(
@@ -212,9 +168,16 @@ function Dashboard() {
     [selectedConfig, toast],
   )
 
+  // Opened from the result toast of a check, the parameter is dropped again so a reload does not reopen it
+  useEffect(() => {
+    if (requestedReport !== 'check' || !selectedConfig) return
+    openReport('check')
+    navigate({ to: '/', search: {}, replace: true })
+  }, [requestedReport, selectedConfig, openReport, navigate])
+
   const executeCommand = useCallback(
     async (command: SnapRaidCommand) => {
-      if (!selectedConfig || wsState.isRunning) return
+      if (!selectedConfig || job.isRunning) return
 
       // Show pending changes before sync, so accidental deletions are not synced away
       if (command === 'sync') {
@@ -245,7 +208,7 @@ function Dashboard() {
 
       runCommand(command)
     },
-    [selectedConfig, wsState.isRunning, runCommand, refetchStatus, openReport],
+    [selectedConfig, job.isRunning, runCommand, refetchStatus, openReport],
   )
 
   const handleUndelete = useCallback(
@@ -254,7 +217,7 @@ function Dashboard() {
       path?: string,
       diskFilter?: string,
     ) => {
-      if (!selectedConfig || wsState.isRunning) return
+      if (!selectedConfig || job.isRunning) return
 
       setShowUndeleteDialog(false)
 
@@ -276,25 +239,25 @@ function Dashboard() {
 
       runCommand('fix', args)
     },
-    [selectedConfig, wsState.isRunning, runCommand],
+    [selectedConfig, job.isRunning, runCommand],
   )
 
   // Repair blocks that scrub marked as bad; `scrub -p bad` verifies the result
   const handleFixErrors = useCallback(async () => {
-    if (!selectedConfig || wsState.isRunning) return
+    if (!selectedConfig || job.isRunning) return
     const confirmed = await confirm({
       message: m.health_fix_errors_confirm(),
       confirmLabel: m.health_fix_errors_start(),
       danger: true,
     })
     if (confirmed) runCommand('fix', ['-e'])
-  }, [selectedConfig, wsState.isRunning, confirm, runCommand])
+  }, [selectedConfig, job.isRunning, confirm, runCommand])
 
   const closeReport = () => setReport(null)
 
   return (
     <PageLayout title={m.nav_dashboard()}>
-      <ConfigBar disabled={wsState.isRunning}>
+      <ConfigBar disabled={job.isRunning}>
         <ArrayHealthPanel
           status={statusData?.status}
           isStatusLoading={isStatusFetching}
@@ -305,39 +268,45 @@ function Dashboard() {
           lastScrub={lastRuns?.scrub}
           nextSchedule={nextSchedule}
           isSchedulesLoading={isSchedulesLoading}
-          runningCommand={
-            currentJob &&
-            currentJob.configPath.replace(/^.*[/\\]/, '') === configFile
-              ? currentJob.command
+          runningJob={
+            job.isRunning &&
+            (!currentJob ||
+              currentJob.configPath.replace(/^.*[/\\]/, '') === configFile)
+              ? {
+                  command: job.currentCommand || currentJob?.command || '',
+                  progress: job.progress,
+                  isAborting: job.isAborting,
+                }
               : undefined
           }
           onRefresh={() => refetchStatus()}
-          onShowDetails={() => setShowStatusModal(true)}
+          onExecute={(command) =>
+            command === 'fix'
+              ? setShowUndeleteDialog(true)
+              : executeCommand(command)
+          }
+          onAbort={job.abort}
           onFixErrors={handleFixErrors}
           onScrubBad={() => runCommand('scrub', ['-p', 'bad'])}
           onTouch={() => runCommand('touch')}
-          refreshDisabled={wsState.isRunning}
+          actionsDisabled={!selectedConfig || job.isRunning}
         />
 
-        <CommandPanel
-          onExecute={executeCommand}
-          onUndelete={() => setShowUndeleteDialog(true)}
-          onAbort={handleAbort}
-          disabled={!selectedConfig}
-          isRunning={wsState.isRunning}
-          isAborting={isAborting}
-          currentCommand={wsState.currentCommand}
-          progress={progress}
-          lastResult={
-            wsState.lastResult?.finishedAt === dismissedResult
-              ? null
-              : wsState.lastResult
-          }
-          onShowCheckReport={() => openReport('check')}
-          onDismissResult={() =>
-            setDismissedResult(wsState.lastResult?.finishedAt ?? null)
-          }
-        />
+        {job.output && (
+          <div className="mb-6">
+            <OutputConsole
+              output={job.output}
+              command={job.currentCommand || job.lastResult?.command}
+              isRunning={job.isRunning}
+              lastFailed={
+                !!job.lastResult &&
+                !job.lastResult.aborted &&
+                (!!job.lastResult.error || job.lastResult.exitCode !== 0)
+              }
+              onClear={job.clearOutput}
+            />
+          </div>
+        )}
 
         <DisksPanel
           parsedConfig={parsedConfig}
@@ -347,12 +316,6 @@ function Dashboard() {
           isConfigLoading={isConfigLoading}
           isStatusLoading={isStatusFetching}
           isParityLoading={isParityLoading}
-        />
-
-        <OutputConsole
-          output={wsState.output}
-          command={wsState.currentCommand || wsState.lastResult?.command}
-          onClear={wsState.clearOutput}
         />
 
         {showSyncPreview && (

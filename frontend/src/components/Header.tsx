@@ -7,6 +7,7 @@ import {
   HardDrive,
   Languages,
   LayoutDashboard,
+  Loader2,
   LogOut,
   Menu,
   Monitor,
@@ -15,13 +16,12 @@ import {
   X,
 } from 'lucide-react'
 import { useState } from 'react'
-import { useCurrentJob, useLogout, useSession } from '../hooks/queries'
+import { useLogout, useSession } from '../hooks/queries'
+import { useJob } from '../hooks/useJob'
+import { getCommandLabel } from '../lib/commands'
 import { useTheme } from '../lib/theme'
 import * as m from '../paraglide/messages'
 import { getLocale, setLocale } from '../paraglide/runtime'
-
-// The dashboard learns about jobs over the WebSocket, other pages only need a coarse indicator
-const JOB_POLL_INTERVAL_MS = 5000
 
 const NAV_ITEMS = [
   { to: '/', label: m.nav_dashboard, icon: LayoutDashboard },
@@ -39,14 +39,44 @@ const THEME_LABELS = {
   system: m.theme_system,
 } as const
 
+// Running job with its progress, visible on every page and leading back to the dashboard
+const JobChip = () => {
+  const { currentCommand, currentJob, progress, isAborting } = useJob()
+  const label = m.nav_job_running({
+    command: getCommandLabel(currentCommand || currentJob?.command || ''),
+  })
+  const title = isAborting ? m.commands_aborting() : label
+
+  return (
+    <Link
+      to="/"
+      className="relative flex items-center gap-2 overflow-hidden rounded-full bg-cyan-800 px-3 py-1 text-xs font-medium hover:bg-cyan-700"
+      title={title}
+      aria-label={title}
+    >
+      {progress && (
+        <span
+          className="absolute inset-y-0 left-0 bg-cyan-600 transition-[width] duration-500"
+          style={{ width: `${Math.min(progress.percent, 100)}%` }}
+        />
+      )}
+      <Loader2 size={14} className="relative animate-spin" />
+      <span className="relative hidden sm:inline">
+        {isAborting ? m.nav_job_aborting() : label}
+      </span>
+      {progress && !isAborting && (
+        <span className="relative tabular-nums">{progress.percent}%</span>
+      )}
+    </Link>
+  )
+}
+
 export const Header = () => {
   const [isOpen, setIsOpen] = useState(false)
   const theme = useTheme()
   const ThemeIcon = THEME_ICONS[theme.preference]
   const currentLocale = getLocale()
-  const { data: currentJob } = useCurrentJob({
-    refetchInterval: JOB_POLL_INTERVAL_MS,
-  })
+  const job = useJob()
   const { data: session } = useSession()
   const logout = useLogout()
 
@@ -84,18 +114,7 @@ export const Header = () => {
         <nav className="hidden flex-1 items-center gap-1 md:flex">{links}</nav>
 
         <div className="ml-auto flex items-center gap-2 md:ml-0">
-          {currentJob && (
-            <Link
-              to="/"
-              className="flex items-center gap-2 rounded-full bg-cyan-600 px-3 py-1 text-xs font-medium hover:bg-cyan-700"
-              title={m.nav_job_running({ command: currentJob.command })}
-            >
-              <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
-              <span className="hidden sm:inline">
-                {m.nav_job_running({ command: currentJob.command })}
-              </span>
-            </Link>
-          )}
+          {job.isRunning && <JobChip />}
           <button
             type="button"
             onClick={theme.cycle}

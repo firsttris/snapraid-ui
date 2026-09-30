@@ -23,6 +23,7 @@ import {
   useToggleSchedule,
   useUpdateSchedule,
 } from '../hooks/queries'
+import { getCommandLabel } from '../lib/commands'
 import { formatRelativeTime } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
@@ -107,27 +108,6 @@ const getOutcomeDetail = (outcome: ScheduleOutcome): string | undefined => {
       return m.schedules_skip_recovery()
     default:
       return outcome.error
-  }
-}
-
-const getCommandLabel = (command: SnapRaidCommand): string => {
-  switch (command) {
-    case 'sync':
-      return m.commands_sync()
-    case 'scrub':
-      return m.commands_scrub()
-    case 'status':
-      return m.commands_status()
-    case 'diff':
-      return m.commands_diff()
-    case 'check':
-      return m.commands_check()
-    case 'smart':
-      return m.commands_smart()
-    case 'touch':
-      return m.commands_touch()
-    default:
-      return command
   }
 }
 
