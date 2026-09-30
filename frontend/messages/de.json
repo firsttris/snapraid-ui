@@ -610,5 +610,9 @@
   "health_zero_subsecond": "{count} Dateien haben keinen Sub-Sekunden-Zeitstempel, daher erkennt SnapRAID nicht zuverlässig, wenn sie verschoben oder kopiert werden.",
   "health_run_touch": "Touch ausführen",
   "sync_pre_hash": "Pre-Hash",
-  "sync_pre_hash_hint": "Liest neue Daten zweimal und prüft sie, bevor die Parität berechnet wird. So gelangen durch fehlerhaften RAM oder Kabel keine beschädigten Daten in die Parität. Dauert länger."
+  "sync_pre_hash_hint": "Liest neue Daten zweimal und prüft sie, bevor die Parität berechnet wird. So gelangen durch fehlerhaften RAM oder Kabel keine beschädigten Daten in die Parität. Dauert länger.",
+  "theme_light": "Hell",
+  "theme_dark": "Dunkel",
+  "theme_system": "System",
+  "theme_switch": "Design: {theme} (klicken zum Wechseln)"
 }

@@ -11,7 +11,10 @@ Run sync and scrub, schedule jobs and keep an eye on disk health, all from your 
 [![Platforms](https://img.shields.io/badge/platform-amd64%20%7C%20arm64-lightgrey)](https://hub.docker.com/r/tristanteu/snapraid-ui/tags)
 [![SnapRAID](https://img.shields.io/badge/SnapRAID-14.x-2ea44f)](https://www.snapraid.it/)
 
-<img src="docs/screenshot.png" alt="SnapRAID UI dashboard" width="900">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
+  <img src="docs/screenshot.png" alt="SnapRAID UI dashboard" width="900">
+</picture>
 
 </div>
 
@@ -23,11 +26,11 @@ Run sync and scrub, schedule jobs and keep an eye on disk health, all from your 
 - **Notifications** via ntfy push, e-mail or webhook (Discord, Slack, Home Assistant …) when a job fails, scrub finds damaged data, a scheduled sync is skipped or a disk shows SMART problems
 - **Disk replacement wizard**: restores a failed data or parity disk step by step (`fix -d`, `check -a`, `sync`) and pauses scheduled jobs meanwhile
 - **Disk overview**: usage, file counts, fragmentation and parity headroom per disk
-- **SMART monitoring** and disk power state (active / standby)
+- **SMART monitoring**: health, temperature and failure probability per disk
 - **Logs**: history of every run with full output
 - **Config management**: edit multiple `snapraid.conf` files, excludes and pool settings
 - **Login** via environment variables, no database needed
-- **English and German UI**
+- **English and German UI**, light and dark theme (follows the system or switch in the header)
 
 ## 🐳 Quick start with Docker
 

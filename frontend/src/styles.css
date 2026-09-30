@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* Tailwind v4 draws borders without a color in currentColor; the components expect v3's light gray */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+}
+
 body {
   @apply m-0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
@@ -129,4 +140,122 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
+}
+
+/* ==========================================================================
+   Dark theme
+   Components use the light palette only. In dark mode the palette itself is
+   remapped: the gray scale is inverted, light tints (50-200) become dark tints
+   and dark text shades (700-900) become light. Generated from the default
+   Tailwind colors, see the values of the same names in tailwindcss/theme.css.
+   ========================================================================== */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #161a22;
+  --color-gray-50: #0d1016;
+  --color-gray-100: #1d222c;
+  --color-gray-200: #282e3a;
+  --color-gray-300: #363d4b;
+  --color-gray-400: #5d6574;
+  --color-gray-500: #8f97a4;
+  --color-gray-600: #a9b0bb;
+  --color-gray-700: #c4c9d1;
+  --color-gray-800: #dadde3;
+  --color-gray-900: #eef0f3;
+  --color-gray-950: #f8f9fa;
+  --color-blue-50: color-mix(in oklab, oklch(62.3% 0.214 259.815) 14%, var(--surface));
+  --color-blue-100: color-mix(in oklab, oklch(62.3% 0.214 259.815) 22%, var(--surface));
+  --color-blue-200: color-mix(in oklab, oklch(62.3% 0.214 259.815) 34%, var(--surface));
+  --color-red-50: color-mix(in oklab, oklch(63.7% 0.237 25.331) 14%, var(--surface));
+  --color-red-100: color-mix(in oklab, oklch(63.7% 0.237 25.331) 22%, var(--surface));
+  --color-red-200: color-mix(in oklab, oklch(63.7% 0.237 25.331) 34%, var(--surface));
+  --color-green-50: color-mix(in oklab, oklch(72.3% 0.219 149.579) 14%, var(--surface));
+  --color-green-100: color-mix(in oklab, oklch(72.3% 0.219 149.579) 22%, var(--surface));
+  --color-green-200: color-mix(in oklab, oklch(72.3% 0.219 149.579) 34%, var(--surface));
+  --color-yellow-50: color-mix(in oklab, oklch(79.5% 0.184 86.047) 14%, var(--surface));
+  --color-yellow-100: color-mix(in oklab, oklch(79.5% 0.184 86.047) 22%, var(--surface));
+  --color-yellow-200: color-mix(in oklab, oklch(79.5% 0.184 86.047) 34%, var(--surface));
+  --color-orange-50: color-mix(in oklab, oklch(70.5% 0.213 47.604) 14%, var(--surface));
+  --color-orange-100: color-mix(in oklab, oklch(70.5% 0.213 47.604) 22%, var(--surface));
+  --color-orange-200: color-mix(in oklab, oklch(70.5% 0.213 47.604) 34%, var(--surface));
+  --color-purple-50: color-mix(in oklab, oklch(62.7% 0.265 303.9) 14%, var(--surface));
+  --color-purple-100: color-mix(in oklab, oklch(62.7% 0.265 303.9) 22%, var(--surface));
+  --color-purple-200: color-mix(in oklab, oklch(62.7% 0.265 303.9) 34%, var(--surface));
+  --color-cyan-50: color-mix(in oklab, oklch(71.5% 0.143 215.221) 14%, var(--surface));
+  --color-cyan-100: color-mix(in oklab, oklch(71.5% 0.143 215.221) 22%, var(--surface));
+  --color-cyan-200: color-mix(in oklab, oklch(71.5% 0.143 215.221) 34%, var(--surface));
+  --color-indigo-50: color-mix(in oklab, oklch(58.5% 0.233 277.117) 14%, var(--surface));
+  --color-indigo-100: color-mix(in oklab, oklch(58.5% 0.233 277.117) 22%, var(--surface));
+  --color-indigo-200: color-mix(in oklab, oklch(58.5% 0.233 277.117) 34%, var(--surface));
+  --color-emerald-50: color-mix(in oklab, oklch(69.6% 0.17 162.48) 14%, var(--surface));
+  --color-emerald-100: color-mix(in oklab, oklch(69.6% 0.17 162.48) 22%, var(--surface));
+  --color-emerald-200: color-mix(in oklab, oklch(69.6% 0.17 162.48) 34%, var(--surface));
+}
+
+[data-theme="dark"] body {
+  background-color: var(--color-gray-50);
+}
+
+/* Cards and dialogs; text-white on colored buttons stays white */
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .hover\:bg-white:hover {
+  background-color: var(--surface);
+}
+[data-theme="dark"] .bg-white\/60 {
+  background-color: color-mix(in oklab, var(--surface) 60%, transparent);
+}
+[data-theme="dark"] .bg-white\/95 {
+  background-color: color-mix(in oklab, var(--surface) 95%, transparent);
+}
+
+/* Shadows vanish on a dark page, an outline keeps cards apart */
+[data-theme="dark"] :is(.shadow, .shadow-lg, .shadow-xl) {
+  box-shadow: 0 0 0 1px var(--color-gray-200), 0 4px 16px rgb(0 0 0 / 0.35);
+}
+
+/* Dark text on tinted boxes becomes light; only text, the same shades are hover backgrounds of buttons */
+[data-theme="dark"] :is(.text-blue-700, .hover\:text-blue-700:hover) { color: oklch(80.9% 0.105 251.813); }
+[data-theme="dark"] :is(.text-blue-800, .hover\:text-blue-800:hover) { color: oklch(88.2% 0.059 254.128); }
+[data-theme="dark"] :is(.text-blue-900, .hover\:text-blue-900:hover) { color: oklch(93.2% 0.032 255.585); }
+[data-theme="dark"] :is(.text-red-700, .hover\:text-red-700:hover) { color: oklch(80.8% 0.114 19.571); }
+[data-theme="dark"] :is(.text-red-800, .hover\:text-red-800:hover) { color: oklch(88.5% 0.062 18.334); }
+[data-theme="dark"] :is(.text-red-900, .hover\:text-red-900:hover) { color: oklch(93.6% 0.032 17.717); }
+[data-theme="dark"] :is(.text-green-700, .hover\:text-green-700:hover) { color: oklch(87.1% 0.15 154.449); }
+[data-theme="dark"] :is(.text-green-800, .hover\:text-green-800:hover) { color: oklch(92.5% 0.084 155.995); }
+[data-theme="dark"] :is(.text-green-900, .hover\:text-green-900:hover) { color: oklch(96.2% 0.044 156.743); }
+[data-theme="dark"] :is(.text-yellow-700, .hover\:text-yellow-700:hover) { color: oklch(90.5% 0.182 98.111); }
+[data-theme="dark"] :is(.text-yellow-800, .hover\:text-yellow-800:hover) { color: oklch(94.5% 0.129 101.54); }
+[data-theme="dark"] :is(.text-yellow-900, .hover\:text-yellow-900:hover) { color: oklch(97.3% 0.071 103.193); }
+[data-theme="dark"] :is(.text-orange-700, .hover\:text-orange-700:hover) { color: oklch(83.7% 0.128 66.29); }
+[data-theme="dark"] :is(.text-orange-800, .hover\:text-orange-800:hover) { color: oklch(90.1% 0.076 70.697); }
+[data-theme="dark"] :is(.text-orange-900, .hover\:text-orange-900:hover) { color: oklch(95.4% 0.038 75.164); }
+[data-theme="dark"] :is(.text-purple-700, .hover\:text-purple-700:hover) { color: oklch(82.7% 0.119 306.383); }
+[data-theme="dark"] :is(.text-purple-800, .hover\:text-purple-800:hover) { color: oklch(90.2% 0.063 306.703); }
+[data-theme="dark"] :is(.text-purple-900, .hover\:text-purple-900:hover) { color: oklch(94.6% 0.033 307.174); }
+[data-theme="dark"] :is(.text-cyan-700, .hover\:text-cyan-700:hover) { color: oklch(86.5% 0.127 207.078); }
+[data-theme="dark"] :is(.text-cyan-800, .hover\:text-cyan-800:hover) { color: oklch(91.7% 0.08 205.041); }
+[data-theme="dark"] :is(.text-cyan-900, .hover\:text-cyan-900:hover) { color: oklch(95.6% 0.045 203.388); }
+[data-theme="dark"] :is(.text-indigo-700, .hover\:text-indigo-700:hover) { color: oklch(78.5% 0.115 274.713); }
+[data-theme="dark"] :is(.text-indigo-800, .hover\:text-indigo-800:hover) { color: oklch(87% 0.065 274.039); }
+[data-theme="dark"] :is(.text-indigo-900, .hover\:text-indigo-900:hover) { color: oklch(93% 0.034 272.788); }
+[data-theme="dark"] :is(.text-emerald-700, .hover\:text-emerald-700:hover) { color: oklch(84.5% 0.143 164.978); }
+[data-theme="dark"] :is(.text-emerald-800, .hover\:text-emerald-800:hover) { color: oklch(90.5% 0.093 164.15); }
+[data-theme="dark"] :is(.text-emerald-900, .hover\:text-emerald-900:hover) { color: oklch(95% 0.052 163.051); }
+
+/* Parts that are dark in both themes (header, login, log output) keep the original grays */
+[data-theme="dark"] .theme-fixed {
+  --color-gray-50: oklch(98.5% 0.002 247.839);
+  --color-gray-100: oklch(96.7% 0.003 264.542);
+  --color-gray-200: oklch(92.8% 0.006 264.531);
+  --color-gray-300: oklch(87.2% 0.01 258.338);
+  --color-gray-400: oklch(70.7% 0.022 261.325);
+  --color-gray-500: oklch(55.1% 0.027 264.364);
+  --color-gray-600: oklch(44.6% 0.03 256.802);
+  --color-gray-700: oklch(37.3% 0.034 259.733);
+  --color-gray-800: oklch(27.8% 0.033 256.848);
+  --color-gray-900: oklch(21% 0.034 264.665);
+  --color-gray-950: oklch(13% 0.028 261.692);
 }

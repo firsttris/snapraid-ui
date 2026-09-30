@@ -610,5 +610,9 @@
   "health_zero_subsecond": "{count} files have no sub-second timestamp, so SnapRAID can't reliably tell when they are moved or copied.",
   "health_run_touch": "Run touch",
   "sync_pre_hash": "Pre-hash",
-  "sync_pre_hash_hint": "Reads new data twice and verifies it before computing parity, so faulty RAM or cabling cannot slip damaged data into the parity. Takes longer."
+  "sync_pre_hash_hint": "Reads new data twice and verifies it before computing parity, so faulty RAM or cabling cannot slip damaged data into the parity. Takes longer.",
+  "theme_light": "Light",
+  "theme_dark": "Dark",
+  "theme_system": "System",
+  "theme_switch": "Theme: {theme} (click to switch)"
 }

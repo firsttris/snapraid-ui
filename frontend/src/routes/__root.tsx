@@ -14,6 +14,7 @@ import { FeedbackProvider } from '../components/Feedback'
 import { Header } from '../components/Header'
 import { queryKeys, STATUS_CACHE_MAX_AGE } from '../hooks/queries'
 import { SelectedConfigProvider } from '../hooks/useSelectedConfig'
+import { THEME_INIT_SCRIPT } from '../lib/theme'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 
@@ -100,8 +101,11 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang={getLocale()}>
+    // The init script sets data-theme before React hydrates
+    <html lang={getLocale()} suppressHydrationWarning>
       <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static script, sets the theme before the first paint */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
       <body>

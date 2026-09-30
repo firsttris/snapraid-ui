@@ -57,7 +57,7 @@ export const LogViewer = ({ selectedLog }: LogViewerProps) => {
         {isLoading ? (
           <div className="text-center text-gray-500">{m.common_loading()}</div>
         ) : selectedLog ? (
-          <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto max-h-[calc(100vh-300px)] text-sm font-mono whitespace-pre-wrap">
+          <pre className="theme-fixed bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto max-h-[calc(100vh-300px)] text-sm font-mono whitespace-pre-wrap">
             {logContent}
           </pre>
         ) : (

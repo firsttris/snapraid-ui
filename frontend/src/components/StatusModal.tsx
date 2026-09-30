@@ -65,6 +65,12 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
     (a, b) => b.daysAgo - a.daysAgo,
   )
 
+  // Chart.js draws on a canvas, so it needs the theme's colors as values
+  const themeColor = (name: string) =>
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  const gridColor = themeColor('--color-gray-200')
+  const tickColor = themeColor('--color-gray-500')
+
   const chartData = {
     labels: sortedHistory.map(
       (point) => `${point.daysAgo}${m.status_modal_days_ago()}`,
@@ -80,7 +86,7 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
         tension: 0.4,
         pointRadius: 4,
         pointBackgroundColor: 'rgb(59, 130, 246)',
-        pointBorderColor: '#fff',
+        pointBorderColor: themeColor('--surface') || '#fff',
         pointBorderWidth: 2,
         pointHoverRadius: 6,
       },
@@ -109,10 +115,11 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
         beginAtZero: true,
         max: 100,
         ticks: {
+          color: tickColor,
           callback: (value: string | number) => `${value}%`,
         },
         grid: {
-          color: 'rgba(0, 0, 0, 0.05)',
+          color: gridColor,
         },
       },
       x: {
@@ -120,6 +127,7 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
           display: false,
         },
         ticks: {
+          color: tickColor,
           maxRotation: 0,
           autoSkip: true,
           maxTicksLimit: 8,
@@ -127,6 +135,7 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
         title: {
           display: true,
           text: m.status_modal_days_ago(),
+          color: tickColor,
           font: {
             size: 12,
           },
@@ -428,7 +437,7 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            className="px-6 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
           >
             {m.common_close()}
           </button>

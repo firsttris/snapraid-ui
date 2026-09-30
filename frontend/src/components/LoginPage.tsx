@@ -129,7 +129,7 @@ export const LoginPage = ({
     'w-full rounded-xl border border-white/10 bg-white/5 py-3 pr-4 pl-11 text-white placeholder-gray-500 outline-none transition focus:border-cyan-400/60 focus:bg-white/10 focus:ring-4 focus:ring-cyan-400/15'
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gray-950 px-4 py-12">
+    <main className="theme-fixed relative flex min-h-screen items-center justify-center overflow-hidden bg-gray-950 px-4 py-12">
       {/* Background: grid and soft glows */}
       <div
         className="pointer-events-none absolute inset-0 opacity-40"

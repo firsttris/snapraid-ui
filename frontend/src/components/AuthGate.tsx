@@ -8,7 +8,7 @@ import * as m from '../paraglide/messages'
 import { LoginPage } from './LoginPage'
 
 const FullScreen = ({ children }: { children: ReactNode }) => (
-  <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-950 px-4 text-gray-400">
+  <main className="theme-fixed flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-950 px-4 text-gray-400">
     <HardDrive size={32} className="text-cyan-400" />
     {children}
   </main>

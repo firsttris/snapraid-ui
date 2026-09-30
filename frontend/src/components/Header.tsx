@@ -9,10 +9,14 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Monitor,
+  Moon,
+  Sun,
   X,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useCurrentJob, useLogout, useSession } from '../hooks/queries'
+import { useTheme } from '../lib/theme'
 import * as m from '../paraglide/messages'
 import { getLocale, setLocale } from '../paraglide/runtime'
 
@@ -27,8 +31,18 @@ const NAV_ITEMS = [
   { to: '/notifications', label: m.nav_notifications, icon: Bell },
 ] as const
 
+const THEME_ICONS = { light: Sun, dark: Moon, system: Monitor } as const
+
+const THEME_LABELS = {
+  light: m.theme_light,
+  dark: m.theme_dark,
+  system: m.theme_system,
+} as const
+
 export const Header = () => {
   const [isOpen, setIsOpen] = useState(false)
+  const theme = useTheme()
+  const ThemeIcon = THEME_ICONS[theme.preference]
   const currentLocale = getLocale()
   const { data: currentJob } = useCurrentJob({
     refetchInterval: JOB_POLL_INTERVAL_MS,
@@ -60,7 +74,7 @@ export const Header = () => {
   ))
 
   return (
-    <header className="bg-gray-800 text-white shadow-lg">
+    <header className="theme-fixed bg-gray-800 text-white shadow-lg">
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-2 font-semibold">
           <HardDrive size={22} className="text-cyan-400" />
@@ -82,6 +96,17 @@ export const Header = () => {
               </span>
             </Link>
           )}
+          <button
+            type="button"
+            onClick={theme.cycle}
+            className="rounded-lg p-2 transition-colors hover:bg-gray-700"
+            title={m.theme_switch({ theme: THEME_LABELS[theme.preference]() })}
+            aria-label={m.theme_switch({
+              theme: THEME_LABELS[theme.preference](),
+            })}
+          >
+            <ThemeIcon size={18} />
+          </button>
           <button
             type="button"
             onClick={toggleLocale}
