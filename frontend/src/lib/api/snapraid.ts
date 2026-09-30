@@ -319,44 +319,6 @@ export const probe = async (configPath: string): Promise<ProbeReport> => {
 }
 
 /**
- * Spin up disks
- */
-export const spinUp = async (
-  configPath: string,
-  disks?: string[],
-): Promise<{ success: boolean; message: string; output: string }> => {
-  const response = await fetch(`${API_BASE}/snapraid/up`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ configPath, disks }),
-  })
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to spin up disks')
-  }
-  return response.json()
-}
-
-/**
- * Spin down disks
- */
-export const spinDown = async (
-  configPath: string,
-  disks?: string[],
-): Promise<{ success: boolean; message: string; output: string }> => {
-  const response = await fetch(`${API_BASE}/snapraid/down`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ configPath, disks }),
-  })
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to spin down disks')
-  }
-  return response.json()
-}
-
-/**
  * Get device information
  */
 export const getDevices = async (

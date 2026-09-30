@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   Menu,
   X,
-  Zap,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useCurrentJob } from '../hooks/queries'
@@ -21,7 +20,6 @@ const JOB_POLL_INTERVAL_MS = 5000
 const NAV_ITEMS = [
   { to: '/', label: m.nav_dashboard, icon: LayoutDashboard },
   { to: '/smart', label: m.nav_smart, icon: Activity },
-  { to: '/power', label: m.nav_power, icon: Zap },
   { to: '/schedules', label: m.schedules, icon: Calendar },
   { to: '/logs', label: m.logs, icon: FileText },
 ] as const

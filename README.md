@@ -21,7 +21,7 @@ Run sync and scrub, schedule jobs and keep an eye on disk health, all from your 
 - **One-click commands**: sync, scrub, status, diff, check, fix, with live output over WebSocket
 - **Scheduler**: cron-based sync and scrub jobs, no crontab editing
 - **Disk overview**: usage, file counts, fragmentation and parity headroom per disk
-- **SMART monitoring** and **disk power** control (spin down / up)
+- **SMART monitoring** and disk power state (active / standby)
 - **Logs**: history of every run with full output
 - **Config management**: edit multiple `snapraid.conf` files, excludes and pool settings
 - **English and German UI**
@@ -43,7 +43,7 @@ docker run -d --name snapraid-ui \
 
 Open **http://localhost:3000** and add your `snapraid.conf` in *Manage Configurations*.
 
-**Mount your disks at the same paths as on the host**, so the paths in `snapraid.conf` stay valid. Parity and content locations must be writable. `--privileged` is only needed for SMART data and disk power.
+**Mount your disks at the same paths as on the host**, so the paths in `snapraid.conf` stay valid. Parity and content locations must be writable. `--privileged` is only needed for SMART data and the disk power state.
 
 ### Docker Compose
 

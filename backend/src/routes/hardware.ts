@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { join } from "@std/path";
 import { parseProbeOutput } from "../parsers/probe-parser.ts";
 import { parseSmartOutput } from "../parsers/smart-parser.ts";
 import { snapraidCommand, resolveFromBase } from "../config.ts";
@@ -109,104 +108,6 @@ hardware.get("/parity-usage", async (c) => {
   try {
     const config = await parseSnapRaidConfig(configPath);
     return c.json(await getParityUsage(config));
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-// POST /api/snapraid/up - Spin up all disks
-hardware.post("/up", async (c) => {
-  const { configPath: relativePath, disks } = await c.req.json();
-
-  if (!relativePath) {
-    return c.json({ error: "Missing configPath" }, 400);
-  }
-
-  const configPath = resolveFromBase(relativePath);
-
-  try {
-    const args = ["-c", configPath];
-    
-    // Add disk filters if specific disks are requested
-    if (disks && Array.isArray(disks) && disks.length > 0) {
-      for (const disk of disks) {
-        args.push("-d", disk);
-      }
-    }
-    
-    args.push("up");
-
-    const command = snapraidCommand(args);
-
-    const { code, stdout, stderr } = await command.output();
-    const output = new TextDecoder().decode(stdout);
-    const errorOutput = new TextDecoder().decode(stderr);
-
-    if (code !== 0) {
-      return c.json({ 
-        error: errorOutput || "Failed to spin up disks",
-        exitCode: code,
-        output 
-      }, 500);
-    }
-
-    return c.json({
-      success: true,
-      message: disks && disks.length > 0 
-        ? `Spun up disks: ${disks.join(', ')}` 
-        : "Spun up all disks",
-      output,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-// POST /api/snapraid/down - Spin down all disks
-hardware.post("/down", async (c) => {
-  const { configPath: relativePath, disks } = await c.req.json();
-
-  if (!relativePath) {
-    return c.json({ error: "Missing configPath" }, 400);
-  }
-
-  const configPath = resolveFromBase(relativePath);
-
-  try {
-    const args = ["-c", configPath];
-    
-    // Add disk filters if specific disks are requested
-    if (disks && Array.isArray(disks) && disks.length > 0) {
-      for (const disk of disks) {
-        args.push("-d", disk);
-      }
-    }
-    
-    args.push("down");
-
-    const command = snapraidCommand(args);
-
-    const { code, stdout, stderr } = await command.output();
-    const output = new TextDecoder().decode(stdout);
-    const errorOutput = new TextDecoder().decode(stderr);
-
-    if (code !== 0) {
-      return c.json({ 
-        error: errorOutput || "Failed to spin down disks",
-        exitCode: code,
-        output 
-      }, 500);
-    }
-
-    return c.json({
-      success: true,
-      message: disks && disks.length > 0 
-        ? `Spun down disks: ${disks.join(', ')}` 
-        : "Spun down all disks",
-      output,
-      timestamp: new Date().toISOString(),
-    });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
