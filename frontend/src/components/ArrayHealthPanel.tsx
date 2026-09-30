@@ -21,6 +21,7 @@ interface ArrayHealthPanelProps {
   isStatusLoading: boolean
   isStatusError: boolean
   isBusy: boolean
+  statusTimestamp: string | undefined
   lastSync: LastRun | null | undefined
   lastScrub: LastRun | null | undefined
   nextSchedule: Schedule | undefined
@@ -159,6 +160,7 @@ export const ArrayHealthPanel = ({
   isStatusLoading,
   isStatusError,
   isBusy,
+  statusTimestamp,
   lastSync,
   lastScrub,
   nextSchedule,
@@ -172,9 +174,12 @@ export const ArrayHealthPanel = ({
   // sync failed before recording new files
   const lastSyncFailed =
     !!lastSync && lastSync.result !== 'ok' && lastSync.result !== 'warning'
-  const health: Health = isBusy
-    ? 'busy'
-    : !status || isStatusError
+  // While a job holds SnapRAID's lock the last known status (kept across reloads) stands in
+  const health: Health = !status
+    ? isBusy
+      ? 'busy'
+      : 'unknown'
+    : isStatusError && !isBusy
       ? 'unknown'
       : status.hasErrors
         ? 'errors'
@@ -229,6 +234,14 @@ export const ArrayHealthPanel = ({
           <div>
             <p className="font-semibold">{title}</p>
             <p className="text-sm">{message}</p>
+            {isBusy && status && statusTimestamp && (
+              <p className="mt-1 text-xs opacity-80">
+                ⏳{' '}
+                {m.health_busy_stale({
+                  time: formatRelativeTime(statusTimestamp, getLocale()),
+                })}
+              </p>
+            )}
             {badBlocks > 0 && (
               <div className="mt-3">
                 <p className="text-sm font-medium">

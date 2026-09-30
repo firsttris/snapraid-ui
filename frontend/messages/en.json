@@ -345,6 +345,7 @@
   "health_errors_msg": "SnapRAID reports bad blocks. Check the details and run a fix if needed.",
   "health_busy": "Job running",
   "health_busy_msg": "SnapRAID is busy right now. The status is updated once the running job has finished.",
+  "health_busy_stale": "A job is running. Showing the status from {time}.",
   "health_unknown": "Status unknown",
   "health_unknown_msg": "The status could not be read. Has an initial sync been run yet?",
   "health_loading": "Loading status…",

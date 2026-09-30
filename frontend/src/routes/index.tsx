@@ -285,6 +285,7 @@ function Dashboard() {
           isStatusLoading={isStatusFetching}
           isStatusError={isStatusError}
           isBusy={statusError instanceof SnapRaidBusyError}
+          statusTimestamp={statusData?.timestamp}
           lastSync={lastRuns?.sync}
           lastScrub={lastRuns?.scrub}
           nextSchedule={nextSchedule}

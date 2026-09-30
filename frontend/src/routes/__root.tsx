@@ -1,5 +1,7 @@
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
 import { TanStackDevtools } from '@tanstack/react-devtools'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient } from '@tanstack/react-query'
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import {
   createRootRoute,
   HeadContent,
@@ -10,6 +12,7 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
 import { FeedbackProvider } from '../components/Feedback'
 import { Header } from '../components/Header'
+import { queryKeys, STATUS_CACHE_MAX_AGE } from '../hooks/queries'
 import { SelectedConfigProvider } from '../hooks/useSelectedConfig'
 import { connectWebSocket, disconnectWebSocket } from '../lib/api/websocket'
 import * as m from '../paraglide/messages'
@@ -27,6 +30,36 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+// No storage during SSR or when the browser blocks it, the cache then just is not persisted
+const browserStorage = (() => {
+  try {
+    return typeof window === 'undefined' ? undefined : window.localStorage
+  } catch {
+    return undefined
+  }
+})()
+
+const persister = createSyncStoragePersister({
+  storage: browserStorage,
+  key: 'snapraid-ui-query-cache',
+})
+
+const persistOptions = {
+  persister,
+  maxAge: STATUS_CACHE_MAX_AGE,
+  // Bump when the persisted data shape changes
+  buster: '1',
+  dehydrateOptions: {
+    // Only the status is persisted; kept after a busy refetch too, which leaves its last data in place
+    shouldDehydrateQuery: (query: {
+      queryKey: readonly unknown[]
+      state: { data: unknown }
+    }) =>
+      query.queryKey[0] === queryKeys.status[0] &&
+      query.state.data !== undefined,
+  },
+}
 
 export const Route = createRootRoute({
   notFoundComponent: () => (
@@ -83,7 +116,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <QueryClientProvider client={queryClient}>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={persistOptions}
+        >
           <FeedbackProvider>
             <SelectedConfigProvider>
               <Header />
@@ -103,7 +139,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               ]}
             />
           )}
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
         <Scripts />
       </body>
     </html>

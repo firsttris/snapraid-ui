@@ -101,6 +101,9 @@ export const useCurrentJob = (
   })
 }
 
+// Status survives page reloads (see __root.tsx), so the dashboard has data while a job holds SnapRAID's lock
+export const STATUS_CACHE_MAX_AGE = 1000 * 60 * 60 * 24
+
 export const useStatus = (
   configPath?: string,
   options?: Omit<
@@ -115,6 +118,7 @@ export const useStatus = (
   return useQuery({
     queryKey: [...queryKeys.status, configPath],
     queryFn: () => getStatus(configPath),
+    gcTime: STATUS_CACHE_MAX_AGE,
     ...options,
   })
 }
