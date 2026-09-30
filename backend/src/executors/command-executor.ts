@@ -1,5 +1,6 @@
 import type { SnapRaidCommand, CommandOutput, RunningJob } from "@shared/types.ts";
 import type { LogManager } from "../log-manager.ts";
+import { basename } from "@std/path";
 import { snapraidCommand } from "../config.ts";
 
 /**
@@ -109,6 +110,7 @@ export const executeCommand = async (
     configPath,
     startTime: timestamp,
     processId,
+    logFile: logPath ? basename(logPath) : undefined,
   };
 
   const cmd = snapraidCommand(args);

@@ -626,5 +626,7 @@
   "smart_monitor_standby_hint": "The disk is asleep. SMART data is not read, so it is not woken up.",
   "smart_monitor_loading_hint": "Reading SMART data from the disks, this takes a few seconds…",
   "smart_monitor_no_disks": "SnapRAID found no disks with SMART data. Inside Docker, SMART needs the container to run with --privileged.",
-  "disks_loading": "Reading disk usage…"
+  "disks_loading": "Reading disk usage…",
+  "health_running_now": "Running now",
+  "health_previous_run": "Before: {time} · {result}"
 }

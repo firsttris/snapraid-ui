@@ -626,5 +626,7 @@
   "smart_monitor_standby_hint": "Die Platte schläft. SMART-Daten werden nicht gelesen, damit sie nicht aufgeweckt wird.",
   "smart_monitor_loading_hint": "SMART-Daten werden von den Platten gelesen, das dauert ein paar Sekunden…",
   "smart_monitor_no_disks": "SnapRAID hat keine Platten mit SMART-Daten gefunden. In Docker braucht SMART einen Container mit --privileged.",
-  "disks_loading": "Plattenbelegung wird gelesen…"
+  "disks_loading": "Plattenbelegung wird gelesen…",
+  "health_running_now": "Läuft gerade",
+  "health_previous_run": "Zuvor: {time} · {result}"
 }

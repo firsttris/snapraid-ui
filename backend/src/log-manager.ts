@@ -6,7 +6,7 @@ export interface LogManager {
   ensureLogDirectory(): Promise<void>;
   getLogPath(command: SnapRaidCommand): string;
   listLogs(): Promise<LogFile[]>;
-  findLastRun(command: SnapRaidCommand, configPath: string): Promise<LastRun | null>;
+  findLastRun(command: SnapRaidCommand, configPath: string, skipLogFile?: string): Promise<LastRun | null>;
   readLog(filename: string): Promise<string>;
   rotateLogs(maxFiles: number, maxAge: number): Promise<number>;
   deleteLog(filename: string): Promise<void>;
@@ -111,10 +111,15 @@ export const createLogManager = (logDirectory: string): LogManager => {
   };
 
   /**
-   * Find the newest run of a command for a config, using the `conf:file` tag of each log
+   * Find the newest run of a command for a config, using the `conf:file` tag of each log.
+   * `skipLogFile` is the log of a job still running, it would read as incomplete.
    */
-  const findLastRun = async (command: SnapRaidCommand, configPath: string): Promise<LastRun | null> => {
-    const logs = (await listLogs()).filter((log) => log.command === command);
+  const findLastRun = async (
+    command: SnapRaidCommand,
+    configPath: string,
+    skipLogFile?: string,
+  ): Promise<LastRun | null> => {
+    const logs = (await listLogs()).filter((log) => log.command === command && log.filename !== skipLogFile);
 
     for (const log of logs) {
       let content: string;

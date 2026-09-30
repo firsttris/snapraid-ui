@@ -110,6 +110,7 @@ export interface RunningJob {
   startTime: string; // ISO string
   processId: string;
   aborting?: boolean; // Abort requested, waiting for SnapRAID to save its state
+  logFile?: string; // Log the job is writing, it has no result yet
 }
 
 // Outcome of a finished run, from the `summary:exit` tag of its log

@@ -116,11 +116,13 @@ snapraid.get("/last-runs", async (c) => {
   }
 
   const configPath = resolveFromBase(relativePath);
+  const job = runner.getCurrentJob();
+  const runningLog = job?.configPath === configPath ? job.logFile : undefined;
 
   try {
     const [sync, scrub] = await Promise.all([
-      state.logManager.findLastRun("sync", configPath),
-      state.logManager.findLastRun("scrub", configPath),
+      state.logManager.findLastRun("sync", configPath, runningLog),
+      state.logManager.findLastRun("scrub", configPath, runningLog),
     ]);
     return c.json({ sync, scrub });
   } catch (error) {

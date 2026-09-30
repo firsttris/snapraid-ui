@@ -27,6 +27,7 @@ interface ArrayHealthPanelProps {
   lastScrub: LastRun | null | undefined
   nextSchedule: Schedule | undefined
   isSchedulesLoading: boolean
+  runningCommand: string | undefined // Job of this config that is running right now
   onRefresh: () => void
   onShowDetails: () => void
   onFixErrors: () => void
@@ -119,11 +120,31 @@ const LastRunTile = ({
   label,
   run,
   staleDays,
+  running,
 }: {
   label: string
   run: LastRun | null | undefined
   staleDays: number
+  running: boolean
 }) => {
+  if (running) {
+    return (
+      <Tile label={label}>
+        <p className="flex items-center gap-2 text-lg font-semibold text-blue-600">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-blue-600" />
+          {m.health_running_now()}
+        </p>
+        {run && (
+          <p className="mt-1 text-xs text-gray-500">
+            {m.health_previous_run({
+              time: formatRelativeTime(run.timestamp, getLocale()),
+              result: getResultLabel(run.result),
+            })}
+          </p>
+        )}
+      </Tile>
+    )
+  }
   if (run === undefined) {
     return (
       <Tile label={label}>
@@ -176,6 +197,7 @@ export const ArrayHealthPanel = ({
   lastScrub,
   nextSchedule,
   isSchedulesLoading,
+  runningCommand,
   onRefresh,
   onShowDetails,
   onFixErrors,
@@ -312,11 +334,13 @@ export const ArrayHealthPanel = ({
           label={m.health_last_sync()}
           run={lastSync}
           staleDays={SYNC_STALE_DAYS}
+          running={runningCommand === 'sync'}
         />
         <LastRunTile
           label={m.health_last_scrub()}
           run={lastScrub}
           staleDays={SCRUB_STALE_DAYS}
+          running={runningCommand === 'scrub'}
         />
         <Tile label={m.health_scrub_coverage()}>
           {isStatusLoading && !status ? (

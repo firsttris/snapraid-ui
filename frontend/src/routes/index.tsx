@@ -305,6 +305,12 @@ function Dashboard() {
           lastScrub={lastRuns?.scrub}
           nextSchedule={nextSchedule}
           isSchedulesLoading={isSchedulesLoading}
+          runningCommand={
+            currentJob &&
+            currentJob.configPath.replace(/^.*[/\\]/, '') === configFile
+              ? currentJob.command
+              : undefined
+          }
           onRefresh={() => refetchStatus()}
           onShowDetails={() => setShowStatusModal(true)}
           onFixErrors={handleFixErrors}
