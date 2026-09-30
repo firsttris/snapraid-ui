@@ -9,7 +9,7 @@ import {
 import { buildRunNotification, buildSkipNotification, diffSmartProblems } from "../notification-events.ts";
 import { failedReport, parseRunReport } from "../run-report.ts";
 import { combineResults, scheduleSteps } from "../scheduler.ts";
-import { assessSmart } from "@shared/smart-health.ts";
+import { assessSmart, attributeLevel, smartHints } from "@shared/smart-health.ts";
 import { parseSmartOutput } from "../parsers/smart-parser.ts";
 
 const SYNC_LOG = `summary:added:12
@@ -232,8 +232,33 @@ Deno.test("assessSmart - a few percent failure probability is normal, sectors an
   assertEquals(byName.d2.reasons, [
     { kind: "status", status: "FAIL" },
     { kind: "sectors", attribute: "reallocated", count: 1024 },
+    { kind: "errors", attribute: "crc", count: 12 },
     { kind: "failure_probability", percent: 40.55 },
   ]);
-  // Error log entries only
+  // Error log entries only, NVMe error log entries alone are no problem
   assertEquals(byName.parity, { level: "warning", reasons: [{ kind: "status", status: "LOGERR" }] });
+  // smartctl could not open it, so it is not monitored
+  assertEquals(byName.d3, { level: "warning", reasons: [{ kind: "unreadable" }] });
+
+  assertEquals(smartHints([byName.d2]), ["replace", "cable"]);
+  assertEquals(smartHints([byName.d3]), ["access"]);
+});
+
+Deno.test("assessSmart - a sleeping disk is not unreadable, worn SSDs and media errors are problems", () => {
+  assertEquals(assessSmart(disk({ status: "UNKNOWN", standby: true })).level, "ok");
+  assertEquals(assessSmart(disk({ wearLevel: 79 })).level, "ok");
+  assertEquals(assessSmart(disk({ wearLevel: 85 })).reasons, [{ kind: "wear", percent: 85 }]);
+  assertEquals(assessSmart(disk({ wearLevel: 104 })).level, "critical");
+  assertEquals(assessSmart(disk({ errorMedium: 2, errorProtocol: 500 })).reasons, [
+    { kind: "errors", attribute: "medium", count: 2 },
+  ]);
+});
+
+Deno.test("attributeLevel - failed and watched attributes stand out", () => {
+  const attribute = { id: 1, name: "Raw_Read_Error_Rate", value: 100, worst: 100, threshold: 6, raw: "123456", flag: "" };
+  assertEquals(attributeLevel(attribute), "ok");
+  assertEquals(attributeLevel({ ...attribute, whenFailed: "past" }), "warning");
+  assertEquals(attributeLevel({ ...attribute, whenFailed: "now" }), "critical");
+  assertEquals(attributeLevel({ ...attribute, id: 197, raw: "8" }), "warning");
+  assertEquals(attributeLevel({ ...attribute, id: 197, raw: "0" }), "ok");
 });

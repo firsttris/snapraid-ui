@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { parseProbeOutput } from "../parsers/probe-parser.ts";
-import { parseSmartOutput } from "../parsers/smart-parser.ts";
+import { parseSmartArrayFailure, parseSmartOutput } from "../parsers/smart-parser.ts";
 import { snapraidCommand, resolveFromBase } from "../config.ts";
 import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
 import { parseSnapRaidConfig } from "../config-parser.ts";
@@ -25,18 +25,19 @@ hardware.get("/smart", async (c) => {
     const output = new TextDecoder().decode(stdout);
     const { log, text: errorOutput } = splitStructuredOutput(new TextDecoder().decode(stderr));
 
-    if (code !== 0) {
+    const disks = parseSmartOutput(log);
+
+    // SnapRAID exits with an error when a disk is FAIL or PREFAIL, the report is complete though
+    if (code !== 0 && disks.length === 0) {
       return c.json({ 
         error: errorOutput || "Failed to get SMART report",
         exitCode: code 
       }, 500);
     }
 
-    // Parse SMART output
-    const disks = parseSmartOutput(log);
-
     return c.json({
       disks,
+      arrayFailureProbability: parseSmartArrayFailure(log),
       timestamp: new Date().toISOString(),
       rawOutput: output,
     });

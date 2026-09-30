@@ -6,7 +6,7 @@ import type {
   SmartDiskInfo,
   SnapRaidCommand,
 } from "@shared/types.ts";
-import { assessSmart, type SmartAssessment, type SmartReason, smartSignature } from "@shared/smart-health.ts";
+import { assessSmart, type SmartAssessment, type SmartReason, smartHints, smartSignature } from "@shared/smart-health.ts";
 import { resolveFromBase } from "./config.ts";
 import { loadNotificationSettings, type Notification, notify } from "./notifications.ts";
 import { isSuccessful, type RunReport } from "./run-report.ts";
@@ -56,9 +56,24 @@ const TEXT = {
           return `${reason.count} ${
             { reallocated: "reallocated", pending: "pending", uncorrectable: "uncorrectable" }[reason.attribute]
           } sectors`;
+        case "errors":
+          return {
+            reported_uncorrectable: `${reason.count} uncorrectable read errors`,
+            crc: `${reason.count} transfer (CRC) errors`,
+            medium: `${reason.count} media errors`,
+          }[reason.attribute];
+        case "wear":
+          return `${reason.percent}% of the SSD's rated lifetime used`;
+        case "unreadable":
+          return "SMART data could not be read";
       }
     },
-    smartHint: "Consider replacing the disk before it fails.",
+    smartHint: {
+      replace: "Consider replacing the disk before it fails.",
+      cable: "Transfer errors usually come from the cable or the backplane; replace it if the count keeps growing.",
+      cooling: "Improve the cooling of the disk.",
+      access: "An unreadable disk is not monitored. Check that it is connected; in Docker SMART needs a --privileged container.",
+    },
   },
   de: {
     result: {
@@ -109,9 +124,24 @@ const TEXT = {
               reason.attribute
             ]
           } Sektoren`;
+        case "errors":
+          return {
+            reported_uncorrectable: `${reason.count} nicht korrigierbare Lesefehler`,
+            crc: `${reason.count} Übertragungsfehler (CRC)`,
+            medium: `${reason.count} Medienfehler`,
+          }[reason.attribute];
+        case "wear":
+          return `${reason.percent} % der vorgesehenen SSD-Lebensdauer verbraucht`;
+        case "unreadable":
+          return "SMART-Daten konnten nicht gelesen werden";
       }
     },
-    smartHint: "Die Platte sollte ersetzt werden, bevor sie ausfällt.",
+    smartHint: {
+      replace: "Die Platte sollte ersetzt werden, bevor sie ausfällt.",
+      cable: "Übertragungsfehler kommen meist vom Kabel oder der Backplane; tausche es, wenn der Zähler weiter steigt.",
+      cooling: "Die Kühlung der Platte sollte verbessert werden.",
+      access: "Eine nicht lesbare Platte wird nicht überwacht. Prüfe, ob sie angeschlossen ist; in Docker braucht SMART einen Container mit --privileged.",
+    },
   },
 } as const;
 
@@ -338,6 +368,7 @@ export const notifySmart = (configPath: string, disks: SmartDiskInfo[]): Promise
       event: "smart_warning",
       severity: report.some(({ assessment }) => assessment.level === "critical") ? "error" : "warning",
       title: t.smartTitle(basename(configPath)),
-      message: [...lines, "", t.smartHint].join("\n"),
+      message: [...lines, "", ...smartHints(report.map(({ assessment }) => assessment)).map((hint) => t.smartHint[hint])]
+        .join("\n"),
     });
   });

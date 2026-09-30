@@ -25,6 +25,8 @@ attr:/dev/nvme0n1:parity:interface:NVMe
 attr:/dev/nvme0n1:parity:size:2000398934016
 attr:/dev/nvme0n1:parity:rotationrate:0
 smart:/dev/nvme0n1:parity
+attr:/dev/nvme0n1:parity:error_protocol:1479
+attr:/dev/nvme0n1:parity:error_medium:0
 attr:/dev/nvme0n1:parity:wear_level:3
 attr:/dev/nvme0n1:parity:flags:64:40
 attr:/dev/nvme0n1:parity:temperature:41
@@ -37,6 +39,7 @@ attr:/dev/sdb:d2:flags:24:18
 attr:/dev/sdb:d2:afr:0.52:0.405479
 attr:/dev/sdb:d2:5:1024:400:1:1:10:Reallocated_Sector_Ct:prefail:always:now
 attr:/dev/sdb:d2:9:4294988592:10000532c:50:50:0:Power_On_Hours:oldage:always:never
+attr:/dev/sdb:d2:199:12:c:200:200:0:UDMA_CRC_Error_Count:oldage:always:never
 info:/dev/sdc:d3
 smart:/dev/sdc:d3
 attr:/dev/sdc:d3:flags:2:2

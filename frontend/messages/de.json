@@ -722,5 +722,21 @@
   "log_raw_no_matches": "Keine passenden Zeilen",
   "log_raw_show_all": "Alle {count} Zeilen anzeigen",
   "health_hint_scrub_oldest": "Manche Blöcke wurden seit {days} Tagen nicht mehr geprüft. Ein Scrub verifiziert sie, solange die Parität stille Datenfehler noch reparieren kann.",
-  "health_no_log": "Kein Log"
+  "health_no_log": "Kein Log",
+  "smart_reason_unreadable": "SMART-Daten konnten nicht gelesen werden, die Platte wird nicht überwacht",
+  "smart_reason_reported_uncorrectable": "{count} nicht korrigierbare Lesefehler",
+  "smart_reason_crc": "{count} Übertragungsfehler (CRC)",
+  "smart_reason_medium_errors": "{count} Medienfehler",
+  "smart_reason_wear": "{percent} % der vorgesehenen SSD-Lebensdauer verbraucht",
+  "smart_hint_replace": "Die Platte sollte ersetzt werden, bevor sie ausfällt.",
+  "smart_hint_cable": "Übertragungsfehler und Einträge im Fehlerprotokoll kommen meist vom Kabel oder der Backplane. Tausche es, wenn der Zähler weiter steigt; ein gleichbleibender Zähler ist harmlos.",
+  "smart_hint_cooling": "Die Kühlung sollte verbessert werden, Hitze verkürzt die Lebensdauer einer Platte.",
+  "smart_hint_access": "Prüfe, ob die Platte angeschlossen ist. In Docker braucht SMART einen Container mit --privileged; manche USB-Gehäuse reichen SMART nicht durch.",
+  "smart_monitor_array_failure": "Wahrscheinlichkeit, dass im nächsten Jahr mindestens eine Platte ausfällt",
+  "smart_monitor_array_failure_hint": "Schätzung von SnapRAID aus den SMART-Daten aller Array-Platten. Die Parität verkraftet so viele Ausfälle, wie du Paritätsstufen hast.",
+  "smart_monitor_wear_level": "SSD-Verschleiß",
+  "smart_monitor_media_errors": "Medienfehler",
+  "smart_monitor_error_log": "Fehlerprotokoll-Einträge",
+  "smart_monitor_hdd": "HDD, {rpm} U/min",
+  "smart_monitor_ssd": "SSD"
 }

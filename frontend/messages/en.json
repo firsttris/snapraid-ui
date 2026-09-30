@@ -722,5 +722,21 @@
   "log_raw_no_matches": "No lines match",
   "log_raw_show_all": "Show all {count} lines",
   "health_hint_scrub_oldest": "Some blocks were last verified {days} days ago. A scrub checks them while parity can still repair silent data errors.",
-  "health_no_log": "No log"
+  "health_no_log": "No log",
+  "smart_reason_unreadable": "SMART data could not be read, the disk is not monitored",
+  "smart_reason_reported_uncorrectable": "{count} uncorrectable read errors",
+  "smart_reason_crc": "{count} transfer errors (CRC)",
+  "smart_reason_medium_errors": "{count} media errors",
+  "smart_reason_wear": "{percent} % of the SSD's rated lifetime used",
+  "smart_hint_replace": "Replace the disk before it fails.",
+  "smart_hint_cable": "Transfer errors and error log entries usually come from the cable or the backplane. Replace it if the count keeps growing; a count that stays the same is harmless.",
+  "smart_hint_cooling": "Improve the cooling, heat shortens the life of a disk.",
+  "smart_hint_access": "Check that the disk is connected. Inside Docker, SMART needs the container to run with --privileged; some USB enclosures do not pass SMART through.",
+  "smart_monitor_array_failure": "Probability that at least one disk fails in the next year",
+  "smart_monitor_array_failure_hint": "SnapRAID's estimate from the SMART data of all array disks. Parity covers as many failures as you have parity levels.",
+  "smart_monitor_wear_level": "SSD wear",
+  "smart_monitor_media_errors": "Media errors",
+  "smart_monitor_error_log": "Error log entries",
+  "smart_monitor_hdd": "HDD, {rpm} rpm",
+  "smart_monitor_ssd": "SSD"
 }

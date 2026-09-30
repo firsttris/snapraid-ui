@@ -172,8 +172,14 @@ export interface SmartDiskInfo {
   powerOnHours?: number;
   failureProbability?: number; // Percentage 0-100
   model?: string;
+  family?: string;
+  interface?: string;   // SATA, NVMe, ...
+  rotationRate?: number; // rpm, 0 for SSDs
   serial?: string;
   size?: string;
+  wearLevel?: number;   // SSD lifetime used in percent, may exceed 100
+  errorMedium?: number; // Media errors, e.g. NVMe "Media and Data Integrity Errors"
+  errorProtocol?: number; // Error log entries, harmless in most cases
   standby?: boolean; // Asleep; smartctl leaves it alone instead of spinning it up, so there is no data
   attributes?: SmartAttribute[];
 }
@@ -186,6 +192,7 @@ export interface SmartAttribute {
   threshold: number;
   raw: string;
   flag: string;
+  whenFailed?: 'now' | 'past'; // Normalized value is or was below its threshold
 }
 
 export interface DiskPowerStatus {
@@ -196,6 +203,7 @@ export interface DiskPowerStatus {
 
 export interface SmartReport {
   disks: SmartDiskInfo[];
+  arrayFailureProbability?: number; // Percentage 0-100 that at least one array disk fails in the next year
   timestamp: string; // ISO string
   rawOutput: string;
 }
@@ -356,19 +364,6 @@ export interface CheckReport {
   okCount: number;
   timestamp: string;       // ISO string
   rawOutput: string;
-}
-
-// SMART disk info (from snapraid smart command)
-export interface SmartDiskInfo {
-  name: string;
-  device: string;
-  status: 'OK' | 'UNKNOWN' | 'FAIL' | 'PREFAIL' | 'LOGFAIL' | 'LOGERR' | 'SELFERR';
-  temperature?: number;
-  powerOnHours?: number;
-  failureProbability?: number;
-  model?: string;
-  serial?: string;
-  size?: string;
 }
 
 // Probe disk info (from snapraid probe command)

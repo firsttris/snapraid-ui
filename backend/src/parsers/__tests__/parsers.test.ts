@@ -4,7 +4,7 @@ import { parseDiffOutput } from "../diff-parser.ts";
 import { parseListOutput } from "../list-parser.ts";
 import { parseCheckOutput } from "../check-parser.ts";
 import { parseDupOutput } from "../dup-parser.ts";
-import { parseSmartOutput } from "../smart-parser.ts";
+import { parseSmartArrayFailure, parseSmartOutput } from "../smart-parser.ts";
 import { parseProbeOutput } from "../probe-parser.ts";
 import { parseDfOutput } from "../df-parser.ts";
 import { isLockedOutput, parseLogTags, splitStructuredOutput, unescapeTagValue } from "../structured-log.ts";
@@ -149,6 +149,22 @@ Deno.test("parseSmartOutput - disk status from smartctl flags", () => {
   // only the lower 32 bits are the hours
   assertEquals(disks[2].powerOnHours, 21296);
   assertEquals(disks[2].attributes![0].flag, "prefail, failed now");
+  assertEquals(disks[2].attributes![0].whenFailed, "now");
+  assertEquals(disks[0].attributes![0].whenFailed, undefined);
+});
+
+Deno.test("parseSmartOutput - drive details, SSD wear and error counters", () => {
+  const [hdd, ssd] = parseSmartOutput(fixture("smart.log"));
+
+  assertEquals([hdd.family, hdd.interface, hdd.rotationRate], ["Western Digital Red", "SATA", 5400]);
+  assertEquals([ssd.interface, ssd.rotationRate, ssd.wearLevel], ["NVMe", 0, 3]);
+  assertEquals([ssd.errorProtocol, ssd.errorMedium], [1479, 0]);
+  assertEquals(hdd.wearLevel, undefined);
+});
+
+Deno.test("parseSmartArrayFailure - probability of at least one failure", () => {
+  assertEquals(parseSmartArrayFailure(fixture("smart.log")), 43.2);
+  assertEquals(parseSmartArrayFailure("info:/dev/sda:d1"), undefined);
 });
 
 Deno.test("parseProbeOutput - power states", () => {

@@ -1,9 +1,18 @@
 import {
   assessSmart,
+  attributeLevel,
+  CRITICAL_CELSIUS,
+  CRITICAL_FAILURE_PROBABILITY,
+  CRITICAL_WEAR_PERCENT,
   DEFAULT_SMART_FAILURE_THRESHOLD,
+  type ErrorAttribute,
+  HOT_CELSIUS,
   type SmartAssessment,
+  type SmartHint,
   type SmartLevel,
   type SmartReason,
+  smartHints,
+  WORN_PERCENT,
 } from '@shared/smart-health'
 import type { SmartDiskInfo } from '@shared/types'
 import { RefreshCw } from 'lucide-react'
@@ -63,6 +72,15 @@ const LEVEL_STYLES: Record<
   },
 }
 
+const ERROR_TEXT: Record<
+  ErrorAttribute,
+  (inputs: { count: number }) => string
+> = {
+  reported_uncorrectable: m.smart_reason_reported_uncorrectable,
+  crc: m.smart_reason_crc,
+  medium: m.smart_reason_medium_errors,
+}
+
 export const describeSmartReason = (reason: SmartReason): string => {
   switch (reason.kind) {
     case 'status':
@@ -80,6 +98,12 @@ export const describeSmartReason = (reason: SmartReason): string => {
         default:
           return reason.status
       }
+    case 'unreadable':
+      return m.smart_reason_unreadable()
+    case 'errors':
+      return ERROR_TEXT[reason.attribute]({ count: reason.count })
+    case 'wear':
+      return m.smart_reason_wear({ percent: reason.percent })
     case 'failure_probability':
       return m.smart_reason_probability({
         percent: formatPercent(reason.percent, 1),
@@ -98,9 +122,16 @@ export const describeSmartReason = (reason: SmartReason): string => {
   }
 }
 
+const HINT_TEXT: Record<SmartHint, () => string> = {
+  replace: m.smart_hint_replace,
+  cable: m.smart_hint_cable,
+  cooling: m.smart_hint_cooling,
+  access: m.smart_hint_access,
+}
+
 // SnapRAID rates healthy disks at a few percent per year, only the threshold is worth a color
 const getFailureProbabilityColor = (probability: number, threshold: number) =>
-  probability >= 50
+  probability >= CRITICAL_FAILURE_PROBABILITY
     ? 'text-red-600'
     : probability >= threshold
       ? 'text-orange-600'
@@ -114,13 +145,39 @@ const formatPercent = (value: number, digits: number) =>
 
 // Same limits as assessSmart, warm is still fine
 const getTemperatureColor = (celsius: number) =>
-  celsius >= 60
+  celsius >= CRITICAL_CELSIUS
     ? 'text-red-600'
-    : celsius > 50
+    : celsius > HOT_CELSIUS
       ? 'text-orange-600'
       : 'text-green-600'
 
-const diskAnchor = (disk: SmartDiskInfo) => `smart-disk-${disk.name}`
+const getWearColor = (percent: number) =>
+  percent >= CRITICAL_WEAR_PERCENT
+    ? 'text-red-600'
+    : percent >= WORN_PERCENT
+      ? 'text-orange-600'
+      : 'text-green-600'
+
+const ATTRIBUTE_ROW_STYLES: Record<SmartLevel, string> = {
+  ok: '',
+  warning: 'bg-yellow-50 text-yellow-800',
+  critical: 'bg-red-50 text-red-800 font-semibold',
+}
+
+const formatYears = (hours: number) =>
+  (hours / 24 / 365).toLocaleString(getLocale(), { maximumFractionDigits: 1 })
+
+const driveType = (disk: SmartDiskInfo) =>
+  disk.rotationRate === undefined
+    ? undefined
+    : disk.rotationRate === 0
+      ? m.smart_monitor_ssd()
+      : m.smart_monitor_hdd({ rpm: disk.rotationRate })
+
+// Disks outside the array have no name, the device tells them apart
+const diskKey = (disk: SmartDiskInfo) => `${disk.device}:${disk.name}`
+const diskAnchor = (disk: SmartDiskInfo) =>
+  `smart-disk-${diskKey(disk).replace(/[^\w-]/g, '_')}`
 
 const DiskCard = ({
   disk,
@@ -131,7 +188,10 @@ const DiskCard = ({
   assessment: SmartAssessment
   threshold: number
 }) => {
-  const [expanded, setExpanded] = useState(false)
+  // Open right away when an attribute stands out, that is where the details are
+  const [expanded, setExpanded] = useState(() =>
+    (disk.attributes ?? []).some((attr) => attributeLevel(attr) !== 'ok'),
+  )
   const style = LEVEL_STYLES[assessment.level]
 
   return (
@@ -151,9 +211,15 @@ const DiskCard = ({
               getStatusBadge(disk.status)
             )}
           </div>
-          <p className="text-sm text-gray-600">{disk.device}</p>
-          {disk.model && (
-            <p className="text-xs text-gray-500 mt-1">{disk.model}</p>
+          <p className="text-sm text-gray-600">
+            {[disk.device, disk.interface, driveType(disk)]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+          {(disk.model || disk.family) && (
+            <p className="text-xs text-gray-500 mt-1">
+              {[disk.family, disk.model].filter(Boolean).join(' · ')}
+            </p>
           )}
           {disk.standby && (
             <p className="text-xs text-gray-500 mt-1">
@@ -212,9 +278,38 @@ const DiskCard = ({
               {disk.powerOnHours.toLocaleString(getLocale())}{' '}
               {m.smart_monitor_hours()}
               <span className="text-xs text-gray-500 ml-1">
-                ({Math.floor(disk.powerOnHours / 24 / 365)}{' '}
-                {m.smart_monitor_years()})
+                ({formatYears(disk.powerOnHours)} {m.smart_monitor_years()})
               </span>
+            </div>
+          </div>
+        )}
+
+        {disk.wearLevel !== undefined && (
+          <div>
+            <div className="text-gray-500">{m.smart_monitor_wear_level()}</div>
+            <div className={`font-semibold ${getWearColor(disk.wearLevel)}`}>
+              {disk.wearLevel} %
+            </div>
+          </div>
+        )}
+
+        {/* Counters are only worth a line when they count something */}
+        {!!disk.errorMedium && (
+          <div>
+            <div className="text-gray-500">
+              {m.smart_monitor_media_errors()}
+            </div>
+            <div className="font-semibold text-orange-600">
+              {disk.errorMedium.toLocaleString(getLocale())}
+            </div>
+          </div>
+        )}
+
+        {!!disk.errorProtocol && (
+          <div>
+            <div className="text-gray-500">{m.smart_monitor_error_log()}</div>
+            <div className="font-semibold">
+              {disk.errorProtocol.toLocaleString(getLocale())}
             </div>
           </div>
         )}
@@ -268,11 +363,17 @@ const DiskCard = ({
                     <th className="px-2 py-1 text-right">
                       {m.smart_monitor_raw()}
                     </th>
+                    <th className="px-2 py-1 text-left">
+                      {m.smart_monitor_status()}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {disk.attributes.map((attr) => (
-                    <tr key={attr.id} className="border-t">
+                    <tr
+                      key={attr.id}
+                      className={`border-t ${ATTRIBUTE_ROW_STYLES[attributeLevel(attr)]}`}
+                    >
                       <td className="px-2 py-1">{attr.id}</td>
                       <td className="px-2 py-1">{attr.name}</td>
                       <td className="px-2 py-1 text-right">{attr.value}</td>
@@ -280,6 +381,9 @@ const DiskCard = ({
                       <td className="px-2 py-1 text-right">{attr.threshold}</td>
                       <td className="px-2 py-1 text-right font-mono">
                         {attr.raw}
+                      </td>
+                      <td className="px-2 py-1 whitespace-nowrap">
+                        {attr.flag}
                       </td>
                     </tr>
                   ))}
@@ -393,7 +497,7 @@ export const SmartMonitor = ({ configPath }: SmartMonitorProps) => {
             <p className="font-semibold">{title}</p>
             <ul className="mt-2 space-y-1">
               {group.map(({ disk, assessment }) => (
-                <li key={disk.name}>
+                <li key={diskKey(disk)}>
                   <a
                     href={`#${diskAnchor(disk)}`}
                     className="font-semibold underline hover:no-underline"
@@ -405,15 +509,37 @@ export const SmartMonitor = ({ configPath }: SmartMonitorProps) => {
                 </li>
               ))}
             </ul>
+            {smartHints(group.map(({ assessment }) => assessment)).map(
+              (hint) => (
+                <p key={hint} className="mt-2">
+                  → {HINT_TEXT[hint]()}
+                </p>
+              ),
+            )}
           </div>
         ))}
+
+      {report?.arrayFailureProbability !== undefined && (
+        <div className="mb-4 flex items-center gap-4 rounded-lg border border-gray-200 p-4 text-sm">
+          {/* Grows with the number of disks, the per-disk threshold does not apply */}
+          <div className="text-2xl font-bold">
+            {formatPercent(report.arrayFailureProbability, 0)} %
+          </div>
+          <div>
+            <p className="font-semibold">{m.smart_monitor_array_failure()}</p>
+            <p className="text-gray-500">
+              {m.smart_monitor_array_failure_hint()}
+            </p>
+          </div>
+        </div>
+      )}
 
       {report && report.disks.length > 0 ? (
         <>
           <div className="grid gap-4 mb-4">
             {assessed.map(({ disk, assessment }) => (
               <DiskCard
-                key={disk.name}
+                key={diskKey(disk)}
                 disk={disk}
                 assessment={assessment}
                 threshold={threshold}

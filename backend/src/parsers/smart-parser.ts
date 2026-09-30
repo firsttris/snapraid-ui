@@ -57,8 +57,16 @@ export const parseSmartOutput = (output: string): SmartDiskInfo[] => {
     switch (key) {
       case 'serial': d.serial = unescapeTagValue(rest.join(':')); break;
       case 'model': d.model = unescapeTagValue(rest.join(':')); break;
+      case 'family': d.family = unescapeTagValue(rest.join(':')); break;
+      case 'interface': d.interface = unescapeTagValue(rest.join(':')); break;
       case 'size': d.size = formatSize(toInt(rest[0])); break;
+      case 'rotationrate': d.rotationRate = toInt(rest[0]); break;
       case 'temperature': d.temperature = toInt(rest[0]); break;
+      // SSD lifetime used, from NVMe "Percentage Used" or the SSD life attributes
+      case 'wear_level': d.wearLevel = toInt(rest[0]); break;
+      case 'error_medium': d.errorMedium = toInt(rest[0]); break;
+      case 'error_protocol': d.errorProtocol = toInt(rest[0]); break;
+      // attr:<device>:<disk>:flags:<decimal>:<hex>
       case 'flags': d.flags = toInt(rest[0]); break;
       case 'power': if (rest[0] === 'standby') d.standby = true; break;
       // attr:<device>:<disk>:afr:<afr>:<prob>
@@ -76,6 +84,7 @@ export const parseSmartOutput = (output: string): SmartDiskInfo[] => {
           threshold: toInt(thresh),
           raw,
           flag: [type, whenFailed && whenFailed !== 'never' ? `failed ${whenFailed}` : ''].filter(Boolean).join(', '),
+          ...(whenFailed === 'now' || whenFailed === 'past' ? { whenFailed } : {}),
         };
         d.attributes!.push(attribute);
         // lower 32 bits hold the hours, upper bits are vendor specific
@@ -88,4 +97,14 @@ export const parseSmartOutput = (output: string): SmartDiskInfo[] => {
     ...d,
     status: statusFromFlags(flags),
   }));
+};
+
+/**
+ * Probability in percent that at least one array disk fails in the next year
+ * summary:array_failure:<afr>:<prob>
+ */
+export const parseSmartArrayFailure = (output: string): number | undefined => {
+  const tag = parseLogTags(output).find(({ name, values }) => name === 'summary' && values[0] === 'array_failure');
+  const probability = tag ? parseFloat(tag.values[2]) : NaN;
+  return Number.isNaN(probability) ? undefined : Math.round(probability * 10000) / 100;
 };
