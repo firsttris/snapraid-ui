@@ -6,6 +6,7 @@ import { Button } from '../components/Button'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { PageLayout } from '../components/PageLayout'
 import {
+  DEFAULT_SCRUB_OPTIONS,
   getScrubPlanLabel,
   isValidScrubOptions,
   parseScrubArgs,
@@ -60,6 +61,9 @@ type PresetId = (typeof PRESETS)[number]['id']
 // Repairs follow a scrub that found errors, so scrub -p bad is not a schedule plan
 const SCHEDULE_SCRUB_PLANS: ScrubPlan[] = ['default', 'percent', 'new', 'full']
 
+// Scrub after a sync: the default checks the oldest 8%, new keeps up with fresh data
+const SYNC_SCRUB_PLANS: ScrubPlan[] = ['default', 'percent', 'new']
+
 // Default for new sync schedules: skip when more files were deleted than this
 const DEFAULT_MAX_DELETED_FILES = 50
 
@@ -99,6 +103,8 @@ const getOutcomeDetail = (outcome: ScheduleOutcome): string | undefined => {
       })
     case 'diff_failed':
       return m.schedules_skip_diff_failed({ error: outcome.error ?? '' })
+    case 'recovery_in_progress':
+      return m.schedules_skip_recovery()
     default:
       return outcome.error
   }
@@ -118,9 +124,22 @@ const getCommandLabel = (command: SnapRaidCommand): string => {
       return m.commands_check()
     case 'smart':
       return m.commands_smart()
+    case 'touch':
+      return m.commands_touch()
     default:
       return command
   }
+}
+
+// Readable scrub args, e.g. "8%, older than 10 days"
+const describeScrubArgs = (args: string[] | undefined) => {
+  const options = parseScrubArgs(args)
+  return options.plan === 'percent'
+    ? m.schedules_scrub_percent_summary({
+        percent: options.percent,
+        days: options.olderThan,
+      })
+    : getScrubPlanLabel(options.plan)
 }
 
 // 2023-01-01 was a Sunday, cron counts weekdays from Sunday = 0
@@ -269,15 +288,29 @@ function ScheduleForm({
   const [maxDeletedFiles, setMaxDeletedFiles] = useState(
     String(schedule?.maxDeletedFiles ?? DEFAULT_MAX_DELETED_FILES),
   )
+  // New sync schedules suggest the full nightly routine
+  const [touchBefore, setTouchBefore] = useState(
+    schedule ? !!schedule.touchBefore : true,
+  )
+  const [scrubAfter, setScrubAfter] = useState(
+    schedule ? !!schedule.scrubAfter : true,
+  )
+  const [scrubAfterOptions, setScrubAfterOptions] = useState<ScrubOptions>(
+    () =>
+      schedule?.scrubAfter
+        ? parseScrubArgs(schedule.scrubAfter)
+        : DEFAULT_SCRUB_OPTIONS,
+  )
   const maxDeletedValue = Number(maxDeletedFiles)
   const isOptionsValid =
     command === 'scrub'
       ? isValidScrubOptions(scrubOptions)
       : command !== 'sync' ||
-        !syncGuard ||
-        (maxDeletedFiles.trim() !== '' &&
-          Number.isInteger(maxDeletedValue) &&
-          maxDeletedValue >= 0)
+        ((!syncGuard ||
+          (maxDeletedFiles.trim() !== '' &&
+            Number.isInteger(maxDeletedValue) &&
+            maxDeletedValue >= 0)) &&
+          (!scrubAfter || isValidScrubOptions(scrubAfterOptions)))
 
   // An existing schedule opens on its matching preset, or as a raw cron expression,
   // so saving other fields never changes when it runs
@@ -340,6 +373,9 @@ function ScheduleForm({
       enabled,
       args: command === 'scrub' ? scrubArgs(scrubOptions) : [],
       maxDeletedFiles: command === 'sync' && syncGuard ? maxDeletedValue : null,
+      touchBefore: command === 'sync' && touchBefore,
+      scrubAfter:
+        command === 'sync' && scrubAfter ? scrubArgs(scrubAfterOptions) : null,
     })
   }
 
@@ -473,6 +509,60 @@ function ScheduleForm({
                   value={maxDeletedFiles}
                   onChange={(e) => setMaxDeletedFiles(e.target.value)}
                   className={inputClass}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {command === 'sync' && (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+            <div>
+              <span className="block text-sm font-medium text-gray-700">
+                {m.schedules_routine()}
+              </span>
+              <p className="text-xs text-gray-500">
+                {m.schedules_routine_hint()}
+              </p>
+            </div>
+            <label className="flex gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={touchBefore}
+                onChange={(e) => setTouchBefore(e.target.checked)}
+                className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span>
+                <span className="block text-sm font-medium text-gray-700">
+                  {m.schedules_touch_before()}
+                </span>
+                <span className="block text-xs text-gray-500">
+                  {m.schedules_touch_before_hint()}
+                </span>
+              </span>
+            </label>
+            <label className="flex gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={scrubAfter}
+                onChange={(e) => setScrubAfter(e.target.checked)}
+                className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span>
+                <span className="block text-sm font-medium text-gray-700">
+                  {m.schedules_scrub_after()}
+                </span>
+                <span className="block text-xs text-gray-500">
+                  {m.schedules_scrub_after_hint()}
+                </span>
+              </span>
+            </label>
+            {scrubAfter && (
+              <div className="ml-6">
+                <ScrubPlanPicker
+                  value={scrubAfterOptions}
+                  onChange={setScrubAfterOptions}
+                  plans={SYNC_SCRUB_PLANS}
                 />
               </div>
             )}
@@ -787,6 +877,9 @@ function ScheduleCard({
               {m.schedules_field_command()}:
             </strong>
             <span>
+              {schedule.command === 'sync' && schedule.touchBefore && (
+                <>{m.commands_touch()} → </>
+              )}
               {getCommandLabel(schedule.command)}
               {schedule.command === 'scrub' && (
                 <span className="text-gray-500">
@@ -798,6 +891,16 @@ function ScheduleCard({
                     </code>
                   )}
                 </span>
+              )}
+              {schedule.command === 'sync' && schedule.scrubAfter && (
+                <>
+                  {' → '}
+                  {m.commands_scrub()}
+                  <span className="text-gray-500">
+                    {' · '}
+                    {describeScrubArgs(schedule.scrubAfter)}
+                  </span>
+                </>
               )}
             </span>
 
@@ -866,6 +969,19 @@ function ScheduleCard({
                   >
                     {getOutcomeLabel(schedule.lastOutcome.result)}
                   </span>
+                  {schedule.lastOutcome.steps && (
+                    <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+                      {schedule.lastOutcome.steps.map((step) => (
+                        <span
+                          key={step.command}
+                          className={`rounded px-1.5 py-0.5 text-xs ${OUTCOME_STYLES[step.result]}`}
+                        >
+                          {getCommandLabel(step.command)}:{' '}
+                          {getOutcomeLabel(step.result)}
+                        </span>
+                      ))}
+                    </span>
+                  )}
                   {getOutcomeDetail(schedule.lastOutcome) && (
                     <span className="ml-2">
                       {getOutcomeDetail(schedule.lastOutcome)}

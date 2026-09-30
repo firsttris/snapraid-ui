@@ -19,7 +19,9 @@ Run sync and scrub, schedule jobs and keep an eye on disk health, all from your 
 
 - **Array health at a glance**: last sync and scrub, scrub coverage, next scheduled job
 - **One-click commands**: sync, scrub, status, diff, check, fix, with live output over WebSocket
-- **Scheduler**: cron-based sync and scrub jobs, no crontab editing
+- **Scheduler**: cron-based jobs, no crontab editing; a sync can run touch before and scrub after it as one nightly routine
+- **Notifications** via ntfy push, e-mail or webhook (Discord, Slack, Home Assistant …) when a job fails, scrub finds damaged data, a scheduled sync is skipped or a disk shows SMART problems
+- **Disk replacement wizard**: restores a failed data or parity disk step by step (`fix -d`, `check -a`, `sync`) and pauses scheduled jobs meanwhile
 - **Disk overview**: usage, file counts, fragmentation and parity headroom per disk
 - **SMART monitoring** and disk power state (active / standby)
 - **Logs**: history of every run with full output

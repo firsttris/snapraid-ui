@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import {
   Activity,
+  Bell,
   Calendar,
   FileText,
   HardDrive,
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { to: '/smart', label: m.nav_smart, icon: Activity },
   { to: '/schedules', label: m.schedules, icon: Calendar },
   { to: '/logs', label: m.logs, icon: FileText },
+  { to: '/notifications', label: m.nav_notifications, icon: Bell },
 ] as const
 
 export const Header = () => {

@@ -11,6 +11,9 @@ import {hardwareRoutes} from "./hardware.ts";
 import { setReportsRunner, reportsRoutes } from "./reports.ts";
 import { parseStatusOutput } from "../parsers/status-parser.ts";
 import { isLockedOutput, STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
+import { createDiskReplacementRoutes } from "./disk-replacement.ts";
+import { readRunReport } from "../run-report.ts";
+import { notifyManualRun } from "../notification-events.ts";
 
 const snapraid = new Hono();
 
@@ -57,6 +60,13 @@ snapraid.route("/", diskManagementRoutes);
 snapraid.route("/", configOperationsRoutes);
 snapraid.route("/", hardwareRoutes);
 snapraid.route("/", reportsRoutes);
+snapraid.route("/", createDiskReplacementRoutes({
+  startJob: (...args) => startJob(...args),
+  isBusy: () => !!runner.getCurrentJob(),
+}));
+
+// Manually started commands worth a notification, when enabled in the settings
+const NOTIFIED_MANUAL_COMMANDS: SnapRaidCommand[] = ["sync", "scrub", "fix", "check"];
 
 // GET /api/snapraid/parse - Parse SnapRAID config
 snapraid.get("/parse", async (c) => {
@@ -157,6 +167,10 @@ const startJob = (
         aborted: result.aborted,
         timestamp: result.timestamp,
       });
+
+      if (NOTIFIED_MANUAL_COMMANDS.includes(command)) {
+        await notifyManualRun(configPath, await readRunReport(command, result));
+      }
 
       // Parse status if it was a status or diff command
       if (command === "status" || command === "diff") {

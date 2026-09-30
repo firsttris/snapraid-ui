@@ -7,9 +7,11 @@
     "@std/assert": "jsr:@std/assert@^1.0.19",
     "@std/path": "jsr:@std/path@^1.1.6",
     "@std/fs": "jsr:@std/fs@^1.0.24",
+    "@types/nodemailer": "npm:@types/nodemailer@^8.0.2",
     "hono": "jsr:@hono/hono@^4.13.9",
     "@hexagon/croner": "jsr:@hexagon/croner@^10.0.1",
-    "@shared/": "../shared/"
+    "@shared/": "../shared/",
+    "nodemailer": "npm:nodemailer@^10.0.13"
   },
   "compilerOptions": {
     "lib": ["deno.window", "deno.unstable"],

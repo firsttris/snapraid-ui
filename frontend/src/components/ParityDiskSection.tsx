@@ -1,11 +1,14 @@
 import type { ParityLevel } from '@shared/types'
 import { useState } from 'react'
+import { useDiskReplacement } from '../hooks/queries'
 import * as m from '../paraglide/messages'
 import { Button } from './Button'
 import { DirectoryBrowser } from './DirectoryBrowser'
 import { useFeedback } from './Feedback'
+import { ReplaceDiskWizard } from './ReplaceDiskWizard'
 
 interface ParityDiskSectionProps {
+  configPath: string
   parity: ParityLevel[]
   onAdd: (fullPath: string) => Promise<void>
   onRemove: (level: number) => Promise<void>
@@ -14,6 +17,7 @@ interface ParityDiskSectionProps {
 const MAX_PARITY_LEVEL = 6
 
 export const ParityDiskSection = ({
+  configPath,
   parity,
   onAdd,
   onRemove,
@@ -25,6 +29,10 @@ export const ParityDiskSection = ({
   const [addingParity, setAddingParity] = useState(false)
   const [showParityBrowser, setShowParityBrowser] = useState(false)
   const [error, setError] = useState('')
+  const [replacing, setReplacing] = useState<ParityLevel | null>(null)
+  const { data: replacement } = useDiskReplacement(configPath)
+  const replacingDisk =
+    replacement && !replacement.completedAt ? replacement.diskName : null
 
   // Levels must stay without gaps, so only the highest one can be removed
   const highestLevel = Math.max(0, ...parity.map((p) => p.level))
@@ -212,6 +220,11 @@ export const ParityDiskSection = ({
                       {m.parity_disk_split({ count: p.paths.length })}
                     </span>
                   )}
+                  {replacingDisk === p.keyword && (
+                    <span className="ml-2 px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-normal whitespace-nowrap">
+                      {m.replace_disk_badge()}
+                    </span>
+                  )}
                 </div>
                 {p.paths.map((path) => (
                   <div
@@ -225,14 +238,26 @@ export const ParityDiskSection = ({
               </div>
               <button
                 type="button"
+                onClick={() => setReplacing(p)}
+                title={m.replace_disk_button_title()}
+                className="ml-3 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+              >
+                {replacingDisk === p.keyword
+                  ? m.replace_disk_resume()
+                  : m.replace_disk_button()}
+              </button>
+              <button
+                type="button"
                 onClick={() => handleRemove(p.level)}
-                disabled={p.level !== highestLevel}
+                disabled={
+                  p.level !== highestLevel || replacingDisk === p.keyword
+                }
                 title={
                   p.level !== highestLevel
                     ? m.parity_disk_remove_highest_only()
                     : undefined
                 }
-                className="ml-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-500"
+                className="ml-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-500"
               >
                 {m.common_remove()}
               </button>
@@ -240,6 +265,16 @@ export const ParityDiskSection = ({
           ))
         )}
       </div>
+
+      {replacing && (
+        <ReplaceDiskWizard
+          configPath={configPath}
+          diskName={replacing.keyword}
+          diskType="parity"
+          currentPath={replacing.paths.join(',')}
+          onClose={() => setReplacing(null)}
+        />
+      )}
 
       {showParityBrowser && (
         <DirectoryBrowser

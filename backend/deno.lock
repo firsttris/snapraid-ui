@@ -8,7 +8,9 @@
     "jsr:@std/internal@^1.0.12": "1.0.14",
     "jsr:@std/internal@^1.0.14": "1.0.14",
     "jsr:@std/path@^1.1.5": "1.1.6",
-    "jsr:@std/path@^1.1.6": "1.1.6"
+    "jsr:@std/path@^1.1.6": "1.1.6",
+    "npm:@types/nodemailer@^8.0.2": "8.0.2",
+    "npm:nodemailer@^10.0.13": "10.0.13"
   },
   "jsr": {
     "@hexagon/croner@10.0.1": {
@@ -40,13 +42,35 @@
       ]
     }
   },
+  "npm": {
+    "@types/node@26.6.3": {
+      "integrity": "sha512-dsqMQQoeTLqu9wynDD00q573mNzso3IdQOAfHRJqLCcmCFPoGo9A1bDpUcv/9tnKpErQWv9uKeGfl37EIS02Yg==",
+      "dependencies": [
+        "undici-types"
+      ]
+    },
+    "@types/nodemailer@8.0.2": {
+      "integrity": "sha512-c7M5ox8p0nEOfbJ2E9Qcmt8/QCu/VzsiAhzBiZbvky2PhKZDHpKB3sQHBM5MEZNkCfBOaS6S9//AGPRTNB7IaA==",
+      "dependencies": [
+        "@types/node"
+      ]
+    },
+    "nodemailer@10.0.13": {
+      "integrity": "sha512-SzG86OlvcW/NNhUFC6uROMwRTL4n7MswfQqC/T8mhkmnY1YVa23zUEMYi4ijSeXSl9GLz9ZeTJDUatEDuY5FeQ=="
+    },
+    "undici-types@8.9.0": {
+      "integrity": "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="
+    }
+  },
   "workspace": {
     "dependencies": [
       "jsr:@hexagon/croner@^10.0.1",
       "jsr:@hono/hono@^4.13.9",
       "jsr:@std/assert@^1.0.19",
       "jsr:@std/fs@^1.0.24",
-      "jsr:@std/path@^1.1.6"
+      "jsr:@std/path@^1.1.6",
+      "npm:@types/nodemailer@^8.0.2",
+      "npm:nodemailer@^10.0.13"
     ]
   }
 }

@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useDiskReplacement } from '../hooks/queries'
 import * as m from '../paraglide/messages'
 import { DirectoryBrowser } from './DirectoryBrowser'
 import { RemoveDataDiskWizard } from './RemoveDataDiskWizard'
+import { ReplaceDiskWizard } from './ReplaceDiskWizard'
 
 interface DataDiskSectionProps {
   configPath: string
@@ -22,6 +24,13 @@ export const DataDiskSection = ({
     path: string
     pending: boolean
   } | null>(null)
+  const [replacing, setReplacing] = useState<{
+    name: string
+    path: string
+  } | null>(null)
+  const { data: replacement } = useDiskReplacement(configPath)
+  const replacingDisk =
+    replacement && !replacement.completedAt ? replacement.diskName : null
   const [showAddDataDisk, setShowAddDataDisk] = useState(false)
   const [newDataDiskName, setNewDataDiskName] = useState('')
   const [newDataDiskPath, setNewDataDiskPath] = useState('')
@@ -180,11 +189,29 @@ export const DataDiskSection = ({
                       {m.data_disk_pending_removal()}
                     </span>
                   )}
+                  {replacingDisk === name && (
+                    <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs whitespace-nowrap">
+                      {m.replace_disk_badge()}
+                    </span>
+                  )}
                 </div>
+                {!pending && (
+                  <button
+                    type="button"
+                    onClick={() => setReplacing({ name, path })}
+                    title={m.replace_disk_button_title()}
+                    className="ml-3 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                  >
+                    {replacingDisk === name
+                      ? m.replace_disk_resume()
+                      : m.replace_disk_button()}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setRemoving({ name, path, pending })}
-                  className="ml-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                  disabled={replacingDisk === name}
+                  className="ml-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {pending ? m.data_disk_resume_removal() : m.common_remove()}
                 </button>
@@ -201,6 +228,16 @@ export const DataDiskSection = ({
           diskPath={removing.path}
           pending={removing.pending}
           onClose={() => setRemoving(null)}
+        />
+      )}
+
+      {replacing && (
+        <ReplaceDiskWizard
+          configPath={configPath}
+          diskName={replacing.name}
+          diskType="data"
+          currentPath={replacing.path}
+          onClose={() => setReplacing(null)}
         />
       )}
 

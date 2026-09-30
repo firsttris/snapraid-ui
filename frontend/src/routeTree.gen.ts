@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LogsRouteImport } from './routes/logs'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as SchedulesRouteImport } from './routes/schedules'
 import { Route as SmartRouteImport } from './routes/smart'
 
@@ -22,6 +23,11 @@ const IndexRoute = IndexRouteImport.update({
 const LogsRoute = LogsRouteImport.update({
   id: '/logs',
   path: '/logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SchedulesRoute = SchedulesRouteImport.update({
@@ -38,12 +44,14 @@ const SmartRoute = SmartRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/logs': typeof LogsRoute
+  '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
   '/smart': typeof SmartRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/logs': typeof LogsRoute
+  '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
   '/smart': typeof SmartRoute
 }
@@ -51,20 +59,22 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/logs': typeof LogsRoute
+  '/notifications': typeof NotificationsRoute
   '/schedules': typeof SchedulesRoute
   '/smart': typeof SmartRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/logs' | '/schedules' | '/smart'
+  fullPaths: '/' | '/logs' | '/notifications' | '/schedules' | '/smart'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/logs' | '/schedules' | '/smart'
-  id: '__root__' | '/' | '/logs' | '/schedules' | '/smart'
+  to: '/' | '/logs' | '/notifications' | '/schedules' | '/smart'
+  id: '__root__' | '/' | '/logs' | '/notifications' | '/schedules' | '/smart'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LogsRoute: typeof LogsRoute
+  NotificationsRoute: typeof NotificationsRoute
   SchedulesRoute: typeof SchedulesRoute
   SmartRoute: typeof SmartRoute
 }
@@ -83,6 +93,13 @@ declare module '@tanstack/react-router' {
       path: '/logs'
       fullPath: '/logs'
       preLoaderRoute: typeof LogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/schedules': {
@@ -105,6 +122,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LogsRoute: LogsRoute,
+  NotificationsRoute: NotificationsRoute,
   SchedulesRoute: SchedulesRoute,
   SmartRoute: SmartRoute,
 }

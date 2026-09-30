@@ -140,6 +140,7 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
       )}
 
       <ParityDiskSection
+        configPath={configPath}
         parity={config.parity}
         onAdd={handleAddParity}
         onRemove={handleRemoveParity}

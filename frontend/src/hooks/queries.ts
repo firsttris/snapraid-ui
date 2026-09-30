@@ -1,11 +1,14 @@
 import type {
   AppConfig,
   AuthSession,
+  DiskReplacement,
   LastRuns,
   LogFile,
+  NotificationSettings,
   ParityLevelUsage,
   ParsedSnapRaidConfig,
   ProbeReport,
+  ReplacementStep,
   RunningJob,
   Schedule,
   SnapRaidCommand,
@@ -28,14 +31,17 @@ import {
 } from '../lib/api/config'
 import { browseFilesystem, readFile, writeFile } from '../lib/api/filesystem'
 import { deleteLog, getLogContent, getLogs, rotateLogs } from '../lib/api/logs'
+import { notificationsApi } from '../lib/api/notifications'
 import { schedulesApi } from '../lib/api/schedules'
 import {
   abortJob,
   addDataDisk,
   addExclude,
   addParityDisk,
+  clearDiskReplacement,
   executeCommand,
   getCurrentJob,
+  getDiskReplacement,
   getLastRuns,
   getParityUsage,
   getStatus,
@@ -44,7 +50,9 @@ import {
   removeDataDisk,
   removeExclude,
   removeParityDisk,
+  runDiskReplacementStep,
   setPool,
+  startDiskReplacement,
 } from '../lib/api/snapraid'
 
 // ====================
@@ -66,6 +74,8 @@ export const queryKeys = {
     ['filesystem', path, filter] as const,
   fileContent: (path: string) => ['file-content', path] as const,
   schedules: ['schedules'] as const,
+  notifications: ['notifications'] as const,
+  diskReplacement: (path: string) => ['disk-replacement', path] as const,
   schedule: (id: string) => ['schedule', id] as const,
 }
 
@@ -600,5 +610,96 @@ export const useToggleSchedule = (
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules })
     },
     ...options,
+  })
+}
+
+// ====================
+// Disk Replacement
+// ====================
+
+export const useDiskReplacement = (
+  configPath: string | undefined,
+  options?: Omit<
+    UseQueryOptions<DiskReplacement | null>,
+    'queryKey' | 'queryFn'
+  >,
+) => {
+  return useQuery({
+    queryKey: queryKeys.diskReplacement(configPath ?? ''),
+    queryFn: configPath ? () => getDiskReplacement(configPath) : skipToken,
+    ...options,
+  })
+}
+
+// Every step runs as a regular job, the dashboard picks it up
+const useInvalidateReplacement = () => {
+  const queryClient = useQueryClient()
+  return (configPath: string) => {
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.diskReplacement(configPath),
+    })
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.snapraidConfig(configPath),
+    })
+    queryClient.invalidateQueries({ queryKey: queryKeys.currentJob })
+  }
+}
+
+export const useStartDiskReplacement = () => {
+  const invalidate = useInvalidateReplacement()
+  return useMutation({
+    mutationFn: ({
+      configPath,
+      diskName,
+      newPath,
+    }: {
+      configPath: string
+      diskName: string
+      newPath: string
+    }) => startDiskReplacement(configPath, diskName, newPath),
+    onSuccess: (_, { configPath }) => invalidate(configPath),
+  })
+}
+
+export const useRunDiskReplacementStep = () => {
+  const invalidate = useInvalidateReplacement()
+  return useMutation({
+    mutationFn: ({
+      configPath,
+      step,
+    }: {
+      configPath: string
+      step: ReplacementStep
+    }) => runDiskReplacementStep(configPath, step),
+    onSuccess: (_, { configPath }) => invalidate(configPath),
+  })
+}
+
+export const useClearDiskReplacement = () => {
+  const invalidate = useInvalidateReplacement()
+  return useMutation({
+    mutationFn: clearDiskReplacement,
+    onSuccess: (_, configPath) => invalidate(configPath),
+  })
+}
+
+// ====================
+// Notifications
+// ====================
+
+export const useNotificationSettings = () => {
+  return useQuery({
+    queryKey: queryKeys.notifications,
+    queryFn: notificationsApi.get,
+  })
+}
+
+export const useSaveNotificationSettings = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: notificationsApi.save,
+    onSuccess: (settings: NotificationSettings) => {
+      queryClient.setQueryData(queryKeys.notifications, settings)
+    },
   })
 }

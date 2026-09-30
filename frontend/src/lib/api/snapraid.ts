@@ -3,11 +3,13 @@ import type {
   CommandOutput,
   DevicesReport,
   DiffReport,
+  DiskReplacement,
   LastRuns,
   ListReport,
   ParityLevelUsage,
   ParsedSnapRaidConfig,
   ProbeReport,
+  ReplacementStep,
   RunningJob,
   SmartReport,
   SnapRaidCommand,
@@ -374,4 +376,68 @@ export const getDiff = async (configPath: string): Promise<DiffReport> => {
     throw new Error(error.error || 'Failed to get diff report')
   }
   return response.json()
+}
+
+/**
+ * Disk replacement in progress for a config, or null
+ */
+export const getDiskReplacement = async (
+  configPath: string,
+): Promise<DiskReplacement | null> => {
+  const response = await apiFetch(
+    `${API_BASE}/snapraid/replace-disk?path=${encodeURIComponent(configPath)}`,
+  )
+  if (!response.ok) throw new Error('Failed to load disk replacement')
+  return response.json()
+}
+
+/**
+ * Point a failed disk to its replacement and start `fix -d`
+ */
+export const startDiskReplacement = async (
+  configPath: string,
+  diskName: string,
+  newPath: string,
+): Promise<DiskReplacement> => {
+  const response = await apiFetch(`${API_BASE}/snapraid/replace-disk`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configPath, diskName, newPath }),
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error || 'Failed to start disk replacement')
+  }
+  return response.json()
+}
+
+/**
+ * Run a step of the disk replacement: fix again, check or the final sync
+ */
+export const runDiskReplacementStep = async (
+  configPath: string,
+  step: ReplacementStep,
+): Promise<void> => {
+  const response = await apiFetch(`${API_BASE}/snapraid/replace-disk/step`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configPath, step }),
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error || 'Failed to run step')
+  }
+}
+
+/**
+ * Close a finished replacement or give up on it, scheduled jobs resume
+ */
+export const clearDiskReplacement = async (
+  configPath: string,
+): Promise<void> => {
+  const response = await apiFetch(
+    `${API_BASE}/snapraid/replace-disk?path=${encodeURIComponent(configPath)}`,
+    { method: 'DELETE' },
+  )
+  if (!response.ok) throw new Error('Failed to close disk replacement')
 }

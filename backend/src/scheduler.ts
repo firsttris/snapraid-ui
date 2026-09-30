@@ -1,9 +1,19 @@
 import { Cron } from "@hexagon/croner";
-import type { CommandOutput, Schedule, ScheduleConfig, ScheduleOutcome } from "@shared/types.ts";
+import type {
+  RunResult,
+  Schedule,
+  ScheduleConfig,
+  ScheduleOutcome,
+  ScheduleStepOutcome,
+  SnapRaidCommand,
+} from "@shared/types.ts";
 import type { SnapRaidRunner } from "./snapraid-runner.ts";
 import { existsSync } from "@std/fs";
 import { resolveFromBase } from "./config.ts";
-import { parseRunResult } from "./log-manager.ts";
+import { failedReport, isSuccessful, readRunReport, type RunReport } from "./run-report.ts";
+import { isReplacementInProgress } from "./disk-replacement.ts";
+import { notifyRun, notifySkipped, notifySmart } from "./notification-events.ts";
+import { parseSmartOutput } from "./parsers/smart-parser.ts";
 
 // Module-level storage for active jobs
 const activeJobs = new Map<string, Cron>();
@@ -112,18 +122,27 @@ const checkSyncGuard = async (
   }
 };
 
-const readOutcome = async (result: CommandOutput): Promise<ScheduleOutcome> => {
-  const timestamp = new Date().toISOString();
-  if (result.aborted) return { timestamp, result: "aborted" };
-  try {
-    if (result.logPath) {
-      return { timestamp, result: parseRunResult(await Deno.readTextFile(result.logPath)) };
-    }
-  } catch {
-    // Fall back to the exit code
-  }
-  return { timestamp, result: result.exitCode === 0 ? "ok" : "error" };
+interface ScheduleStep {
+  command: SnapRaidCommand;
+  args: string[];
+}
+
+// A sync schedule can run touch before and scrub after the sync, the usual nightly routine
+export const scheduleSteps = (schedule: Schedule): ScheduleStep[] => {
+  const isSync = schedule.command === "sync";
+  return [
+    ...(isSync && schedule.touchBefore ? [{ command: "touch" as const, args: [] }] : []),
+    { command: schedule.command, args: schedule.args || [] },
+    ...(isSync && schedule.scrubAfter ? [{ command: "scrub" as const, args: schedule.scrubAfter }] : []),
+  ];
 };
+
+/**
+ * Overall result of the steps: the first failure, otherwise warning if any step warned
+ */
+export const combineResults = (results: RunResult[]): RunResult =>
+  results.find((result) => !isSuccessful(result)) ??
+    (results.includes("warning") ? "warning" : "ok");
 
 // Execute scheduled command
 const executeScheduledCommand = async (
@@ -141,10 +160,13 @@ const executeScheduledCommand = async (
 
   const skip = runner.getCurrentJob()
     ? skipped({ skipReason: "job_running" })
+    : await isReplacementInProgress(schedule.configPath)
+    ? skipped({ skipReason: "recovery_in_progress" })
     : await checkSyncGuard(runner, schedule, snapraidConfigPath);
   if (skip) {
     console.warn(`Scheduled job skipped: ${schedule.name} (${skip.skipReason})`);
     await updateStoredSchedule(configPath, scheduleId, { nextRun, lastOutcome: skip });
+    await notifySkipped(schedule.name, snapraidConfigPath, skip, schedule.maxDeletedFiles);
     return;
   }
 
@@ -153,20 +175,48 @@ const executeScheduledCommand = async (
     nextRun,
   });
 
-  const outcome = await runner
-    .executeCommand(
-      schedule.command,
-      snapraidConfigPath,
-      (chunk) => onOutput?.(scheduleId, chunk),
-      schedule.args || []
-    )
-    .then(readOutcome)
-    .catch((error): ScheduleOutcome => {
-      console.error(`Scheduled job failed: ${schedule.name}:`, error);
-      return { timestamp: new Date().toISOString(), result: "error", error: String(error) };
-    });
+  const steps = scheduleSteps(schedule);
+  const reports: RunReport[] = [];
 
+  for (const step of steps) {
+    // A manual job may have started between two steps, SnapRAID would refuse to run next to it
+    if (reports.length > 0 && runner.getCurrentJob()) {
+      reports.push(failedReport(step.command, "Another job started before this step"));
+      break;
+    }
+    try {
+      const output = await runner.executeCommand(
+        step.command,
+        snapraidConfigPath,
+        (chunk) => onOutput?.(scheduleId, chunk),
+        step.args,
+      );
+      const report = await readRunReport(step.command, output);
+      reports.push(report);
+      if (step.command === "smart") {
+        await notifySmart(snapraidConfigPath, parseSmartOutput(report.log));
+      }
+      if (!isSuccessful(report.result)) break;
+    } catch (error) {
+      console.error(`Scheduled job failed: ${schedule.name}:`, error);
+      reports.push(failedReport(step.command, String(error)));
+      break;
+    }
+  }
+
+  const error = reports.find((report) => report.error)?.error;
+  const outcome: ScheduleOutcome = {
+    timestamp: new Date().toISOString(),
+    result: combineResults(reports.map((report) => report.result)),
+    ...(error ? { error } : {}),
+    ...(steps.length > 1
+      ? { steps: reports.map((report): ScheduleStepOutcome => ({ command: report.command, result: report.result })) }
+      : {}),
+  };
   await updateStoredSchedule(configPath, scheduleId, { lastOutcome: outcome });
+
+  const notRun = steps.slice(reports.length).map((step) => step.command);
+  await notifyRun(schedule.name, snapraidConfigPath, reports, notRun);
 };
 
 // Start cron job for schedule

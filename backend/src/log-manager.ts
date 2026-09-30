@@ -35,6 +35,9 @@ export const parseRunResult = (log: string): RunResult => {
   // SnapRAID bails out on fatal errors before writing the summary
   if (!exit) return /^msg:fatal:/m.test(log) ? "error" : "incomplete";
   if (exit === "ok" || exit === "warning") return exit;
+  // fix and check report what happened to the errors they found
+  if (exit === "recovered") return "ok";
+  if (exit === "recoverable") return "warning";
   return "error";
 };
 

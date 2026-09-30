@@ -93,7 +93,7 @@ export interface CommandOutput {
   aborted?: boolean; // Stopped on user request
 }
 
-export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff' | 'fix' | 'check' | 'pool' | 'smart' | 'probe' | 'up' | 'down' | 'devices' | 'list';
+export type SnapRaidCommand = 'status' | 'sync' | 'scrub' | 'diff' | 'fix' | 'check' | 'pool' | 'smart' | 'probe' | 'up' | 'down' | 'devices' | 'list' | 'touch';
 
 export interface LogFile {
   filename: string;
@@ -214,6 +214,10 @@ export interface Schedule {
   enabled: boolean;
   // sync only: skip the run when diff reports more deleted files, null disables the check
   maxDeletedFiles?: number | null;
+  // sync only: run `touch` first, files with a zero sub-second timestamp get one so moves are detected
+  touchBefore?: boolean;
+  // sync only: scrub args to run after a successful sync, null or missing runs no scrub
+  scrubAfter?: string[] | null;
   lastRun?: string; // ISO string
   lastOutcome?: ScheduleOutcome;
   nextRun?: string; // ISO string
@@ -221,7 +225,13 @@ export interface Schedule {
   updatedAt: string; // ISO string
 }
 
-export type ScheduleSkipReason = 'job_running' | 'too_many_deleted' | 'diff_failed';
+export type ScheduleSkipReason = 'job_running' | 'too_many_deleted' | 'diff_failed' | 'recovery_in_progress';
+
+// One command of a scheduled run, e.g. touch, sync and scrub of a nightly sync
+export interface ScheduleStepOutcome {
+  command: SnapRaidCommand;
+  result: RunResult | 'skipped';
+}
 
 // Result of the last scheduled run, including runs the scheduler skipped
 export interface ScheduleOutcome {
@@ -230,6 +240,7 @@ export interface ScheduleOutcome {
   skipReason?: ScheduleSkipReason;
   deletedFiles?: number; // Deleted files diff reported, for too_many_deleted
   error?: string;
+  steps?: ScheduleStepOutcome[]; // Only for schedules that run more than one command
 }
 
 export interface ScheduleConfig {
@@ -336,4 +347,69 @@ export interface AuthSession {
   enabled: boolean;
   authenticated: boolean;
   username?: string;
+}
+
+// Disk replacement, following "Recovering" in the SnapRAID manual:
+// point the disk to its new location, `fix -d`, optionally `check -a -d`, then `sync`
+export type ReplacementStep = 'fix' | 'check' | 'sync';
+
+export interface ReplacementStepResult {
+  result: RunResult;
+  finishedAt: string;      // ISO string
+  recovered?: number;      // fix: blocks restored from parity
+  unrecoverable?: number;  // fix/check: blocks that could not be restored
+  errors?: number;         // I/O and data errors
+  logFile?: string;
+}
+
+export interface DiskReplacement {
+  configPath: string;      // As passed by the client
+  diskName: string;        // Data disk name or parity keyword, e.g. "d1" or "2-parity"
+  diskType: 'data' | 'parity';
+  oldPath: string;
+  newPath: string;
+  startedAt: string;       // ISO string
+  completedAt?: string;    // Set by a successful sync, scheduled jobs are paused until then
+  steps: Partial<Record<ReplacementStep, ReplacementStepResult>>;
+}
+
+// Notifications
+export type NotificationEvent = 'job_failed' | 'data_errors' | 'schedule_skipped' | 'smart_warning' | 'job_succeeded';
+export type NotificationChannel = 'email' | 'ntfy' | 'webhook';
+
+// Returned instead of stored passwords and tokens; sending it back keeps the stored value
+export const SECRET_MASK = '********';
+
+export interface NotificationSettings {
+  language: 'en' | 'de';
+  uiUrl: string;                 // Link in messages, e.g. http://nas:3000; empty for none
+  events: Record<NotificationEvent, boolean>;
+  includeManualJobs: boolean;    // Also report jobs started in the UI, not only scheduled ones
+  smartFailureThreshold: number; // Warn when a disk's yearly failure probability reaches this percentage
+  email: {
+    enabled: boolean;
+    host: string;
+    port: number;
+    security: 'starttls' | 'tls' | 'none';
+    username: string;
+    password: string;
+    from: string;
+    to: string;                  // Comma separated
+  };
+  ntfy: {
+    enabled: boolean;
+    server: string;
+    topic: string;
+    token: string;               // Access token for protected topics, may be empty
+  };
+  webhook: {
+    enabled: boolean;
+    url: string;
+  };
+}
+
+export interface NotificationTestResult {
+  channel: NotificationChannel;
+  ok: boolean;
+  error?: string;
 }

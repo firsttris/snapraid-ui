@@ -12,6 +12,7 @@ import { filesystemRoutes } from "./routes/filesystem.ts";
 import { snapraidRoutes } from "./routes/snapraid.ts";
 import { logsRoutes } from "./routes/logs.ts";
 import { schedulesRoutes } from "./routes/schedules.ts";
+import { notificationsRoutes } from "./routes/notifications.ts";
 import { resolveFromBase } from "./config.ts";
 import { createAuth, disabledAuthRoutes, loadSessionSecret, readAuthEnv } from "./auth.ts";
 
@@ -58,6 +59,7 @@ app.route("/api/filesystem", filesystemRoutes);
 app.route("/api/snapraid", snapraidRoutes);
 app.route("/api/logs", logsRoutes);
 app.route("/api/schedules", schedulesRoutes);
+app.route("/api/notifications", notificationsRoutes);
 
 // Health check
 app.get("/", (c) => {

@@ -1,0 +1,319 @@
+import { basename } from "@std/path";
+import { existsSync } from "@std/fs";
+import type {
+  NotificationSettings,
+  ScheduleOutcome,
+  SmartDiskInfo,
+  SnapRaidCommand,
+} from "@shared/types.ts";
+import { resolveFromBase } from "./config.ts";
+import { loadNotificationSettings, type Notification, notify } from "./notifications.ts";
+import { isSuccessful, type RunReport } from "./run-report.ts";
+import { parseLogTags, restOf, unescapeTagValue } from "./parsers/structured-log.ts";
+
+type Language = NotificationSettings["language"];
+
+const TEXT = {
+  en: {
+    result: { ok: "OK", warning: "OK with warnings", error: "failed", aborted: "aborted", incomplete: "incomplete" },
+    manualLabel: (command: string) => `Manual ${command}`,
+    failedTitle: (label: string) => `Failed: ${label}`,
+    dataErrorsTitle: (label: string) => `Data errors found: ${label}`,
+    succeededTitle: (label: string) => `Completed: ${label}`,
+    skippedTitle: (label: string) => `Skipped: ${label}`,
+    smartTitle: (config: string) => `SMART warning: ${config}`,
+    config: (name: string) => `Config: ${name}`,
+    changes: (c: NonNullable<RunReport["changes"]>) =>
+      `${c.added} added, ${c.updated} updated, ${c.removed} removed, ${c.moved} moved`,
+    errors: (io: number, data: number) => `${io} I/O errors, ${data} data errors`,
+    fixCounts: (recovered: number, unrecoverable: number) =>
+      `${recovered} recovered, ${unrecoverable} unrecoverable`,
+    notRun: "not run",
+    dataErrorsHint: "Blocks marked as bad can be repaired with \"Fix errors\" on the dashboard.",
+    skip: {
+      job_running: "Another job was running.",
+      too_many_deleted: (count: number, max: number) =>
+        `diff reports ${count} deleted files, more than the limit of ${max}. Check that no disk is missing, then start the sync manually.`,
+      diff_failed: (error: string) => `diff failed: ${error}`,
+      recovery_in_progress: "A disk is being replaced; scheduled jobs are paused until its sync is done.",
+    },
+    smartDisk: (disk: SmartDiskInfo) =>
+      [
+        `${disk.name} (${[disk.device, disk.model, disk.serial].filter(Boolean).join(", ")})`,
+        disk.status !== "OK" && disk.status !== "UNKNOWN" ? `status ${disk.status}` : "",
+        disk.failureProbability !== undefined ? `failure probability ${disk.failureProbability}%` : "",
+      ].filter(Boolean).join(": "),
+    smartHint: "Consider replacing the disk before it fails.",
+  },
+  de: {
+    result: {
+      ok: "OK",
+      warning: "OK mit Warnungen",
+      error: "fehlgeschlagen",
+      aborted: "abgebrochen",
+      incomplete: "unvollständig",
+    },
+    manualLabel: (command: string) => `Manueller ${command}`,
+    failedTitle: (label: string) => `Fehlgeschlagen: ${label}`,
+    dataErrorsTitle: (label: string) => `Datenfehler gefunden: ${label}`,
+    succeededTitle: (label: string) => `Erfolgreich: ${label}`,
+    skippedTitle: (label: string) => `Übersprungen: ${label}`,
+    smartTitle: (config: string) => `SMART-Warnung: ${config}`,
+    config: (name: string) => `Konfiguration: ${name}`,
+    changes: (c: NonNullable<RunReport["changes"]>) =>
+      `${c.added} neu, ${c.updated} geändert, ${c.removed} gelöscht, ${c.moved} verschoben`,
+    errors: (io: number, data: number) => `${io} E/A-Fehler, ${data} Datenfehler`,
+    fixCounts: (recovered: number, unrecoverable: number) =>
+      `${recovered} wiederhergestellt, ${unrecoverable} nicht wiederherstellbar`,
+    notRun: "nicht ausgeführt",
+    dataErrorsHint: "Als fehlerhaft markierte Blöcke lassen sich im Dashboard mit „Fehler beheben“ reparieren.",
+    skip: {
+      job_running: "Es lief gerade ein anderer Job.",
+      too_many_deleted: (count: number, max: number) =>
+        `diff meldet ${count} gelöschte Dateien, mehr als die Grenze von ${max}. Prüfe, ob eine Platte fehlt, und starte den Sync dann manuell.`,
+      diff_failed: (error: string) => `diff ist fehlgeschlagen: ${error}`,
+      recovery_in_progress: "Eine Platte wird gerade ersetzt, geplante Jobs pausieren bis zu ihrem Sync.",
+    },
+    smartDisk: (disk: SmartDiskInfo) =>
+      [
+        `${disk.name} (${[disk.device, disk.model, disk.serial].filter(Boolean).join(", ")})`,
+        disk.status !== "OK" && disk.status !== "UNKNOWN" ? `Status ${disk.status}` : "",
+        disk.failureProbability !== undefined
+          ? `Ausfallwahrscheinlichkeit ${String(disk.failureProbability).replace(".", ",")} %`
+          : "",
+      ].filter(Boolean).join(": "),
+    smartHint: "Die Platte sollte ersetzt werden, bevor sie ausfällt.",
+  },
+} as const;
+
+const COMMAND_LABEL: Partial<Record<SnapRaidCommand, string>> = {
+  sync: "Sync",
+  scrub: "Scrub",
+  touch: "Touch",
+  fix: "Fix",
+  check: "Check",
+  smart: "SMART",
+  status: "Status",
+  diff: "Diff",
+};
+
+const commandLabel = (command: SnapRaidCommand) => COMMAND_LABEL[command] ?? command;
+
+const formatDuration = (seconds: number): string => {
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
+};
+
+// The reason SnapRAID gave up, e.g. a missing disk
+const fatalMessage = (log: string): string | undefined => {
+  const tag = parseLogTags(log).find((t) => t.name === "msg" && t.values[0] === "fatal");
+  return tag ? unescapeTagValue(restOf(tag.values, 1)) : undefined;
+};
+
+const hasErrors = (report: RunReport) => report.ioErrors + report.dataErrors > 0;
+
+const stepLine = (lang: Language, report: RunReport): string => {
+  const t = TEXT[lang];
+  const details = [
+    report.changes && t.changes(report.changes),
+    hasErrors(report) && t.errors(report.ioErrors, report.dataErrors),
+    report.command === "fix" && t.fixCounts(report.recovered ?? 0, report.unrecoverable ?? 0),
+    !isSuccessful(report.result) && (report.error ?? fatalMessage(report.log)),
+  ].filter(Boolean);
+  return `${commandLabel(report.command)}: ${t.result[report.result]} (${formatDuration(report.durationSec)})` +
+    (details.length ? `\n  ${details.join("\n  ")}` : "");
+};
+
+/**
+ * One notification for a run of one or more commands, the most severe outcome wins
+ */
+export const buildRunNotification = (
+  lang: Language,
+  label: string,
+  configPath: string,
+  reports: RunReport[],
+  notRun: SnapRaidCommand[] = [],
+): Notification | null => {
+  const t = TEXT[lang];
+  // Stopped on request, nobody needs to be told
+  if (reports.some((report) => report.result === "aborted")) return null;
+
+  const lines = [
+    ...reports.map((report) => stepLine(lang, report)),
+    ...notRun.map((command) => `${commandLabel(command)}: ${t.notRun}`),
+    "",
+    t.config(basename(configPath)),
+  ];
+
+  if (reports.some(hasErrors)) {
+    return {
+      event: "data_errors",
+      severity: "error",
+      title: t.dataErrorsTitle(label),
+      message: [...lines, "", t.dataErrorsHint].join("\n"),
+    };
+  }
+  if (reports.some((report) => !isSuccessful(report.result))) {
+    return { event: "job_failed", severity: "error", title: t.failedTitle(label), message: lines.join("\n") };
+  }
+  return { event: "job_succeeded", severity: "info", title: t.succeededTitle(label), message: lines.join("\n") };
+};
+
+export const buildSkipNotification = (
+  lang: Language,
+  label: string,
+  configPath: string,
+  outcome: ScheduleOutcome,
+  maxDeletedFiles?: number | null,
+): Notification => {
+  const t = TEXT[lang];
+  const reason = (() => {
+    switch (outcome.skipReason) {
+      case "too_many_deleted":
+        return t.skip.too_many_deleted(outcome.deletedFiles ?? 0, maxDeletedFiles ?? 0);
+      case "diff_failed":
+        return t.skip.diff_failed(outcome.error ?? "");
+      case "recovery_in_progress":
+        return t.skip.recovery_in_progress;
+      default:
+        return t.skip.job_running;
+    }
+  })();
+  return {
+    event: "schedule_skipped",
+    severity: "warning",
+    title: t.skippedTitle(label),
+    message: [reason, "", t.config(basename(configPath))].join("\n"),
+  };
+};
+
+// ====================
+// SMART
+// ====================
+
+const STATE_FILE = "notifications-state.json";
+const FAILING_STATUSES: SmartDiskInfo["status"][] = ["FAIL", "PREFAIL", "LOGFAIL", "LOGERR", "SELFERR"];
+
+interface NotificationState {
+  // Last reported problem per disk, a disk is reported again only when it changes
+  smart: Record<string, string>;
+}
+
+const smartKey = (configPath: string, disk: SmartDiskInfo) =>
+  `${configPath}|${disk.name}|${disk.serial ?? disk.device}`;
+
+/**
+ * Signature of a disk's problem, null for a healthy disk
+ */
+export const smartProblem = (disk: SmartDiskInfo, threshold: number): string | null => {
+  const failing = FAILING_STATUSES.includes(disk.status);
+  const likelyToFail = (disk.failureProbability ?? 0) >= threshold;
+  return failing || likelyToFail ? `${disk.status}|${likelyToFail}` : null;
+};
+
+/**
+ * Disks with a new or changed problem, and the state to remember for the config
+ */
+export const diffSmartProblems = (
+  configPath: string,
+  disks: SmartDiskInfo[],
+  threshold: number,
+  previous: Record<string, string>,
+): { report: SmartDiskInfo[]; state: Record<string, string> } => {
+  const ownKeys = (key: string) => key.startsWith(`${configPath}|`);
+  const state = Object.fromEntries(Object.entries(previous).filter(([key]) => !ownKeys(key)));
+  const report: SmartDiskInfo[] = [];
+
+  disks.forEach((disk) => {
+    const problem = smartProblem(disk, threshold);
+    if (!problem) return;
+    const key = smartKey(configPath, disk);
+    state[key] = problem;
+    if (previous[key] !== problem) report.push(disk);
+  });
+  return { report, state };
+};
+
+const loadState = async (): Promise<NotificationState> => {
+  const path = resolveFromBase(STATE_FILE);
+  if (!existsSync(path)) return { smart: {} };
+  try {
+    return { smart: {}, ...JSON.parse(await Deno.readTextFile(path)) };
+  } catch {
+    return { smart: {} };
+  }
+};
+
+const saveState = (state: NotificationState) =>
+  Deno.writeTextFile(resolveFromBase(STATE_FILE), JSON.stringify(state, null, 2));
+
+// ====================
+// Entry points, never throw: a failed notification must not fail the job
+// ====================
+
+const safely = async (what: string, fn: () => Promise<void>) => {
+  try {
+    await fn();
+  } catch (error) {
+    console.error(`Failed to send ${what} notification:`, error);
+  }
+};
+
+export const notifyRun = (
+  label: string,
+  configPath: string,
+  reports: RunReport[],
+  notRun: SnapRaidCommand[] = [],
+): Promise<void> =>
+  safely("run", async () => {
+    const settings = await loadNotificationSettings();
+    const notification = buildRunNotification(settings.language, label, configPath, reports, notRun);
+    if (notification) await notify(notification);
+  });
+
+/**
+ * A job started in the UI, only reported when the settings ask for it
+ */
+export const notifyManualRun = (configPath: string, report: RunReport): Promise<void> =>
+  safely("run", async () => {
+    const settings = await loadNotificationSettings();
+    if (!settings.includeManualJobs) return;
+    const label = TEXT[settings.language].manualLabel(commandLabel(report.command));
+    const notification = buildRunNotification(settings.language, label, configPath, [report]);
+    if (notification) await notify(notification);
+  });
+
+export const notifySkipped = (
+  label: string,
+  configPath: string,
+  outcome: ScheduleOutcome,
+  maxDeletedFiles?: number | null,
+): Promise<void> =>
+  safely("skip", async () => {
+    const settings = await loadNotificationSettings();
+    await notify(buildSkipNotification(settings.language, label, configPath, outcome, maxDeletedFiles));
+  });
+
+export const notifySmart = (configPath: string, disks: SmartDiskInfo[]): Promise<void> =>
+  safely("SMART", async () => {
+    const settings = await loadNotificationSettings();
+    const state = await loadState();
+    const { report, state: smart } = diffSmartProblems(
+      configPath,
+      disks,
+      settings.smartFailureThreshold,
+      state.smart,
+    );
+    await saveState({ ...state, smart });
+    if (report.length === 0) return;
+
+    const t = TEXT[settings.language];
+    await notify({
+      event: "smart_warning",
+      severity: report.some((disk) => disk.status === "FAIL") ? "error" : "warning",
+      title: t.smartTitle(basename(configPath)),
+      message: [...report.map(t.smartDisk), "", t.smartHint].join("\n"),
+    });
+  });
