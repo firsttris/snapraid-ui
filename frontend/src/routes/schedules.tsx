@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Button } from '../components/Button'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { PageLayout } from '../components/PageLayout'
+import { SAVE_BAR_SPACE, SaveBar } from '../components/SaveBar'
 import {
   DEFAULT_SCRUB_OPTIONS,
   getScrubPlanLabel,
@@ -146,6 +147,12 @@ function SchedulesPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
+  // One form at a time, each brings its own save bar
+  const startCreating = () => {
+    setEditingId(null)
+    setIsCreating(true)
+  }
+
   const handleCreate = async (schedule: ScheduleInput) => {
     try {
       await createSchedule.mutateAsync(schedule)
@@ -200,7 +207,7 @@ function SchedulesPage() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => setIsCreating(true)}
+            onClick={startCreating}
             disabled={isCreating}
           >
             <Plus size={16} />
@@ -233,7 +240,7 @@ function SchedulesPage() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => setIsCreating(true)}
+            onClick={startCreating}
             className="mt-5"
           >
             <Plus size={16} />
@@ -241,14 +248,19 @@ function SchedulesPage() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div
+          className={`space-y-4 ${isCreating || editingId ? SAVE_BAR_SPACE : ''}`}
+        >
           {schedules.map((schedule) => (
             <ScheduleCard
               key={schedule.id}
               schedule={schedule}
               configs={config?.snapraidConfigs || []}
               isEditing={editingId === schedule.id}
-              onEdit={() => setEditingId(schedule.id)}
+              onEdit={() => {
+                setIsCreating(false)
+                setEditingId(schedule.id)
+              }}
               onUpdate={(updates) => handleUpdate(schedule.id, updates)}
               onCancelEdit={() => setEditingId(null)}
               onDelete={() => handleDelete(schedule.id)}
@@ -818,14 +830,14 @@ function ScheduleForm({
           </label>
         </div>
 
-        <div className="flex gap-2 justify-end pt-4">
+        <SaveBar>
           <Button variant="secondary" onClick={onCancel}>
             {m.common_cancel()}
           </Button>
           <Button type="submit" disabled={!isOptionsValid}>
             {schedule ? m.common_save() : m.common_create()}
           </Button>
-        </div>
+        </SaveBar>
       </form>
     </div>
   )

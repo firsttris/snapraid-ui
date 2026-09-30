@@ -10,6 +10,7 @@ import { type ReactNode, useState } from 'react'
 import { Button } from '../components/Button'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { PageLayout } from '../components/PageLayout'
+import { SAVE_BAR_SPACE, SaveBar } from '../components/SaveBar'
 import { Select } from '../components/Select'
 import {
   useNotificationSettings,
@@ -171,7 +172,7 @@ function NotificationForm({ initial }: { initial: NotificationSettings }) {
   const { email, ntfy, webhook } = settings
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className={`space-y-6 ${SAVE_BAR_SPACE}`}>
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">
           {m.notifications_channels()}
@@ -526,25 +527,18 @@ function NotificationForm({ initial }: { initial: NotificationSettings }) {
         </div>
       </section>
 
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-gray-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-end gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          {dirty && (
-            <span className="text-sm text-gray-600">
-              {m.notifications_unsaved()}
-            </span>
-          )}
-          <Button
-            variant="secondary"
-            onClick={() => setSettings(saved)}
-            disabled={!dirty || save.isPending}
-          >
-            {m.common_cancel()}
-          </Button>
-          <Button onClick={handleSave} disabled={!dirty || save.isPending}>
-            {m.common_save()}
-          </Button>
-        </div>
-      </div>
+      <SaveBar hint={dirty && m.notifications_unsaved()}>
+        <Button
+          variant="secondary"
+          onClick={() => setSettings(saved)}
+          disabled={!dirty || save.isPending}
+        >
+          {m.common_cancel()}
+        </Button>
+        <Button onClick={handleSave} disabled={!dirty || save.isPending}>
+          {m.common_save()}
+        </Button>
+      </SaveBar>
     </div>
   )
 }
