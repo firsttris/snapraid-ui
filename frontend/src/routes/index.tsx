@@ -90,7 +90,8 @@ function Dashboard() {
 
   // TanStack Query hooks
   const queryClient = useQueryClient()
-  const { data: parsedConfig } = useSnapRaidConfig(selectedConfig)
+  const { data: parsedConfig, isLoading: isConfigLoading } =
+    useSnapRaidConfig(selectedConfig)
   const { data: currentJob, refetch: refetchCurrentJob } = useCurrentJob()
   const {
     data: statusData,
@@ -104,8 +105,9 @@ function Dashboard() {
     retry: (count, error) => !(error instanceof SnapRaidBusyError) && count < 3,
   })
   const { data: lastRuns } = useLastRuns(selectedConfig)
-  const { data: parityUsage } = useParityUsage(selectedConfig)
-  const { data: schedules } = useSchedules()
+  const { data: parityUsage, isLoading: isParityLoading } =
+    useParityUsage(selectedConfig)
+  const { data: schedules, isLoading: isSchedulesLoading } = useSchedules()
   const executeCommandMutation = useExecuteCommand()
   const abortMutation = useAbortJob()
 
@@ -302,6 +304,7 @@ function Dashboard() {
           lastSync={lastRuns?.sync}
           lastScrub={lastRuns?.scrub}
           nextSchedule={nextSchedule}
+          isSchedulesLoading={isSchedulesLoading}
           onRefresh={() => refetchStatus()}
           onShowDetails={() => setShowStatusModal(true)}
           onFixErrors={handleFixErrors}
@@ -335,6 +338,9 @@ function Dashboard() {
           status={statusData?.status}
           parityUsage={parityUsage}
           powerStates={probeReport?.disks}
+          isConfigLoading={isConfigLoading}
+          isStatusLoading={isStatusFetching}
+          isParityLoading={isParityLoading}
         />
 
         <OutputConsole

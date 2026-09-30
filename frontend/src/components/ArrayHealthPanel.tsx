@@ -11,6 +11,7 @@ import { daysSince, formatRelativeTime } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { Button } from './Button'
+import { LoadingHint, Skeleton } from './Skeleton'
 
 // A run older than this is flagged as overdue
 const SYNC_STALE_DAYS = 7
@@ -25,6 +26,7 @@ interface ArrayHealthPanelProps {
   lastSync: LastRun | null | undefined
   lastScrub: LastRun | null | undefined
   nextSchedule: Schedule | undefined
+  isSchedulesLoading: boolean
   onRefresh: () => void
   onShowDetails: () => void
   onFixErrors: () => void
@@ -96,6 +98,14 @@ const getResultLabel = (result: RunResult): string => {
   }
 }
 
+// Shape of a tile's value and its caption
+const TileSkeleton = () => (
+  <>
+    <Skeleton className="mt-1.5 h-6 w-28" />
+    <Skeleton className="mt-2 h-4 w-20" />
+  </>
+)
+
 const Tile = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="rounded-lg border border-gray-200 p-4">
     <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
@@ -117,7 +127,7 @@ const LastRunTile = ({
   if (run === undefined) {
     return (
       <Tile label={label}>
-        <p className="text-lg font-semibold text-gray-400">…</p>
+        <TileSkeleton />
       </Tile>
     )
   }
@@ -165,6 +175,7 @@ export const ArrayHealthPanel = ({
   lastSync,
   lastScrub,
   nextSchedule,
+  isSchedulesLoading,
   onRefresh,
   onShowDetails,
   onFixErrors,
@@ -223,8 +234,12 @@ export const ArrayHealthPanel = ({
       </div>
 
       {isStatusLoading && !status ? (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-gray-600">
-          {m.health_loading()}
+        <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <LoadingHint>{m.health_loading()}</LoadingHint>
+            <Skeleton className="h-4 w-2/3 max-w-md" />
+          </div>
         </div>
       ) : (
         <div
@@ -304,7 +319,9 @@ export const ArrayHealthPanel = ({
           staleDays={SCRUB_STALE_DAYS}
         />
         <Tile label={m.health_scrub_coverage()}>
-          {status?.scrubPercentage !== undefined ? (
+          {isStatusLoading && !status ? (
+            <TileSkeleton />
+          ) : status?.scrubPercentage !== undefined ? (
             <>
               <p className="text-lg font-semibold text-gray-900">
                 {status.scrubPercentage}%
@@ -320,7 +337,9 @@ export const ArrayHealthPanel = ({
           )}
         </Tile>
         <Tile label={m.health_next_job()}>
-          {nextSchedule?.nextRun ? (
+          {isSchedulesLoading ? (
+            <TileSkeleton />
+          ) : nextSchedule?.nextRun ? (
             <>
               <p
                 className="text-lg font-semibold text-gray-900"

@@ -315,7 +315,7 @@
   "health_busy_stale": "Ein Job läuft. Angezeigt wird der Stand von {time}.",
   "health_unknown": "Status unbekannt",
   "health_unknown_msg": "Der Status konnte nicht gelesen werden. Wurde bereits ein erster Sync ausgeführt?",
-  "health_loading": "Status wird geladen…",
+  "health_loading": "SnapRAID liest den Array-Status…",
   "health_details": "Details",
   "health_refresh": "Aktualisieren",
   "health_last_sync": "Letzter Sync",
@@ -625,5 +625,6 @@
   "smart_monitor_standby": "Standby",
   "smart_monitor_standby_hint": "Die Platte schläft. SMART-Daten werden nicht gelesen, damit sie nicht aufgeweckt wird.",
   "smart_monitor_loading_hint": "SMART-Daten werden von den Platten gelesen, das dauert ein paar Sekunden…",
-  "smart_monitor_no_disks": "SnapRAID hat keine Platten mit SMART-Daten gefunden. In Docker braucht SMART einen Container mit --privileged."
+  "smart_monitor_no_disks": "SnapRAID hat keine Platten mit SMART-Daten gefunden. In Docker braucht SMART einen Container mit --privileged.",
+  "disks_loading": "Plattenbelegung wird gelesen…"
 }

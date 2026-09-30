@@ -315,7 +315,7 @@
   "health_busy_stale": "A job is running. Showing the status from {time}.",
   "health_unknown": "Status unknown",
   "health_unknown_msg": "The status could not be read. Has an initial sync been run yet?",
-  "health_loading": "Loading status…",
+  "health_loading": "SnapRAID is reading the array status…",
   "health_details": "Details",
   "health_refresh": "Refresh",
   "health_last_sync": "Last sync",
@@ -625,5 +625,6 @@
   "smart_monitor_standby": "Standby",
   "smart_monitor_standby_hint": "The disk is asleep. SMART data is not read, so it is not woken up.",
   "smart_monitor_loading_hint": "Reading SMART data from the disks, this takes a few seconds…",
-  "smart_monitor_no_disks": "SnapRAID found no disks with SMART data. Inside Docker, SMART needs the container to run with --privileged."
+  "smart_monitor_no_disks": "SnapRAID found no disks with SMART data. Inside Docker, SMART needs the container to run with --privileged.",
+  "disks_loading": "Reading disk usage…"
 }

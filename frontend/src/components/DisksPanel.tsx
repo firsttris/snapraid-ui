@@ -10,6 +10,7 @@ import type { ReactNode } from 'react'
 import { formatGB } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
+import { LoadingHint, Skeleton } from './Skeleton'
 
 // Parity reserve below this share of the fullest data disk is flagged as tight
 const PARITY_TIGHT_RATIO = 0.05
@@ -19,6 +20,10 @@ interface DisksPanelProps {
   status: SnapRaidStatus | undefined
   parityUsage: ParityLevelUsage[] | undefined
   powerStates: DiskPowerStatus[] | undefined
+  // status and parity usage come from slower SnapRAID and df calls than the config
+  isConfigLoading: boolean
+  isStatusLoading: boolean
+  isParityLoading: boolean
 }
 
 type Tone = 'ok' | 'warning' | 'error'
@@ -99,6 +104,7 @@ const DiskRow = ({
   free,
   warning,
   details,
+  loading = false,
 }: {
   name: string
   role: string
@@ -110,6 +116,7 @@ const DiskRow = ({
   free: number | undefined
   warning: Warning | null
   details: ReactNode
+  loading?: boolean
 }) => (
   <li className="grid items-center gap-x-6 gap-y-2 py-3 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_11rem]">
     <div className="min-w-0">
@@ -136,16 +143,26 @@ const DiskRow = ({
     </div>
 
     <div className="min-w-0">
-      {percent !== undefined && (
-        <UsageBar percent={percent} barClass={barClass} />
+      {loading ? (
+        <>
+          <Skeleton className="h-2 w-full rounded-full" />
+          <Skeleton className="mt-2 h-3 w-24" />
+        </>
+      ) : (
+        <>
+          {percent !== undefined && (
+            <UsageBar percent={percent} barClass={barClass} />
+          )}
+          <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-gray-500">
+            {details}
+          </div>
+        </>
       )}
-      <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-gray-500">
-        {details}
-      </div>
     </div>
 
     <div className="flex flex-wrap items-center gap-2 text-sm md:justify-end">
-      {percent !== undefined && free !== undefined && (
+      {loading && <Skeleton className="h-4 w-28" />}
+      {!loading && percent !== undefined && free !== undefined && (
         <span className="text-gray-700">
           <span className="font-semibold">{percent}%</span> ·{' '}
           {m.disks_free({ free: formatGB(free) })}
@@ -236,13 +253,35 @@ const sumFilesystems = (usage: ParityLevelUsage) => {
     : undefined
 }
 
+// Rows until the config says which disks there are
+const SkeletonRow = () => (
+  <li className="grid items-center gap-x-6 gap-y-2 py-3 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_11rem]">
+    <div className="space-y-2">
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-3 w-36" />
+    </div>
+    <div>
+      <Skeleton className="h-2 w-full rounded-full" />
+      <Skeleton className="mt-2 h-3 w-24" />
+    </div>
+    <Skeleton className="h-4 w-28 md:justify-self-end" />
+  </li>
+)
+
 export const DisksPanel = ({
   parsedConfig,
   status,
   parityUsage,
   powerStates,
+  isConfigLoading,
+  isStatusLoading,
+  isParityLoading,
 }: DisksPanelProps) => {
-  if (!parsedConfig) return null
+  // A config that fails to parse shows nothing, as before
+  if (!parsedConfig && !isConfigLoading) return null
+
+  const statusPending = !status && isStatusLoading
+  const parityPending = !parityUsage && isParityLoading
 
   const statsByName = new Map(status?.disks?.map((disk) => [disk.name, disk]))
   const powerByName = new Map(
@@ -258,6 +297,9 @@ export const DisksPanel = ({
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="text-xl font-semibold">{m.disks_title()}</h2>
         <div className="flex flex-wrap items-baseline gap-x-4 text-sm text-gray-500">
+          {(!parsedConfig || statusPending) && (
+            <LoadingHint>{m.disks_loading()}</LoadingHint>
+          )}
           {status?.totalUsedGB !== undefined &&
             status.totalFreeGB !== undefined && (
               <span>
@@ -274,7 +316,8 @@ export const DisksPanel = ({
       </div>
 
       <ul className="mt-2 divide-y divide-gray-100">
-        {Object.entries(parsedConfig.data).map(([name, path]) => {
+        {!parsedConfig && [1, 2, 3].map((row) => <SkeletonRow key={row} />)}
+        {Object.entries(parsedConfig?.data ?? {}).map(([name, path]) => {
           const stats = statsByName.get(name)
           return (
             <DiskRow
@@ -289,11 +332,12 @@ export const DisksPanel = ({
               free={stats?.freeGB}
               warning={stats ? usageWarning(stats.usePercent) : null}
               details={<DataDetails stats={stats} />}
+              loading={statusPending}
             />
           )
         })}
 
-        {parsedConfig.parity.map((parity) => {
+        {(parsedConfig?.parity ?? []).map((parity) => {
           const usage = parityUsage?.find(
             (level) => level.keyword === parity.keyword,
           )
@@ -321,6 +365,7 @@ export const DisksPanel = ({
               barClass="bg-purple-500"
               free={filesystem?.free}
               warning={null}
+              loading={parityPending}
               details={
                 <>
                   {fileSize === null ? (
