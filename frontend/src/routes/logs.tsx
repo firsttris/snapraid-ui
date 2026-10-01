@@ -72,13 +72,16 @@ function LogsPage() {
         </div>
       }
     >
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      {/* Without a selection both boxes share one height, with one the log sets its own */}
+      <div
+        className={`grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] ${selectedLog ? 'items-start' : ''}`}
+      >
         {/* On small screens list and log take turns */}
-        <div className={selectedLog ? 'hidden lg:block' : ''}>
+        <div className={`flex-col ${selectedLog ? 'hidden lg:flex' : 'flex'}`}>
           <LogList selectedLog={selectedLog} onSelectLog={selectLog} />
         </div>
         <div
-          className={`lg:sticky lg:top-6 ${selectedLog ? '' : 'hidden lg:block'}`}
+          className={`flex-col lg:sticky lg:top-6 ${selectedLog ? 'flex' : 'hidden lg:flex'}`}
         >
           <LogViewer selectedLog={selectedLog} onSelectLog={selectLog} />
         </div>

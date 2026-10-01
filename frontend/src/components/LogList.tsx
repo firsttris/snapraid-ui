@@ -150,7 +150,7 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
+    <section className="flex flex-1 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
       <div className="border-b border-gray-200 p-4">
         <div className="mb-3 flex items-baseline justify-between gap-2">
           <h2 className="font-semibold text-gray-900">{m.log_list_title()}</h2>
@@ -182,7 +182,7 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
       <div
         ref={listRef}
         onKeyDown={handleKeyDown}
-        className="max-h-[calc(100vh-280px)] min-h-48 overflow-auto"
+        className="max-h-[calc(100vh-280px)] min-h-48 flex-1 overflow-auto"
       >
         {isLoading ? (
           <div className="divide-y divide-gray-100" aria-busy="true">
@@ -197,28 +197,30 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
             ))}
           </div>
         ) : filteredLogs.length === 0 ? (
-          <div className="ui-fade-in flex flex-col items-center px-6 py-12 text-center">
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
-              {isFiltered ? <FilterX size={22} /> : <ScrollText size={22} />}
+          <div className="overflow-hidden">
+            <div className="ui-fade-in flex flex-col items-center px-6 py-12 text-center">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                {isFiltered ? <FilterX size={22} /> : <ScrollText size={22} />}
+              </div>
+              <p className="font-medium text-gray-900">
+                {isFiltered ? m.log_list_no_matches() : m.log_list_no_logs()}
+              </p>
+              <p className="mt-1 max-w-xs text-sm text-gray-500">
+                {isFiltered
+                  ? m.log_list_no_matches_hint()
+                  : m.log_list_no_logs_hint()}
+              </p>
+              {isFiltered && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="mt-4"
+                >
+                  {m.log_filters_reset()}
+                </Button>
+              )}
             </div>
-            <p className="font-medium text-gray-900">
-              {isFiltered ? m.log_list_no_matches() : m.log_list_no_logs()}
-            </p>
-            <p className="mt-1 max-w-xs text-sm text-gray-500">
-              {isFiltered
-                ? m.log_list_no_matches_hint()
-                : m.log_list_no_logs_hint()}
-            </p>
-            {isFiltered && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={resetFilters}
-                className="mt-4"
-              >
-                {m.log_filters_reset()}
-              </Button>
-            )}
           </div>
         ) : (
           groups.map((group) => (

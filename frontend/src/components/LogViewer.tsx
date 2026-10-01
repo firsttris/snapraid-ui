@@ -358,7 +358,7 @@ const Overview = ({
 }
 
 const EmptyState = () => (
-  <div className="flex flex-col items-center px-6 py-20 text-center">
+  <div className="flex flex-1 flex-col items-center justify-center px-6 py-20 text-center">
     <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-50 to-indigo-100 text-indigo-600">
       <ScrollText size={26} />
     </div>
@@ -410,7 +410,7 @@ export const LogViewer = ({ selectedLog, onSelectLog }: LogViewerProps) => {
   )
 
   const shell = (children: React.ReactNode) => (
-    <section className="flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
+    <section className="flex max-h-[calc(100vh-3rem)] flex-1 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
       {children}
     </section>
   )
