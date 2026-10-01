@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Same look as the logo in the header: lucide HardDrive on a dark tile with a cyan to indigo tint -->
+  <defs>
+    <linearGradient id="tint" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00d3f2" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#615fff" stop-opacity="0.28"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#101828"/>
+  <rect x="8" y="8" width="496" height="496" rx="104" fill="url(#tint)" stroke="#00d3f2" stroke-opacity="0.45" stroke-width="16"/>
+  <g transform="translate(96 96) scale(13.333)" fill="none" stroke="#53eafd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 16h.01"/>
+    <path d="M2.212 11.577a2 2 0 0 0-.212.896V18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.527a2 2 0 0 0-.212-.896L18.55 5.11A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+    <path d="M21.946 12.013H2.054"/>
+    <path d="M6 16h.01"/>
+  </g>
+</svg>

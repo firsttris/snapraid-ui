@@ -5,6 +5,7 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
+import { VitePWA } from 'vite-plugin-pwa'
 
 const config = defineConfig({
   resolve: {
@@ -24,6 +25,47 @@ const config = defineConfig({
     tailwindcss(),
     tanstackStart(),
     viteReact(),
+    // Only for the client build, which Nitro writes to .output/public
+    ...VitePWA({
+      outDir: '.output/public',
+      // Registered in __root.tsx, there is no index.html to inject into with SSR
+      injectRegister: false,
+      registerType: 'autoUpdate',
+      includeAssets: [
+        'favicon.ico',
+        'favicon.svg',
+        'apple-touch-icon-180x180.png',
+      ],
+      manifest: {
+        name: 'SnapRAID UI',
+        short_name: 'SnapRAID',
+        description: 'Web interface for managing SnapRAID arrays',
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        theme_color: '#101828',
+        background_color: '#101828',
+        icons: [
+          { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          {
+            src: 'maskable-icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
+        // Pages are rendered by the server and API data has to be live, so neither is cached
+        navigateFallback: null,
+      },
+    }).map((plugin) => ({
+      ...plugin,
+      applyToEnvironment: (env: { name: string }) => env.name === 'client',
+    })),
     /* Proxy not forwarding POST request bodys correctly, disabled for now
       server: {
     proxy: {
