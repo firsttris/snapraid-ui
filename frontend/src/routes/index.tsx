@@ -132,6 +132,12 @@ function Dashboard() {
         )[0],
     [schedules, configFile],
   )
+  const hasScrubSchedule = !!schedules?.some(
+    (schedule) =>
+      schedule.enabled &&
+      schedule.configPath.replace(/^.*[/\\]/, '') === configFile &&
+      (schedule.command === 'scrub' || !!schedule.scrubAfter),
+  )
 
   // A job started elsewhere (other tab, schedule, before a reload) belongs to its config
   // biome-ignore lint/correctness/useExhaustiveDependencies: only react to a newly detected job
@@ -267,6 +273,7 @@ function Dashboard() {
           lastSync={lastRuns?.sync}
           lastScrub={lastRuns?.scrub}
           nextSchedule={nextSchedule}
+          hasScrubSchedule={hasScrubSchedule}
           isSchedulesLoading={isSchedulesLoading}
           runningJob={
             job.isRunning &&

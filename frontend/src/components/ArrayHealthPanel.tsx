@@ -49,6 +49,7 @@ interface ArrayHealthPanelProps {
   lastSync: LastRun | null | undefined
   lastScrub: LastRun | null | undefined
   nextSchedule: Schedule | undefined
+  hasScrubSchedule: boolean // An enabled schedule scrubs this config, also as part of a sync
   isSchedulesLoading: boolean
   runningJob: RunningJobInfo | undefined // Job of this config that is running right now
   onRefresh: () => void
@@ -185,6 +186,13 @@ const oldestBlockStale = (status: SnapRaidStatus | undefined) =>
     ? status.oldestScrubDays
     : undefined
 
+// Each scrub verifies the oldest blocks first, a few percent per run, so recent
+// successful scrubs work off old blocks bit by bit and those need no warning
+const scrubKeepingUp = (run: LastRun | null | undefined) =>
+  !!run &&
+  (run.result === 'ok' || run.result === 'warning') &&
+  daysSince(run.timestamp) <= SCRUB_STALE_DAYS
+
 const LogLink = ({ logFile }: { logFile: string }) => (
   <Link
     to="/logs"
@@ -314,9 +322,19 @@ const LastRunTile = ({
 }
 
 // Scrub coverage from the status: how much of the array was ever verified, and how long ago the oldest block
-const ScrubCoverage = ({ status }: { status: SnapRaidStatus | undefined }) => {
+const ScrubCoverage = ({
+  status,
+  keepingUp,
+  hasScrubSchedule,
+}: {
+  status: SnapRaidStatus | undefined
+  keepingUp: boolean
+  hasScrubSchedule: boolean
+}) => {
   if (status?.scrubPercentage === undefined) return null
   const oldestStale = oldestBlockStale(status) !== undefined
+  // Old blocks while scrubs run are a backlog being worked off, not a problem
+  const backlog = oldestStale && keepingUp
   return (
     <div className="mt-3">
       <div
@@ -339,12 +357,29 @@ const ScrubCoverage = ({ status }: { status: SnapRaidStatus | undefined }) => {
         {status.oldestScrubDays !== undefined && (
           <>
             {' · '}
-            <span className={oldestStale ? 'font-medium text-orange-600' : ''}>
+            <span
+              className={
+                oldestStale && !backlog ? 'font-medium text-orange-600' : ''
+              }
+            >
               {m.health_oldest_block({ days: status.oldestScrubDays })}
             </span>
           </>
         )}
       </p>
+      {backlog && (
+        <p className="mt-1 text-xs text-gray-500">
+          {m.health_scrub_backlog()}
+          {!hasScrubSchedule && (
+            <>
+              {' '}
+              <Link to="/schedules" className="text-blue-600 hover:underline">
+                {m.health_setup_schedule()} →
+              </Link>
+            </>
+          )}
+        </p>
+      )}
     </div>
   )
 }
@@ -358,6 +393,7 @@ export const ArrayHealthPanel = ({
   lastSync,
   lastScrub,
   nextSchedule,
+  hasScrubSchedule,
   isSchedulesLoading,
   runningJob,
   onRefresh,
@@ -374,7 +410,8 @@ export const ArrayHealthPanel = ({
     !!lastSync && lastSync.result !== 'ok' && lastSync.result !== 'warning'
   const syncOverdue = staleDays(lastSync, SYNC_STALE_DAYS)
   const scrubOverdue = staleDays(lastScrub, SCRUB_STALE_DAYS)
-  const oldestOverdue = oldestBlockStale(status)
+  const keepingUp = scrubKeepingUp(lastScrub)
+  const oldestOverdue = keepingUp ? undefined : oldestBlockStale(status)
   // While a job holds SnapRAID's lock the last known status (kept across reloads) stands in
   const health: Health = !status
     ? isBusy
@@ -548,6 +585,17 @@ export const ArrayHealthPanel = ({
                     {hint.actionLabel}
                   </Button>
                 ))}
+                {/* A single scrub covers a few percent, regular ones keep the array verified */}
+                {overdue.some((hint) => hint.key === 'scrub') &&
+                  !hasScrubSchedule &&
+                  !isSchedulesLoading && (
+                    <Link
+                      to="/schedules"
+                      className="px-1 text-sm font-medium underline-offset-2 hover:underline"
+                    >
+                      {m.health_setup_schedule()} →
+                    </Link>
+                  )}
               </div>
             )}
             {isBusy && status && statusTimestamp && (
@@ -626,7 +674,11 @@ export const ArrayHealthPanel = ({
             status?.scrubPercentage ? m.health_no_log() : m.health_never()
           }
         >
-          <ScrubCoverage status={status} />
+          <ScrubCoverage
+            status={status}
+            keepingUp={keepingUp}
+            hasScrubSchedule={hasScrubSchedule || isSchedulesLoading}
+          />
         </LastRunTile>
         <Tile label={m.health_next_job()}>
           {isSchedulesLoading ? (
