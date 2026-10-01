@@ -1,7 +1,7 @@
 {
   "tasks": {
-    "dev": "deno run --allow-net --allow-read --allow-write --allow-run --allow-env --watch src/main.ts",
-    "start": "deno run --allow-net --allow-read --allow-write --allow-run --allow-env src/main.ts"
+    "dev": "deno run --allow-net --allow-read --allow-write --allow-run --allow-env --allow-sys=networkInterfaces,hostname --watch src/main.ts",
+    "start": "deno run --allow-net --allow-read --allow-write --allow-run --allow-env --allow-sys=networkInterfaces,hostname src/main.ts"
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@^1.0.19",
