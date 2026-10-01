@@ -1,4 +1,4 @@
-import type { SnapRaidCommand, CommandOutput, RunningJob } from "@shared/types.ts";
+import type { SnapRaidCommand, CommandOutput, RunningJob, FinishedJob } from "@shared/types.ts";
 import type { LogManager } from "../log-manager.ts";
 import { basename } from "@std/path";
 import { snapraidCommand } from "../config.ts";
@@ -10,7 +10,17 @@ const state = {
   processes: new Map<string, Deno.ChildProcess>(),
   abortRequested: new Set<string>(),
   currentJob: null as RunningJob | null,
+  // Tail of the running job's output, replayed to clients that connect while it runs
+  currentOutput: "",
+  lastJob: null as FinishedJob | null,
   logManager: null as LogManager | null,
+};
+
+// Enough for the console and the progress bar, SnapRAID rewrites its progress line over and over
+const MAX_BUFFERED_OUTPUT = 64 * 1024;
+
+const bufferOutput = (chunk: string): void => {
+  state.currentOutput = (state.currentOutput + chunk).slice(-MAX_BUFFERED_OUTPUT);
 };
 
 /**
@@ -52,14 +62,20 @@ async function* readStream(reader: ReadableStreamDefaultReader<Uint8Array>): Asy
  */
 const createStreamReader = (
   reader: ReadableStreamDefaultReader<Uint8Array>,
-  decoder: TextDecoder,
   onOutput: (chunk: string) => void
 ) => async (): Promise<string> => {
+  // One decoder per stream, in streaming mode, so characters split across chunks stay intact
+  const decoder = new TextDecoder();
   const chunks: string[] = [];
   for await (const value of readStream(reader)) {
-    const chunk = decoder.decode(value);
+    const chunk = decoder.decode(value, { stream: true });
     chunks.push(chunk);
     onOutput(chunk);
+  }
+  const rest = decoder.decode();
+  if (rest) {
+    chunks.push(rest);
+    onOutput(rest);
   }
   return chunks.join("");
 };
@@ -71,10 +87,9 @@ const readProcessStreams = async (
   process: Deno.ChildProcess,
   onOutput: (chunk: string) => void
 ): Promise<string> => {
-  const decoder = new TextDecoder();
   const [stdoutContent, stderrContent] = await Promise.all([
-    createStreamReader(process.stdout.getReader(), decoder, onOutput)(),
-    createStreamReader(process.stderr.getReader(), decoder, onOutput)(),
+    createStreamReader(process.stdout.getReader(), onOutput)(),
+    createStreamReader(process.stderr.getReader(), onOutput)(),
   ]);
   return stdoutContent + stderrContent;
 };
@@ -82,11 +97,13 @@ const readProcessStreams = async (
 /**
  * Cleanup after process completion
  */
-const cleanupProcess = (processId: string): void => {
+const cleanupProcess = (processId: string, outcome: Omit<FinishedJob, "finishedAt">): void => {
   state.processes.delete(processId);
   state.abortRequested.delete(processId);
+  state.lastJob = { ...outcome, finishedAt: new Date().toISOString() };
   if (state.currentJob?.processId === processId) {
     state.currentJob = null;
+    state.currentOutput = "";
   }
 };
 
@@ -101,25 +118,31 @@ export const executeCommand = async (
   afterRun?: (result: CommandOutput) => Promise<void>
 ): Promise<CommandOutput> => {
   const processId = `${command}-${Date.now()}`;
-  const logPath = state.logManager ? await prepareLogPath(command) : undefined;
-  const args = buildCommandArgs(command, configPath, additionalArgs, logPath);
   const timestamp = new Date().toISOString();
 
-  state.currentJob = {
-    command,
-    configPath,
-    startTime: timestamp,
-    processId,
-    logFile: logPath ? basename(logPath) : undefined,
-  };
-
-  const cmd = snapraidCommand(args);
-
-  const process = cmd.spawn();
-  state.processes.set(processId, process);
-
+  // Also a failure before the process runs ends up as the last job, so clients learn about it
   try {
-    const fullOutput = await readProcessStreams(process, onOutput);
+    const logPath = state.logManager ? await prepareLogPath(command) : undefined;
+    const args = buildCommandArgs(command, configPath, additionalArgs, logPath);
+
+    state.currentJob = {
+      command,
+      configPath,
+      startTime: timestamp,
+      processId,
+      logFile: logPath ? basename(logPath) : undefined,
+    };
+    state.currentOutput = "";
+
+    const cmd = snapraidCommand(args);
+
+    const process = cmd.spawn();
+    state.processes.set(processId, process);
+
+    const fullOutput = await readProcessStreams(process, (chunk) => {
+      bufferOutput(chunk);
+      onOutput(chunk);
+    });
     const status = await process.status;
     const aborted = state.abortRequested.has(processId);
     const result = {
@@ -132,11 +155,11 @@ export const executeCommand = async (
     };
     // Still counts as the current job, so nothing else starts before the follow-up is done
     await afterRun?.(result);
-    cleanupProcess(processId);
+    cleanupProcess(processId, { command, processId, exitCode: status.code, aborted });
 
     return result;
   } catch (error) {
-    cleanupProcess(processId);
+    cleanupProcess(processId, { command, processId, exitCode: null, aborted: false, error: String(error) });
     throw error;
   }
 };
@@ -163,6 +186,20 @@ export const abortCommand = (processId: string): boolean => {
  */
 export const getCurrentJob = (): RunningJob | null => {
   return state.currentJob;
+};
+
+/**
+ * Output of the running job so far (its tail)
+ */
+export const getCurrentOutput = (): string => {
+  return state.currentOutput;
+};
+
+/**
+ * Outcome of the last finished job
+ */
+export const getLastJob = (): FinishedJob | null => {
+  return state.lastJob;
 };
 
 /**

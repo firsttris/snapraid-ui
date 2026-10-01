@@ -1,6 +1,6 @@
-import type { SnapRaidCommand, CommandOutput, RunningJob, DevicesReport, ListReport, DiffReport, DupReport } from "@shared/types.ts";
+import type { SnapRaidCommand, CommandOutput, RunningJob, FinishedJob, DevicesReport, ListReport, DiffReport, DupReport } from "@shared/types.ts";
 import type { LogManager } from "./log-manager.ts";
-import { executeCommand, abortCommand, getCurrentJob, executeSnapraidCommand, setLogManager } from "./executors/command-executor.ts";
+import { executeCommand, abortCommand, getCurrentJob, getLastJob, executeSnapraidCommand, setLogManager } from "./executors/command-executor.ts";
 import { parseDevicesOutput } from "./parsers/devices-parser.ts";
 import { parseListOutput } from "./parsers/list-parser.ts";
 import { parseDupOutput } from "./parsers/dup-parser.ts";
@@ -55,6 +55,13 @@ export const createSnapRaidRunner = () => {
      */
     getCurrentJob: (): RunningJob | null => {
       return getCurrentJob();
+    },
+
+    /**
+     * Get the outcome of the last finished job
+     */
+    getLastJob: (): FinishedJob | null => {
+      return getLastJob();
     },
 
     /**

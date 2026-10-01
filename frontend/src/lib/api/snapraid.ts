@@ -5,6 +5,7 @@ import type {
   DiffReport,
   DiskReplacement,
   DupReport,
+  FinishedJob,
   LastRuns,
   ListReport,
   ParityLevelUsage,
@@ -65,6 +66,15 @@ export const getHistory = async (): Promise<CommandOutput[]> => {
 export const getCurrentJob = async (): Promise<RunningJob | null> => {
   const response = await apiFetch(`${API_BASE}/snapraid/current-job`)
   if (!response.ok) throw new Error('Failed to fetch current job')
+  return response.json()
+}
+
+/**
+ * Outcome of the last finished job, for when its WebSocket completion was missed
+ */
+export const getLastJob = async (): Promise<FinishedJob | null> => {
+  const response = await apiFetch(`${API_BASE}/snapraid/last-job`)
+  if (!response.ok) throw new Error('Failed to fetch last job')
   return response.json()
 }
 

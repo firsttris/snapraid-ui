@@ -93,6 +93,11 @@ snapraid.get("/current-job", (c) => {
   return c.json(currentJob);
 });
 
+// GET /api/snapraid/last-job - Outcome of the last finished job, for clients that missed its completion
+snapraid.get("/last-job", (c) => {
+  return c.json(runner.getLastJob());
+});
+
 // POST /api/snapraid/abort - Abort the running job
 snapraid.post("/abort", (c) => {
   const currentJob = runner.getCurrentJob();
@@ -194,6 +199,7 @@ const startJob = (
       state.broadcastFn({
         type: "complete",
         command,
+        processId: runner.getLastJob()?.processId,
         exitCode: result.exitCode,
         aborted: result.aborted,
         timestamp: result.timestamp,
@@ -215,6 +221,7 @@ const startJob = (
       state.broadcastFn({
         type: "error",
         command,
+        processId: runner.getLastJob()?.processId,
         error: String(error),
         timestamp: new Date().toISOString(),
       });

@@ -1,4 +1,4 @@
-import type { RunningJob } from '@shared/types'
+import type { FinishedJob, RunningJob } from '@shared/types'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import {
@@ -12,14 +12,24 @@ import {
   useState,
 } from 'react'
 import { useFeedback } from '../components/Feedback'
+import { getLastJob } from '../lib/api/snapraid'
 import { connectWebSocket } from '../lib/api/websocket'
 import { getCommandLabel } from '../lib/commands'
+import { createJobTracker } from '../lib/job-tracker'
 import { type JobProgress, parseProgress } from '../lib/progress'
 import * as m from '../paraglide/messages'
 import { queryKeys, useAbortJob, useCurrentJob } from './queries'
 
 // The WebSocket reports output and completion, polling catches jobs it missed (reload, reconnect)
 const JOB_POLL_INTERVAL_MS = 5000
+
+const toJobResult = (job: FinishedJob): JobResult => ({
+  command: job.command,
+  exitCode: job.exitCode,
+  aborted: job.aborted,
+  error: job.error,
+  finishedAt: job.finishedAt,
+})
 
 export interface JobResult {
   command: string
@@ -84,9 +94,15 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate()
   const { confirm, toast } = useFeedback()
   const abortMutation = useAbortJob()
-  const { data: currentJob, refetch: refetchCurrentJob } = useCurrentJob({
+  const {
+    data: currentJob,
+    dataUpdatedAt: currentJobUpdatedAt,
+    refetch: refetchCurrentJob,
+  } = useCurrentJob({
     refetchInterval: JOB_POLL_INTERVAL_MS,
   })
+  // WebSocket and polling can both report the end of a job, it is handled once
+  const [tracker] = useState(createJobTracker)
   const [state, setState] = useState<JobState>({
     output: '',
     currentCommand: '',
@@ -94,17 +110,22 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
     lastResult: null,
   })
 
-  // The WebSocket handlers outlive renders, they reach the latest callbacks through this ref
-  const finishRef = useRef<(result: JobResult) => void>(() => {})
-  finishRef.current = (result: JobResult) => {
+  // The WebSocket handlers outlive renders, they reach the latest callbacks through this ref.
+  // Without a result the job ended unnoticed and its outcome is unknown, it just stops showing as running.
+  const finishRef = useRef<
+    (result: JobResult | null, processId?: string) => void
+  >(() => {})
+  finishRef.current = (result: JobResult | null, processId?: string) => {
+    if (!tracker.finish(processId)) return
+
     setState((prev) => ({
       ...prev,
       isRunning: false,
       currentCommand: '',
-      output: result.error
+      output: result?.error
         ? `${prev.output}\n\nError: ${result.error}`
         : prev.output,
-      lastResult: result,
+      lastResult: result ?? prev.lastResult,
     }))
 
     // A finished job changes status and run history, so reload them
@@ -118,6 +139,7 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
     // Removing a data disk edits the config once its sync -E has finished
     queryClient.invalidateQueries({ queryKey: ['snapraid-config'] })
 
+    if (!result) return
     const { kind, message } = resultToast(result)
     // The check report is read from the log afterwards, the dashboard opens it
     const action =
@@ -143,27 +165,55 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
             command === 'scheduled' ? prev.currentCommand : command,
         }))
       },
-      onComplete: (command, exitCode, aborted) =>
-        finishRef.current({
-          command,
-          exitCode,
-          aborted,
-          finishedAt: new Date().toISOString(),
-        }),
-      onError: (error, command) =>
-        finishRef.current({
-          command,
-          exitCode: null,
-          aborted: false,
-          error,
-          finishedAt: new Date().toISOString(),
-        }),
+      onReplay: (output, command, processId) => {
+        if (!tracker.observe(processId)) return
+        setState((prev) => ({
+          ...prev,
+          isRunning: true,
+          currentCommand: command,
+          output,
+        }))
+      },
+      onComplete: (command, exitCode, aborted, processId) =>
+        finishRef.current(
+          {
+            command,
+            exitCode,
+            aborted,
+            finishedAt: new Date().toISOString(),
+          },
+          processId,
+        ),
+      onError: (error, command, processId) =>
+        finishRef.current(
+          {
+            command,
+            exitCode: null,
+            aborted: false,
+            error,
+            finishedAt: new Date().toISOString(),
+          },
+          processId,
+        ),
     })
-  }, [])
+  }, [tracker])
 
-  // Pick up a job that was started elsewhere (other tab, schedule) or before a reload
+  // Pick up a job that was started elsewhere (other tab, schedule) or before a reload,
+  // and notice one that ended while the WebSocket was not connected
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-evaluate on every poll, even when the job stays the same
   useEffect(() => {
-    if (!currentJob) return
+    if (!currentJob) {
+      const missing = tracker.takeMissing(currentJob)
+      if (!missing) return
+      getLastJob()
+        .then((last) =>
+          last?.processId === missing ? toJobResult(last) : null,
+        )
+        .catch(() => null)
+        .then((result) => finishRef.current(result, missing))
+      return
+    }
+    if (!tracker.observe(currentJob.processId)) return
     setState((prev) => {
       if (prev.isRunning && prev.currentCommand) return prev
       return {
@@ -175,7 +225,7 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
           : `${prev.output}\n[Reconnected to running job: ${currentJob.command}]\n`,
       }
     })
-  }, [currentJob])
+  }, [currentJob, currentJobUpdatedAt, tracker])
 
   const start = useCallback((command: string) => {
     setState((prev) => ({

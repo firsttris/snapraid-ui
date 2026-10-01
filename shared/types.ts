@@ -129,6 +129,16 @@ export interface RunningJob {
   logFile?: string; // Log the job is writing, it has no result yet
 }
 
+// Outcome of the last job, for clients that missed its WebSocket completion (reload, reconnect)
+export interface FinishedJob {
+  command: SnapRaidCommand;
+  processId: string;
+  exitCode: number | null;
+  aborted: boolean;
+  error?: string; // The job could not run at all
+  finishedAt: string; // ISO string
+}
+
 // Outcome of a finished run, from the `summary:exit` tag of its log
 export type RunResult = 'ok' | 'warning' | 'error' | 'aborted' | 'incomplete';
 

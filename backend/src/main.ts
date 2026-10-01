@@ -104,13 +104,14 @@ const main = async (): Promise<void> => {
         broadcast({
           type: "complete",
           command,
+          processId: runner.getLastJob()?.processId,
           exitCode: result.exitCode,
           aborted: result.aborted,
           timestamp: result.timestamp,
         });
         return result;
       } catch (error) {
-        broadcast({ type: "error", command, error: String(error), timestamp: new Date().toISOString() });
+        broadcast({ type: "error", command, processId: runner.getLastJob()?.processId, error: String(error), timestamp: new Date().toISOString() });
         throw error;
       }
     },

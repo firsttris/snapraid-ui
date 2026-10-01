@@ -8,8 +8,15 @@ const wsState = {
   shouldReconnect: true,
   handlers: {} as {
     onOutput?: (chunk: string, command: string) => void
-    onComplete?: (command: string, exitCode: number, aborted: boolean) => void
-    onError?: (error: string, command: string) => void
+    // Output of a job that was already running when the connection opened, replaces what is shown
+    onReplay?: (output: string, command: string, processId: string) => void
+    onComplete?: (
+      command: string,
+      exitCode: number,
+      aborted: boolean,
+      processId?: string,
+    ) => void
+    onError?: (error: string, command: string, processId?: string) => void
     onStatus?: (status: SnapRaidStatus) => void
   },
 }
@@ -17,12 +24,7 @@ const wsState = {
 /**
  * Connect to WebSocket for live updates; without handlers the current ones are kept
  */
-export const connectWebSocket = (handlers?: {
-  onOutput?: (chunk: string, command: string) => void
-  onComplete?: (command: string, exitCode: number, aborted: boolean) => void
-  onError?: (error: string, command: string) => void
-  onStatus?: (status: SnapRaidStatus) => void
-}): void => {
+export const connectWebSocket = (handlers?: typeof wsState.handlers): void => {
   // Update handlers
   if (handlers) wsState.handlers = handlers
 
@@ -63,15 +65,27 @@ export const connectWebSocket = (handlers?: {
       case 'output':
         wsState.handlers.onOutput?.(message.chunk, message.command)
         break
+      case 'replay':
+        wsState.handlers.onReplay?.(
+          message.output,
+          message.command,
+          message.processId,
+        )
+        break
       case 'complete':
         wsState.handlers.onComplete?.(
           message.command,
           message.exitCode,
           message.aborted ?? false,
+          message.processId,
         )
         break
       case 'error':
-        wsState.handlers.onError?.(message.error, message.command)
+        wsState.handlers.onError?.(
+          message.error,
+          message.command,
+          message.processId,
+        )
         break
       case 'status':
         wsState.handlers.onStatus?.(message.status)
