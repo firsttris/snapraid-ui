@@ -117,7 +117,7 @@ cd snapraid-ui
 
 Frontend runs on http://localhost:3000, backend API on http://localhost:8080. `Ctrl+C` stops both.
 
-`--demo` runs `dev/setup.sh`, which builds a pinned SnapRAID into `dev/bin/` (needs `curl`, `gcc`, `make`) and creates `dev/sandbox/` with three data disks, a parity disk and a few pending changes. `dev/setup.sh --reset` starts over.
+`--demo` runs `dev/setup.sh`, which builds a pinned SnapRAID into `dev/bin/` (needs `curl`, `gcc`, `make`) and creates `dev/sandbox/` with three data disks, a parity disk and a few pending changes. Since the sandbox disks have no SMART data, `SNAPRAID_DEMO=1` makes the backend report made-up SMART values and power states for them (see `backend/src/demo.ts`). `dev/setup.sh --reset` starts over.
 
 <details>
 <summary>Stopping leftover processes</summary>

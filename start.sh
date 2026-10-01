@@ -12,6 +12,8 @@ if test "$argv[1]" = "--demo"
     set -x SNAPRAID_BIN $root/dev/bin/snapraid
     # All sandbox "disks" live on one filesystem, which snapraid rejects without this
     set -x SNAPRAID_EXTRA_ARGS --test-skip-device
+    # Sandbox disks are directories without SMART, the backend fakes smart and probe
+    set -x SNAPRAID_DEMO 1
 else
     set -x SNAPRAID_BASE_PATH $root/snapraid
     # Local data directory, the backend fills it on first start

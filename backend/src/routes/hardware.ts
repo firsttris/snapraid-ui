@@ -5,6 +5,7 @@ import { snapraidCommand, resolveFromBase } from "../config.ts";
 import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { getParityUsage } from "../parity-usage.ts";
+import { DEMO_MODE, demoProbeLog, demoSmartLog } from "../demo.ts";
 
 const hardware = new Hono();
 
@@ -19,6 +20,16 @@ hardware.get("/smart", async (c) => {
   const configPath = resolveFromBase(relativePath);
 
   try {
+    if (DEMO_MODE) {
+      const log = await demoSmartLog(configPath);
+      return c.json({
+        disks: parseSmartOutput(log),
+        arrayFailureProbability: parseSmartArrayFailure(log),
+        timestamp: new Date().toISOString(),
+        rawOutput: log,
+      });
+    }
+
     const command = snapraidCommand(["-c", configPath, ...STRUCTURED_LOG_ARGS, "smart"]);
 
     const { code, stdout, stderr } = await command.output();
@@ -57,6 +68,11 @@ hardware.get("/probe", async (c) => {
   const configPath = resolveFromBase(relativePath);
 
   try {
+    if (DEMO_MODE) {
+      const log = await demoProbeLog(configPath);
+      return c.json({ disks: parseProbeOutput(log), timestamp: new Date().toISOString(), rawOutput: log });
+    }
+
     const command = snapraidCommand(["-c", configPath, ...STRUCTURED_LOG_ARGS, "probe"]);
 
     const { code, stdout, stderr } = await command.output();

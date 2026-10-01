@@ -62,7 +62,7 @@ const PowerDot = ({
       : state === 'Idle'
         ? ['bg-green-300', m.disks_power_idle()]
         : [
-            'ui-led bg-green-500 shadow-[0_0_6px] shadow-green-500/60',
+            'ui-led bg-green-500',
             m.disks_power_active(),
           ]
   return (
@@ -82,9 +82,9 @@ const UsageBar = ({
   percent: number
   barClass: string
 }) => (
-  <div className="h-2 overflow-hidden rounded-full bg-gray-200">
+  <div className="h-2 rounded-full bg-gray-200">
     <div
-      className={`ui-bar h-full rounded-full ${barClass}`}
+      className={`ui-bar ui-bar-glow h-full rounded-full ${barClass}`}
       style={{ width: `${Math.min(percent, 100)}%` }}
     />
   </div>
