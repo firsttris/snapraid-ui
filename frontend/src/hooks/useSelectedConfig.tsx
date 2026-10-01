@@ -53,17 +53,18 @@ export const SelectedConfigProvider = ({
     [config],
   )
 
-  // Restore the remembered config, or fall back to the first enabled one
+  // Restore the remembered config, or fall back to the first enabled one.
+  // Functional update: a config selected for a running job in the same render wins.
   useEffect(() => {
     if (!config) return
-    if (selectedConfig && enabledConfigs.some((c) => c.path === selectedConfig))
-      return
-
-    const stored = readStored()
-    const next =
-      enabledConfigs.find((c) => c.path === stored) ?? enabledConfigs[0]
-    setSelected(next?.path ?? '')
-  }, [config, enabledConfigs, selectedConfig])
+    setSelected((prev) => {
+      if (prev && enabledConfigs.some((c) => c.path === prev)) return prev
+      const stored = readStored()
+      const next =
+        enabledConfigs.find((c) => c.path === stored) ?? enabledConfigs[0]
+      return next?.path ?? ''
+    })
+  }, [config, enabledConfigs])
 
   const setSelectedConfig = useCallback((path: string) => {
     setSelected(path)

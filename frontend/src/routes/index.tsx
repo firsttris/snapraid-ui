@@ -139,11 +139,13 @@ function Dashboard() {
       (schedule.command === 'scrub' || !!schedule.scrubAfter),
   )
 
-  // A job started elsewhere (other tab, schedule, before a reload) belongs to its config
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only react to a newly detected job
+  // A job started elsewhere (other tab, schedule, before a reload) belongs to its config.
+  // Also re-run once the config list has loaded (selectConfigByFile changes), after a reload
+  // the running job is often known before the configs and could not be matched yet.
+  const jobConfigPath = currentJob?.configPath
   useEffect(() => {
-    if (currentJob) selectConfigByFile(currentJob.configPath)
-  }, [currentJob?.processId])
+    if (jobConfigPath) selectConfigByFile(jobConfigPath)
+  }, [jobConfigPath, selectConfigByFile])
 
   const runCommand = useCallback(
     (command: SnapRaidCommand, args: string[] = []) => {
