@@ -122,12 +122,20 @@ const HealthBadge = ({ health }: { health: Health }) => {
   )
 }
 
-const getHealthTitle = (health: Health): string => {
+const getHealthTitle = (
+  health: Health,
+  syncOverdue: boolean,
+  scrubOverdue: boolean,
+): string => {
   switch (health) {
     case 'healthy':
       return m.health_healthy()
     case 'attention':
-      return m.health_attention()
+      return syncOverdue && scrubOverdue
+        ? m.health_attention_both()
+        : syncOverdue
+          ? m.health_attention_sync()
+          : m.health_attention_scrub()
     case 'sync_incomplete':
       return m.health_sync_incomplete()
     case 'errors':
@@ -147,7 +155,8 @@ const getHealthMessage = (
     case 'healthy':
       return m.health_healthy_msg()
     case 'attention':
-      return m.health_attention_msg()
+      // The overdue runs below explain themselves
+      return ''
     case 'sync_incomplete':
       // Unsynced blocks come from the content file, a failed run from its log
       return status?.unsyncedBlocks
@@ -388,9 +397,10 @@ export const ArrayHealthPanel = ({
     health === 'sync_incomplete' ||
     (health === 'attention' && syncOverdue !== undefined)
 
-  const hints: Hint[] = []
+  // Overdue runs are the reason for 'attention', so they go into its box
+  const overdue: Hint[] = []
   if (health === 'attention' && syncOverdue !== undefined) {
-    hints.push({
+    overdue.push({
       key: 'sync',
       text: m.health_hint_sync_stale({ days: syncOverdue }),
       actionLabel: m.health_start_sync(),
@@ -401,7 +411,7 @@ export const ArrayHealthPanel = ({
     health === 'attention' &&
     (scrubOverdue !== undefined || oldestOverdue !== undefined)
   ) {
-    hints.push({
+    overdue.push({
       key: 'scrub',
       text:
         scrubOverdue !== undefined
@@ -411,6 +421,7 @@ export const ArrayHealthPanel = ({
       onAction: () => onExecute('scrub'),
     })
   }
+  const hints: Hint[] = []
   if ((status?.zeroSubsecondFiles ?? 0) > 0) {
     hints.push({
       key: 'touch',
@@ -450,6 +461,15 @@ export const ArrayHealthPanel = ({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            onClick={() => onExecute('status')}
+            disabled={!!runningJob || actionsDisabled}
+            variant="secondary"
+            size="sm"
+            title={getCommandDescription('status')}
+          >
+            {getCommandLabel('status')}
+          </Button>
           <Button
             onClick={() => onExecute('scrub')}
             disabled={!!runningJob || actionsDisabled}
@@ -499,8 +519,37 @@ export const ArrayHealthPanel = ({
         >
           <HealthBadge health={health} />
           <div className="min-w-0 flex-1">
-            <p className="font-semibold">{getHealthTitle(health)}</p>
-            <p className="text-sm">{getHealthMessage(health, status)}</p>
+            <p className="font-semibold">
+              {getHealthTitle(
+                health,
+                overdue.some((hint) => hint.key === 'sync'),
+                overdue.some((hint) => hint.key === 'scrub'),
+              )}
+            </p>
+            {getHealthMessage(health, status) && (
+              <p className="text-sm">{getHealthMessage(health, status)}</p>
+            )}
+            {overdue.map((hint) => (
+              <p key={hint.key} className="text-sm">
+                {hint.text}
+              </p>
+            ))}
+            {overdue.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {overdue.map((hint) => (
+                  <Button
+                    key={hint.key}
+                    onClick={hint.onAction}
+                    disabled={actionsDisabled}
+                    variant="secondary"
+                    size="sm"
+                    className="bg-white"
+                  >
+                    {hint.actionLabel}
+                  </Button>
+                ))}
+              </div>
+            )}
             {isBusy && status && statusTimestamp && (
               <p className="mt-1 flex items-center gap-1 text-xs opacity-80">
                 <Hourglass size={12} className="shrink-0" />

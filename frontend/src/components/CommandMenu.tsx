@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { getCommandDescription, getCommandLabel } from '../lib/commands'
 import * as m from '../paraglide/messages'
 
-// Everything besides sync and scrub, which have their own buttons
+// Everything besides status, sync and scrub, which have their own buttons
 const MENU_GROUPS: Array<{
   title: () => string
   description: () => string
@@ -13,7 +13,7 @@ const MENU_GROUPS: Array<{
   {
     title: m.commands_group_info,
     description: m.commands_group_info_desc,
-    commands: ['status', 'diff', 'list', 'dup', 'devices'],
+    commands: ['diff', 'list', 'dup', 'devices'],
   },
   {
     title: m.commands_group_maintenance,

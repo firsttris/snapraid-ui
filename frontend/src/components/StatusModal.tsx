@@ -11,7 +11,7 @@ import { RefreshCw, X } from 'lucide-react'
 import { type ReactNode, useRef, useState } from 'react'
 import { Bar } from 'react-chartjs-2'
 import { useDialogKeys } from '../hooks/useDialogKeys'
-import { SCRUB_STALE_DAYS } from '../lib/utils'
+import { SCRUB_OLDEST_STALE_DAYS } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { Button } from './Button'
@@ -73,12 +73,13 @@ const getFindings = (status: SnapRaidStatus): Finding[] => {
       message: m.status_modal_needs_sync_msg(),
     })
   }
-  if ((status.oldestScrubDays ?? 0) > SCRUB_STALE_DAYS) {
+  // Same threshold and wording as the dashboard, so both agree
+  if ((status.oldestScrubDays ?? 0) > SCRUB_OLDEST_STALE_DAYS) {
     findings.push({
       tone: 'warning',
-      title: m.status_modal_scrub_stale_title(),
-      message: m.status_modal_scrub_stale_msg({
-        days: String(status.oldestScrubDays),
+      title: m.health_attention_scrub(),
+      message: m.health_hint_scrub_oldest({
+        days: status.oldestScrubDays ?? 0,
       }),
     })
   }
@@ -161,7 +162,7 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
       {
         data: history.map((point) => point.percentage),
         backgroundColor: history.map((point) =>
-          point.daysAgo > SCRUB_STALE_DAYS ? BAR_STALE_COLOR : BAR_COLOR,
+          point.daysAgo > SCRUB_OLDEST_STALE_DAYS ? BAR_STALE_COLOR : BAR_COLOR,
         ),
         borderRadius: 2,
         maxBarThickness: 32,
@@ -283,7 +284,9 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Stat
               label={m.status_modal_oldest()}
-              highlight={(status.oldestScrubDays ?? 0) > SCRUB_STALE_DAYS}
+              highlight={
+                (status.oldestScrubDays ?? 0) > SCRUB_OLDEST_STALE_DAYS
+              }
             >
               {formatDaysAgo(status.oldestScrubDays)}
             </Stat>
@@ -322,7 +325,7 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
               <h4 className="font-semibold">{m.status_modal_scrub_age()}</h4>
               <p className="mt-1 mb-3 text-sm text-gray-600">
                 {m.status_modal_scrub_age_hint({
-                  days: String(SCRUB_STALE_DAYS),
+                  days: String(SCRUB_OLDEST_STALE_DAYS),
                 })}
               </p>
               <div className="h-56 rounded-lg border border-gray-200 p-3">

@@ -61,10 +61,7 @@ const PowerDot = ({
       ? ['border-2 border-gray-400', m.disks_power_standby()]
       : state === 'Idle'
         ? ['bg-green-300', m.disks_power_idle()]
-        : [
-            'ui-led bg-green-500',
-            m.disks_power_active(),
-          ]
+        : ['ui-led bg-green-500', m.disks_power_active()]
   return (
     <span
       className={`h-2.5 w-2.5 shrink-0 rounded-full ${className}`}
