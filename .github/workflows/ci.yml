@@ -3,9 +3,10 @@ name: CI
 on:
   push:
     branches: [master]
-    tags: ["v*"]
   pull_request:
     branches: [master]
+  # The release workflow runs the same checks before it publishes anything.
+  workflow_call:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

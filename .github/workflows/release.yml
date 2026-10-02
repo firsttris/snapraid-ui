@@ -1,0 +1,26 @@
+name: Release
+
+# Pushing a tag vX.Y.Z publishes that version: the CI first, then the shared Docker release from
+# firsttris/workflows, which pushes the image as :x.y.z, :x.y and :latest, updates the Docker Hub
+# description and creates the GitHub release. The tag itself is the version (no version file).
+# Run by hand on master: the same checks, then the image as :edge, nothing is released.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  docker:
+    needs: checks
+    uses: firsttris/workflows/.github/workflows/docker-release.yml@v1
+    with:
+      image: tristanteu/snapraid-ui
+      description: Web UI for SnapRAID — run sync/scrub, schedule jobs, monitor disks and SMART health
+      version-file: ""
+    secrets: inherit
+    permissions:
+      contents: write
+      packages: write
