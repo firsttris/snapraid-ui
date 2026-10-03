@@ -428,6 +428,7 @@ function Dashboard() {
         {showStatusModal && statusData && (
           <StatusModal
             status={statusData.status}
+            lastScrub={lastRuns?.scrub}
             onClose={() => setShowStatusModal(false)}
             onRefresh={refetchStatus}
           />

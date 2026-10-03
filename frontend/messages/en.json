@@ -272,6 +272,7 @@
   "status_modal_needs_sync_msg": "Files changed since the last sync are not protected by parity yet. Run sync.",
   "status_modal_ok_title": "No problems found",
   "status_modal_ok_msg": "All blocks have parity and no errors are known.",
+  "status_modal_backlog_title": "Scrub catching up",
   "status_modal_oldest": "Oldest block checked",
   "status_modal_median": "Median",
   "status_modal_newest": "Last checked",

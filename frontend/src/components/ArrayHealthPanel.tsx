@@ -26,6 +26,7 @@ import {
   SCRUB_OLDEST_STALE_DAYS,
   SCRUB_STALE_DAYS,
   SYNC_STALE_DAYS,
+  scrubKeepingUp,
 } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
@@ -185,13 +186,6 @@ const oldestBlockStale = (status: SnapRaidStatus | undefined) =>
   status.oldestScrubDays > SCRUB_OLDEST_STALE_DAYS
     ? status.oldestScrubDays
     : undefined
-
-// Each scrub verifies the oldest blocks first, a few percent per run, so recent
-// successful scrubs work off old blocks bit by bit and those need no warning
-const scrubKeepingUp = (run: LastRun | null | undefined) =>
-  !!run &&
-  (run.result === 'ok' || run.result === 'warning') &&
-  daysSince(run.timestamp) <= SCRUB_STALE_DAYS
 
 const LogLink = ({ logFile }: { logFile: string }) => (
   <Link

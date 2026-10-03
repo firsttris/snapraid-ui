@@ -55,6 +55,15 @@ export const SCRUB_STALE_DAYS = 30
 // whole array with weekly scrubs, so the oldest block gets more slack
 export const SCRUB_OLDEST_STALE_DAYS = 120
 
+// Each scrub verifies the oldest blocks first, a few percent per run, so recent
+// successful scrubs work off old blocks bit by bit and those need no warning
+export const scrubKeepingUp = (
+  run: { timestamp: string; result: string } | null | undefined,
+) =>
+  !!run &&
+  (run.result === 'ok' || run.result === 'warning') &&
+  daysSince(run.timestamp) <= SCRUB_STALE_DAYS
+
 /**
  * Tailwind classes for disk usage, shared so all views use the same thresholds
  */

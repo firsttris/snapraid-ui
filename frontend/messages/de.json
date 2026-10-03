@@ -258,6 +258,7 @@
   "status_modal_needs_sync_msg": "Seit dem letzten Sync geänderte Dateien sind noch nicht durch Parität geschützt. Sync ausführen.",
   "status_modal_ok_title": "Keine Probleme gefunden",
   "status_modal_ok_msg": "Alle Blöcke haben Parität, es sind keine Fehler bekannt.",
+  "status_modal_backlog_title": "Scrub holt auf",
   "status_modal_oldest": "Ältester Block geprüft",
   "status_modal_median": "Median",
   "status_modal_newest": "Zuletzt geprüft",
