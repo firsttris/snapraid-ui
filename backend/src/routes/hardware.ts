@@ -4,7 +4,7 @@ import { parseSmartArrayFailure, parseSmartOutput } from "../parsers/smart-parse
 import { snapraidCommand, resolveFromBase } from "../config.ts";
 import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
 import { parseSnapRaidConfig } from "../config-parser.ts";
-import { getParityUsage } from "../parity-usage.ts";
+import { getDataDiskUsage, getParityUsage } from "../parity-usage.ts";
 import { DEMO_MODE, demoProbeLog, demoSmartLog } from "../demo.ts";
 import { msg } from "@shared/i18n.ts";
 
@@ -126,6 +126,24 @@ hardware.get("/parity-usage", async (c) => {
   try {
     const config = await parseSnapRaidConfig(configPath);
     return c.json(await getParityUsage(config));
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// GET /api/snapraid/data-disk-usage - Size and free space of the data disks
+hardware.get("/data-disk-usage", async (c) => {
+  const relativePath = c.req.query("path");
+
+  if (!relativePath) {
+    return c.json({ error: "Missing path parameter" }, 400);
+  }
+
+  const configPath = resolveFromBase(relativePath);
+
+  try {
+    const config = await parseSnapRaidConfig(configPath);
+    return c.json(await getDataDiskUsage(config));
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }

@@ -137,6 +137,7 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
     queryClient.invalidateQueries({ queryKey: queryKeys.status })
     queryClient.invalidateQueries({ queryKey: ['last-runs'] })
     queryClient.invalidateQueries({ queryKey: ['parity-usage'] })
+    queryClient.invalidateQueries({ queryKey: ['data-disk-usage'] })
     // The job's log got its result
     queryClient.invalidateQueries({ queryKey: queryKeys.logs })
     queryClient.invalidateQueries({ queryKey: ['log-content'] })

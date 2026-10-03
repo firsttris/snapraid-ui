@@ -25,6 +25,7 @@ import { StatusModal } from '../components/StatusModal'
 import { SyncPreviewDialog } from '../components/SyncPreviewDialog'
 import { UndeleteDialog } from '../components/UndeleteDialog'
 import {
+  useDataDiskUsage,
   useExecuteCommand,
   useLastRuns,
   useParityUsage,
@@ -104,6 +105,7 @@ function Dashboard() {
   const { data: lastRuns } = useLastRuns(selectedConfig)
   const { data: parityUsage, isLoading: isParityLoading } =
     useParityUsage(selectedConfig)
+  const { data: dataDiskUsage } = useDataDiskUsage(selectedConfig)
   const { data: schedules, isLoading: isSchedulesLoading } = useSchedules()
   const executeCommandMutation = useExecuteCommand()
   const { currentJob } = job
@@ -321,6 +323,7 @@ function Dashboard() {
           parsedConfig={parsedConfig}
           status={statusData?.status}
           parityUsage={parityUsage}
+          dataDiskUsage={dataDiskUsage}
           powerStates={probeReport?.disks}
           isConfigLoading={isConfigLoading}
           isStatusLoading={isStatusFetching}

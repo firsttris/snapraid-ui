@@ -1,5 +1,10 @@
 import { dirname } from "@std/path";
-import type { ParityFileUsage, ParityLevelUsage, ParsedSnapRaidConfig } from "@shared/types.ts";
+import type {
+  DataDiskUsage,
+  ParityFileUsage,
+  ParityLevelUsage,
+  ParsedSnapRaidConfig,
+} from "@shared/types.ts";
 import { type FsUsage, parseDfOutput } from "./parsers/df-parser.ts";
 
 const toGB = (bytes: number): number => Math.round(bytes / 1e9 * 10) / 10;
@@ -55,4 +60,17 @@ export const getParityUsage = (config: ParsedSnapRaidConfig): Promise<ParityLeve
       : null;
 
     return { level, keyword, files, capacityGB: capacityBytes === null ? null : toGB(capacityBytes) };
+  }));
+
+/**
+ * Size and free space of the filesystem behind each data disk
+ */
+export const getDataDiskUsage = (config: ParsedSnapRaidConfig): Promise<DataDiskUsage[]> =>
+  Promise.all(Object.entries(config.data).map(async ([name, path]) => {
+    const fs = await getFsUsage(path);
+    return {
+      name,
+      totalGB: fs ? toGB(fs.totalBytes) : null,
+      freeGB: fs ? toGB(fs.freeBytes) : null,
+    };
   }));

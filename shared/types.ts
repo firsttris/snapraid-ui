@@ -224,6 +224,13 @@ export interface ProbeReport {
   rawOutput: string;
 }
 
+// Filesystem of a data disk, SnapRAID status reports only its free space
+export interface DataDiskUsage {
+  name: string;
+  totalGB: number | null;      // null when df cannot read the filesystem
+  freeGB: number | null;
+}
+
 // Space of a parity level, SnapRAID status does not report parity disks
 export interface ParityFileUsage {
   path: string;

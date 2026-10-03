@@ -1,4 +1,5 @@
 import type {
+  DataDiskUsage,
   DiskPowerStatus,
   DiskStatusInfo,
   ParityLevelUsage,
@@ -19,6 +20,7 @@ interface DisksPanelProps {
   parsedConfig: ParsedSnapRaidConfig | undefined
   status: SnapRaidStatus | undefined
   parityUsage: ParityLevelUsage[] | undefined
+  dataDiskUsage: DataDiskUsage[] | undefined
   powerStates: DiskPowerStatus[] | undefined
   // status and parity usage come from slower SnapRAID and df calls than the config
   isConfigLoading: boolean
@@ -96,6 +98,7 @@ const DiskRow = ({
   percent,
   barClass,
   free,
+  total,
   warning,
   details,
   loading = false,
@@ -108,11 +111,12 @@ const DiskRow = ({
   percent: number | undefined
   barClass: string
   free: number | undefined
+  total: number | undefined
   warning: Warning | null
   details: ReactNode
   loading?: boolean
 }) => (
-  <li className="grid items-center gap-x-6 gap-y-2 py-3 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_11rem]">
+  <li className="grid items-center gap-x-6 gap-y-2 py-3 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_14rem]">
     <div className="min-w-0">
       <div className="flex items-center gap-2">
         <PowerDot state={power} />
@@ -159,7 +163,9 @@ const DiskRow = ({
       {!loading && percent !== undefined && free !== undefined && (
         <span className="text-gray-700">
           <span className="font-semibold">{percent}%</span> ·{' '}
-          {m.disks_free({ free: formatGB(free) })}
+          {total !== undefined
+            ? m.disks_free_of({ free: formatGB(free), total: formatGB(total) })
+            : m.disks_free({ free: formatGB(free) })}
         </span>
       )}
       {warning && (
@@ -243,13 +249,13 @@ const sumFilesystems = (usage: ParityLevelUsage) => {
   const total = values.reduce((sum, fs) => sum + fs.total, 0)
   const free = values.reduce((sum, fs) => sum + fs.free, 0)
   return total > 0
-    ? { free, percent: Math.round((1 - free / total) * 100) }
+    ? { free, total, percent: Math.round((1 - free / total) * 100) }
     : undefined
 }
 
 // Rows until the config says which disks there are
 const SkeletonRow = () => (
-  <li className="grid items-center gap-x-6 gap-y-2 py-3 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_11rem]">
+  <li className="grid items-center gap-x-6 gap-y-2 py-3 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_14rem]">
     <div className="space-y-2">
       <Skeleton className="h-4 w-24" />
       <Skeleton className="h-3 w-36" />
@@ -266,6 +272,7 @@ export const DisksPanel = ({
   parsedConfig,
   status,
   parityUsage,
+  dataDiskUsage,
   powerStates,
   isConfigLoading,
   isStatusLoading,
@@ -278,6 +285,7 @@ export const DisksPanel = ({
   const parityPending = !parityUsage && isParityLoading
 
   const statsByName = new Map(status?.disks?.map((disk) => [disk.name, disk]))
+  const sizeByName = new Map(dataDiskUsage?.map((disk) => [disk.name, disk]))
   const powerByName = new Map(
     powerStates?.map((disk) => [disk.name, disk.status]),
   )
@@ -313,6 +321,15 @@ export const DisksPanel = ({
         {!parsedConfig && [1, 2, 3].map((row) => <SkeletonRow key={row} />)}
         {Object.entries(parsedConfig?.data ?? {}).map(([name, path]) => {
           const stats = statsByName.get(name)
+          // The filesystem's numbers when df can read it, a disk path can be a
+          // subfolder that shares its filesystem with other data
+          const size = sizeByName.get(name)
+          const total = size?.totalGB ?? undefined
+          const free = size?.freeGB ?? stats?.freeGB
+          const percent =
+            total && size?.freeGB != null
+              ? Math.round((1 - size.freeGB / total) * 100)
+              : stats?.usePercent
           return (
             <DiskRow
               key={name}
@@ -321,10 +338,11 @@ export const DisksPanel = ({
               roleClass="bg-blue-50 text-blue-700"
               paths={[path]}
               power={powerByName.get(name)}
-              percent={stats?.usePercent}
-              barClass={usageBarColor(stats?.usePercent ?? 0)}
-              free={stats?.freeGB}
-              warning={stats ? usageWarning(stats.usePercent) : null}
+              percent={percent}
+              barClass={usageBarColor(percent ?? 0)}
+              free={free}
+              total={total}
+              warning={percent !== undefined ? usageWarning(percent) : null}
               details={<DataDetails stats={stats} />}
               loading={statusPending}
             />
@@ -358,6 +376,7 @@ export const DisksPanel = ({
               // The parity file fills its disk by design, the check below is what matters
               barClass="bg-purple-500"
               free={filesystem?.free}
+              total={filesystem?.total}
               warning={null}
               loading={parityPending}
               details={

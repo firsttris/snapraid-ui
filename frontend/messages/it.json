@@ -320,6 +320,7 @@
   "disks_role_data": "Dati",
   "disks_role_parity": "Parità {level}",
   "disks_free": "{free} liberi",
+  "disks_free_of": "{free} liberi su {total}",
   "disks_files": "{count} file",
   "disks_fragmented": "{count} frammentati",
   "disks_wasted": "{size} sprecati",
