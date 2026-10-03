@@ -1,4 +1,4 @@
-import type { SnapRaidStatus } from '@shared/types'
+import type { LastRun, SnapRaidStatus } from '@shared/types'
 import {
   BarElement,
   CategoryScale,
@@ -11,7 +11,7 @@ import { RefreshCw, X } from 'lucide-react'
 import { type ReactNode, useRef, useState } from 'react'
 import { Bar } from 'react-chartjs-2'
 import { useDialogKeys } from '../hooks/useDialogKeys'
-import { SCRUB_OLDEST_STALE_DAYS } from '../lib/utils'
+import { SCRUB_OLDEST_STALE_DAYS, scrubKeepingUp } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { Button } from './Button'
@@ -20,26 +20,33 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip)
 
 interface StatusModalProps {
   status: SnapRaidStatus
+  lastScrub?: LastRun | null
   onClose: () => void
   onRefresh?: () => Promise<unknown>
 }
 
-type Tone = 'ok' | 'warning' | 'error'
+type Tone = 'ok' | 'info' | 'warning' | 'error'
 type Finding = { tone: Tone; title: string; message: string }
 
 const TONE_BOX: Record<Tone, string> = {
   ok: 'bg-green-50 border-green-200 text-green-800',
+  info: 'bg-blue-50 border-blue-200 text-blue-800',
   warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
   error: 'bg-red-50 border-red-200 text-red-800',
 }
 
-const TONE_ICON: Record<Tone, string> = { ok: '✅', warning: '⚠️', error: '❌' }
+const TONE_ICON: Record<Tone, string> = {
+  ok: '✅',
+  info: 'ℹ️',
+  warning: '⚠️',
+  error: '❌',
+}
 
 const BAR_COLOR = 'rgb(59, 130, 246)'
 const BAR_STALE_COLOR = 'rgb(249, 115, 22)'
 
 // What needs attention, most severe first, each with the step that resolves it
-const getFindings = (status: SnapRaidStatus): Finding[] => {
+const getFindings = (status: SnapRaidStatus, keepingUp: boolean): Finding[] => {
   const findings: Finding[] = []
   const badBlocks = status.badBlocks ?? 0
 
@@ -73,8 +80,10 @@ const getFindings = (status: SnapRaidStatus): Finding[] => {
       message: m.status_modal_needs_sync_msg(),
     })
   }
-  // Same threshold and wording as the dashboard, so both agree
-  if ((status.oldestScrubDays ?? 0) > SCRUB_OLDEST_STALE_DAYS) {
+  // Same rule and wording as the dashboard, so both agree: old blocks while
+  // recent scrubs succeed are a backlog being worked off, not a problem
+  const oldestStale = (status.oldestScrubDays ?? 0) > SCRUB_OLDEST_STALE_DAYS
+  if (oldestStale && !keepingUp) {
     findings.push({
       tone: 'warning',
       title: m.health_attention_scrub(),
@@ -84,15 +93,21 @@ const getFindings = (status: SnapRaidStatus): Finding[] => {
     })
   }
 
-  return findings.length > 0
-    ? findings
-    : [
-        {
-          tone: 'ok',
-          title: m.status_modal_ok_title(),
-          message: m.status_modal_ok_msg(),
-        },
-      ]
+  if (findings.length === 0) {
+    findings.push({
+      tone: 'ok',
+      title: m.status_modal_ok_title(),
+      message: m.status_modal_ok_msg(),
+    })
+  }
+  if (oldestStale && keepingUp) {
+    findings.push({
+      tone: 'info',
+      title: m.status_modal_backlog_title(),
+      message: m.health_scrub_backlog(),
+    })
+  }
+  return findings
 }
 
 // "vor 890 Tagen", "heute", "yesterday", ...
@@ -127,7 +142,12 @@ const Stat = ({
   </div>
 )
 
-export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
+export function StatusModal({
+  status,
+  lastScrub,
+  onClose,
+  onRefresh,
+}: StatusModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   useDialogKeys(dialogRef, onClose)
@@ -141,7 +161,8 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
     }
   }
 
-  const findings = getFindings(status)
+  const keepingUp = scrubKeepingUp(lastScrub)
+  const findings = getFindings(status, keepingUp)
   const locale = getLocale()
 
   // Oldest blocks on the left, like the graph of `snapraid status`
@@ -285,6 +306,7 @@ export function StatusModal({ status, onClose, onRefresh }: StatusModalProps) {
             <Stat
               label={m.status_modal_oldest()}
               highlight={
+                !keepingUp &&
                 (status.oldestScrubDays ?? 0) > SCRUB_OLDEST_STALE_DAYS
               }
             >

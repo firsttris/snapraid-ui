@@ -191,6 +191,7 @@ export interface SmartDiskInfo {
   errorMedium?: number; // Media errors, e.g. NVMe "Media and Data Integrity Errors"
   errorProtocol?: number; // Error log entries, harmless in most cases
   standby?: boolean; // Asleep; smartctl leaves it alone instead of spinning it up, so there is no data
+  crcStableSince?: string; // ISO date since the transfer error count has not grown, it is then harmless
   attributes?: SmartAttribute[];
 }
 
@@ -222,6 +223,13 @@ export interface ProbeReport {
   disks: DiskPowerStatus[];
   timestamp: string; // ISO string
   rawOutput: string;
+}
+
+// Filesystem of a data disk, SnapRAID status reports only its free space
+export interface DataDiskUsage {
+  name: string;
+  totalGB: number | null;      // null when df cannot read the filesystem
+  freeGB: number | null;
 }
 
 // Space of a parity level, SnapRAID status does not report parity disks

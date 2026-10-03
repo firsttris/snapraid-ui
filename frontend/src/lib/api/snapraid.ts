@@ -1,6 +1,7 @@
 import type {
   CheckReport,
   CommandOutput,
+  DataDiskUsage,
   DevicesReport,
   DiffReport,
   DiskReplacement,
@@ -133,6 +134,19 @@ export const getParityUsage = async (
 ): Promise<ParityLevelUsage[]> => {
   const response = await apiFetch(
     `${API_BASE}/snapraid/parity-usage?path=${encodeURIComponent(configPath)}`,
+  )
+  if (!response.ok) throw await apiError(response)
+  return response.json()
+}
+
+/**
+ * Get size and free space of the data disks, status only reports the free space
+ */
+export const getDataDiskUsage = async (
+  configPath: string,
+): Promise<DataDiskUsage[]> => {
+  const response = await apiFetch(
+    `${API_BASE}/snapraid/data-disk-usage?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) throw await apiError(response)
   return response.json()

@@ -47,6 +47,8 @@ const SECTOR_ATTRIBUTES: Record<number, SectorAttribute> = {
   198: "uncorrectable",
 };
 
+export const CRC_ATTRIBUTE_ID = 199;
+
 const ERROR_ATTRIBUTES: Record<number, ErrorAttribute> = {
   187: "reported_uncorrectable", // Read errors the disk could not correct with ECC
   199: "crc",                    // Transfer errors, a cable or backplane problem rather than the disk
@@ -57,12 +59,17 @@ const rawCount = (raw: string): number => {
   return Number.isNaN(count) ? 0 : count;
 };
 
+// Transfer errors that stopped growing are a past cable problem, nothing to watch
+const isStableCrc = (attribute: SmartAttribute, disk?: SmartDiskInfo) =>
+  attribute.id === CRC_ATTRIBUTE_ID && disk?.crcStableSince !== undefined;
+
 /**
  * How alarming a single attribute is, to highlight it in the attribute table
  */
-export const attributeLevel = (attribute: SmartAttribute): SmartLevel => {
+export const attributeLevel = (attribute: SmartAttribute, disk?: SmartDiskInfo): SmartLevel => {
   if (attribute.whenFailed === "now") return "critical";
   if (attribute.whenFailed === "past") return "warning";
+  if (isStableCrc(attribute, disk)) return "ok";
   const watched = SECTOR_ATTRIBUTES[attribute.id] ?? ERROR_ATTRIBUTES[attribute.id];
   return watched && rawCount(attribute.raw) > 0 ? "warning" : "ok";
 };
@@ -84,7 +91,7 @@ export const assessSmart = (
 
   (disk.attributes ?? []).forEach((attribute) => {
     const count = rawCount(attribute.raw);
-    if (count === 0) return;
+    if (count === 0 || isStableCrc(attribute, disk)) return;
     const sector = SECTOR_ATTRIBUTES[attribute.id];
     if (sector) found.push({ level: "warning", reason: { kind: "sectors", attribute: sector, count } });
     const error = ERROR_ATTRIBUTES[attribute.id];

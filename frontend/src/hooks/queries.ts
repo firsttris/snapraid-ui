@@ -1,6 +1,7 @@
 import type {
   AppConfig,
   AuthSession,
+  DataDiskUsage,
   DiskReplacement,
   LastRuns,
   LogFile,
@@ -47,6 +48,7 @@ import {
   clearDiskReplacement,
   executeCommand,
   getCurrentJob,
+  getDataDiskUsage,
   getDiskReplacement,
   getLastRuns,
   getParityUsage,
@@ -78,6 +80,7 @@ export const queryKeys = {
   status: ['status'] as const,
   lastRuns: (path: string) => ['last-runs', path] as const,
   parityUsage: (path: string) => ['parity-usage', path] as const,
+  dataDiskUsage: (path: string) => ['data-disk-usage', path] as const,
   probe: (path: string) => ['probe', path] as const,
   smart: (path: string) => ['smart', path] as const,
   logs: ['logs'] as const,
@@ -196,6 +199,17 @@ export const useParityUsage = (
   return useQuery({
     queryKey: queryKeys.parityUsage(configPath ?? ''),
     queryFn: configPath ? () => getParityUsage(configPath) : skipToken,
+    ...options,
+  })
+}
+
+export const useDataDiskUsage = (
+  configPath: string | undefined,
+  options?: Omit<UseQueryOptions<DataDiskUsage[]>, 'queryKey' | 'queryFn'>,
+) => {
+  return useQuery({
+    queryKey: queryKeys.dataDiskUsage(configPath ?? ''),
+    queryFn: configPath ? () => getDataDiskUsage(configPath) : skipToken,
     ...options,
   })
 }
