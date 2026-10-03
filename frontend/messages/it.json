@@ -762,5 +762,11 @@
   "smart_history_pending": "Settori in sospeso",
   "smart_history_crc": "Errori di trasferimento (CRC)",
   "smart_history_media_errors": "Errori del supporto",
-  "smart_history_wear": "Usura SSD"
+  "smart_history_wear": "Usura SSD",
+  "usage_history_title": "Andamento dell'occupazione ({days} giorni)",
+  "usage_history_protected": "Dati protetti",
+  "usage_history_growth": "I dati protetti crescono di circa {size} al mese (ultimi 90 giorni).",
+  "usage_history_shrink": "I dati protetti calano di circa {size} al mese (ultimi 90 giorni).",
+  "disks_forecast": "pieno tra circa {days} giorni",
+  "disks_forecast_hint": "Stima basata su come lo spazio libero si è ridotto negli ultimi 90 giorni"
 }

@@ -55,6 +55,7 @@ import {
   getSmart,
   getSmartHistory,
   getStatus,
+  getUsageHistory,
   parseSnapRaidConfig,
   probe,
   removeContentFile,
@@ -82,6 +83,8 @@ export const queryKeys = {
   lastRuns: (path: string) => ['last-runs', path] as const,
   parityUsage: (path: string) => ['parity-usage', path] as const,
   dataDiskUsage: (path: string) => ['data-disk-usage', path] as const,
+  usageHistory: (path: string, readAt: string) =>
+    ['usage-history', path, readAt] as const,
   probe: (path: string) => ['probe', path] as const,
   smart: (path: string) => ['smart', path] as const,
   smartHistory: (path: string, readAt: string) =>
@@ -214,6 +217,18 @@ export const useDataDiskUsage = (
     queryKey: queryKeys.dataDiskUsage(configPath ?? ''),
     queryFn: configPath ? () => getDataDiskUsage(configPath) : skipToken,
     ...options,
+  })
+}
+
+// Each status read adds to the history, so it follows the time of the read
+export const useUsageHistory = (
+  configPath: string | undefined,
+  readAt: string | undefined,
+) => {
+  return useQuery({
+    queryKey: queryKeys.usageHistory(configPath ?? '', readAt ?? ''),
+    queryFn:
+      configPath && readAt ? () => getUsageHistory(configPath) : skipToken,
   })
 }
 

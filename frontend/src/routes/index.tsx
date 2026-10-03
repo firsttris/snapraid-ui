@@ -34,6 +34,7 @@ import {
   useSchedules,
   useSnapRaidConfig,
   useStatus,
+  useUsageHistory,
 } from '../hooks/queries'
 import { useJob } from '../hooks/useJob'
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
@@ -104,6 +105,10 @@ function Dashboard() {
     retry: (count, error) => !(error instanceof SnapRaidBusyError) && count < 3,
   })
   const { data: lastRuns } = useLastRuns(selectedConfig)
+  const { data: usageHistory } = useUsageHistory(
+    selectedConfig,
+    statusData?.timestamp,
+  )
   const { data: parityUsage, isLoading: isParityLoading } =
     useParityUsage(selectedConfig)
   const { data: dataDiskUsage } = useDataDiskUsage(selectedConfig)
@@ -336,6 +341,7 @@ function Dashboard() {
           status={statusData?.status}
           parityUsage={parityUsage}
           dataDiskUsage={dataDiskUsage}
+          usageHistory={usageHistory}
           powerStates={probeReport?.disks}
           isConfigLoading={isConfigLoading}
           isStatusLoading={isStatusFetching}

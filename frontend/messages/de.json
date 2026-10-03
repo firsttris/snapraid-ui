@@ -776,5 +776,11 @@
   "smart_history_pending": "Ausstehende Sektoren",
   "smart_history_crc": "Übertragungsfehler (CRC)",
   "smart_history_media_errors": "Medienfehler",
-  "smart_history_wear": "SSD-Verschleiß"
+  "smart_history_wear": "SSD-Verschleiß",
+  "usage_history_title": "Belegungsverlauf ({days} Tage)",
+  "usage_history_protected": "Geschützte Daten",
+  "usage_history_growth": "Die geschützten Daten wachsen um etwa {size} pro Monat (letzte 90 Tage).",
+  "usage_history_shrink": "Die geschützten Daten schrumpfen um etwa {size} pro Monat (letzte 90 Tage).",
+  "disks_forecast": "voll in etwa {days} Tagen",
+  "disks_forecast_hint": "Geschätzt daraus, wie der freie Platz in den letzten 90 Tagen geschrumpft ist"
 }

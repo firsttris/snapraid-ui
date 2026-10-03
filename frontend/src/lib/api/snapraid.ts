@@ -18,6 +18,7 @@ import type {
   SmartReport,
   SnapRaidCommand,
   SnapRaidStatus,
+  UsagePoint,
 } from '@shared/types'
 import { API_BASE, apiFetch } from './constants'
 import { apiError } from './errors'
@@ -135,6 +136,19 @@ export const getParityUsage = async (
 ): Promise<ParityLevelUsage[]> => {
   const response = await apiFetch(
     `${API_BASE}/snapraid/parity-usage?path=${encodeURIComponent(configPath)}`,
+  )
+  if (!response.ok) throw await apiError(response)
+  return response.json()
+}
+
+/**
+ * Daily usage of the array, recorded on each status read
+ */
+export const getUsageHistory = async (
+  configPath: string,
+): Promise<UsagePoint[]> => {
+  const response = await apiFetch(
+    `${API_BASE}/snapraid/usage-history?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) throw await apiError(response)
   return response.json()

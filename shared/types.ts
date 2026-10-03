@@ -238,6 +238,14 @@ export interface ProbeReport {
   rawOutput: string;
 }
 
+// Usage of an array on one day, from its status
+export interface UsagePoint {
+  date: string; // YYYY-MM-DD
+  usedGB: number;
+  freeGB: number;
+  disks: Record<string, { usedGB: number; freeGB: number }>;
+}
+
 // Filesystem of a data disk, SnapRAID status reports only its free space
 export interface DataDiskUsage {
   name: string;
