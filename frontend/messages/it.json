@@ -768,5 +768,14 @@
   "usage_history_growth": "I dati protetti crescono di circa {size} al mese (ultimi 90 giorni).",
   "usage_history_shrink": "I dati protetti calano di circa {size} al mese (ultimi 90 giorni).",
   "disks_forecast": "pieno tra circa {days} giorni",
-  "disks_forecast_hint": "Stima basata su come lo spazio libero si è ridotto negli ultimi 90 giorni"
+  "disks_forecast_hint": "Stima basata su come lo spazio libero si è ridotto negli ultimi 90 giorni",
+  "backup_title": "Backup",
+  "backup_description": "Un file con le configurazioni, le pianificazioni, le impostazioni delle notifiche, l'andamento SMART e dell'occupazione e le config di SnapRAID nella cartella dati. Contiene le password e i token delle notifiche, conservalo in modo sicuro.",
+  "backup_download": "Scarica backup",
+  "backup_restore": "Ripristina backup",
+  "backup_restore_title": "Ripristina backup",
+  "backup_restore_confirm": "Sostituire le impostazioni con quelle di {file}? I file non contenuti nel backup restano invariati.",
+  "backup_restored": "Backup ripristinato, {count} file scritti",
+  "backup_restored_skipped": "Backup ripristinato, {count} file scritti. Non ripristinati: {skipped}",
+  "server_error_backup_invalid": "Questo non è un backup di SnapRAID UI"
 }

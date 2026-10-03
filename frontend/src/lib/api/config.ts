@@ -106,3 +106,34 @@ export const getBasePath = async (): Promise<string> => {
   const result = await response.json()
   return result.basePath
 }
+
+/**
+ * Settings, histories and SnapRAID configs as one file
+ */
+export const downloadBackup = async (): Promise<{
+  blob: Blob
+  filename: string
+}> => {
+  const response = await apiFetch(`${API_BASE}/config/backup`)
+  if (!response.ok) throw await apiError(response)
+  const filename =
+    response.headers
+      .get('Content-Disposition')
+      ?.match(/filename="([^"]+)"/)?.[1] ?? 'snapraid-ui-backup.json'
+  return { blob: await response.blob(), filename }
+}
+
+/**
+ * Write a backup back, the server checks its content
+ */
+export const restoreBackup = async (
+  content: string,
+): Promise<{ restored: string[]; skipped: string[] }> => {
+  const response = await apiFetch(`${API_BASE}/config/restore`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: content,
+  })
+  if (!response.ok) throw await apiError(response)
+  return response.json()
+}

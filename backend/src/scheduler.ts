@@ -277,6 +277,15 @@ export const createScheduler = (configPath: string, runner: SnapRaidRunner) => {
         .forEach((schedule) => startCronJob(configPath, runner, outputCallback, schedule));
     },
 
+    // Schedules replaced on disk, e.g. by restoring a backup
+    reloadSchedules: async (): Promise<void> => {
+      stopAllJobs();
+      const schedules = await loadSchedulesFromFile(configPath);
+      schedules
+        .filter((schedule) => schedule.enabled)
+        .forEach((schedule) => startCronJob(configPath, runner, outputCallback, schedule));
+    },
+
     getSchedules: (): Promise<Schedule[]> => 
       loadSchedulesFromFile(configPath),
 

@@ -238,6 +238,14 @@ export interface ProbeReport {
   rawOutput: string;
 }
 
+// Settings, histories and SnapRAID configs in one file, to move or restore an installation
+export interface SettingsBackup {
+  app: "snapraid-ui";
+  version: 1;
+  exportedAt: string;
+  files: Record<string, string>; // Path relative to the data folder (or absolute) -> content
+}
+
 // Usage of an array on one day, from its status
 export interface UsagePoint {
   date: string; // YYYY-MM-DD
