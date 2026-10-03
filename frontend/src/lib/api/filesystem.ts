@@ -1,4 +1,5 @@
 import { API_BASE, apiFetch } from './constants'
+import { apiError } from './errors'
 
 /**
  * Browse filesystem for .conf files
@@ -12,7 +13,7 @@ export const browseFilesystem = async (
 }> => {
   const url = `${API_BASE}/filesystem/browse?filter=${filter}${path ? `&path=${encodeURIComponent(path)}` : ''}`
   const response = await apiFetch(url)
-  if (!response.ok) throw new Error('Failed to browse filesystem')
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 
@@ -23,7 +24,7 @@ export const readFile = async (path: string): Promise<string> => {
   const response = await apiFetch(
     `${API_BASE}/filesystem/read?path=${encodeURIComponent(path)}`,
   )
-  if (!response.ok) throw new Error('Failed to read file')
+  if (!response.ok) throw await apiError(response)
   const result = await response.json()
   return result.content
 }
@@ -40,5 +41,5 @@ export const writeFile = async (
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path, content }),
   })
-  if (!response.ok) throw new Error('Failed to write file')
+  if (!response.ok) throw await apiError(response)
 }

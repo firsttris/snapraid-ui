@@ -1,12 +1,13 @@
 import type { AppConfig, ConfigFileCheck } from '@shared/types'
 import { API_BASE, apiFetch } from './constants'
+import { apiError } from './errors'
 
 /**
  * Get app configuration
  */
 export const getConfig = async (): Promise<AppConfig> => {
   const response = await apiFetch(`${API_BASE}/config`)
-  if (!response.ok) throw new Error('Failed to fetch config')
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 
@@ -19,12 +20,7 @@ export const saveConfig = async (config: AppConfig): Promise<void> => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(config),
   })
-  if (!response.ok) throw new Error('Failed to save config')
-}
-
-const errorFrom = async (response: Response, fallback: string) => {
-  const error = await response.json().catch(() => ({}))
-  return new Error(error.error || fallback)
+  if (!response.ok) throw await apiError(response)
 }
 
 /**
@@ -40,7 +36,7 @@ export const addConfig = async (
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, path, enabled }),
   })
-  if (!response.ok) throw await errorFrom(response, 'Failed to add config')
+  if (!response.ok) throw await apiError(response)
   const result = await response.json()
   return result.config
 }
@@ -54,7 +50,7 @@ export const removeConfig = async (path: string): Promise<AppConfig> => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path }),
   })
-  if (!response.ok) throw new Error('Failed to remove config')
+  if (!response.ok) throw await apiError(response)
   const result = await response.json()
   return result.config
 }
@@ -71,7 +67,7 @@ export const createConfig = async (
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, fileName }),
   })
-  if (!response.ok) throw await errorFrom(response, 'Failed to create config')
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 
@@ -87,7 +83,7 @@ export const updateConfig = async (
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path, ...changes }),
   })
-  if (!response.ok) throw await errorFrom(response, 'Failed to update config')
+  if (!response.ok) throw await apiError(response)
   const result = await response.json()
   return result.config
 }
@@ -97,7 +93,7 @@ export const updateConfig = async (
  */
 export const checkConfigs = async (): Promise<ConfigFileCheck[]> => {
   const response = await apiFetch(`${API_BASE}/config/check`)
-  if (!response.ok) throw new Error('Failed to check configs')
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 
@@ -106,7 +102,7 @@ export const checkConfigs = async (): Promise<ConfigFileCheck[]> => {
  */
 export const getBasePath = async (): Promise<string> => {
   const response = await apiFetch(`${API_BASE}/config/base-path`)
-  if (!response.ok) throw new Error('Failed to fetch base path')
+  if (!response.ok) throw await apiError(response)
   const result = await response.json()
   return result.basePath
 }

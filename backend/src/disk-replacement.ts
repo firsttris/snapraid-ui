@@ -3,6 +3,7 @@ import { existsSync } from "@std/fs";
 import type { DiskReplacement, ReplacementStep, ReplacementStepResult } from "@shared/types.ts";
 import { parseParityLine } from "./config-parser.ts";
 import { resolveFromBase } from "./config.ts";
+import { msg } from "@shared/i18n.ts";
 
 /**
  * Replacing a failed disk follows "Recovering" in the SnapRAID manual:
@@ -59,10 +60,10 @@ export const applyReplacementPath = (
     const oldPath = parity.paths.join(",");
     if (newPath === oldPath) return { config, diskType: "parity", oldPath };
     if (parity.paths.length > 1) {
-      throw new DiskReplacementError("Split parity can only be replaced in place, edit the config to move it");
+      throw new DiskReplacementError(msg("server_error_split_parity_in_place"));
     }
     if (!newPath.endsWith(".parity")) {
-      throw new DiskReplacementError("Parity file path must end with .parity");
+      throw new DiskReplacementError(msg("server_error_parity_extension"));
     }
     const updated = lines.map((line, i) => (i === parityIndex ? `${diskName} ${newPath}` : line));
     return {
@@ -72,7 +73,7 @@ export const applyReplacementPath = (
     };
   }
 
-  throw new DiskReplacementError(`Disk '${diskName}' not found`);
+  throw new DiskReplacementError(msg("server_error_disk_not_found", { disk: diskName }));
 };
 
 /**

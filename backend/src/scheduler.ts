@@ -14,6 +14,7 @@ import { failedReport, isSuccessful, readRunReport, type RunReport } from "./run
 import { isReplacementInProgress } from "./disk-replacement.ts";
 import { notifyRun, notifySkipped, notifySmart } from "./notification-events.ts";
 import { parseSmartOutput } from "./parsers/smart-parser.ts";
+import { msg } from "@shared/i18n.ts";
 
 // Module-level storage for active jobs
 const activeJobs = new Map<string, Cron>();
@@ -24,7 +25,7 @@ const validateCronExpression = (expression: string): Date | undefined => {
     const cron = new Cron(expression);
     return cron.nextRun() ?? undefined;
   } catch (error) {
-    throw new Error(`Invalid cron expression: ${error}`);
+    throw new Error(msg("server_error_invalid_cron", { error: error instanceof Error ? error.message : String(error) }));
   }
 };
 
@@ -304,7 +305,7 @@ export const createScheduler = (configPath: string, runner: SnapRaidRunner) => {
       const existing = schedules.find((s) => s.id === id);
       
       if (!existing) {
-        throw new Error(`Schedule ${id} not found`);
+        throw new Error(msg("server_error_schedule_not_found"));
       }
 
       const wasEnabled = existing.enabled;
@@ -334,7 +335,7 @@ export const createScheduler = (configPath: string, runner: SnapRaidRunner) => {
       const exists = schedules.some((s) => s.id === id);
 
       if (!exists) {
-        throw new Error(`Schedule ${id} not found`);
+        throw new Error(msg("server_error_schedule_not_found"));
       }
 
       stopCronJob(id);

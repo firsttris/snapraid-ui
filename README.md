@@ -144,6 +144,16 @@ Pushing a `v*` tag publishes a multi-arch image to Docker Hub via GitHub Actions
 - **Frontend**: React 19, TanStack Start/Router/Query, Tailwind CSS, Paraglide i18n
 - **Container**: Nginx reverse proxy, Supervisor, bundled SnapRAID
 
+### Translations
+
+The UI speaks English, German and Italian. All texts live in `frontend/messages/{en,de,it}.json`
+([Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJs)); components call them as
+`m.key()`. The backend does not know the viewer's language: for errors a user can run into it sends
+the key and its inputs (`msg("server_error_…", { … })` from `shared/i18n.ts`), and the frontend
+renders them. Notifications are the exception, they go out in the language set for them.
+`frontend/src/lib/__tests__/i18n.test.ts` checks that every language has the same keys and
+placeholders, and that every message is used and every used key exists.
+
 ## 🤝 Contributing
 
 Issues and pull requests are welcome. Please run `npx biome check`, `npm run typecheck` and the tests (`deno test` in `backend/`, `npm test` in `frontend/`) before opening a PR.

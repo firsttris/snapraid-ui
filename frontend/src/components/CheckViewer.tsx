@@ -167,10 +167,7 @@ export function CheckViewer({
               <span className="font-semibold">
                 ⚠️ {m.check_report_warning_title()}:
               </span>{' '}
-              {m.check_report_warning_message({
-                count: errorCount,
-                plural: errorCount !== 1 ? 's' : '',
-              })}
+              {m.check_report_warning_message({ count: errorCount })}
             </p>
           </div>
         )}

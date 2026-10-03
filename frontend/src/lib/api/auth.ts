@@ -1,5 +1,6 @@
 import type { AuthSession } from '@shared/types'
 import { API_BASE, apiFetch } from './constants'
+import { apiError } from './errors'
 
 export type LoginResult =
   | { ok: true; session: AuthSession }
@@ -11,7 +12,7 @@ export type LoginResult =
  */
 export const getSession = async (): Promise<AuthSession> => {
   const response = await apiFetch(`${API_BASE}/auth/session`)
-  if (!response.ok) throw new Error('Failed to fetch session')
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 
@@ -37,7 +38,7 @@ export const login = async (
       retryAfter: Number(body.retryAfter) || 60,
     }
   }
-  throw new Error('Login failed')
+  throw await apiError(response)
 }
 
 /**
@@ -47,5 +48,5 @@ export const logout = async (): Promise<void> => {
   const response = await apiFetch(`${API_BASE}/auth/logout`, {
     method: 'POST',
   })
-  if (!response.ok) throw new Error('Failed to log out')
+  if (!response.ok) throw await apiError(response)
 }

@@ -1,16 +1,17 @@
 import type { Schedule } from '@shared/types'
 import { API_BASE, apiFetch } from './constants'
+import { apiError } from './errors'
 
 export const schedulesApi = {
   getAll: async (): Promise<Schedule[]> => {
     const res = await apiFetch(`${API_BASE}/schedules`)
-    if (!res.ok) throw new Error('Failed to fetch schedules')
+    if (!res.ok) throw await apiError(res)
     return res.json()
   },
 
   getById: async (id: string): Promise<Schedule> => {
     const res = await apiFetch(`${API_BASE}/schedules/${id}`)
-    if (!res.ok) throw new Error('Failed to fetch schedule')
+    if (!res.ok) throw await apiError(res)
     return res.json()
   },
 
@@ -26,8 +27,7 @@ export const schedulesApi = {
       body: JSON.stringify(schedule),
     })
     if (!res.ok) {
-      const error = await res.json()
-      throw new Error(error.error || 'Failed to create schedule')
+      throw await apiError(res)
     }
     return res.json()
   },
@@ -42,8 +42,7 @@ export const schedulesApi = {
       body: JSON.stringify(updates),
     })
     if (!res.ok) {
-      const error = await res.json()
-      throw new Error(error.error || 'Failed to update schedule')
+      throw await apiError(res)
     }
     return res.json()
   },
@@ -53,8 +52,7 @@ export const schedulesApi = {
       method: 'DELETE',
     })
     if (!res.ok) {
-      const error = await res.json()
-      throw new Error(error.error || 'Failed to delete schedule')
+      throw await apiError(res)
     }
   },
 
@@ -63,15 +61,14 @@ export const schedulesApi = {
       method: 'POST',
     })
     if (!res.ok) {
-      const error = await res.json()
-      throw new Error(error.error || 'Failed to toggle schedule')
+      throw await apiError(res)
     }
     return res.json()
   },
 
   getNextRuns: async (): Promise<Record<string, string | null>> => {
     const res = await apiFetch(`${API_BASE}/schedules/next-runs`)
-    if (!res.ok) throw new Error('Failed to fetch next runs')
+    if (!res.ok) throw await apiError(res)
     return res.json()
   },
 }

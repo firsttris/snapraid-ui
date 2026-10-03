@@ -15,6 +15,7 @@ import { isLockedOutput, STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../p
 import { createDiskReplacementRoutes } from "./disk-replacement.ts";
 import { readRunReport } from "../run-report.ts";
 import { notifyManualRun } from "../notification-events.ts";
+import { msg } from "@shared/i18n.ts";
 
 const snapraid = new Hono();
 
@@ -102,7 +103,7 @@ snapraid.get("/last-job", (c) => {
 snapraid.post("/abort", (c) => {
   const currentJob = runner.getCurrentJob();
   if (!currentJob) {
-    return c.json({ error: "No job is running" }, 404);
+    return c.json({ error: msg("server_error_no_job") }, 404);
   }
 
   const aborted = runner.abortCommand(currentJob.processId);
@@ -150,7 +151,7 @@ snapraid.get("/check-report", async (c) => {
   try {
     const lastRun = await state.logManager.findLastRun("check", resolveFromBase(relativePath));
     if (!lastRun) {
-      return c.json({ error: "No check has run for this configuration yet" }, 404);
+      return c.json({ error: msg("server_error_no_check_yet") }, 404);
     }
     const log = await state.logManager.readLog(lastRun.logFile);
     return c.json({
@@ -238,7 +239,7 @@ snapraid.post("/execute", async (c) => {
   }
 
   if (runner.getCurrentJob()) {
-    return c.json({ error: "Another job is already running" }, 409);
+    return c.json({ error: msg("server_error_job_running") }, 409);
   }
 
   startJob(command, resolveFromBase(relativePath), args);
@@ -255,7 +256,7 @@ snapraid.post("/remove-data-disk", async (c) => {
   }
 
   if (runner.getCurrentJob()) {
-    return c.json({ error: "Another job is already running" }, 409);
+    return c.json({ error: msg("server_error_job_running") }, 409);
   }
 
   const configPath = resolveFromBase(relativePath);
@@ -309,7 +310,7 @@ snapraid.get("/status", async (c) => {
 
   // A running job holds SnapRAID's lock, status would only fail with a fatal error
   if (runner.getCurrentJob()) {
-    return c.json({ error: "SnapRAID is busy with another job", busy: true }, 409);
+    return c.json({ error: msg("server_error_snapraid_busy"), busy: true }, 409);
   }
 
   // Execute new status command
@@ -320,7 +321,7 @@ snapraid.get("/status", async (c) => {
     const { code, stdout, stderr } = await cmd.output();
     const { log, text } = splitStructuredOutput(new TextDecoder().decode(stderr));
     if (isLockedOutput(log)) {
-      return c.json({ error: "SnapRAID is already in use", busy: true }, 409);
+      return c.json({ error: msg("server_error_snapraid_in_use"), busy: true }, 409);
     }
     const parsedStatus = parseStatusOutput(log, code === 0 ? new TextDecoder().decode(stdout) : text);
     

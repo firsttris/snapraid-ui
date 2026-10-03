@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { join } from "@std/path";
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { resolveFromBase } from "../config.ts";
+import { msg } from "@shared/i18n.ts";
 
 const configOperations = new Hono();
 
@@ -24,7 +25,7 @@ configOperations.post("/add-exclude", async (c) => {
     const patternExists = lines.some(line => line.trim() === `exclude ${pattern}`);
 
     if (patternExists) {
-      return c.json({ error: `Pattern '${pattern}' already exists` }, 400);
+      return c.json({ error: msg("server_error_pattern_exists", { pattern }) }, 400);
     }
 
     // Find the last exclude line or a good position to insert
@@ -185,7 +186,7 @@ configOperations.post("/add-content", async (c) => {
   try {
     const lines = (await Deno.readTextFile(configPath)).split("\n");
     if (lines.some((line) => line.trim() === `content ${value}`)) {
-      return c.json({ error: `Content file '${value}' already exists` }, 400);
+      return c.json({ error: msg("server_error_content_file_exists", { path: value }) }, 400);
     }
 
     const insertIndex = insertIndexAfter(lines, [CONTENT_LINE, PARITY_LINE]);
@@ -235,7 +236,7 @@ configOperations.post("/set-option", async (c) => {
     return c.json({ error: "Missing configPath or unknown option" }, 400);
   }
   if (value !== null && (!Number.isInteger(value) || value <= 0)) {
-    return c.json({ error: "Value must be a positive whole number" }, 400);
+    return c.json({ error: msg("server_error_positive_whole_number") }, 400);
   }
 
   const configPath = resolveFromBase(relativePath);
