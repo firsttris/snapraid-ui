@@ -1,3 +1,4 @@
+import type { ForceOption } from '@shared/force-option'
 import type {
   CheckReport,
   DevicesReport,
@@ -18,6 +19,7 @@ import { DisksPanel } from '../components/DisksPanel'
 import { DupViewer } from '../components/DupViewer'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { FileListViewer } from '../components/FileListViewer'
+import { ForceRetryBox } from '../components/ForceRetryBox'
 import { OutputConsole } from '../components/OutputConsole'
 import { PageLayout } from '../components/PageLayout'
 import { ScrubDialog } from '../components/ScrubDialog'
@@ -33,6 +35,7 @@ import {
   useSchedules,
   useSnapRaidConfig,
   useStatus,
+  useUsageHistory,
 } from '../hooks/queries'
 import { useJob } from '../hooks/useJob'
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
@@ -103,6 +106,10 @@ function Dashboard() {
     retry: (count, error) => !(error instanceof SnapRaidBusyError) && count < 3,
   })
   const { data: lastRuns } = useLastRuns(selectedConfig)
+  const { data: usageHistory } = useUsageHistory(
+    selectedConfig,
+    statusData?.timestamp,
+  )
   const { data: parityUsage, isLoading: isParityLoading } =
     useParityUsage(selectedConfig)
   const { data: dataDiskUsage } = useDataDiskUsage(selectedConfig)
@@ -265,6 +272,19 @@ function Dashboard() {
 
   const closeReport = () => setReport(null)
 
+  // A safety stop of the job just run, or of the last sync or scrub in the logs (scheduled, before a reload)
+  const forceStop: { command: SnapRaidCommand; option: ForceOption } | null =
+    job.lastResult?.forceOption
+      ? {
+          command: job.lastResult.command as SnapRaidCommand,
+          option: job.lastResult.forceOption,
+        }
+      : lastRuns?.sync?.forceOption
+        ? { command: 'sync', option: lastRuns.sync.forceOption }
+        : lastRuns?.scrub?.forceOption
+          ? { command: 'scrub', option: lastRuns.scrub.forceOption }
+          : null
+
   return (
     <PageLayout title={m.nav_dashboard()}>
       <ConfigBar disabled={job.isRunning}>
@@ -303,6 +323,15 @@ function Dashboard() {
           actionsDisabled={!selectedConfig || job.isRunning}
         />
 
+        {!job.isRunning && forceStop && (
+          <ForceRetryBox
+            command={forceStop.command}
+            option={forceStop.option}
+            disabled={!selectedConfig}
+            onRetry={(flag) => runCommand(forceStop.command, [flag])}
+          />
+        )}
+
         {job.output && (
           <div className="mb-6">
             <OutputConsole
@@ -324,6 +353,7 @@ function Dashboard() {
           status={statusData?.status}
           parityUsage={parityUsage}
           dataDiskUsage={dataDiskUsage}
+          usageHistory={usageHistory}
           powerStates={probeReport?.disks}
           isConfigLoading={isConfigLoading}
           isStatusLoading={isStatusFetching}

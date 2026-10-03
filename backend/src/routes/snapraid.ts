@@ -9,6 +9,7 @@ import { DiskRemovalError, ensureEmptyDir, finalizeDataDiskRemoval, prepareDataD
 import {configOperationsRoutes} from "./config-operations.ts";
 import {hardwareRoutes} from "./hardware.ts";
 import { setReportsRunner, reportsRoutes } from "./reports.ts";
+import { getUsageHistory, recordUsage } from "../usage-history.ts";
 import { parseStatusOutput } from "../parsers/status-parser.ts";
 import { parseCheckOutput } from "../parsers/check-parser.ts";
 import { isLockedOutput, STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
@@ -201,6 +202,7 @@ const startJob = (
         type: "complete",
         command,
         processId: runner.getLastJob()?.processId,
+        forceOption: runner.getLastJob()?.forceOption,
         exitCode: result.exitCode,
         aborted: result.aborted,
         timestamp: result.timestamp,
@@ -324,7 +326,8 @@ snapraid.get("/status", async (c) => {
       return c.json({ error: msg("server_error_snapraid_in_use"), busy: true }, 409);
     }
     const parsedStatus = parseStatusOutput(log, code === 0 ? new TextDecoder().decode(stdout) : text);
-    
+    if (code === 0) await recordUsage(configPath, parsedStatus);
+
     return c.json({
       status: parsedStatus,
       timestamp: new Date().toISOString(),
@@ -335,6 +338,21 @@ snapraid.get("/status", async (c) => {
   }
 });
 
+
+// GET /api/snapraid/usage-history - Daily usage of the array, recorded on each status read
+snapraid.get("/usage-history", async (c) => {
+  const relativePath = c.req.query("path");
+
+  if (!relativePath) {
+    return c.json({ error: "Missing path parameter" }, 400);
+  }
+
+  try {
+    return c.json(await getUsageHistory(resolveFromBase(relativePath)));
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
 
 // POST /api/snapraid/validate - Validate SnapRAID config
 snapraid.post("/validate", async (c) => {

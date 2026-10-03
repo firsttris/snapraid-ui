@@ -3,6 +3,8 @@ import type { ConfigFileCheck } from "@shared/types.ts";
 import { loadAppConfig, parseSnapRaidConfig, saveAppConfig } from "../config-parser.ts";
 import { BASE_PATH, resolveFromBase, toStoredPath } from "../config.ts";
 import { msg } from "@shared/i18n.ts";
+import { BackupError, createBackup, restoreBackup } from "../backup.ts";
+import { reloadSchedules } from "./schedules.ts";
 
 const config = new Hono();
 
@@ -37,6 +39,28 @@ config.post("/", async (c) => {
   const body = await c.req.json();
   await saveAppConfig(body);
   return c.json({ success: true });
+});
+
+// GET /api/config/backup - Settings, histories and SnapRAID configs as one file
+config.get("/backup", async (c) => {
+  const backup = await createBackup();
+  const date = backup.exportedAt.slice(0, 10);
+  c.header("Content-Disposition", `attachment; filename="snapraid-ui-backup-${date}.json"`);
+  return c.json(backup);
+});
+
+// POST /api/config/restore - Write a backup back and restart the schedules
+config.post("/restore", async (c) => {
+  try {
+    const result = await restoreBackup(await c.req.json());
+    await reloadSchedules();
+    return c.json(result);
+  } catch (error) {
+    if (error instanceof BackupError || error instanceof SyntaxError) {
+      return c.json({ error: error instanceof BackupError ? error.message : msg("server_error_backup_invalid") }, 400);
+    }
+    return c.json({ error: String(error) }, 500);
+  }
 });
 
 // POST /api/config/add - Add an existing SnapRAID config file

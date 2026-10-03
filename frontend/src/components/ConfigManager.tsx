@@ -5,6 +5,7 @@ import { useRef, useState } from 'react'
 import { queryKeys, useRemoveConfig, useUpdateConfig } from '../hooks/queries'
 import { useDialogKeys } from '../hooks/useDialogKeys'
 import * as m from '../paraglide/messages'
+import { BackupSection } from './BackupSection'
 import { Button } from './Button'
 import { ConfigAddForm } from './ConfigAddForm'
 import { ConfigCreateForm } from './ConfigCreateForm'
@@ -147,6 +148,8 @@ export const ConfigManager = ({ config, onClose }: ConfigManagerProps) => {
               )
             }
           />
+
+          <BackupSection />
         </div>
       </div>
 

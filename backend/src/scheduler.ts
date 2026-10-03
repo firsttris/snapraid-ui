@@ -13,6 +13,7 @@ import { resolveFromBase } from "./config.ts";
 import { failedReport, isSuccessful, readRunReport, type RunReport } from "./run-report.ts";
 import { isReplacementInProgress } from "./disk-replacement.ts";
 import { withCrcBaseline } from "./smart-baseline.ts";
+import { recordSmartHistory } from "./smart-history.ts";
 import { notifyRun, notifySkipped, notifySmart } from "./notification-events.ts";
 import { parseSmartOutput } from "./parsers/smart-parser.ts";
 import { msg } from "@shared/i18n.ts";
@@ -196,7 +197,9 @@ const executeScheduledCommand = async (
       const report = await readRunReport(step.command, output);
       reports.push(report);
       if (step.command === "smart") {
-        await notifySmart(snapraidConfigPath, await withCrcBaseline(snapraidConfigPath, parseSmartOutput(report.log)));
+        const disks = await withCrcBaseline(snapraidConfigPath, parseSmartOutput(report.log));
+        await recordSmartHistory(snapraidConfigPath, disks);
+        await notifySmart(snapraidConfigPath, disks);
       }
       if (!isSuccessful(report.result)) break;
     } catch (error) {
@@ -269,6 +272,15 @@ export const createScheduler = (configPath: string, runner: SnapRaidRunner) => {
     loadSchedules: async (): Promise<void> => {
       const schedules = await loadSchedulesFromFile(configPath);
       
+      schedules
+        .filter((schedule) => schedule.enabled)
+        .forEach((schedule) => startCronJob(configPath, runner, outputCallback, schedule));
+    },
+
+    // Schedules replaced on disk, e.g. by restoring a backup
+    reloadSchedules: async (): Promise<void> => {
+      stopAllJobs();
+      const schedules = await loadSchedulesFromFile(configPath);
       schedules
         .filter((schedule) => schedule.enabled)
         .forEach((schedule) => startCronJob(configPath, runner, outputCallback, schedule));

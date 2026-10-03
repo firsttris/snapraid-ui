@@ -1,4 +1,5 @@
 import type { SnapRaidCommand, CommandOutput, RunningJob, FinishedJob } from "@shared/types.ts";
+import { detectForceOption } from "@shared/force-option.ts";
 import type { LogManager } from "../log-manager.ts";
 import { basename } from "@std/path";
 import { snapraidCommand } from "../config.ts";
@@ -155,7 +156,13 @@ export const executeCommand = async (
     };
     // Still counts as the current job, so nothing else starts before the follow-up is done
     await afterRun?.(result);
-    cleanupProcess(processId, { command, processId, exitCode: status.code, aborted });
+    cleanupProcess(processId, {
+      command,
+      processId,
+      exitCode: status.code,
+      aborted,
+      forceOption: status.code !== 0 && !aborted ? detectForceOption(fullOutput) : undefined,
+    });
 
     return result;
   } catch (error) {

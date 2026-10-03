@@ -14,9 +14,11 @@ import type {
   ProbeReport,
   ReplacementStep,
   RunningJob,
+  SmartHistoryPoint,
   SmartReport,
   SnapRaidCommand,
   SnapRaidStatus,
+  UsagePoint,
 } from '@shared/types'
 import { API_BASE, apiFetch } from './constants'
 import { apiError } from './errors'
@@ -134,6 +136,19 @@ export const getParityUsage = async (
 ): Promise<ParityLevelUsage[]> => {
   const response = await apiFetch(
     `${API_BASE}/snapraid/parity-usage?path=${encodeURIComponent(configPath)}`,
+  )
+  if (!response.ok) throw await apiError(response)
+  return response.json()
+}
+
+/**
+ * Daily usage of the array, recorded on each status read
+ */
+export const getUsageHistory = async (
+  configPath: string,
+): Promise<UsagePoint[]> => {
+  const response = await apiFetch(
+    `${API_BASE}/snapraid/usage-history?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) throw await apiError(response)
   return response.json()
@@ -349,6 +364,19 @@ export const getSmart = async (configPath: string): Promise<SmartReport> => {
   if (!response.ok) {
     throw await apiError(response)
   }
+  return response.json()
+}
+
+/**
+ * Daily SMART values of the disks by name, recorded on each SMART read
+ */
+export const getSmartHistory = async (
+  configPath: string,
+): Promise<Record<string, SmartHistoryPoint[]>> => {
+  const response = await apiFetch(
+    `${API_BASE}/snapraid/smart-history?path=${encodeURIComponent(configPath)}`,
+  )
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 

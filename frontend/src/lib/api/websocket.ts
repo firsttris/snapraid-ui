@@ -1,3 +1,4 @@
+import type { ForceOption } from '@shared/force-option'
 import type { SnapRaidStatus } from '@shared/types'
 import { WS_URL } from './constants'
 
@@ -15,6 +16,7 @@ const wsState = {
       exitCode: number,
       aborted: boolean,
       processId?: string,
+      forceOption?: ForceOption,
     ) => void
     onError?: (error: string, command: string, processId?: string) => void
     onStatus?: (status: SnapRaidStatus) => void
@@ -78,6 +80,7 @@ export const connectWebSocket = (handlers?: typeof wsState.handlers): void => {
           message.exitCode,
           message.aborted ?? false,
           message.processId,
+          message.forceOption,
         )
         break
       case 'error':

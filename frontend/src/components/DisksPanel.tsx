@@ -5,13 +5,16 @@ import type {
   ParityLevelUsage,
   ParsedSnapRaidConfig,
   SnapRaidStatus,
+  UsagePoint,
 } from '@shared/types'
+import { diskFreeSeries, forecastFill } from '@shared/usage-forecast'
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { formatGB, usageBarColor } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { LoadingHint, Skeleton } from './Skeleton'
+import { UsageHistoryChart } from './UsageHistoryChart'
 
 // Parity reserve below this share of the fullest data disk is flagged as tight
 const PARITY_TIGHT_RATIO = 0.05
@@ -21,6 +24,7 @@ interface DisksPanelProps {
   status: SnapRaidStatus | undefined
   parityUsage: ParityLevelUsage[] | undefined
   dataDiskUsage: DataDiskUsage[] | undefined
+  usageHistory: UsagePoint[] | undefined
   powerStates: DiskPowerStatus[] | undefined
   // status and parity usage come from slower SnapRAID and df calls than the config
   isConfigLoading: boolean
@@ -179,7 +183,32 @@ const DiskRow = ({
   </li>
 )
 
-const DataDetails = ({ stats }: { stats: DiskStatusInfo | undefined }) => {
+// Only worth a line while the disk would fill up within a year
+const FORECAST_MAX_DAYS = 365
+const FORECAST_URGENT_DAYS = 60
+
+const FillForecastNote = ({ daysUntilFull }: { daysUntilFull?: number }) => {
+  if (daysUntilFull === undefined || daysUntilFull > FORECAST_MAX_DAYS)
+    return null
+  const urgent = daysUntilFull <= FORECAST_URGENT_DAYS
+  return (
+    <span
+      className={urgent ? 'font-medium text-red-700' : ''}
+      title={m.disks_forecast_hint()}
+    >
+      {urgent ? '⚠ ' : ''}
+      {m.disks_forecast({ days: String(daysUntilFull) })}
+    </span>
+  )
+}
+
+const DataDetails = ({
+  stats,
+  daysUntilFull,
+}: {
+  stats: DiskStatusInfo | undefined
+  daysUntilFull?: number
+}) => {
   if (!stats) return <span>{m.disks_no_stats()}</span>
   return (
     <>
@@ -192,6 +221,7 @@ const DataDetails = ({ stats }: { stats: DiskStatusInfo | undefined }) => {
       {stats.wastedGB > 0 && (
         <span>{m.disks_wasted({ size: formatGB(stats.wastedGB) })}</span>
       )}
+      <FillForecastNote daysUntilFull={daysUntilFull} />
     </>
   )
 }
@@ -273,6 +303,7 @@ export const DisksPanel = ({
   status,
   parityUsage,
   dataDiskUsage,
+  usageHistory,
   powerStates,
   isConfigLoading,
   isStatusLoading,
@@ -343,7 +374,17 @@ export const DisksPanel = ({
               free={free}
               total={total}
               warning={percent !== undefined ? usageWarning(percent) : null}
-              details={<DataDetails stats={stats} />}
+              details={
+                <DataDetails
+                  stats={stats}
+                  daysUntilFull={
+                    usageHistory
+                      ? forecastFill(diskFreeSeries(usageHistory, name))
+                          ?.daysUntilFull
+                      : undefined
+                  }
+                />
+              }
               loading={statusPending}
             />
           )
@@ -401,6 +442,8 @@ export const DisksPanel = ({
           )
         })}
       </ul>
+
+      <UsageHistoryChart points={usageHistory} />
     </div>
   )
 }

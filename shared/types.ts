@@ -1,4 +1,5 @@
 // Shared types between frontend and backend
+import type { ForceOption } from "./force-option.ts";
 // Single source of truth for all type definitions
 
 export interface SnapRaidConfig {
@@ -136,6 +137,7 @@ export interface FinishedJob {
   exitCode: number | null;
   aborted: boolean;
   error?: string; // The job could not run at all
+  forceOption?: ForceOption; // SnapRAID stopped for safety, this switch runs it anyway
   finishedAt: string; // ISO string
 }
 
@@ -146,6 +148,7 @@ export interface LastRun {
   timestamp: string; // ISO string
   result: RunResult;
   logFile: string;
+  forceOption?: ForceOption; // SnapRAID stopped for safety, this switch runs it anyway
 }
 
 export interface LastRuns {
@@ -195,6 +198,17 @@ export interface SmartDiskInfo {
   attributes?: SmartAttribute[];
 }
 
+// Daily values of a disk, to see trends; missing values were not reported
+export interface SmartHistoryPoint {
+  date: string; // YYYY-MM-DD
+  temperature?: number;
+  reallocated?: number;
+  pending?: number;
+  crc?: number;
+  wear?: number;
+  mediaErrors?: number;
+}
+
 export interface SmartAttribute {
   id: number;
   name: string;
@@ -223,6 +237,22 @@ export interface ProbeReport {
   disks: DiskPowerStatus[];
   timestamp: string; // ISO string
   rawOutput: string;
+}
+
+// Settings, histories and SnapRAID configs in one file, to move or restore an installation
+export interface SettingsBackup {
+  app: "snapraid-ui";
+  version: 1;
+  exportedAt: string;
+  files: Record<string, string>; // Path relative to the data folder (or absolute) -> content
+}
+
+// Usage of an array on one day, from its status
+export interface UsagePoint {
+  date: string; // YYYY-MM-DD
+  usedGB: number;
+  freeGB: number;
+  disks: Record<string, { usedGB: number; freeGB: number }>;
 }
 
 // Filesystem of a data disk, SnapRAID status reports only its free space

@@ -13,6 +13,8 @@ export const setScheduler = (scheduler: Scheduler): void => {
   state.scheduler = scheduler;
 };
 
+export const reloadSchedules = (): Promise<void> => state.scheduler?.reloadSchedules() ?? Promise.resolve();
+
 // GET /api/schedules - Get all schedules
 schedules.get("/", async (c) => {
   if (!state.scheduler) {
