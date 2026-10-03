@@ -19,6 +19,7 @@ const LINK_ERROR_TAGS = new Set(['hardlink_error', 'hardlink_error_io', 'symlink
 export const parseCheckOutput = (output: string): { files: CheckFileInfo[], totalFiles: number, errorCount: number, rehashCount: number, okCount: number } => {
   const tags = parseLogTags(output);
   const summary = collectKeyValues(tags, 'summary');
+  const contentInfo = collectKeyValues(tags, 'content_info');
   const entries = new Map<string, { disk: string, name: string, message?: string, state?: string }>();
 
   const entry = (disk: string, name: string) => {
@@ -55,8 +56,8 @@ export const parseCheckOutput = (output: string): { files: CheckFileInfo[], tota
   }));
 
   const errorCount = toInt(summary.get('error_soft')) + toInt(summary.get('error_io')) + toInt(summary.get('error_data'));
-  // check reports no per-file rehash state, only a block counter
-  const rehashCount = 0;
+  // check reports no per-file rehash state, only the blocks of the content file still waiting for a new hash
+  const rehashCount = toInt(contentInfo.get('block_rehash'));
   const totalFiles = files.length;
   const okCount = files.filter(f => f.status === 'OK').length;
 

@@ -206,7 +206,7 @@
   "check_report_title": "Check Report",
   "check_report_total": "Total",
   "check_report_errors": "Errors",
-  "check_report_rehash": "Rehash",
+  "check_report_rehash": "Blocks to rehash",
   "check_report_ok": "OK",
   "check_report_status": "Status",
   "check_report_file_path": "File Path",

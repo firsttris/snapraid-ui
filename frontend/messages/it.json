@@ -206,7 +206,7 @@
   "check_report_title": "Report del check",
   "check_report_total": "Totale",
   "check_report_errors": "Errori",
-  "check_report_rehash": "Rehash",
+  "check_report_rehash": "Blocchi da ricalcolare",
   "check_report_ok": "OK",
   "check_report_status": "Stato",
   "check_report_file_path": "Percorso del file",

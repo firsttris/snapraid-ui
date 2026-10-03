@@ -129,6 +129,13 @@ Deno.test("parseCheckOutput - no errors", () => {
 
   assertEquals(check.files, []);
   assertEquals(check.errorCount, 0);
+  assertEquals(check.rehashCount, 0);
+});
+
+Deno.test("parseCheckOutput - rehash blocks from the content file", () => {
+  const check = parseCheckOutput(fixture("check-ok.log").replace("content_info:block_rehash:0", "content_info:block_rehash:42"));
+
+  assertEquals(check.rehashCount, 42);
 });
 
 Deno.test("parseSmartOutput - disk status from smartctl flags", () => {
