@@ -18,6 +18,7 @@ import type {
   SnapRaidStatus,
 } from '@shared/types'
 import { API_BASE, apiFetch } from './constants'
+import { apiError } from './errors'
 
 /**
  * Parse a SnapRAID config file
@@ -28,7 +29,7 @@ export const parseSnapRaidConfig = async (
   const response = await apiFetch(
     `${API_BASE}/snapraid/parse?path=${encodeURIComponent(path)}`,
   )
-  if (!response.ok) throw new Error('Failed to parse config')
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 
@@ -46,8 +47,7 @@ export const executeCommand = async (
     body: JSON.stringify({ command, configPath, args }),
   })
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.error || 'Failed to execute command')
+    throw await apiError(response)
   }
 }
 
@@ -56,7 +56,7 @@ export const executeCommand = async (
  */
 export const getHistory = async (): Promise<CommandOutput[]> => {
   const response = await apiFetch(`${API_BASE}/history`)
-  if (!response.ok) throw new Error('Failed to fetch history')
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 
@@ -65,7 +65,7 @@ export const getHistory = async (): Promise<CommandOutput[]> => {
  */
 export const getCurrentJob = async (): Promise<RunningJob | null> => {
   const response = await apiFetch(`${API_BASE}/snapraid/current-job`)
-  if (!response.ok) throw new Error('Failed to fetch current job')
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 
@@ -74,7 +74,7 @@ export const getCurrentJob = async (): Promise<RunningJob | null> => {
  */
 export const getLastJob = async (): Promise<FinishedJob | null> => {
   const response = await apiFetch(`${API_BASE}/snapraid/last-job`)
-  if (!response.ok) throw new Error('Failed to fetch last job')
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 
@@ -86,8 +86,7 @@ export const abortJob = async (): Promise<void> => {
     method: 'POST',
   })
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to abort job')
+    throw await apiError(response)
   }
 }
 
@@ -98,7 +97,7 @@ export const getLastRuns = async (configPath: string): Promise<LastRuns> => {
   const response = await apiFetch(
     `${API_BASE}/snapraid/last-runs?path=${encodeURIComponent(configPath)}`,
   )
-  if (!response.ok) throw new Error('Failed to fetch last runs')
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 
@@ -117,7 +116,7 @@ export const getStatus = async (
     : `${API_BASE}/snapraid/status`
   const response = await apiFetch(url)
   if (response.status === 409) throw new SnapRaidBusyError('SnapRAID is busy')
-  if (!response.ok) throw new Error('Failed to fetch status')
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 
@@ -135,7 +134,7 @@ export const getParityUsage = async (
   const response = await apiFetch(
     `${API_BASE}/snapraid/parity-usage?path=${encodeURIComponent(configPath)}`,
   )
-  if (!response.ok) throw new Error('Failed to fetch parity usage')
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 
@@ -150,7 +149,7 @@ export const validateConfig = async (
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ configPath }),
   })
-  if (!response.ok) throw new Error('Failed to validate config')
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 
@@ -168,8 +167,7 @@ export const addDataDisk = async (
     body: JSON.stringify({ configPath, diskName, diskPath }),
   })
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to add data disk')
+    throw await apiError(response)
   }
   const result = await response.json()
   return result.config
@@ -188,8 +186,7 @@ export const addParityDisk = async (
     body: JSON.stringify({ configPath, parityPath }),
   })
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to add parity disk')
+    throw await apiError(response)
   }
   const result = await response.json()
   return result.config
@@ -208,8 +205,7 @@ export const removeParityDisk = async (
     body: JSON.stringify({ configPath, diskType: 'parity', level }),
   })
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to remove disk')
+    throw await apiError(response)
   }
   const result = await response.json()
   return result.config
@@ -229,8 +225,7 @@ export const removeDataDisk = async (
     body: JSON.stringify({ configPath, diskName }),
   })
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.error || 'Failed to remove disk')
+    throw await apiError(response)
   }
   const result = await response.json()
   return result.config
@@ -249,8 +244,7 @@ export const addExclude = async (
     body: JSON.stringify({ configPath, pattern }),
   })
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to add exclude pattern')
+    throw await apiError(response)
   }
   const result = await response.json()
   return result.config
@@ -269,8 +263,7 @@ export const removeExclude = async (
     body: JSON.stringify({ configPath, pattern }),
   })
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to remove exclude pattern')
+    throw await apiError(response)
   }
   const result = await response.json()
   return result.config
@@ -289,8 +282,7 @@ export const setPool = async (
     body: JSON.stringify({ configPath, poolPath }),
   })
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to set pool directory')
+    throw await apiError(response)
   }
   const result = await response.json()
   return result.config
@@ -299,7 +291,6 @@ export const setPool = async (
 const configOperation = async (
   endpoint: string,
   body: Record<string, unknown>,
-  fallback: string,
 ): Promise<ParsedSnapRaidConfig> => {
   const response = await apiFetch(`${API_BASE}/snapraid/${endpoint}`, {
     method: 'POST',
@@ -307,8 +298,7 @@ const configOperation = async (
     body: JSON.stringify(body),
   })
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.error || fallback)
+    throw await apiError(response)
   }
   const result = await response.json()
   return result.config
@@ -318,21 +308,13 @@ const configOperation = async (
  * Add a content file to SnapRAID config
  */
 export const addContentFile = (configPath: string, contentPath: string) =>
-  configOperation(
-    'add-content',
-    { configPath, contentPath },
-    'Failed to add content file',
-  )
+  configOperation('add-content', { configPath, contentPath })
 
 /**
  * Remove a content file from SnapRAID config
  */
 export const removeContentFile = (configPath: string, contentPath: string) =>
-  configOperation(
-    'remove-content',
-    { configPath, contentPath },
-    'Failed to remove content file',
-  )
+  configOperation('remove-content', { configPath, contentPath })
 
 /**
  * Set autosave (GiB) or blocksize (KiB), null removes the option
@@ -341,12 +323,7 @@ export const setConfigOption = (
   configPath: string,
   option: 'autosave' | 'blocksize',
   value: number | null,
-) =>
-  configOperation(
-    'set-option',
-    { configPath, option, value },
-    'Failed to set option',
-  )
+) => configOperation('set-option', { configPath, option, value })
 
 /**
  * Get SMART report for all disks
@@ -356,8 +333,7 @@ export const getSmart = async (configPath: string): Promise<SmartReport> => {
     `${API_BASE}/snapraid/smart?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to get SMART report')
+    throw await apiError(response)
   }
   return response.json()
 }
@@ -370,8 +346,7 @@ export const probe = async (configPath: string): Promise<ProbeReport> => {
     `${API_BASE}/snapraid/probe?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to probe disk status')
+    throw await apiError(response)
   }
   return response.json()
 }
@@ -386,8 +361,7 @@ export const getDevices = async (
     `${API_BASE}/snapraid/devices?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to get device information')
+    throw await apiError(response)
   }
   return response.json()
 }
@@ -400,8 +374,7 @@ export const getFileList = async (configPath: string): Promise<ListReport> => {
     `${API_BASE}/snapraid/list?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to get file list')
+    throw await apiError(response)
   }
   return response.json()
 }
@@ -416,8 +389,7 @@ export const getCheckReport = async (
     `${API_BASE}/snapraid/check-report?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to get check report')
+    throw await apiError(response)
   }
   return response.json()
 }
@@ -430,8 +402,7 @@ export const getDup = async (configPath: string): Promise<DupReport> => {
     `${API_BASE}/snapraid/dup?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to get duplicates')
+    throw await apiError(response)
   }
   return response.json()
 }
@@ -444,8 +415,7 @@ export const getDiff = async (configPath: string): Promise<DiffReport> => {
     `${API_BASE}/snapraid/diff?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to get diff report')
+    throw await apiError(response)
   }
   return response.json()
 }
@@ -459,7 +429,7 @@ export const getDiskReplacement = async (
   const response = await apiFetch(
     `${API_BASE}/snapraid/replace-disk?path=${encodeURIComponent(configPath)}`,
   )
-  if (!response.ok) throw new Error('Failed to load disk replacement')
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 
@@ -477,8 +447,7 @@ export const startDiskReplacement = async (
     body: JSON.stringify({ configPath, diskName, newPath }),
   })
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.error || 'Failed to start disk replacement')
+    throw await apiError(response)
   }
   return response.json()
 }
@@ -496,8 +465,7 @@ export const runDiskReplacementStep = async (
     body: JSON.stringify({ configPath, step }),
   })
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.error || 'Failed to run step')
+    throw await apiError(response)
   }
 }
 
@@ -511,5 +479,5 @@ export const clearDiskReplacement = async (
     `${API_BASE}/snapraid/replace-disk?path=${encodeURIComponent(configPath)}`,
     { method: 'DELETE' },
   )
-  if (!response.ok) throw new Error('Failed to close disk replacement')
+  if (!response.ok) throw await apiError(response)
 }

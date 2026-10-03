@@ -4,17 +4,12 @@ import type {
   NotificationTestResult,
 } from '@shared/types'
 import { API_BASE, apiFetch } from './constants'
-
-const failed = async (response: Response, fallback: string) => {
-  const error = await response.json().catch(() => ({}))
-  return new Error(error.error || fallback)
-}
+import { apiError } from './errors'
 
 export const notificationsApi = {
   get: async (): Promise<NotificationSettings> => {
     const response = await apiFetch(`${API_BASE}/notifications`)
-    if (!response.ok)
-      throw await failed(response, 'Failed to load notification settings')
+    if (!response.ok) throw await apiError(response)
     return response.json()
   },
 
@@ -26,8 +21,7 @@ export const notificationsApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings),
     })
-    if (!response.ok)
-      throw await failed(response, 'Failed to save notification settings')
+    if (!response.ok) throw await apiError(response)
     return response.json()
   },
 
@@ -41,8 +35,7 @@ export const notificationsApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ settings, channel }),
     })
-    if (!response.ok)
-      throw await failed(response, 'Failed to send test notification')
+    if (!response.ok) throw await apiError(response)
     return response.json()
   },
 }

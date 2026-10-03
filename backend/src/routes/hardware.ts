@@ -6,6 +6,7 @@ import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structure
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { getParityUsage } from "../parity-usage.ts";
 import { DEMO_MODE, demoProbeLog, demoSmartLog } from "../demo.ts";
+import { msg } from "@shared/i18n.ts";
 
 const hardware = new Hono();
 
@@ -84,7 +85,7 @@ hardware.get("/probe", async (c) => {
     const combinedOutput = output + "\n" + errorOutput;
     if (combinedOutput.includes("unsupported") || combinedOutput.includes("Probe is unsupported")) {
       return c.json({ 
-        error: "Probe command is not supported on this platform. This is common with NVMe drives or certain disk controllers.",
+        error: msg("server_error_probe_unsupported"),
         unsupported: true,
         exitCode: code,
         rawOutput: combinedOutput.trim()

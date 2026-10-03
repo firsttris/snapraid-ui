@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { ConfigFileCheck } from "@shared/types.ts";
 import { loadAppConfig, parseSnapRaidConfig, saveAppConfig } from "../config-parser.ts";
 import { BASE_PATH, resolveFromBase, toStoredPath } from "../config.ts";
+import { msg } from "@shared/i18n.ts";
 
 const config = new Hono();
 
@@ -48,12 +49,12 @@ config.post("/add", async (c) => {
 
   const absolute = resolveFromBase(path.trim());
   if (!(await isFile(absolute))) {
-    return c.json({ error: `Config file not found: ${absolute}` }, 400);
+    return c.json({ error: msg("server_error_config_file_not_found", { path: absolute }) }, 400);
   }
 
   const appConfig = await loadAppConfig();
   if (appConfig.snapraidConfigs.some((cfg) => resolveFromBase(cfg.path) === absolute)) {
-    return c.json({ error: "This config file is already added" }, 400);
+    return c.json({ error: msg("server_error_config_already_added") }, 400);
   }
 
   appConfig.snapraidConfigs.push({ name: name.trim(), path: toStoredPath(absolute), enabled });
@@ -71,7 +72,7 @@ config.post("/create", async (c) => {
   }
   const trimmed = fileName.trim();
   if (!/^[\w.-]+$/.test(trimmed)) {
-    return c.json({ error: "File name may only contain letters, digits, '.', '-' and '_'" }, 400);
+    return c.json({ error: msg("server_error_invalid_file_name") }, 400);
   }
 
   const storedPath = trimmed.endsWith(".conf") ? trimmed : `${trimmed}.conf`;
@@ -81,7 +82,7 @@ config.post("/create", async (c) => {
     await Deno.writeTextFile(absolute, CONFIG_TEMPLATE, { createNew: true });
   } catch (error) {
     if (error instanceof Deno.errors.AlreadyExists) {
-      return c.json({ error: `File already exists: ${absolute}` }, 409);
+      return c.json({ error: msg("server_error_file_exists", { path: absolute }) }, 409);
     }
     return c.json({ error: String(error) }, 500);
   }
@@ -101,13 +102,13 @@ config.post("/update", async (c) => {
     return c.json({ error: "Missing path" }, 400);
   }
   if (name !== undefined && !String(name).trim()) {
-    return c.json({ error: "Name must not be empty" }, 400);
+    return c.json({ error: msg("server_error_name_empty") }, 400);
   }
 
   const appConfig = await loadAppConfig();
   const target = appConfig.snapraidConfigs.find((cfg) => cfg.path === path);
   if (!target) {
-    return c.json({ error: "Config not found" }, 404);
+    return c.json({ error: msg("server_error_config_not_found") }, 404);
   }
 
   if (name !== undefined) target.name = String(name).trim();

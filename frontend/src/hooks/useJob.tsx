@@ -15,6 +15,7 @@ import { useFeedback } from '../components/Feedback'
 import { getLastJob } from '../lib/api/snapraid'
 import { connectWebSocket } from '../lib/api/websocket'
 import { getCommandLabel } from '../lib/commands'
+import { localizeServer } from '../lib/i18n'
 import { createJobTracker } from '../lib/job-tracker'
 import { type JobProgress, parseProgress } from '../lib/progress'
 import * as m from '../paraglide/messages'
@@ -65,7 +66,10 @@ const resultToast = (result: JobResult) => {
   if (result.error) {
     return {
       kind: 'error' as const,
-      message: m.commands_result_error({ command, error: result.error }),
+      message: m.commands_result_error({
+        command,
+        error: localizeServer(result.error),
+      }),
     }
   }
   if (result.aborted) {
@@ -123,7 +127,7 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
       isRunning: false,
       currentCommand: '',
       output: result?.error
-        ? `${prev.output}\n\nError: ${result.error}`
+        ? `${prev.output}\n\nError: ${localizeServer(result.error)}`
         : prev.output,
       lastResult: result ?? prev.lastResult,
     }))

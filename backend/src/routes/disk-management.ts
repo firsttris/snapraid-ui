@@ -7,6 +7,7 @@ import {
   parseSnapRaidConfig,
 } from "../config-parser.ts";
 import { resolveFromBase } from "../config.ts";
+import { msg } from "@shared/i18n.ts";
 
 const diskManagement = new Hono();
 
@@ -31,7 +32,7 @@ diskManagement.post("/add-data-disk", async (c) => {
     const diskExists = lines.some(line => line.trim().startsWith(`data ${diskName} `));
 
     if (diskExists) {
-      return c.json({ error: `Disk name '${diskName}' already exists` }, 400);
+      return c.json({ error: msg("server_error_disk_name_exists", { disk: diskName }) }, 400);
     }
 
     // Find position to insert functionally
@@ -97,7 +98,7 @@ diskManagement.post("/add-parity-disk", async (c) => {
 
   // Validate that parityPath ends with .parity
   if (!parityPath.endsWith(".parity")) {
-    return c.json({ error: "Parity file path must end with .parity" }, 400);
+    return c.json({ error: msg("server_error_parity_extension") }, 400);
   }
 
   try {
@@ -109,7 +110,7 @@ diskManagement.post("/add-parity-disk", async (c) => {
     const levels = lines.map(parseParityLine).filter(parity => parity !== null);
     const nextLevel = Math.max(0, ...levels.map(parity => parity.level)) + 1;
     if (nextLevel > MAX_PARITY_LEVEL) {
-      return c.json({ error: `SnapRAID supports at most ${MAX_PARITY_LEVEL} parity levels` }, 400);
+      return c.json({ error: msg("server_error_max_parity_levels", { max: MAX_PARITY_LEVEL }) }, 400);
     }
 
     // Insert after the last parity line, or before the first setting
@@ -174,7 +175,7 @@ diskManagement.post("/remove-disk", async (c) => {
     );
     if (highest && level !== undefined && level !== highest.parity!.level) {
       throw new ParityLevelError(
-        `Only the highest parity level (${highest.parity!.keyword}) can be removed`,
+        msg("server_error_highest_parity_only", { level: highest.parity!.keyword }),
       );
     }
     const updatedLines = highest

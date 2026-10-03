@@ -20,3 +20,7 @@ dev/tools/
 # Local data of ./start.sh (configs, schedules, logs)
 /snapraid/
 !backend/src/parsers/__tests__/fixtures/*.log
+
+# Paraglide (generated from frontend/messages/*.json) and the inlang cache
+frontend/src/paraglide/
+frontend/project.inlang/cache/

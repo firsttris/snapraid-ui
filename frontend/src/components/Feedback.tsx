@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react'
 import { useDialogKeys } from '../hooks/useDialogKeys'
+import { localizeServer } from '../lib/i18n'
 import * as m from '../paraglide/messages'
 
 // How long a toast stays visible, errors stay longer so they can be read
@@ -66,7 +67,7 @@ const TOAST_STYLES: Record<ToastKind, { box: string; icon: ReactNode }> = {
  * Error message of an unknown thrown value
  */
 export const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
+  localizeServer(error instanceof Error ? error.message : String(error))
 
 const ConfirmDialog = ({
   pending,

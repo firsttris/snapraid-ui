@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { Scheduler } from "../scheduler.ts";
+import { msg } from "@shared/i18n.ts";
 
 const schedules = new Hono();
 
@@ -32,7 +33,7 @@ schedules.get("/:id", async (c) => {
   const schedule = await state.scheduler.getSchedule(id);
 
   if (!schedule) {
-    return c.json({ error: "Schedule not found" }, 404);
+    return c.json({ error: msg("server_error_schedule_not_found") }, 404);
   }
 
   return c.json(schedule);
@@ -68,7 +69,7 @@ schedules.post("/", async (c) => {
 
     return c.json(schedule, 201);
   } catch (error) {
-    return c.json({ error: String(error) }, 400);
+    return c.json({ error: error instanceof Error ? error.message : String(error) }, 400);
   }
 });
 
@@ -85,8 +86,8 @@ schedules.put("/:id", async (c) => {
     const schedule = await state.scheduler.updateSchedule(id, body);
     return c.json(schedule);
   } catch (error) {
-    const errorMessage = String(error);
-    if (errorMessage.includes("not found")) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage === msg("server_error_schedule_not_found")) {
       return c.json({ error: errorMessage }, 404);
     }
     return c.json({ error: errorMessage }, 400);
@@ -105,8 +106,8 @@ schedules.delete("/:id", async (c) => {
     await state.scheduler.deleteSchedule(id);
     return c.json({ success: true });
   } catch (error) {
-    const errorMessage = String(error);
-    if (errorMessage.includes("not found")) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage === msg("server_error_schedule_not_found")) {
       return c.json({ error: errorMessage }, 404);
     }
     return c.json({ error: errorMessage }, 500);
@@ -124,7 +125,7 @@ schedules.post("/:id/toggle", async (c) => {
   try {
     const schedule = await state.scheduler.getSchedule(id);
     if (!schedule) {
-      return c.json({ error: "Schedule not found" }, 404);
+      return c.json({ error: msg("server_error_schedule_not_found") }, 404);
     }
 
     const updated = await state.scheduler.updateSchedule(id, {
@@ -133,7 +134,7 @@ schedules.post("/:id/toggle", async (c) => {
 
     return c.json(updated);
   } catch (error) {
-    return c.json({ error: String(error) }, 400);
+    return c.json({ error: error instanceof Error ? error.message : String(error) }, 400);
   }
 });
 

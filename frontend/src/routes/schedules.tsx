@@ -27,6 +27,7 @@ import {
   useUpdateSchedule,
 } from '../hooks/queries'
 import { getCommandLabel } from '../lib/commands'
+import { localizeServer } from '../lib/i18n'
 import { formatRelativeTime } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
@@ -106,11 +107,13 @@ const getOutcomeDetail = (outcome: ScheduleOutcome): string | undefined => {
         count: outcome.deletedFiles ?? 0,
       })
     case 'diff_failed':
-      return m.schedules_skip_diff_failed({ error: outcome.error ?? '' })
+      return m.schedules_skip_diff_failed({
+        error: localizeServer(outcome.error ?? ''),
+      })
     case 'recovery_in_progress':
       return m.schedules_skip_recovery()
     default:
-      return outcome.error
+      return outcome.error && localizeServer(outcome.error)
   }
 }
 

@@ -46,15 +46,15 @@ Deno.test("prepareDataDiskRemoval - does not touch a disk whose path only shares
 Deno.test("prepareDataDiskRemoval - refuses to leave too few content files", () => {
   const config = `${CONFIG}\n2-parity /mnt/parity2/snapraid.2-parity`;
 
-  assertThrows(() => prepareDataDiskRemoval(config, "d1"), DiskRemovalError, "at least 3 content files");
+  assertThrows(() => prepareDataDiskRemoval(config, "d1"), DiskRemovalError, '"needed":3');
 });
 
 Deno.test("prepareDataDiskRemoval - refuses unknown and last data disks", () => {
-  assertThrows(() => prepareDataDiskRemoval(CONFIG, "d9"), DiskRemovalError, "not found");
+  assertThrows(() => prepareDataDiskRemoval(CONFIG, "d9"), DiskRemovalError, "server_error_data_disk_not_found");
   assertThrows(
     () => prepareDataDiskRemoval("parity /p\ncontent /a\ncontent /b\ndata d1 /mnt/disk1", "d1"),
     DiskRemovalError,
-    "last data disk",
+    "server_error_last_data_disk",
   );
 });
 
@@ -87,7 +87,7 @@ Deno.test("ensureEmptyDir - creates the directory and rejects leftovers", async 
     await ensureEmptyDir(emptyDir);
 
     await Deno.writeTextFile(join(emptyDir, "file"), "x");
-    await assertRejects(() => ensureEmptyDir(emptyDir), DiskRemovalError, "not empty");
+    await assertRejects(() => ensureEmptyDir(emptyDir), DiskRemovalError, "server_error_not_empty");
   } finally {
     await Deno.remove(dir, { recursive: true });
   }

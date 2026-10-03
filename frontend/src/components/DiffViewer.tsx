@@ -224,11 +224,7 @@ export function DiffViewer({
               <span className="font-semibold">
                 ⚠️ {m.diff_report_changes_detected()}:
               </span>{' '}
-              {m.diff_report_changes_message({
-                count: totalChanges,
-                plural: totalChanges !== 1 ? 's' : '',
-                singular: totalChanges === 1 ? 's' : '',
-              })}
+              {m.diff_report_changes_message({ count: totalChanges })}
             </p>
           </div>
         )}

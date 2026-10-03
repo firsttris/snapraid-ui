@@ -1,5 +1,6 @@
 import { dirname, join } from "@std/path";
 import { isPendingRemoval, parseParityLine, REMOVAL_DIR } from "./config-parser.ts";
+import { msg } from "@shared/i18n.ts";
 
 /**
  * Removing a data disk follows the SnapRAID FAQ:
@@ -31,10 +32,10 @@ export const prepareDataDiskRemoval = (
   const dataLines = lines.map(parseDataLine);
   const index = dataLines.findIndex(data => data?.name === diskName);
   if (index === -1) {
-    throw new DiskRemovalError(`Data disk '${diskName}' not found`);
+    throw new DiskRemovalError(msg("server_error_data_disk_not_found", { disk: diskName }));
   }
   if (dataLines.filter(data => data !== null).length < 2) {
-    throw new DiskRemovalError("The last data disk cannot be removed");
+    throw new DiskRemovalError(msg("server_error_last_data_disk"));
   }
 
   const currentPath = trimSlash(dataLines[index]!.path);
@@ -49,7 +50,7 @@ export const prepareDataDiskRemoval = (
   const levels = lines.filter(line => parseParityLine(line)).length;
   if (remaining < levels + 1) {
     throw new DiskRemovalError(
-      `SnapRAID needs at least ${levels + 1} content files on other disks, only ${remaining} would remain`,
+      msg("server_error_content_files_needed", { needed: levels + 1, remaining }),
     );
   }
 
@@ -77,6 +78,6 @@ export const finalizeDataDiskRemoval = (config: string, diskName: string): strin
 export const ensureEmptyDir = async (path: string): Promise<void> => {
   await Deno.mkdir(path, { recursive: true });
   for await (const _ of Deno.readDir(path)) {
-    throw new DiskRemovalError(`${path} is not empty`);
+    throw new DiskRemovalError(msg("server_error_not_empty", { path }));
   }
 };

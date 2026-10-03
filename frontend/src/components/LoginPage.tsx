@@ -13,7 +13,7 @@ import {
 import { type FormEvent, useEffect, useState } from 'react'
 import { login } from '../lib/api/auth'
 import * as m from '../paraglide/messages'
-import { getLocale, setLocale } from '../paraglide/runtime'
+import { getLocale, locales, setLocale } from '../paraglide/runtime'
 
 // Columns of the disk array in the background, the last two are parity
 const DISK_COUNT = 6
@@ -149,9 +149,13 @@ export const LoginPage = ({
 
       <button
         type="button"
-        onClick={() => setLocale(currentLocale === 'en' ? 'de' : 'en')}
+        onClick={() =>
+          setLocale(
+            locales[(locales.indexOf(currentLocale) + 1) % locales.length],
+          )
+        }
         className="absolute top-4 right-4 flex items-center gap-2 rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-        aria-label="Switch language"
+        aria-label={m.common_switch_language()}
       >
         <Languages size={18} />
         <span className="text-sm font-medium">

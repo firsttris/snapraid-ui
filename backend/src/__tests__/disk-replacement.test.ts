@@ -52,13 +52,13 @@ Deno.test("applyReplacementPath - split parity can only be replaced in place", (
   assertThrows(
     () => applyReplacementPath(CONFIG, "2-parity", "/mnt/p2c/c.parity"),
     DiskReplacementError,
-    "Split parity",
+    "server_error_split_parity_in_place",
   );
 });
 
 Deno.test("applyReplacementPath - rejects unknown disks and parity paths without .parity", () => {
-  assertThrows(() => applyReplacementPath(CONFIG, "d9", "/mnt/x"), DiskReplacementError, "not found");
-  assertThrows(() => applyReplacementPath(CONFIG, "parity", "/mnt/x"), DiskReplacementError, ".parity");
+  assertThrows(() => applyReplacementPath(CONFIG, "d9", "/mnt/x"), DiskReplacementError, "server_error_disk_not_found");
+  assertThrows(() => applyReplacementPath(CONFIG, "parity", "/mnt/x"), DiskReplacementError, "server_error_parity_extension");
 });
 
 Deno.test("requiredDirectory - data directory or the directory of the parity file", () => {

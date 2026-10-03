@@ -11,6 +11,7 @@ import {
   saveReplacement,
 } from "../disk-replacement.ts";
 import { readRunReport } from "../run-report.ts";
+import { msg } from "@shared/i18n.ts";
 
 type StartJob = (
   command: SnapRaidCommand,
@@ -69,11 +70,11 @@ export const createDiskReplacementRoutes = ({ startJob, isBusy }: { startJob: St
     if (!configPath || !diskName || !newPath?.trim()) {
       return c.json({ error: "Missing configPath, diskName or newPath" }, 400);
     }
-    if (isBusy()) return c.json({ error: "Another job is already running" }, 409);
+    if (isBusy()) return c.json({ error: msg("server_error_job_running") }, 409);
 
     const existing = await getReplacement(configPath);
     if (existing && !existing.completedAt && existing.diskName !== diskName) {
-      return c.json({ error: `Disk '${existing.diskName}' is still being replaced` }, 409);
+      return c.json({ error: msg("server_error_replacement_running", { disk: existing.diskName }) }, 409);
     }
 
     try {
@@ -85,7 +86,7 @@ export const createDiskReplacementRoutes = ({ startJob, isBusy }: { startJob: St
       );
       const directory = requiredDirectory(diskType, newPath.trim());
       if (!(await isDirectory(directory))) {
-        return c.json({ error: `${directory} does not exist or is not a directory` }, 400);
+        return c.json({ error: msg("server_error_not_a_directory", { path: directory }) }, 400);
       }
       await Deno.writeTextFile(path, config);
 
@@ -113,15 +114,15 @@ export const createDiskReplacementRoutes = ({ startJob, isBusy }: { startJob: St
   routes.post("/replace-disk/step", async (c) => {
     const { configPath, step } = await c.req.json<{ configPath: string; step: ReplacementStep }>();
     if (!configPath || !(step in STEP_ARGS)) return c.json({ error: "Missing configPath or step" }, 400);
-    if (isBusy()) return c.json({ error: "Another job is already running" }, 409);
+    if (isBusy()) return c.json({ error: msg("server_error_job_running") }, 409);
 
     const replacement = await getReplacement(configPath);
-    if (!replacement) return c.json({ error: "No disk replacement in progress" }, 404);
+    if (!replacement) return c.json({ error: msg("server_error_no_replacement") }, 404);
     if (step !== "fix" && !replacement.steps.fix) {
-      return c.json({ error: "Run fix first" }, 400);
+      return c.json({ error: msg("server_error_run_fix_first") }, 400);
     }
     if (step === "check" && replacement.diskType === "parity") {
-      return c.json({ error: "check -a only verifies data disks" }, 400);
+      return c.json({ error: msg("server_error_check_data_disks_only") }, 400);
     }
 
     runStep(configPath, replacement.diskName, step);

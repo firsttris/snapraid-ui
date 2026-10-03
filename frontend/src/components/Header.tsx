@@ -137,7 +137,7 @@ export const Header = () => {
             type="button"
             onClick={toggleLocale}
             className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-white/10"
-            aria-label="Switch language"
+            aria-label={m.common_switch_language()}
           >
             <Languages size={18} />
             <span className="text-sm font-medium">

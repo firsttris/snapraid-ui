@@ -8,6 +8,7 @@ import {
   saveNotificationSettings,
   validateNotificationSettings,
 } from "../notifications.ts";
+import { msg } from "@shared/i18n.ts";
 
 const notifications = new Hono();
 
@@ -67,7 +68,7 @@ notifications.post("/test", async (c) => {
 
     const channels = channel ? [channel] : CHANNELS.filter((ch) => settings[ch].enabled);
     if (channels.length === 0) {
-      return c.json({ error: "No notification channel is enabled" }, 400);
+      return c.json({ error: msg("server_error_no_channel") }, 400);
     }
 
     const results = await deliver(
