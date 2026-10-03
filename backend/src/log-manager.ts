@@ -1,6 +1,7 @@
 import { join } from "@std/path";
 import { expandGlob } from "@std/fs";
 import type { SnapRaidCommand, LogFile, LastRun, RunResult } from "@shared/types.ts";
+import { detectForceOption } from "@shared/force-option.ts";
 
 export interface LogManager {
   ensureLogDirectory(): Promise<void>;
@@ -163,10 +164,12 @@ export const createLogManager = (logDirectory: string): LogManager => {
       if (content.match(/^conf:file:(.*)$/m)?.[1] !== configPath) continue;
 
       const unixtime = content.match(/^unixtime:(\d+)$/m)?.[1];
+      const result = parseRunResult(content);
       return {
         timestamp: unixtime ? new Date(Number(unixtime) * 1000).toISOString() : log.timestamp,
-        result: parseRunResult(content),
+        result,
         logFile: log.filename,
+        forceOption: result === "ok" || result === "warning" ? undefined : detectForceOption(content),
       };
     }
     return null;

@@ -1,3 +1,4 @@
+import type { ForceOption } from '@shared/force-option'
 import type {
   CheckReport,
   DevicesReport,
@@ -271,6 +272,19 @@ function Dashboard() {
 
   const closeReport = () => setReport(null)
 
+  // A safety stop of the job just run, or of the last sync or scrub in the logs (scheduled, before a reload)
+  const forceStop: { command: SnapRaidCommand; option: ForceOption } | null =
+    job.lastResult?.forceOption
+      ? {
+          command: job.lastResult.command as SnapRaidCommand,
+          option: job.lastResult.forceOption,
+        }
+      : lastRuns?.sync?.forceOption
+        ? { command: 'sync', option: lastRuns.sync.forceOption }
+        : lastRuns?.scrub?.forceOption
+          ? { command: 'scrub', option: lastRuns.scrub.forceOption }
+          : null
+
   return (
     <PageLayout title={m.nav_dashboard()}>
       <ConfigBar disabled={job.isRunning}>
@@ -309,14 +323,12 @@ function Dashboard() {
           actionsDisabled={!selectedConfig || job.isRunning}
         />
 
-        {!job.isRunning && job.lastResult?.forceOption && (
+        {!job.isRunning && forceStop && (
           <ForceRetryBox
-            command={job.lastResult.command}
-            option={job.lastResult.forceOption}
+            command={forceStop.command}
+            option={forceStop.option}
             disabled={!selectedConfig}
-            onRetry={(flag) =>
-              runCommand(job.lastResult?.command as SnapRaidCommand, [flag])
-            }
+            onRetry={(flag) => runCommand(forceStop.command, [flag])}
           />
         )}
 

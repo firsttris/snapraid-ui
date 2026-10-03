@@ -25,10 +25,12 @@ Run sync and scrub, schedule jobs and keep an eye on disk health, all from your 
 - **Scheduler**: cron-based jobs, no crontab editing; a sync can run touch before and scrub after it as one nightly routine
 - **Notifications** via ntfy push, e-mail or webhook (Discord, Slack, Home Assistant …) when a job fails, scrub finds damaged data, a scheduled sync is skipped or a disk shows SMART problems
 - **Disk replacement wizard**: restores a failed data or parity disk step by step (`fix -d`, `check -a`, `sync`) and pauses scheduled jobs meanwhile
-- **Disk overview**: usage, file counts, fragmentation and parity headroom per disk
-- **SMART monitoring**: health, temperature, failure probability and SSD wear per disk; flags reallocated/pending sectors, read and CRC errors, highlights the affected attributes and tells you what to do (replace the disk, check the cable, improve cooling)
+- **Disk overview**: capacity, usage, file counts, fragmentation and parity headroom per disk; a usage history and an estimate of when each disk runs full
+- **SMART monitoring**: health, temperature, failure probability and SSD wear per disk; flags reallocated/pending sectors, read and CRC errors, highlights the affected attributes and tells you what to do (replace the disk, check the cable, improve cooling); a daily history per disk shows trends, and CRC errors only warn while their count grows
+- **Safety stops explained**: when SnapRAID stops a run because files suddenly have zero size, a disk looks empty or disks changed their UUID, the dashboard explains why and offers a confirmed run with `--force-zero`, `--force-empty` or `--force-uuid`
 - **Logs**: history of every run with full output, searchable and filterable; old logs are rotated automatically (100 files / 30 days by default) or on demand
 - **Config management**: add existing or create new `snapraid.conf` files, rename, enable/disable, and edit disks, content files, excludes, pool and options visually or as text
+- **Backup**: download settings, schedules, notification settings, histories and SnapRAID configs as one file and restore them on a new server
 - **Login** via environment variables, no database needed
 - **Multilingual**: follows the browser language, switchable in the header
 - **Light and dark theme**: follows the system, switchable in the header

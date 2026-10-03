@@ -148,6 +148,7 @@ export interface LastRun {
   timestamp: string; // ISO string
   result: RunResult;
   logFile: string;
+  forceOption?: ForceOption; // SnapRAID stopped for safety, this switch runs it anyway
 }
 
 export interface LastRuns {
