@@ -1,4 +1,5 @@
 // Shared types between frontend and backend
+import type { ForceOption } from "./force-option.ts";
 // Single source of truth for all type definitions
 
 export interface SnapRaidConfig {
@@ -136,6 +137,7 @@ export interface FinishedJob {
   exitCode: number | null;
   aborted: boolean;
   error?: string; // The job could not run at all
+  forceOption?: ForceOption; // SnapRAID stopped for safety, this switch runs it anyway
   finishedAt: string; // ISO string
 }
 

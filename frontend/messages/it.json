@@ -747,5 +747,13 @@
   "server_error_split_parity_in_place": "La parità divisa può essere sostituita solo sul posto; per spostarla modifica la configurazione",
   "server_error_disk_not_found": "Disco '{disk}' non trovato",
   "common_request_failed": "Richiesta non riuscita (HTTP {status})",
-  "common_switch_language": "Cambia lingua"
+  "common_switch_language": "Cambia lingua",
+  "force_zero_title": "Fermato per sicurezza: file improvvisamente di dimensione zero",
+  "force_zero_msg": "Un crash può troncare i file a 0 byte. Eseguire ora salverebbe i file vuoti nella parità e il loro vecchio contenuto non potrebbe più essere ripristinato. Controlla prima i file indicati nell'output e ripristina quelli danneggiati con fix. Continua solo se i file sono vuoti di proposito.",
+  "force_empty_title": "Fermato per sicurezza: mancano tutti i file di un disco",
+  "force_empty_msg": "Di solito il disco non è montato o è montato in un altro percorso. Eseguire ora toglierebbe i suoi file dalla parità. Controlla prima il mount. Continua solo se il disco è vuoto di proposito.",
+  "force_uuid_title": "Fermato per sicurezza: più dischi hanno un nuovo UUID",
+  "force_uuid_msg": "Succede dopo la sostituzione dei dischi o quando i punti di mount sono stati scambiati. Controlla che ogni disco sia montato nel suo percorso. Continua solo se hai davvero sostituito i dischi.",
+  "force_retry": "{command} comunque",
+  "force_confirm": "Eseguire {command} con {flag}? Il controllo di sicurezza di SnapRAID viene saltato per questa esecuzione, quindi assicurati che dischi e file siano come devono essere."
 }

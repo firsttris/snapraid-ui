@@ -18,6 +18,7 @@ import { DisksPanel } from '../components/DisksPanel'
 import { DupViewer } from '../components/DupViewer'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { FileListViewer } from '../components/FileListViewer'
+import { ForceRetryBox } from '../components/ForceRetryBox'
 import { OutputConsole } from '../components/OutputConsole'
 import { PageLayout } from '../components/PageLayout'
 import { ScrubDialog } from '../components/ScrubDialog'
@@ -302,6 +303,17 @@ function Dashboard() {
           onTouch={() => runCommand('touch')}
           actionsDisabled={!selectedConfig || job.isRunning}
         />
+
+        {!job.isRunning && job.lastResult?.forceOption && (
+          <ForceRetryBox
+            command={job.lastResult.command}
+            option={job.lastResult.forceOption}
+            disabled={!selectedConfig}
+            onRetry={(flag) =>
+              runCommand(job.lastResult?.command as SnapRaidCommand, [flag])
+            }
+          />
+        )}
 
         {job.output && (
           <div className="mb-6">

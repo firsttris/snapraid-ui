@@ -775,5 +775,13 @@
   "server_error_split_parity_in_place": "Split parity can only be replaced in place, edit the config to move it",
   "server_error_disk_not_found": "Disk '{disk}' not found",
   "common_request_failed": "Request failed (HTTP {status})",
-  "common_switch_language": "Switch language"
+  "common_switch_language": "Switch language",
+  "force_zero_title": "Stopped for safety: files suddenly have zero size",
+  "force_zero_msg": "A crash can truncate files to 0 bytes. Running now would store the empty files in parity, and their old content could no longer be restored. Check the files named in the output first and restore damaged ones with fix. Only continue if the files are empty on purpose.",
+  "force_empty_title": "Stopped for safety: all files of a disk are missing",
+  "force_empty_msg": "Usually the disk is not mounted, or mounted at another path. Running now would drop its files from parity. Check the mount first. Only continue if the disk is empty on purpose.",
+  "force_uuid_title": "Stopped for safety: several disks have a new UUID",
+  "force_uuid_msg": "This happens after replacing disks, or when mount points got mixed up. Check that every disk is mounted at its path. Only continue if you really replaced the disks.",
+  "force_retry": "{command} anyway",
+  "force_confirm": "Run {command} with {flag}? SnapRAID's safety check is skipped for this run, so make sure the disks and files are as they should be."
 }

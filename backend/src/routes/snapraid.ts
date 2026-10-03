@@ -201,6 +201,7 @@ const startJob = (
         type: "complete",
         command,
         processId: runner.getLastJob()?.processId,
+        forceOption: runner.getLastJob()?.forceOption,
         exitCode: result.exitCode,
         aborted: result.aborted,
         timestamp: result.timestamp,

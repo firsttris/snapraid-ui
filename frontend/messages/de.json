@@ -761,5 +761,13 @@
   "server_error_split_parity_in_place": "Geteilte Parität kann nur an Ort und Stelle ersetzt werden, zum Verschieben die Konfiguration bearbeiten",
   "server_error_disk_not_found": "Platte '{disk}' nicht gefunden",
   "common_request_failed": "Anfrage fehlgeschlagen (HTTP {status})",
-  "common_switch_language": "Sprache wechseln"
+  "common_switch_language": "Sprache wechseln",
+  "force_zero_title": "Zur Sicherheit gestoppt: Dateien sind plötzlich 0 Byte groß",
+  "force_zero_msg": "Ein Absturz kann Dateien auf 0 Byte kürzen. Ein Lauf jetzt würde die leeren Dateien in die Parität übernehmen, ihr alter Inhalt wäre dann nicht mehr wiederherstellbar. Prüfe zuerst die Dateien in der Ausgabe und stelle beschädigte mit Fix wieder her. Fahre nur fort, wenn die Dateien absichtlich leer sind.",
+  "force_empty_title": "Zur Sicherheit gestoppt: Alle Dateien einer Platte fehlen",
+  "force_empty_msg": "Meist ist die Platte nicht oder unter einem anderen Pfad eingehängt. Ein Lauf jetzt würde ihre Dateien aus der Parität entfernen. Prüfe zuerst den Mount. Fahre nur fort, wenn die Platte absichtlich leer ist.",
+  "force_uuid_title": "Zur Sicherheit gestoppt: Mehrere Platten haben eine neue UUID",
+  "force_uuid_msg": "Das passiert nach dem Tausch von Platten oder wenn Mountpunkte vertauscht sind. Prüfe, dass jede Platte unter ihrem Pfad eingehängt ist. Fahre nur fort, wenn du die Platten wirklich getauscht hast.",
+  "force_retry": "{command} trotzdem",
+  "force_confirm": "{command} mit {flag} ausführen? Die Sicherheitsprüfung von SnapRAID wird für diesen Lauf übersprungen, stelle also sicher, dass Platten und Dateien so sind, wie sie sein sollen."
 }

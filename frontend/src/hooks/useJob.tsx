@@ -1,3 +1,4 @@
+import type { ForceOption } from '@shared/force-option'
 import type { FinishedJob, RunningJob } from '@shared/types'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
@@ -29,6 +30,7 @@ const toJobResult = (job: FinishedJob): JobResult => ({
   exitCode: job.exitCode,
   aborted: job.aborted,
   error: job.error,
+  forceOption: job.forceOption,
   finishedAt: job.finishedAt,
 })
 
@@ -37,6 +39,7 @@ export interface JobResult {
   exitCode: number | null
   aborted: boolean
   error?: string
+  forceOption?: ForceOption // SnapRAID stopped for safety, this switch runs it anyway
   finishedAt: string
 }
 
@@ -179,12 +182,13 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
           output,
         }))
       },
-      onComplete: (command, exitCode, aborted, processId) =>
+      onComplete: (command, exitCode, aborted, processId, forceOption) =>
         finishRef.current(
           {
             command,
             exitCode,
             aborted,
+            forceOption,
             finishedAt: new Date().toISOString(),
           },
           processId,
