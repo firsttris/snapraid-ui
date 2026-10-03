@@ -783,5 +783,12 @@
   "force_uuid_title": "Stopped for safety: several disks have a new UUID",
   "force_uuid_msg": "This happens after replacing disks, or when mount points got mixed up. Check that every disk is mounted at its path. Only continue if you really replaced the disks.",
   "force_retry": "{command} anyway",
-  "force_confirm": "Run {command} with {flag}? SnapRAID's safety check is skipped for this run, so make sure the disks and files are as they should be."
+  "force_confirm": "Run {command} with {flag}? SnapRAID's safety check is skipped for this run, so make sure the disks and files are as they should be.",
+  "smart_history_title": "History ({days} days)",
+  "smart_history_temperature": "Temperature",
+  "smart_history_reallocated": "Reallocated sectors",
+  "smart_history_pending": "Pending sectors",
+  "smart_history_crc": "Transfer errors (CRC)",
+  "smart_history_media_errors": "Media errors",
+  "smart_history_wear": "SSD wear"
 }

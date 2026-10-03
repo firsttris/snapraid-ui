@@ -755,5 +755,12 @@
   "force_uuid_title": "Fermato per sicurezza: più dischi hanno un nuovo UUID",
   "force_uuid_msg": "Succede dopo la sostituzione dei dischi o quando i punti di mount sono stati scambiati. Controlla che ogni disco sia montato nel suo percorso. Continua solo se hai davvero sostituito i dischi.",
   "force_retry": "{command} comunque",
-  "force_confirm": "Eseguire {command} con {flag}? Il controllo di sicurezza di SnapRAID viene saltato per questa esecuzione, quindi assicurati che dischi e file siano come devono essere."
+  "force_confirm": "Eseguire {command} con {flag}? Il controllo di sicurezza di SnapRAID viene saltato per questa esecuzione, quindi assicurati che dischi e file siano come devono essere.",
+  "smart_history_title": "Andamento ({days} giorni)",
+  "smart_history_temperature": "Temperatura",
+  "smart_history_reallocated": "Settori riallocati",
+  "smart_history_pending": "Settori in sospeso",
+  "smart_history_crc": "Errori di trasferimento (CRC)",
+  "smart_history_media_errors": "Errori del supporto",
+  "smart_history_wear": "Usura SSD"
 }

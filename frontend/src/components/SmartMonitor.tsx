@@ -15,14 +15,19 @@ import {
   smartHints,
   WORN_PERCENT,
 } from '@shared/smart-health'
-import type { SmartDiskInfo } from '@shared/types'
+import type { SmartDiskInfo, SmartHistoryPoint } from '@shared/types'
 import { RefreshCw } from 'lucide-react'
 import { useState } from 'react'
-import { useNotificationSettings, useSmart } from '../hooks/queries'
+import {
+  useNotificationSettings,
+  useSmart,
+  useSmartHistory,
+} from '../hooks/queries'
 import { formatRelativeTime } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { Button } from './Button'
+import { SmartHistoryCharts } from './SmartHistoryCharts'
 
 interface SmartMonitorProps {
   configPath: string
@@ -198,10 +203,12 @@ const DiskCard = ({
   disk,
   assessment,
   threshold,
+  history,
 }: {
   disk: SmartDiskInfo
   assessment: SmartAssessment
   threshold: number
+  history: SmartHistoryPoint[] | undefined
 }) => {
   // Open right away when an attribute stands out, that is where the details are
   const [expanded, setExpanded] = useState(() =>
@@ -346,6 +353,8 @@ const DiskCard = ({
         )}
       </div>
 
+      <SmartHistoryCharts points={history} />
+
       {disk.attributes && disk.attributes.length > 0 && (
         <div className="mt-3">
           <button
@@ -424,6 +433,10 @@ export const SmartMonitor = ({ configPath }: SmartMonitorProps) => {
     refetch,
   } = useSmart(configPath || undefined)
   const error = queryError?.message
+  const { data: history } = useSmartHistory(
+    configPath || undefined,
+    report?.timestamp,
+  )
 
   // Same threshold as the SMART notifications, so the page and the messages agree
   const { data: notificationSettings } = useNotificationSettings()
@@ -560,6 +573,7 @@ export const SmartMonitor = ({ configPath }: SmartMonitorProps) => {
                 disk={disk}
                 assessment={assessment}
                 threshold={threshold}
+                history={history?.[disk.name]}
               />
             ))}
           </div>

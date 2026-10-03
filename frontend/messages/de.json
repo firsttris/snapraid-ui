@@ -769,5 +769,12 @@
   "force_uuid_title": "Zur Sicherheit gestoppt: Mehrere Platten haben eine neue UUID",
   "force_uuid_msg": "Das passiert nach dem Tausch von Platten oder wenn Mountpunkte vertauscht sind. Prüfe, dass jede Platte unter ihrem Pfad eingehängt ist. Fahre nur fort, wenn du die Platten wirklich getauscht hast.",
   "force_retry": "{command} trotzdem",
-  "force_confirm": "{command} mit {flag} ausführen? Die Sicherheitsprüfung von SnapRAID wird für diesen Lauf übersprungen, stelle also sicher, dass Platten und Dateien so sind, wie sie sein sollen."
+  "force_confirm": "{command} mit {flag} ausführen? Die Sicherheitsprüfung von SnapRAID wird für diesen Lauf übersprungen, stelle also sicher, dass Platten und Dateien so sind, wie sie sein sollen.",
+  "smart_history_title": "Verlauf ({days} Tage)",
+  "smart_history_temperature": "Temperatur",
+  "smart_history_reallocated": "Umgelagerte Sektoren",
+  "smart_history_pending": "Ausstehende Sektoren",
+  "smart_history_crc": "Übertragungsfehler (CRC)",
+  "smart_history_media_errors": "Medienfehler",
+  "smart_history_wear": "SSD-Verschleiß"
 }

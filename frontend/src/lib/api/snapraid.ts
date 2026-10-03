@@ -14,6 +14,7 @@ import type {
   ProbeReport,
   ReplacementStep,
   RunningJob,
+  SmartHistoryPoint,
   SmartReport,
   SnapRaidCommand,
   SnapRaidStatus,
@@ -349,6 +350,19 @@ export const getSmart = async (configPath: string): Promise<SmartReport> => {
   if (!response.ok) {
     throw await apiError(response)
   }
+  return response.json()
+}
+
+/**
+ * Daily SMART values of the disks by name, recorded on each SMART read
+ */
+export const getSmartHistory = async (
+  configPath: string,
+): Promise<Record<string, SmartHistoryPoint[]>> => {
+  const response = await apiFetch(
+    `${API_BASE}/snapraid/smart-history?path=${encodeURIComponent(configPath)}`,
+  )
+  if (!response.ok) throw await apiError(response)
   return response.json()
 }
 

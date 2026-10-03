@@ -6,6 +6,7 @@ import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structure
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { getDataDiskUsage, getParityUsage } from "../parity-usage.ts";
 import { withCrcBaseline } from "../smart-baseline.ts";
+import { getSmartHistory, recordSmartHistory } from "../smart-history.ts";
 import { DEMO_MODE, demoProbeLog, demoSmartLog } from "../demo.ts";
 import { msg } from "@shared/i18n.ts";
 
@@ -39,6 +40,7 @@ hardware.get("/smart", async (c) => {
     const { log, text: errorOutput } = splitStructuredOutput(new TextDecoder().decode(stderr));
 
     const disks = await withCrcBaseline(configPath, parseSmartOutput(log));
+    await recordSmartHistory(configPath, disks);
 
     // SnapRAID exits with an error when a disk is FAIL or PREFAIL, the report is complete though
     if (code !== 0 && disks.length === 0) {
@@ -54,6 +56,21 @@ hardware.get("/smart", async (c) => {
       timestamp: new Date().toISOString(),
       rawOutput: output,
     });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// GET /api/snapraid/smart-history - Daily SMART values of the disks, recorded on each read
+hardware.get("/smart-history", async (c) => {
+  const relativePath = c.req.query("path");
+
+  if (!relativePath) {
+    return c.json({ error: "Missing path parameter" }, 400);
+  }
+
+  try {
+    return c.json(await getSmartHistory(resolveFromBase(relativePath)));
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }

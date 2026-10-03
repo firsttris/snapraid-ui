@@ -197,6 +197,17 @@ export interface SmartDiskInfo {
   attributes?: SmartAttribute[];
 }
 
+// Daily values of a disk, to see trends; missing values were not reported
+export interface SmartHistoryPoint {
+  date: string; // YYYY-MM-DD
+  temperature?: number;
+  reallocated?: number;
+  pending?: number;
+  crc?: number;
+  wear?: number;
+  mediaErrors?: number;
+}
+
 export interface SmartAttribute {
   id: number;
   name: string;

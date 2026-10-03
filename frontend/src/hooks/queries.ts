@@ -53,6 +53,7 @@ import {
   getLastRuns,
   getParityUsage,
   getSmart,
+  getSmartHistory,
   getStatus,
   parseSnapRaidConfig,
   probe,
@@ -83,6 +84,8 @@ export const queryKeys = {
   dataDiskUsage: (path: string) => ['data-disk-usage', path] as const,
   probe: (path: string) => ['probe', path] as const,
   smart: (path: string) => ['smart', path] as const,
+  smartHistory: (path: string, readAt: string) =>
+    ['smart-history', path, readAt] as const,
   logs: ['logs'] as const,
   logContent: (filename: string) => ['log-content', filename] as const,
   filesystem: (path: string | undefined, filter: 'conf' | 'directories') =>
@@ -234,6 +237,18 @@ export const useSmart = (configPath: string | undefined) => {
     queryKey: queryKeys.smart(configPath ?? ''),
     queryFn: configPath ? () => getSmart(configPath) : skipToken,
     staleTime: SMART_STALE_MS,
+  })
+}
+
+// Each SMART read adds to the history, so it follows the time of the read
+export const useSmartHistory = (
+  configPath: string | undefined,
+  readAt: string | undefined,
+) => {
+  return useQuery({
+    queryKey: queryKeys.smartHistory(configPath ?? '', readAt ?? ''),
+    queryFn:
+      configPath && readAt ? () => getSmartHistory(configPath) : skipToken,
   })
 }
 
