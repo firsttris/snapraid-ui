@@ -713,6 +713,7 @@
   "smart_reason_unreadable": "SMART-Daten konnten nicht gelesen werden, die Platte wird nicht überwacht",
   "smart_reason_reported_uncorrectable": "{count} nicht korrigierbare Lesefehler",
   "smart_reason_crc": "{count} Übertragungsfehler (CRC)",
+  "smart_crc_stable": "{count} Übertragungsfehler (CRC), unverändert seit {date}. Ein altes Kabelproblem, nur ein steigender Wert ist eine Warnung.",
   "smart_reason_medium_errors": "{count} Medienfehler",
   "smart_reason_wear": "{percent} % der vorgesehenen SSD-Lebensdauer verbraucht",
   "smart_hint_replace": "Die Platte sollte ersetzt werden, bevor sie ausfällt.",

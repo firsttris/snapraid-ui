@@ -1,6 +1,7 @@
 import {
   assessSmart,
   attributeLevel,
+  CRC_ATTRIBUTE_ID,
   CRITICAL_CELSIUS,
   CRITICAL_FAILURE_PROBABILITY,
   CRITICAL_WEAR_PERCENT,
@@ -179,6 +180,20 @@ const diskKey = (disk: SmartDiskInfo) => `${disk.device}:${disk.name}`
 const diskAnchor = (disk: SmartDiskInfo) =>
   `smart-disk-${diskKey(disk).replace(/[^\w-]/g, '_')}`
 
+// Transfer errors that stopped growing, a past cable problem worth a mention but no warning
+const StableCrcNote = ({ disk }: { disk: SmartDiskInfo }) => {
+  const raw = disk.attributes?.find((attr) => attr.id === CRC_ATTRIBUTE_ID)?.raw
+  if (!disk.crcStableSince || !raw) return null
+  return (
+    <p className="mb-3 text-sm text-gray-500">
+      {m.smart_crc_stable({
+        count: Number.parseInt(raw, 10).toLocaleString(getLocale()),
+        date: new Date(disk.crcStableSince).toLocaleDateString(getLocale()),
+      })}
+    </p>
+  )
+}
+
 const DiskCard = ({
   disk,
   assessment,
@@ -190,7 +205,7 @@ const DiskCard = ({
 }) => {
   // Open right away when an attribute stands out, that is where the details are
   const [expanded, setExpanded] = useState(() =>
-    (disk.attributes ?? []).some((attr) => attributeLevel(attr) !== 'ok'),
+    (disk.attributes ?? []).some((attr) => attributeLevel(attr, disk) !== 'ok'),
   )
   const style = LEVEL_STYLES[assessment.level]
 
@@ -251,6 +266,8 @@ const DiskCard = ({
           ))}
         </ul>
       )}
+
+      <StableCrcNote disk={disk} />
 
       <div className="grid grid-cols-2 gap-4 text-sm">
         {disk.failureProbability !== undefined && (
@@ -372,7 +389,7 @@ const DiskCard = ({
                   {disk.attributes.map((attr) => (
                     <tr
                       key={attr.id}
-                      className={`border-t ${ATTRIBUTE_ROW_STYLES[attributeLevel(attr)]}`}
+                      className={`border-t ${ATTRIBUTE_ROW_STYLES[attributeLevel(attr, disk)]}`}
                     >
                       <td className="px-2 py-1">{attr.id}</td>
                       <td className="px-2 py-1">{attr.name}</td>

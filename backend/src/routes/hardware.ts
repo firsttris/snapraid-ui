@@ -5,6 +5,7 @@ import { snapraidCommand, resolveFromBase } from "../config.ts";
 import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { getDataDiskUsage, getParityUsage } from "../parity-usage.ts";
+import { withCrcBaseline } from "../smart-baseline.ts";
 import { DEMO_MODE, demoProbeLog, demoSmartLog } from "../demo.ts";
 import { msg } from "@shared/i18n.ts";
 
@@ -37,7 +38,7 @@ hardware.get("/smart", async (c) => {
     const output = new TextDecoder().decode(stdout);
     const { log, text: errorOutput } = splitStructuredOutput(new TextDecoder().decode(stderr));
 
-    const disks = parseSmartOutput(log);
+    const disks = await withCrcBaseline(configPath, parseSmartOutput(log));
 
     // SnapRAID exits with an error when a disk is FAIL or PREFAIL, the report is complete though
     if (code !== 0 && disks.length === 0) {

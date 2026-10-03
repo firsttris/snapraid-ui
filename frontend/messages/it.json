@@ -699,6 +699,7 @@
   "smart_reason_unreadable": "Impossibile leggere i dati SMART, il disco non è monitorato",
   "smart_reason_reported_uncorrectable": "{count} errori di lettura non correggibili",
   "smart_reason_crc": "{count} errori di trasferimento (CRC)",
+  "smart_crc_stable": "{count} errori di trasferimento (CRC), invariati dal {date}. Un vecchio problema di cavo, solo un valore in aumento è un avviso.",
   "smart_reason_medium_errors": "{count} errori del supporto",
   "smart_reason_wear": "{percent} % della durata prevista dell'SSD consumata",
   "smart_hint_replace": "Sostituisci il disco prima che si guasti.",

@@ -191,6 +191,7 @@ export interface SmartDiskInfo {
   errorMedium?: number; // Media errors, e.g. NVMe "Media and Data Integrity Errors"
   errorProtocol?: number; // Error log entries, harmless in most cases
   standby?: boolean; // Asleep; smartctl leaves it alone instead of spinning it up, so there is no data
+  crcStableSince?: string; // ISO date since the transfer error count has not grown, it is then harmless
   attributes?: SmartAttribute[];
 }
 
