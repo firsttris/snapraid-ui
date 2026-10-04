@@ -1,11 +1,19 @@
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
 import { DirectoryBrowser } from './DirectoryBrowser'
 import { useFeedback } from './Feedback'
 import { UndeleteAdvancedOptions } from './UndeleteAdvancedOptions'
 import { UndeleteModeSelector } from './UndeleteModeSelector'
 import { UndeletePathInput } from './UndeletePathInput'
+import { Button } from './ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
 
 interface UndeleteDialogProps {
   dataDisk: Record<string, string>
@@ -84,31 +92,24 @@ export const UndeleteDialog = ({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-40">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-          {/* Header */}
-          <div className="p-6 border-b flex justify-between items-center">
-            <div>
-              <h3 className="text-xl font-semibold">{m.undelete_title()}</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                {m.undelete_description()}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-            >
-              ✕
-            </button>
-          </div>
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open) onClose()
+        }}
+      >
+        <DialogContent
+          className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-2xl"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="border-b p-6 pr-12 pb-4">
+            <DialogTitle>{m.undelete_title()}</DialogTitle>
+            <DialogDescription>{m.undelete_description()}</DialogDescription>
+          </DialogHeader>
 
-          {/* Content */}
-          <div className="p-6 flex-1 overflow-y-auto space-y-6">
-            {/* Mode Selection */}
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6">
             <UndeleteModeSelector mode={mode} onChange={setMode} />
 
-            {/* File/Directory Path Input */}
             <UndeletePathInput
               mode={mode}
               dataDisk={dataDisk}
@@ -126,15 +127,14 @@ export const UndeleteDialog = ({
             />
           </div>
 
-          {/* Footer */}
-          <div className="p-6 border-t flex justify-end gap-3">
-            <Button variant="secondary" onClick={onClose}>
+          <DialogFooter className="border-t p-6 py-4">
+            <Button variant="outline" onClick={onClose}>
               {m.common_cancel()}
             </Button>
             <Button onClick={handleExecute}>{m.undelete_execute()}</Button>
-          </div>
-        </div>
-      </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Directory Browser Overlay */}
       {showBrowser && (

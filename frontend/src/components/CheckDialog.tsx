@@ -1,6 +1,17 @@
 import { useState } from 'react'
+import { cn } from '@/lib/utils'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
+import { Button } from './ui/button'
+import { Checkbox } from './ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
+import { RadioGroup, RadioGroupItem } from './ui/radio-group'
 
 type CheckMode = 'full' | 'audit'
 
@@ -48,78 +59,92 @@ export const CheckDialog = ({
     )
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-semibold">{m.check_dialog_title()}</h2>
-        </div>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <DialogContent
+        className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-xl"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="p-6 pr-12 pb-4">
+          <DialogTitle>{m.check_dialog_title()}</DialogTitle>
+          <DialogDescription>{m.check_dialog_intro()}</DialogDescription>
+        </DialogHeader>
 
-        <div className="p-6 overflow-y-auto space-y-5">
-          <p className="text-gray-700">{m.check_dialog_intro()}</p>
-
-          <fieldset className="space-y-2">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 pb-2">
+          <RadioGroup
+            value={mode}
+            onValueChange={(value) => setMode(value as CheckMode)}
+            className="gap-2"
+          >
             {MODES.map(({ id, label, description }) => (
               <label
                 key={id}
-                className={`flex cursor-pointer gap-3 rounded-lg border p-3 ${
+                htmlFor={`check-mode-${id}`}
+                className={cn(
+                  'flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-3 transition-colors',
                   mode === id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:bg-gray-50'
-                }`}
+                    ? 'border-primary ring-1 ring-primary'
+                    : 'hover:bg-muted/50',
+                )}
               >
-                <input
-                  type="radio"
-                  name="check-mode"
-                  checked={mode === id}
-                  onChange={() => setMode(id)}
-                  className="mt-1"
+                <RadioGroupItem
+                  id={`check-mode-${id}`}
+                  value={id}
+                  className="mt-0.5"
                 />
                 <span>
-                  <span className="block font-medium text-gray-900">
-                    {label()}
-                  </span>
-                  <span className="block text-sm text-gray-600">
+                  <span className="block text-sm font-medium">{label()}</span>
+                  <span className="block text-sm text-muted-foreground">
                     {description()}
                   </span>
                 </span>
               </label>
             ))}
-          </fieldset>
+          </RadioGroup>
 
-          <div>
-            <span className="mb-2 block text-sm font-medium text-gray-700">
-              {m.check_dialog_disks()}
-            </span>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">{m.check_dialog_disks()}</p>
             <div className="flex flex-wrap gap-2">
-              {dataDisks.map((disk) => (
-                <label
-                  key={disk}
-                  className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm ${
-                    selected.includes(disk)
-                      ? 'border-blue-500 bg-blue-50 text-blue-900'
-                      : 'border-gray-300 text-gray-600'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(disk)}
-                    onChange={() => toggle(disk)}
-                  />
-                  {disk}
-                </label>
-              ))}
+              {dataDisks.map((disk) => {
+                const checked = selected.includes(disk)
+                return (
+                  <label
+                    key={disk}
+                    htmlFor={`check-disk-${disk}`}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 font-mono text-sm transition-colors',
+                      checked
+                        ? 'border-primary bg-muted'
+                        : 'text-muted-foreground hover:bg-muted/50',
+                    )}
+                  >
+                    <Checkbox
+                      id={`check-disk-${disk}`}
+                      checked={checked}
+                      onCheckedChange={() => toggle(disk)}
+                    />
+                    {disk}
+                  </label>
+                )
+              })}
             </div>
           </div>
 
-          <p className="text-sm text-gray-600">{m.check_dialog_job_hint()}</p>
+          <p className="text-sm text-muted-foreground">
+            {m.check_dialog_job_hint()}
+          </p>
 
-          <p className="font-mono text-xs text-gray-500">
+          <p className="break-all rounded-md bg-muted px-2.5 py-2 font-mono text-xs text-muted-foreground">
             snapraid check {args.join(' ')}
           </p>
         </div>
 
-        <div className="flex justify-end gap-3 p-6 border-t">
-          <Button onClick={onClose} variant="secondary">
+        <DialogFooter className="p-6 pt-4">
+          <Button variant="outline" onClick={onClose}>
             {m.common_cancel()}
           </Button>
           <Button
@@ -128,8 +153,8 @@ export const CheckDialog = ({
           >
             {m.check_dialog_start()}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

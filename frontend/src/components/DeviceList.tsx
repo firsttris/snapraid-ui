@@ -1,5 +1,21 @@
 import type { DeviceInfo } from '@shared/types'
 import * as m from '../paraglide/messages'
+import { Badge } from './ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table'
 
 interface DeviceListProps {
   devices: DeviceInfo[]
@@ -9,96 +25,72 @@ interface DeviceListProps {
 
 export function DeviceList({ devices, isLoading, onClose }: DeviceListProps) {
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b">
-          <div>
-            <h2 className="text-xl font-semibold">{m.devices_title()}</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              {m.devices_description()}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <svg
-              aria-hidden="true"
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <DialogContent
+        className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-4xl"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="border-b p-6 pr-12 pb-4">
+          <DialogTitle>{m.devices_title()}</DialogTitle>
+          <DialogDescription>{m.devices_description()}</DialogDescription>
+        </DialogHeader>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">
           {isLoading ? (
-            <p className="text-sm text-gray-600 text-center py-8">
+            <p className="py-8 text-center text-sm text-muted-foreground">
               {m.common_loading()}
             </p>
           ) : devices.length === 0 ? (
-            <p className="text-sm text-gray-600 text-center py-8">
+            <p className="py-8 text-center text-sm text-muted-foreground">
               {m.devices_no_devices()}
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {m.devices_disk_name()}
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {m.devices_device()}
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {m.devices_partition()}
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {m.devices_major_minor()}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+            <div className="overflow-hidden rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>{m.devices_disk_name()}</TableHead>
+                    <TableHead>{m.devices_device()}</TableHead>
+                    <TableHead>{m.devices_partition()}</TableHead>
+                    <TableHead>{m.devices_major_minor()}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {devices.map((device) => (
-                    <tr key={device.partition} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-semibold ${
+                    <TableRow key={`${device.diskName}:${device.partition}`}>
+                      <TableCell>
+                        <Badge
+                          variant={
                             device.diskName.includes('parity')
-                              ? 'text-red-600 bg-red-50'
-                              : 'text-blue-600 bg-blue-50'
-                          }`}
+                              ? 'parity'
+                              : 'info'
+                          }
                         >
                           {device.diskName}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap font-mono text-sm">
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono">
                         {device.device}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap font-mono text-sm">
+                      </TableCell>
+                      <TableCell className="font-mono">
                         {device.partition}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap font-mono text-xs text-gray-500">
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground tabular-nums">
                         {device.majorMinor} → {device.partMajorMinor}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

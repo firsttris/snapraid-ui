@@ -1,6 +1,6 @@
+import { TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
 import {
   DEFAULT_SCRUB_OPTIONS,
   isValidScrubOptions,
@@ -8,6 +8,16 @@ import {
   ScrubPlanPicker,
   scrubArgs,
 } from './ScrubPlanPicker'
+import { Alert, AlertDescription } from './ui/alert'
+import { Button } from './ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
 
 interface ScrubDialogProps {
   badBlocks: number
@@ -26,42 +36,50 @@ export const ScrubDialog = ({
   })
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-semibold">{m.scrub_dialog_title()}</h2>
-        </div>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <DialogContent
+        className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-xl"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="p-6 pr-12 pb-4">
+          <DialogTitle>{m.scrub_dialog_title()}</DialogTitle>
+          <DialogDescription>{m.scrub_dialog_intro()}</DialogDescription>
+        </DialogHeader>
 
-        <div className="p-6 overflow-y-auto space-y-4">
-          <p className="text-gray-700">{m.scrub_dialog_intro()}</p>
-
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pb-2">
           {badBlocks > 0 && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-              ⚠️ {m.scrub_bad_blocks_hint({ count: badBlocks })}
-            </div>
+            <Alert variant="destructive">
+              <TriangleAlert />
+              <AlertDescription>
+                {m.scrub_bad_blocks_hint({ count: badBlocks })}
+              </AlertDescription>
+            </Alert>
           )}
 
           <ScrubPlanPicker value={options} onChange={setOptions} />
 
-          <p className="font-mono text-xs text-gray-500">
+          <p className="break-all rounded-md bg-muted px-2.5 py-2 font-mono text-xs text-muted-foreground">
             snapraid scrub {scrubArgs(options).join(' ')}
           </p>
         </div>
 
-        <div className="flex justify-end gap-3 p-6 border-t">
-          <Button onClick={onClose} variant="secondary">
+        <DialogFooter className="p-6 pt-4">
+          <Button variant="outline" onClick={onClose}>
             {m.common_cancel()}
           </Button>
-          <button
-            type="button"
+          <Button
             onClick={() => onConfirm(scrubArgs(options))}
             disabled={!isValidScrubOptions(options)}
-            className="px-4 py-2 rounded text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             {m.scrub_dialog_start()}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

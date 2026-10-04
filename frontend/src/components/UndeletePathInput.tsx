@@ -1,5 +1,9 @@
+import { FolderOpen } from 'lucide-react'
 import * as m from '../paraglide/messages'
 import { Select } from './Select'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
 
 type UndeleteMode = 'all-missing' | 'directory-missing' | 'specific'
 
@@ -30,13 +34,8 @@ export const UndeletePathInput = ({
     <div className="space-y-4">
       {/* Data Disk Selector - for browsing */}
       {Object.keys(dataDisk).length > 1 && (
-        <div>
-          <label
-            htmlFor="undelete-disk"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            {m.undelete_browse_from_disk()}
-          </label>
+        <div className="grid gap-2">
+          <Label htmlFor="undelete-disk">{m.undelete_browse_from_disk()}</Label>
           <Select
             id="undelete-disk"
             value={selectedDisk}
@@ -47,45 +46,39 @@ export const UndeletePathInput = ({
               hint: path,
             }))}
           />
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="text-xs text-muted-foreground">
             {m.undelete_select_disk_help()}
           </p>
         </div>
       )}
 
-      <div>
-        <label
-          htmlFor="undelete-file-path"
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
+      <div className="grid gap-2">
+        <Label htmlFor="undelete-file-path">
           {m.undelete_file_path_label()}
-        </label>
-        <div className="flex gap-2">
-          <input
+        </Label>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input
             id="undelete-file-path"
             type="text"
             value={filePath}
             onChange={(e) => onFilePathChange(e.target.value)}
             placeholder={m.undelete_file_path_placeholder()}
-            className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="font-mono sm:flex-1"
           />
-          <button
-            type="button"
-            onClick={onBrowse}
-            disabled={!selectedDisk}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+          <Button variant="outline" onClick={onBrowse} disabled={!selectedDisk}>
+            <FolderOpen />
             {m.undelete_browse_files()}
-          </button>
+          </Button>
         </div>
-        <p className="mt-2 text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           {mode === 'directory-missing'
             ? m.undelete_path_help_directory()
             : m.undelete_path_help_file()}
         </p>
         {selectedDisk && dataDisk[selectedDisk] && (
-          <p className="mt-1 text-xs text-gray-400">
-            {m.undelete_base_path()} {dataDisk[selectedDisk]}
+          <p className="text-xs text-muted-foreground">
+            {m.undelete_base_path()}{' '}
+            <span className="font-mono">{dataDisk[selectedDisk]}</span>
           </p>
         )}
       </div>

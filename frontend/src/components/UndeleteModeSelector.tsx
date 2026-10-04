@@ -1,4 +1,6 @@
+import { cn } from '@/lib/utils'
 import * as m from '../paraglide/messages'
+import { RadioGroup, RadioGroupItem } from './ui/radio-group'
 
 type UndeleteMode = 'all-missing' | 'directory-missing' | 'specific'
 
@@ -7,61 +9,63 @@ interface UndeleteModeSelectProps {
   onChange: (mode: UndeleteMode) => void
 }
 
+const MODES: Array<{ id: UndeleteMode; label: () => string; command: string }> =
+  [
+    {
+      id: 'all-missing',
+      label: m.undelete_all_missing,
+      command: 'snapraid fix -m',
+    },
+    {
+      id: 'directory-missing',
+      label: m.undelete_directory_missing,
+      command: 'snapraid fix -m -f DIR/',
+    },
+    {
+      id: 'specific',
+      label: m.undelete_specific_file,
+      command: 'snapraid fix -f FILE',
+    },
+  ]
+
 export const UndeleteModeSelector = ({
   mode,
   onChange,
-}: UndeleteModeSelectProps) => {
-  return (
-    <div>
-      <span className="block text-sm font-medium text-gray-700 mb-3">
-        {m.undelete_mode_label()}
-      </span>
-      <div className="space-y-2">
-        <label className="flex items-center p-3 border rounded cursor-pointer hover:bg-gray-50">
-          <input
-            type="radio"
-            name="mode"
-            value="all-missing"
-            checked={mode === 'all-missing'}
-            onChange={(e) => onChange(e.target.value as UndeleteMode)}
-            className="mr-3"
+}: UndeleteModeSelectProps) => (
+  <div className="space-y-2">
+    <p id="undelete-mode-label" className="text-sm font-medium">
+      {m.undelete_mode_label()}
+    </p>
+    <RadioGroup
+      value={mode}
+      onValueChange={(value) => onChange(value as UndeleteMode)}
+      aria-labelledby="undelete-mode-label"
+      className="gap-2"
+    >
+      {MODES.map(({ id, label, command }) => (
+        <label
+          key={id}
+          htmlFor={`undelete-mode-${id}`}
+          className={cn(
+            'flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-3 transition-colors',
+            mode === id
+              ? 'border-primary ring-1 ring-primary'
+              : 'hover:bg-muted/50',
+          )}
+        >
+          <RadioGroupItem
+            id={`undelete-mode-${id}`}
+            value={id}
+            className="mt-0.5"
           />
-          <div>
-            <div className="font-medium">{m.undelete_all_missing()}</div>
-            <div className="text-sm text-gray-600">snapraid fix -m</div>
-          </div>
+          <span>
+            <span className="block text-sm font-medium">{label()}</span>
+            <span className="block font-mono text-xs text-muted-foreground">
+              {command}
+            </span>
+          </span>
         </label>
-
-        <label className="flex items-center p-3 border rounded cursor-pointer hover:bg-gray-50">
-          <input
-            type="radio"
-            name="mode"
-            value="directory-missing"
-            checked={mode === 'directory-missing'}
-            onChange={(e) => onChange(e.target.value as UndeleteMode)}
-            className="mr-3"
-          />
-          <div>
-            <div className="font-medium">{m.undelete_directory_missing()}</div>
-            <div className="text-sm text-gray-600">snapraid fix -m -f DIR/</div>
-          </div>
-        </label>
-
-        <label className="flex items-center p-3 border rounded cursor-pointer hover:bg-gray-50">
-          <input
-            type="radio"
-            name="mode"
-            value="specific"
-            checked={mode === 'specific'}
-            onChange={(e) => onChange(e.target.value as UndeleteMode)}
-            className="mr-3"
-          />
-          <div>
-            <div className="font-medium">{m.undelete_specific_file()}</div>
-            <div className="text-sm text-gray-600">snapraid fix -f FILE</div>
-          </div>
-        </label>
-      </div>
-    </div>
-  )
-}
+      ))}
+    </RadioGroup>
+  </div>
+)

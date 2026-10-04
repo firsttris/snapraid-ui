@@ -1,5 +1,10 @@
+import { ChevronRight } from 'lucide-react'
 import { useState } from 'react'
+import { cn } from '@/lib/utils'
 import * as m from '../paraglide/messages'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
 
 interface UndeleteAdvancedOptionsProps {
   diskFilter?: string
@@ -14,32 +19,33 @@ export const UndeleteAdvancedOptions = ({
 
   return (
     <div className="border-t pt-4">
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => setShowAdvanced(!showAdvanced)}
-        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
+        aria-expanded={showAdvanced}
+        className="-ml-2 text-muted-foreground"
       >
-        <span>{showAdvanced ? '▼' : '▶'}</span>
-        <span>{m.undelete_advanced_options()}</span>
-      </button>
+        <ChevronRight
+          className={cn('transition-transform', showAdvanced && 'rotate-90')}
+        />
+        {m.undelete_advanced_options()}
+      </Button>
 
       {showAdvanced && (
-        <div className="mt-3 p-4 bg-gray-50 rounded">
-          <label
-            htmlFor="undelete-disk-filter"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
+        <div className="mt-3 grid gap-2 rounded-lg border bg-muted/50 p-4">
+          <Label htmlFor="undelete-disk-filter">
             {m.undelete_disk_filter_label()}
-          </label>
-          <input
+          </Label>
+          <Input
             id="undelete-disk-filter"
             type="text"
-            value={diskFilter}
+            value={diskFilter ?? ''}
             onChange={(e) => onDiskFilterChange(e.target.value)}
             placeholder={m.undelete_disk_filter_placeholder()}
-            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-background font-mono"
           />
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             {m.undelete_disk_filter_help()}
           </p>
         </div>

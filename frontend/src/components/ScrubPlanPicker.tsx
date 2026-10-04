@@ -1,4 +1,9 @@
+import { useId } from 'react'
+import { cn } from '@/lib/utils'
 import * as m from '../paraglide/messages'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { RadioGroup, RadioGroupItem } from './ui/radio-group'
 
 export type ScrubPlan = 'default' | 'percent' | 'new' | 'bad' | 'full'
 
@@ -102,76 +107,82 @@ export const ScrubPlanPicker = ({
   value,
   onChange,
   plans,
-}: ScrubPlanPickerProps) => (
-  <fieldset className="space-y-2">
-    {PLANS.filter(({ id }) => !plans || plans.includes(id)).map(
-      ({ id, label, description }) => (
-        <div
-          key={id}
-          className={`rounded-lg border p-3 ${
-            value.plan === id
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-200 hover:bg-gray-50'
-          }`}
-        >
-          <label className="flex cursor-pointer gap-3">
-            <input
-              type="radio"
-              name="scrub-plan"
-              value={id}
-              checked={value.plan === id}
-              onChange={() => onChange({ ...value, plan: id })}
-              className="mt-1"
-            />
-            <div className="flex-1">
-              <p className="font-medium text-gray-900">{label()}</p>
-              <p className="text-sm text-gray-600">{description()}</p>
-            </div>
-          </label>
+}: ScrubPlanPickerProps) => {
+  // Two pickers can be on one page (schedules), so ids must be unique
+  const id = useId()
 
-          {id === 'percent' && value.plan === 'percent' && (
-            <div className="mt-3 ml-7 grid grid-cols-2 gap-3">
-              <div>
-                <label
-                  htmlFor="scrub-percent"
-                  className="block text-xs font-medium text-gray-700 mb-1"
-                >
-                  {m.scrub_percent_label()}
-                </label>
-                <input
-                  id="scrub-percent"
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={value.percent}
-                  onChange={(e) =>
-                    onChange({ ...value, percent: e.target.value })
-                  }
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm"
-                />
+  return (
+    <RadioGroup
+      value={value.plan}
+      onValueChange={(plan) => onChange({ ...value, plan: plan as ScrubPlan })}
+      className="gap-2"
+    >
+      {PLANS.filter((plan) => !plans || plans.includes(plan.id)).map((plan) => {
+        const selected = value.plan === plan.id
+        const itemId = `${id}-${plan.id}`
+        return (
+          <div
+            key={plan.id}
+            className={cn(
+              'rounded-lg border bg-card transition-colors',
+              selected
+                ? 'border-primary ring-1 ring-primary'
+                : 'hover:bg-muted/50',
+            )}
+          >
+            <label
+              htmlFor={itemId}
+              className="flex cursor-pointer items-start gap-3 p-3"
+            >
+              <RadioGroupItem id={itemId} value={plan.id} className="mt-0.5" />
+              <span className="flex-1">
+                <span className="block text-sm font-medium">
+                  {plan.label()}
+                </span>
+                <span className="block text-sm text-muted-foreground">
+                  {plan.description()}
+                </span>
+              </span>
+            </label>
+
+            {plan.id === 'percent' && selected && (
+              <div className="grid grid-cols-2 gap-3 px-3 pb-3 pl-10">
+                <div className="grid gap-1.5">
+                  <Label htmlFor={`${id}-percent`} className="text-xs">
+                    {m.scrub_percent_label()}
+                  </Label>
+                  <Input
+                    id={`${id}-percent`}
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={value.percent}
+                    onChange={(e) =>
+                      onChange({ ...value, percent: e.target.value })
+                    }
+                    className="font-mono tabular-nums"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor={`${id}-older-than`} className="text-xs">
+                    {m.scrub_older_than_label()}
+                  </Label>
+                  <Input
+                    id={`${id}-older-than`}
+                    type="number"
+                    min={0}
+                    value={value.olderThan}
+                    onChange={(e) =>
+                      onChange({ ...value, olderThan: e.target.value })
+                    }
+                    className="font-mono tabular-nums"
+                  />
+                </div>
               </div>
-              <div>
-                <label
-                  htmlFor="scrub-older-than"
-                  className="block text-xs font-medium text-gray-700 mb-1"
-                >
-                  {m.scrub_older_than_label()}
-                </label>
-                <input
-                  id="scrub-older-than"
-                  type="number"
-                  min={0}
-                  value={value.olderThan}
-                  onChange={(e) =>
-                    onChange({ ...value, olderThan: e.target.value })
-                  }
-                  className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      ),
-    )}
-  </fieldset>
-)
+            )}
+          </div>
+        )
+      })}
+    </RadioGroup>
+  )
+}
