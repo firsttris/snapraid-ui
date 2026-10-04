@@ -1,8 +1,13 @@
-import { Plus, Trash2 } from 'lucide-react'
+import { Ban, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
+import { ErrorAlert } from './ErrorAlert'
 import { useFeedback } from './Feedback'
+import { Badge } from './ui/badge'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 interface ExcludePatternSectionProps {
   exclude: string[]
@@ -57,112 +62,101 @@ export const ExcludePatternSection = ({
   }
 
   return (
-    <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="font-semibold text-orange-900 flex items-center gap-2">
-          <svg
-            aria-hidden="true"
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-            />
-          </svg>
-          {m.exclude_pattern_title()} ({exclude.length})
+    <section className="rounded-xl border bg-card shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+        <h3 className="flex items-center gap-2 text-base font-semibold">
+          <Ban className="size-4 text-muted-foreground" />
+          {m.exclude_pattern_title()}
+          <Badge variant="secondary" className="tabular-nums">
+            {exclude.length}
+          </Badge>
         </h3>
         <Button
-          variant="secondary"
+          variant="outline"
           size="sm"
           onClick={() => setShowAddExclude(!showAddExclude)}
         >
-          <Plus size={14} />
+          <Plus />
           {m.exclude_pattern_add_pattern()}
         </Button>
       </div>
 
-      {error && (
-        <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-          {error}
-        </div>
-      )}
+      <div className="flex flex-col gap-3 p-4">
+        {error && <ErrorAlert error={error} />}
 
-      {showAddExclude && (
-        <div className="mb-3 p-3 bg-white rounded border border-orange-300">
-          <label
-            htmlFor="exclude-pattern"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            {m.exclude_pattern_label()}
-            <span className="text-xs text-gray-500 ml-2">
-              ({m.exclude_pattern_hint()})
-            </span>
-          </label>
-          <input
-            id="exclude-pattern"
-            type="text"
-            value={newExcludePattern}
-            onChange={(e) => setNewExcludePattern(e.target.value)}
-            placeholder={m.exclude_pattern_pattern_placeholder()}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
-          />
-          <div className="flex gap-2 mt-2">
-            <Button
-              size="sm"
-              onClick={handleAddExclude}
-              disabled={addingExclude}
-            >
-              {addingExclude ? m.common_adding() : m.common_add()}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setShowAddExclude(false)
-                setNewExcludePattern('')
-                setError('')
-              }}
-            >
-              {m.common_cancel()}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        {exclude.length === 0 ? (
-          <div className="text-sm text-orange-600 italic">
-            {m.exclude_pattern_no_patterns()}
-          </div>
-        ) : (
-          exclude.map((pattern, index) => (
-            <div
-              // biome-ignore lint/suspicious/noArrayIndexKey: patterns are not guaranteed unique
-              key={index}
-              className="flex justify-between items-center bg-white p-3 rounded border border-orange-200"
-            >
-              <div className="font-mono text-sm text-gray-700 flex-1">
-                {pattern}
-              </div>
+        {showAddExclude && (
+          <div className="flex flex-col gap-3 rounded-lg border border-dashed bg-muted/40 p-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="exclude-pattern" className="flex-wrap">
+                {m.exclude_pattern_label()}
+                <span className="text-xs font-normal text-muted-foreground">
+                  ({m.exclude_pattern_hint()})
+                </span>
+              </Label>
+              <Input
+                id="exclude-pattern"
+                value={newExcludePattern}
+                onChange={(e) => setNewExcludePattern(e.target.value)}
+                placeholder={m.exclude_pattern_pattern_placeholder()}
+                className="bg-background font-mono"
+              />
+            </div>
+            <div className="flex gap-2">
               <Button
-                variant="ghostDanger"
-                size="iconSm"
-                onClick={() => handleRemoveExclude(pattern)}
-                aria-label={m.common_remove()}
-                title={m.common_remove()}
-                className="ml-3"
+                size="sm"
+                onClick={handleAddExclude}
+                disabled={addingExclude}
               >
-                <Trash2 size={16} />
+                {addingExclude ? m.common_adding() : m.common_add()}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowAddExclude(false)
+                  setNewExcludePattern('')
+                  setError('')
+                }}
+              >
+                {m.common_cancel()}
               </Button>
             </div>
-          ))
+          </div>
+        )}
+
+        {exclude.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {m.exclude_pattern_no_patterns()}
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {exclude.map((pattern, index) => (
+              <li
+                // biome-ignore lint/suspicious/noArrayIndexKey: patterns are not guaranteed unique
+                key={index}
+                className="flex items-center gap-3 rounded-lg border bg-background px-3 py-2 dark:bg-input/20"
+              >
+                <span className="min-w-0 flex-1 break-all font-mono text-sm">
+                  {pattern}
+                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghostDestructive"
+                      size="icon-sm"
+                      onClick={() => handleRemoveExclude(pattern)}
+                      aria-label={m.common_remove()}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{m.common_remove()}</TooltipContent>
+                </Tooltip>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
-    </div>
+    </section>
   )
 }

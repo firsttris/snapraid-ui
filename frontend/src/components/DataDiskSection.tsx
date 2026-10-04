@@ -1,11 +1,16 @@
-import { Plus, Trash2 } from 'lucide-react'
+import { Database, FolderOpen, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useDiskReplacement } from '../hooks/queries'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
 import { DirectoryBrowser } from './DirectoryBrowser'
+import { ErrorAlert } from './ErrorAlert'
 import { RemoveDataDiskWizard } from './RemoveDataDiskWizard'
 import { ReplaceDiskWizard } from './ReplaceDiskWizard'
+import { Badge } from './ui/badge'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 interface DataDiskSectionProps {
   configPath: string
@@ -61,172 +66,175 @@ export const DataDiskSection = ({
   }
 
   return (
-    <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="font-semibold text-green-900 flex items-center gap-2">
-          <svg
-            aria-hidden="true"
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
-            />
-          </svg>
-          {m.data_disk_title()} ({Object.keys(data).length})
+    <section className="rounded-xl border bg-card shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+        <h3 className="flex items-center gap-2 text-base font-semibold">
+          <Database className="size-4 text-muted-foreground" />
+          {m.data_disk_title()}
+          <Badge variant="secondary" className="tabular-nums">
+            {Object.keys(data).length}
+          </Badge>
         </h3>
         <Button
-          variant="secondary"
+          variant="outline"
           size="sm"
           onClick={() => setShowAddDataDisk(!showAddDataDisk)}
         >
-          <Plus size={14} />
+          <Plus />
           {m.data_disk_add_disk()}
         </Button>
       </div>
 
-      {error && (
-        <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-          {error}
-        </div>
-      )}
+      <div className="flex flex-col gap-3 p-4">
+        {error && <ErrorAlert error={error} />}
 
-      {showAddDataDisk && (
-        <div className="mb-3 p-3 bg-white rounded border border-green-300">
-          <div className="grid grid-cols-2 gap-3 mb-2">
-            <div>
-              <label
-                htmlFor="data-disk-name"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                {m.data_disk_name_label()}
-              </label>
-              <input
-                id="data-disk-name"
-                type="text"
-                value={newDataDiskName}
-                onChange={(e) => setNewDataDiskName(e.target.value)}
-                placeholder={m.data_disk_name_placeholder()}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono text-sm"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="data-disk-path"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                {m.data_disk_path_label()}
-              </label>
-              <div className="flex gap-2">
-                <input
-                  id="data-disk-path"
-                  type="text"
-                  value={newDataDiskPath}
-                  onChange={(e) => setNewDataDiskPath(e.target.value)}
-                  placeholder={m.data_disk_path_placeholder()}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono text-sm"
+        {showAddDataDisk && (
+          <div className="flex flex-col gap-3 rounded-lg border border-dashed bg-muted/40 p-3">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="data-disk-name">
+                  {m.data_disk_name_label()}
+                </Label>
+                <Input
+                  id="data-disk-name"
+                  value={newDataDiskName}
+                  onChange={(e) => setNewDataDiskName(e.target.value)}
+                  placeholder={m.data_disk_name_placeholder()}
+                  className="bg-background font-mono"
                 />
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowDataDiskBrowser(true)}
-                  title={m.data_disk_browse()}
-                >
-                  {m.config_manager_browse()}
-                </Button>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="data-disk-path">
+                  {m.data_disk_path_label()}
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="data-disk-path"
+                    value={newDataDiskPath}
+                    onChange={(e) => setNewDataDiskPath(e.target.value)}
+                    placeholder={m.data_disk_path_placeholder()}
+                    className="bg-background font-mono"
+                  />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setShowDataDiskBrowser(true)}
+                        aria-label={m.data_disk_browse()}
+                      >
+                        <FolderOpen />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{m.data_disk_browse()}</TooltipContent>
+                  </Tooltip>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={handleAddDataDisk}
-              disabled={addingDataDisk}
-            >
-              {addingDataDisk ? m.common_adding() : m.common_add()}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setShowAddDataDisk(false)
-                setNewDataDiskName('')
-                setNewDataDiskPath('')
-                setError('')
-              }}
-            >
-              {m.common_cancel()}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        {Object.keys(data).length === 0 ? (
-          <div className="text-sm text-green-600 italic">
-            {m.data_disk_no_disks()}
-          </div>
-        ) : (
-          Object.entries(data).map(([name, path]) => {
-            const pending = pendingRemoval.includes(name)
-            return (
-              <div
-                key={name}
-                className="flex justify-between items-center bg-white p-3 rounded border border-green-200"
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={handleAddDataDisk}
+                disabled={addingDataDisk}
               >
-                <div className="flex items-center gap-3 flex-1">
-                  <span className="font-semibold text-purple-600 text-sm">
-                    {name}
-                  </span>
-                  <span className="font-mono text-sm text-gray-700">
-                    {path}
-                  </span>
-                  {pending && (
-                    <span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs">
-                      {m.data_disk_pending_removal()}
-                    </span>
-                  )}
-                  {replacingDisk === name && (
-                    <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs whitespace-nowrap">
-                      {m.replace_disk_badge()}
-                    </span>
-                  )}
-                </div>
-                {!pending && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setReplacing({ name, path })}
-                    title={m.replace_disk_button_title()}
-                    className="ml-3"
-                  >
-                    {replacingDisk === name
-                      ? m.replace_disk_resume()
-                      : m.replace_disk_button()}
-                  </Button>
-                )}
-                <Button
-                  variant="ghostDanger"
-                  size={pending ? 'sm' : 'iconSm'}
-                  onClick={() => setRemoving({ name, path, pending })}
-                  disabled={replacingDisk === name}
-                  aria-label={m.common_remove()}
-                  title={m.common_remove()}
-                  className="ml-2"
+                {addingDataDisk ? m.common_adding() : m.common_add()}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowAddDataDisk(false)
+                  setNewDataDiskName('')
+                  setNewDataDiskPath('')
+                  setError('')
+                }}
+              >
+                {m.common_cancel()}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {Object.keys(data).length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {m.data_disk_no_disks()}
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {Object.entries(data).map(([name, path]) => {
+              const pending = pendingRemoval.includes(name)
+              const isReplacing = replacingDisk === name
+              return (
+                <li
+                  key={name}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border bg-background px-3 py-2 dark:bg-input/20"
                 >
-                  {pending ? (
-                    m.data_disk_resume_removal()
-                  ) : (
-                    <Trash2 size={16} />
-                  )}
-                </Button>
-              </div>
-            )
-          })
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+                    <Badge variant="info" className="font-mono">
+                      {name}
+                    </Badge>
+                    <span
+                      className="min-w-0 truncate font-mono text-sm"
+                      title={path}
+                    >
+                      {path}
+                    </span>
+                    {pending && (
+                      <Badge variant="warning">
+                        {m.data_disk_pending_removal()}
+                      </Badge>
+                    )}
+                    {isReplacing && (
+                      <Badge variant="info">{m.replace_disk_badge()}</Badge>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {!pending && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setReplacing({ name, path })}
+                        title={m.replace_disk_button_title()}
+                      >
+                        {isReplacing
+                          ? m.replace_disk_resume()
+                          : m.replace_disk_button()}
+                      </Button>
+                    )}
+                    {pending ? (
+                      <Button
+                        variant="ghostDestructive"
+                        size="sm"
+                        onClick={() => setRemoving({ name, path, pending })}
+                        disabled={isReplacing}
+                      >
+                        {m.data_disk_resume_removal()}
+                      </Button>
+                    ) : (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex">
+                            <Button
+                              variant="ghostDestructive"
+                              size="icon-sm"
+                              onClick={() =>
+                                setRemoving({ name, path, pending })
+                              }
+                              disabled={isReplacing}
+                              aria-label={m.common_remove()}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>{m.common_remove()}</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
         )}
       </div>
 
@@ -261,6 +269,6 @@ export const DataDiskSection = ({
           onClose={() => setShowDataDiskBrowser(false)}
         />
       )}
-    </div>
+    </section>
   )
 }

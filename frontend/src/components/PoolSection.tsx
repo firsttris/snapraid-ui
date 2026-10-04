@@ -1,9 +1,12 @@
-import { Plus } from 'lucide-react'
+import { FolderOpen, FolderTree, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
 import { DirectoryBrowser } from './DirectoryBrowser'
 import { useFeedback } from './Feedback'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 interface PoolSectionProps {
   pool?: string
@@ -44,94 +47,110 @@ export const PoolSection = ({ pool, onPoolChange }: PoolSectionProps) => {
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">{m.pool_section_title()}</h3>
+      <section className="rounded-xl border bg-card shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+          <h3 className="flex items-center gap-2 text-base font-semibold">
+            <FolderTree className="size-4 text-muted-foreground" />
+            {m.pool_section_title()}
+          </h3>
           {!editMode && !pool && (
             <Button
-              variant="secondary"
+              variant="outline"
               size="sm"
               onClick={() => setEditMode(true)}
             >
-              <Plus size={14} />
+              <Plus />
               {m.common_add()}
             </Button>
           )}
         </div>
 
-        {!pool && !editMode ? (
-          <p className="text-gray-500 text-center py-8">
-            {m.pool_no_pool_configured()}
-          </p>
-        ) : editMode || pool ? (
-          <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="pool-directory"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                {m.pool_directory_label()}
-              </label>
-              <div className="flex gap-2">
-                <input
-                  id="pool-directory"
-                  type="text"
-                  value={editMode ? localPool : pool}
-                  onChange={(e) => editMode && setLocalPool(e.target.value)}
-                  placeholder={m.pool_directory_placeholder()}
-                  disabled={!editMode}
-                  className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                />
-                {editMode && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowBrowser(true)}
-                  >
-                    {m.pool_directory_browse()}
-                  </Button>
-                )}
+        <div className="p-4">
+          {!pool && !editMode ? (
+            <p className="text-sm text-muted-foreground">
+              {m.pool_no_pool_configured()}
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="pool-directory">
+                  {m.pool_directory_label()}
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="pool-directory"
+                    value={editMode ? localPool : pool}
+                    onChange={(e) => editMode && setLocalPool(e.target.value)}
+                    placeholder={m.pool_directory_placeholder()}
+                    disabled={!editMode}
+                    className="font-mono"
+                  />
+                  {editMode && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setShowBrowser(true)}
+                          aria-label={m.pool_directory_browse()}
+                        >
+                          <FolderOpen />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {m.pool_directory_browse()}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {m.pool_directory_help()}
+                </p>
               </div>
-              <p className="mt-2 text-sm text-gray-500">
-                {m.pool_directory_help()}
-              </p>
-            </div>
 
-            {editMode ? (
-              <div className="flex gap-2 justify-end">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    setEditMode(false)
-                    setLocalPool(pool || '')
-                  }}
-                >
-                  {m.common_cancel()}
-                </Button>
-                <Button size="sm" onClick={handleAdd}>
-                  {m.common_save()}
-                </Button>
-              </div>
-            ) : (
-              <div className="flex gap-2 justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setLocalPool(pool || '')
-                    setEditMode(true)
-                  }}
-                >
-                  {m.common_edit()}
-                </Button>
-                <Button variant="ghostDanger" size="sm" onClick={handleRemove}>
-                  {m.common_remove()}
-                </Button>
-              </div>
-            )}
-          </div>
-        ) : null}
-      </div>
+              {editMode ? (
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditMode(false)
+                      setLocalPool(pool || '')
+                    }}
+                  >
+                    {m.common_cancel()}
+                  </Button>
+                  <Button size="sm" onClick={handleAdd}>
+                    {m.common_save()}
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setLocalPool(pool || '')
+                      setEditMode(true)
+                    }}
+                  >
+                    <Pencil />
+                    {m.common_edit()}
+                  </Button>
+                  <Button
+                    variant="ghostDestructive"
+                    size="sm"
+                    onClick={handleRemove}
+                  >
+                    <Trash2 />
+                    {m.common_remove()}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
 
       {showBrowser && (
         <DirectoryBrowser

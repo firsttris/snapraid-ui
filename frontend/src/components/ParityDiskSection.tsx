@@ -1,12 +1,17 @@
 import type { ParityLevel } from '@shared/types'
-import { Plus, Trash2 } from 'lucide-react'
+import { FolderOpen, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useDiskReplacement } from '../hooks/queries'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
 import { DirectoryBrowser } from './DirectoryBrowser'
+import { ErrorAlert } from './ErrorAlert'
 import { useFeedback } from './Feedback'
 import { ReplaceDiskWizard } from './ReplaceDiskWizard'
+import { Badge } from './ui/badge'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 interface ParityDiskSectionProps {
   configPath: string
@@ -90,179 +95,187 @@ export const ParityDiskSection = ({
   }
 
   return (
-    <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="font-semibold text-blue-900 flex items-center gap-2">
-          <svg
-            aria-hidden="true"
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          {m.parity_disk_title()} ({parity.length})
+    <section className="rounded-xl border bg-card shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+        <h3 className="flex items-center gap-2 text-base font-semibold">
+          <ShieldCheck className="size-4 text-muted-foreground" />
+          {m.parity_disk_title()}
+          <Badge variant="secondary" className="tabular-nums">
+            {parity.length}
+          </Badge>
         </h3>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setShowAddParity(!showAddParity)}
-          disabled={!canAdd}
-          title={canAdd ? undefined : m.parity_disk_max_reached()}
-        >
-          <Plus size={14} />
-          {m.parity_disk_add_parity()}
-        </Button>
+        {canAdd ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAddParity(!showAddParity)}
+          >
+            <Plus />
+            {m.parity_disk_add_parity()}
+          </Button>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex">
+                <Button variant="outline" size="sm" disabled>
+                  <Plus />
+                  {m.parity_disk_add_parity()}
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{m.parity_disk_max_reached()}</TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
-      {error && (
-        <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-          {error}
-        </div>
-      )}
+      <div className="flex flex-col gap-3 p-4">
+        {error && <ErrorAlert error={error} />}
 
-      {showAddParity && (
-        <div className="mb-3 p-3 bg-white rounded border border-blue-300">
-          <p className="text-sm text-gray-600 mb-3">
-            {m.parity_disk_next_level({ keyword: nextKeyword })}
-          </p>
-          <div className="space-y-3">
-            <div>
-              <label
-                htmlFor="parity-disk-path"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+        {showAddParity && (
+          <div className="flex flex-col gap-3 rounded-lg border border-dashed bg-muted/40 p-3">
+            <p className="text-sm text-muted-foreground">
+              {m.parity_disk_next_level({ keyword: nextKeyword })}
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="parity-disk-path">
                 {m.parity_disk_directory_label()}
-              </label>
+              </Label>
               <div className="flex gap-2">
-                <input
+                <Input
                   id="parity-disk-path"
-                  type="text"
                   value={newParityPath}
                   onChange={(e) => setNewParityPath(e.target.value)}
                   placeholder={m.parity_disk_directory_placeholder()}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                  className="bg-background font-mono"
                 />
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowParityBrowser(true)}
-                  title={m.parity_disk_browse()}
-                >
-                  {m.config_manager_browse()}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setShowParityBrowser(true)}
+                      aria-label={m.parity_disk_browse()}
+                    >
+                      <FolderOpen />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{m.parity_disk_browse()}</TooltipContent>
+                </Tooltip>
               </div>
             </div>
-            <div>
-              <label
-                htmlFor="parity-disk-filename"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="parity-disk-filename">
                 {m.parity_disk_filename_label()}
-                <span className="text-xs text-gray-500 ml-2">
+                <span className="text-xs font-normal text-muted-foreground">
                   ({m.parity_disk_filename_label_tooltip()})
                 </span>
-              </label>
-              <input
+              </Label>
+              <Input
                 id="parity-disk-filename"
-                type="text"
                 value={newParityFilename}
                 onChange={(e) => setNewParityFilename(e.target.value)}
                 placeholder={m.parity_disk_filename_placeholder()}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                className="bg-background font-mono"
               />
             </div>
-          </div>
-          <div className="flex gap-2 mt-2">
-            <Button size="sm" onClick={handleAddParity} disabled={addingParity}>
-              {addingParity ? m.common_adding() : m.common_add()}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setShowAddParity(false)
-                setNewParityPath('')
-                setNewParityFilename('snapraid.parity')
-                setError('')
-              }}
-            >
-              {m.common_cancel()}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        {parity.length === 0 ? (
-          <div className="text-sm text-blue-600 italic">
-            {m.parity_disk_no_disks()}
-          </div>
-        ) : (
-          parity.map((p) => (
-            <div
-              key={p.keyword}
-              className="flex justify-between items-center bg-white p-3 rounded border border-blue-200"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-blue-700">
-                  {p.keyword}
-                  {p.paths.length > 1 && (
-                    <span className="ml-2 font-normal text-gray-500">
-                      {m.parity_disk_split({ count: p.paths.length })}
-                    </span>
-                  )}
-                  {replacingDisk === p.keyword && (
-                    <span className="ml-2 px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-normal whitespace-nowrap">
-                      {m.replace_disk_badge()}
-                    </span>
-                  )}
-                </div>
-                {p.paths.map((path) => (
-                  <div
-                    key={path}
-                    className="font-mono text-sm text-gray-700 truncate"
-                    title={path}
-                  >
-                    {path}
-                  </div>
-                ))}
-              </div>
+            <div className="flex gap-2">
               <Button
-                variant="secondary"
                 size="sm"
-                onClick={() => setReplacing(p)}
-                title={m.replace_disk_button_title()}
-                className="ml-3"
+                onClick={handleAddParity}
+                disabled={addingParity}
               >
-                {replacingDisk === p.keyword
-                  ? m.replace_disk_resume()
-                  : m.replace_disk_button()}
+                {addingParity ? m.common_adding() : m.common_add()}
               </Button>
               <Button
-                variant="ghostDanger"
-                size="iconSm"
-                aria-label={m.common_remove()}
-                onClick={() => handleRemove(p.level)}
-                disabled={
-                  p.level !== highestLevel || replacingDisk === p.keyword
-                }
-                title={
-                  p.level !== highestLevel
-                    ? m.parity_disk_remove_highest_only()
-                    : m.common_remove()
-                }
-                className="ml-2"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowAddParity(false)
+                  setNewParityPath('')
+                  setNewParityFilename('snapraid.parity')
+                  setError('')
+                }}
               >
-                <Trash2 size={16} />
+                {m.common_cancel()}
               </Button>
             </div>
-          ))
+          </div>
+        )}
+
+        {parity.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {m.parity_disk_no_disks()}
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {parity.map((p) => {
+              const isReplacing = replacingDisk === p.keyword
+              const removable = p.level === highestLevel
+              return (
+                <li
+                  key={p.keyword}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border bg-background px-3 py-2 dark:bg-input/20"
+                >
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="parity" className="font-mono">
+                        {p.keyword}
+                      </Badge>
+                      {p.paths.length > 1 && (
+                        <span className="text-xs text-muted-foreground">
+                          {m.parity_disk_split({ count: p.paths.length })}
+                        </span>
+                      )}
+                      {isReplacing && (
+                        <Badge variant="info">{m.replace_disk_badge()}</Badge>
+                      )}
+                    </div>
+                    {p.paths.map((path) => (
+                      <div
+                        key={path}
+                        className="truncate font-mono text-sm"
+                        title={path}
+                      >
+                        {path}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setReplacing(p)}
+                      title={m.replace_disk_button_title()}
+                    >
+                      {isReplacing
+                        ? m.replace_disk_resume()
+                        : m.replace_disk_button()}
+                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex">
+                          <Button
+                            variant="ghostDestructive"
+                            size="icon-sm"
+                            aria-label={m.common_remove()}
+                            onClick={() => handleRemove(p.level)}
+                            disabled={!removable || isReplacing}
+                          >
+                            <Trash2 />
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {removable
+                          ? m.common_remove()
+                          : m.parity_disk_remove_highest_only()}
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
         )}
       </div>
 
@@ -287,6 +300,6 @@ export const ParityDiskSection = ({
           onClose={() => setShowParityBrowser(false)}
         />
       )}
-    </div>
+    </section>
   )
 }

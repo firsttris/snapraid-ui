@@ -1,3 +1,4 @@
+import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import {
   useAddDataDisk,
@@ -11,6 +12,7 @@ import {
 import * as m from '../paraglide/messages'
 import { ContentFileSection } from './ContentFileSection'
 import { DataDiskSection } from './DataDiskSection'
+import { ErrorAlert } from './ErrorAlert'
 import { ExcludePatternSection } from './ExcludePatternSection'
 import { OptionsSection } from './OptionsSection'
 import { ParityDiskSection } from './ParityDiskSection'
@@ -119,27 +121,20 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
 
   if (loading) {
     return (
-      <div className="p-4 bg-gray-50 rounded-lg">
-        <div className="text-gray-600">{m.disk_manager_loading()}</div>
+      <div className="flex items-center gap-2 rounded-xl border bg-card p-4 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" />
+        {m.disk_manager_loading()}
       </div>
     )
   }
 
   if (!config) {
-    return (
-      <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-        <div className="text-red-600">{m.disk_manager_load_failed()}</div>
-      </div>
-    )
+    return <ErrorAlert error={m.disk_manager_load_failed()} />
   }
 
   return (
-    <div className="space-y-4">
-      {error && (
-        <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-          {error}
-        </div>
-      )}
+    <div className="flex flex-col gap-4">
+      {error && <ErrorAlert error={error} />}
 
       <ParityDiskSection
         configPath={configPath}

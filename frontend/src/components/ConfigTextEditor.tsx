@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import * as m from '../paraglide/messages'
+import { Badge } from './ui/badge'
 
 interface ConfigTextEditorProps {
   content: string
@@ -50,7 +51,7 @@ const highlightSnapRaidConfig = (text: string): string => {
     .map((line) => {
       // Skip empty lines and comments
       if (line.trim() === '' || line.trim().startsWith('#')) {
-        return `<span class="text-gray-400">${escapeHtml(line)}</span>`
+        return `<span class="text-muted-foreground">${escapeHtml(line)}</span>`
       }
 
       // Check if line starts with a keyword
@@ -71,12 +72,12 @@ const highlightSnapRaidConfig = (text: string): string => {
           if (spaceIndex > 0) {
             const diskName = afterTrimmed.substring(0, spaceIndex)
             const path = afterTrimmed.substring(spaceIndex)
-            return `${escapeHtml(before)}<span class="text-blue-600 font-semibold">${keyword}</span> <span class="text-purple-600 font-medium">${escapeHtml(diskName)}</span><span class="text-green-600">${escapeHtml(path)}</span>`
+            return `${escapeHtml(before)}<span class="text-blue-700 font-semibold">${keyword}</span> <span class="text-purple-700 font-medium">${escapeHtml(diskName)}</span><span class="text-green-700">${escapeHtml(path)}</span>`
           }
         }
 
         // Highlight the keyword in blue and the path/value in green
-        return `${escapeHtml(before)}<span class="text-blue-600 font-semibold">${keyword}</span><span class="text-green-600">${escapeHtml(after)}</span>`
+        return `${escapeHtml(before)}<span class="text-blue-700 font-semibold">${keyword}</span><span class="text-green-700">${escapeHtml(after)}</span>`
       }
 
       return escapeHtml(line)
@@ -101,24 +102,22 @@ export const ConfigTextEditor = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-      <div className="flex items-center justify-between mb-2 shrink-0">
-        <div className="text-sm text-gray-600">
+    <div className="flex min-h-[320px] flex-1 flex-col gap-2">
+      <div className="flex shrink-0 items-center justify-between gap-2">
+        <div>
           {hasChanges && (
-            <span className="text-orange-600 font-medium">
-              {m.config_editor_unsaved_changes()}
-            </span>
+            <Badge variant="warning">{m.config_editor_unsaved_changes()}</Badge>
           )}
         </div>
-        <div className="text-xs text-gray-500">
+        <div className="text-xs tabular-nums text-muted-foreground">
           {m.config_editor_lines()}: {content.split('\n').length}
         </div>
       </div>
-      <div className="flex-1 relative min-h-0">
+      <div className="relative min-h-0 flex-1">
         {/* Syntax highlighted background */}
         <div
           ref={highlightRef}
-          className="absolute inset-0 px-4 py-3 border border-gray-300 rounded-lg font-mono text-sm overflow-auto whitespace-pre-wrap pointer-events-none bg-white"
+          className="pointer-events-none absolute inset-0 overflow-auto whitespace-pre-wrap rounded-lg border border-input bg-background px-4 py-3 font-mono text-sm text-foreground dark:bg-input/30"
           style={{ wordWrap: 'break-word' }}
           // biome-ignore lint/security/noDangerouslySetInnerHtml: all user content is passed through escapeHtml
           dangerouslySetInnerHTML={{ __html: highlightSnapRaidConfig(content) }}
@@ -129,8 +128,8 @@ export const ConfigTextEditor = ({
           value={content}
           onChange={(e) => onContentChange(e.target.value)}
           onScroll={handleScroll}
-          className="absolute inset-0 w-full h-full px-4 py-3 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-transparent caret-gray-900"
-          style={{ color: 'transparent', caretColor: '#111827' }}
+          aria-label={m.config_editor_text_mode()}
+          className="absolute inset-0 h-full w-full resize-none rounded-lg border border-transparent bg-transparent px-4 py-3 font-mono text-sm text-transparent caret-foreground outline-none transition-[box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           spellCheck={false}
         />
       </div>

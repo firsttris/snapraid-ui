@@ -3,6 +3,16 @@ import type {
   ReplacementStep,
   ReplacementStepResult,
 } from '@shared/types'
+import {
+  Check,
+  CircleCheck,
+  FolderOpen,
+  Info,
+  Loader2,
+  TriangleAlert,
+  X,
+} from 'lucide-react'
+import type * as React from 'react'
 import { useState } from 'react'
 import {
   useClearDiskReplacement,
@@ -11,22 +21,87 @@ import {
   useRunDiskReplacementStep,
   useStartDiskReplacement,
 } from '../hooks/queries'
+import { cn } from '../lib/utils'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
 import { DirectoryBrowser } from './DirectoryBrowser'
+import { ErrorAlert } from './ErrorAlert'
 import { errorMessage, useFeedback } from './Feedback'
+import { Alert, AlertDescription } from './ui/alert'
+import { Button } from './ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 const POLL_MS = 2000
 
 type StepState = 'todo' | 'active' | 'done' | 'warning' | 'failed'
 
-const STEP_ICONS: Record<StepState, string> = {
-  todo: '○',
-  active: '⏳',
-  done: '✅',
-  warning: '⚠️',
-  failed: '❌',
+const STEP_MARKER: Record<StepState, string> = {
+  todo: 'border bg-background text-muted-foreground',
+  active: 'border border-blue-200 bg-blue-50 text-blue-700',
+  done: 'bg-green-600 text-white',
+  warning: 'bg-yellow-50 text-yellow-800 border border-yellow-200',
+  failed: 'bg-red-600 text-white',
 }
+
+const StepMarker = ({
+  state,
+  number,
+}: {
+  state: StepState
+  number: number
+}) => (
+  <span
+    className={cn(
+      'relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-medium tabular-nums',
+      STEP_MARKER[state],
+    )}
+  >
+    {state === 'active' ? (
+      <Loader2 className="size-3.5 animate-spin" />
+    ) : state === 'done' ? (
+      <Check className="size-3.5" />
+    ) : state === 'warning' ? (
+      <TriangleAlert className="size-3.5" />
+    ) : state === 'failed' ? (
+      <X className="size-3.5" />
+    ) : (
+      number
+    )}
+  </span>
+)
+
+interface StepItemProps {
+  state: StepState
+  number: number
+  last: boolean
+  children: React.ReactNode
+}
+
+// One row of the numbered step list, a line joins it to the next one
+const StepItem = ({ state, number, last, children }: StepItemProps) => (
+  <li
+    aria-current={state === 'active' ? 'step' : undefined}
+    className="relative flex gap-3 text-sm"
+  >
+    {!last && (
+      <span
+        aria-hidden="true"
+        className="absolute top-7 -bottom-3 left-3 w-px bg-border"
+      />
+    )}
+    <StepMarker state={state} number={number} />
+    {children}
+  </li>
+)
 
 interface ReplaceDiskWizardProps {
   configPath: string
@@ -136,26 +211,35 @@ export const ReplaceDiskWizard = ({
   const handleFinish = () => clear.mutate(configPath, { onSuccess: onClose })
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-semibold">
-            {m.replace_disk_title({ diskName })}
-          </h2>
-          <p className="mt-1 font-mono text-sm text-gray-500 break-all">
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !busy) onClose()
+      }}
+    >
+      <DialogContent
+        className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-2xl"
+        onInteractOutside={(event) => event.preventDefault()}
+      >
+        <DialogHeader className="border-b px-6 py-4 pr-12 text-left">
+          <DialogTitle>{m.replace_disk_title({ diskName })}</DialogTitle>
+          <DialogDescription className="break-all font-mono text-xs">
             {own && own.oldPath !== own.newPath
               ? `${own.oldPath} → ${own.newPath}`
               : (own?.newPath ?? currentPath)}
-          </p>
-        </div>
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="p-6 overflow-y-auto space-y-4">
+        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-6 py-4">
           {otherInProgress ? (
-            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-              {m.replace_disk_other_in_progress({
-                diskName: otherInProgress.diskName,
-              })}
-            </div>
+            <Alert variant="warning">
+              <TriangleAlert />
+              <AlertDescription>
+                {m.replace_disk_other_in_progress({
+                  diskName: otherInProgress.diskName,
+                })}
+              </AlertDescription>
+            </Alert>
           ) : own ? (
             <ReplacementProgress
               replacement={own}
@@ -174,25 +258,22 @@ export const ReplaceDiskWizard = ({
           )}
 
           {!own && !otherInProgress && job && (
-            <p className="text-sm text-yellow-700">
-              {m.remove_disk_job_running()}
-            </p>
+            <Alert variant="warning">
+              <Info />
+              <AlertDescription>{m.remove_disk_job_running()}</AlertDescription>
+            </Alert>
           )}
 
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+          {error && <ErrorAlert error={error} />}
         </div>
 
-        <div className="flex flex-wrap justify-end gap-3 p-6 border-t">
+        <DialogFooter className="flex-wrap border-t px-6 py-4">
           {own && !own.completedAt && !job && (
             <Button
-              variant="ghostDanger"
+              variant="ghostDestructive"
               onClick={handleCancel}
               disabled={busy}
-              className="mr-auto"
+              className="sm:mr-auto"
             >
               {m.replace_disk_cancel()}
             </Button>
@@ -202,34 +283,35 @@ export const ReplaceDiskWizard = ({
               {m.replace_disk_finish()}
             </Button>
           ) : (
-            <Button onClick={onClose} variant="secondary">
+            <Button onClick={onClose} variant="outline" disabled={busy}>
               {own ? m.common_close() : m.common_cancel()}
             </Button>
           )}
           {!own && !otherInProgress && (
             <Button
               onClick={handleStart}
-              variant="danger"
+              variant="destructive"
               disabled={busy || !!job || !newPath.trim()}
             >
+              {start.isPending && <Loader2 className="animate-spin" />}
               {m.replace_disk_start()}
             </Button>
           )}
-        </div>
-      </div>
+        </DialogFooter>
 
-      {showBrowser && (
-        <DirectoryBrowser
-          title={m.data_disk_select_directory()}
-          currentValue={newPath}
-          onSelect={(path) => {
-            setNewPath(path)
-            setShowBrowser(false)
-          }}
-          onClose={() => setShowBrowser(false)}
-        />
-      )}
-    </div>
+        {showBrowser && (
+          <DirectoryBrowser
+            title={m.data_disk_select_directory()}
+            currentValue={newPath}
+            onSelect={(path) => {
+              setNewPath(path)
+              setShowBrowser(false)
+            }}
+            onClose={() => setShowBrowser(false)}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -247,70 +329,96 @@ const Intro = ({
   newPath,
   onNewPathChange,
   onBrowse,
-}: IntroProps) => (
-  <>
-    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-      {m.replace_disk_intro()}
-    </div>
+}: IntroProps) => {
+  const steps = [
+    { label: m.replace_disk_step_config() },
+    {
+      label: m.replace_disk_step_fix(),
+      command: `snapraid fix -d ${diskName}`,
+    },
+    ...(diskType === 'data'
+      ? [
+          {
+            label: m.replace_disk_step_check(),
+            command: `snapraid check -a -d ${diskName}`,
+          },
+        ]
+      : []),
+    { label: m.replace_disk_step_sync(), command: 'snapraid sync' },
+  ]
 
-    <div>
-      <h3 className="mb-2 text-sm font-semibold text-gray-700">
-        {m.replace_disk_steps_title()}
-      </h3>
-      <ol className="list-decimal space-y-1 pl-5 text-sm text-gray-700">
-        <li>{m.replace_disk_step_config()}</li>
-        <li>
-          {m.replace_disk_step_fix()}{' '}
-          <code className="text-xs text-gray-500">
-            snapraid fix -d {diskName}
-          </code>
-        </li>
-        {diskType === 'data' && (
-          <li>
-            {m.replace_disk_step_check()}{' '}
-            <code className="text-xs text-gray-500">
-              snapraid check -a -d {diskName}
-            </code>
-          </li>
-        )}
-        <li>
-          {m.replace_disk_step_sync()}{' '}
-          <code className="text-xs text-gray-500">snapraid sync</code>
-        </li>
-      </ol>
-    </div>
+  return (
+    <>
+      <Alert variant="info">
+        <Info />
+        <AlertDescription>{m.replace_disk_intro()}</AlertDescription>
+      </Alert>
 
-    <div>
-      <label
-        htmlFor="replace-disk-path"
-        className="block text-sm font-medium text-gray-700 mb-1"
-      >
-        {diskType === 'data'
-          ? m.replace_disk_new_path()
-          : m.replace_disk_new_parity_path()}
-      </label>
-      <div className="flex gap-2">
-        <input
-          id="replace-disk-path"
-          type="text"
-          value={newPath}
-          onChange={(e) => onNewPathChange(e.target.value)}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-        />
-        {diskType === 'data' && (
-          <Button variant="secondary" onClick={onBrowse}>
-            📁 {m.config_manager_browse()}
-          </Button>
-        )}
+      <div className="flex flex-col gap-3">
+        <h3 className="text-sm font-semibold">
+          {m.replace_disk_steps_title()}
+        </h3>
+        <ol className="flex flex-col gap-4">
+          {steps.map((step, index) => (
+            <StepItem
+              key={step.label}
+              state="todo"
+              number={index + 1}
+              last={index === steps.length - 1}
+            >
+              <div className="min-w-0 pt-0.5">
+                <div>{step.label}</div>
+                {step.command && (
+                  <code className="font-mono text-xs text-muted-foreground">
+                    {step.command}
+                  </code>
+                )}
+              </div>
+            </StepItem>
+          ))}
+        </ol>
       </div>
-      <p className="mt-1 text-xs text-gray-500">
-        {m.replace_disk_same_path_hint()}
-      </p>
-    </div>
 
-    <p className="text-sm text-gray-600">{m.replace_disk_schedules_paused()}</p>
-  </>
-)
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="replace-disk-path">
+          {diskType === 'data'
+            ? m.replace_disk_new_path()
+            : m.replace_disk_new_parity_path()}
+        </Label>
+        <div className="flex gap-2">
+          <Input
+            id="replace-disk-path"
+            value={newPath}
+            onChange={(e) => onNewPathChange(e.target.value)}
+            className="font-mono"
+          />
+          {diskType === 'data' && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={onBrowse}
+                  aria-label={m.config_manager_browse()}
+                >
+                  <FolderOpen />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{m.config_manager_browse()}</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {m.replace_disk_same_path_hint()}
+        </p>
+      </div>
+
+      <p className="text-sm text-muted-foreground">
+        {m.replace_disk_schedules_paused()}
+      </p>
+    </>
+  )
+}
 
 interface ReplacementProgressProps {
   replacement: DiskReplacement
@@ -376,43 +484,49 @@ const ReplacementProgress = ({
 
   return (
     <>
-      <ol className="space-y-3">
-        <li className="flex gap-3 text-sm">
-          <span className="w-5 shrink-0 text-center">✅</span>
-          <div className="min-w-0">
-            <div className="text-gray-800">
-              1. {m.replace_disk_step_config()}
-            </div>
-            <div className="font-mono text-xs text-gray-500 break-all">
+      <ol className="flex flex-col gap-4">
+        <StepItem state="done" number={1} last={false}>
+          <div className="min-w-0 pt-0.5">
+            <div className="font-medium">{m.replace_disk_step_config()}</div>
+            <div className="break-all font-mono text-xs text-muted-foreground">
               {diskType === 'data' ? 'data' : diskName}{' '}
               {diskType === 'data' ? `${diskName} ` : ''}
               {replacement.newPath}
             </div>
           </div>
-        </li>
+        </StepItem>
         {rows.map((row, index) => {
           const result = steps[row.step]
           const detail = resultDetail(result)
+          const state = stepState(result, running(row.step))
           return (
-            <li key={row.step} className="flex gap-3 text-sm">
-              <span className="w-5 shrink-0 text-center">
-                {STEP_ICONS[stepState(result, running(row.step))]}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-gray-800">
-                  {index + 2}. {row.label}
+            <StepItem
+              key={row.step}
+              state={state}
+              number={index + 2}
+              last={index === rows.length - 1}
+            >
+              <div className="min-w-0 flex-1 pt-0.5">
+                <div
+                  className={
+                    state === 'todo' ? 'text-muted-foreground' : 'font-medium'
+                  }
+                >
+                  {row.label}
                 </div>
-                <div className="font-mono text-xs text-gray-500">
+                <div className="break-all font-mono text-xs text-muted-foreground">
                   {row.command}
                 </div>
                 {detail && (
-                  <div className="mt-0.5 text-xs text-gray-600">{detail}</div>
+                  <div className="mt-0.5 break-all text-xs text-muted-foreground">
+                    {detail}
+                  </div>
                 )}
               </div>
               {row.action && !running(row.step) && (
                 <Button
                   size="sm"
-                  variant={row.action.primary ? 'primary' : 'secondary'}
+                  variant={row.action.primary ? 'default' : 'outline'}
                   onClick={() => onStep(row.step)}
                   disabled={disabled}
                   className="shrink-0 self-start"
@@ -420,37 +534,46 @@ const ReplacementProgress = ({
                   {row.action.label}
                 </Button>
               )}
-            </li>
+            </StepItem>
           )
         })}
       </ol>
 
       {activeRow && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-          {m.replace_disk_running({ command: activeRow.command })}
-        </div>
+        <Alert variant="info">
+          <Loader2 className="animate-spin" />
+          <AlertDescription>
+            {m.replace_disk_running({ command: activeRow.command })}
+          </AlertDescription>
+        </Alert>
       )}
 
       {!activeRow && steps.fix?.result === 'error' && unrecoverable === 0 && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          {m.replace_disk_fix_failed()}
-        </div>
+        <ErrorAlert error={m.replace_disk_fix_failed()} />
       )}
 
       {!completedAt && unrecoverable > 0 && (
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-          {m.replace_disk_unrecoverable_hint({ count: unrecoverable })}
-        </div>
+        <Alert variant="warning">
+          <TriangleAlert />
+          <AlertDescription>
+            {m.replace_disk_unrecoverable_hint({ count: unrecoverable })}
+          </AlertDescription>
+        </Alert>
       )}
 
       {!activeRow && fixDone && !completedAt && (
-        <p className="text-sm text-gray-600">{m.replace_disk_before_sync()}</p>
+        <p className="text-sm text-muted-foreground">
+          {m.replace_disk_before_sync()}
+        </p>
       )}
 
       {completedAt && (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-          {m.replace_disk_done({ diskName })}
-        </div>
+        <Alert variant="success">
+          <CircleCheck />
+          <AlertDescription>
+            {m.replace_disk_done({ diskName })}
+          </AlertDescription>
+        </Alert>
       )}
     </>
   )

@@ -1,11 +1,30 @@
+import {
+  Check,
+  CircleCheck,
+  Info,
+  Loader2,
+  TriangleAlert,
+  X,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import {
   useCurrentJob,
   useRemoveDataDisk,
   useSnapRaidConfig,
 } from '../hooks/queries'
+import { cn } from '../lib/utils'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
+import { ErrorAlert } from './ErrorAlert'
+import { Alert, AlertDescription } from './ui/alert'
+import { Button } from './ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
 
 // Must match REMOVAL_DIR in backend/src/config-parser.ts
 const REMOVAL_DIR = '.snapraid-removal'
@@ -25,12 +44,37 @@ interface RemoveDataDiskWizardProps {
   onClose: () => void
 }
 
-const STEP_ICONS: Record<StepState, string> = {
-  todo: '○',
-  active: '⏳',
-  done: '✅',
-  failed: '❌',
+const STEP_MARKER: Record<StepState, string> = {
+  todo: 'border bg-background text-muted-foreground',
+  active: 'border border-blue-200 bg-blue-50 text-blue-700',
+  done: 'bg-green-600 text-white',
+  failed: 'bg-red-600 text-white',
 }
+
+const StepMarker = ({
+  state,
+  number,
+}: {
+  state: StepState
+  number: number
+}) => (
+  <span
+    className={cn(
+      'relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-medium tabular-nums',
+      STEP_MARKER[state],
+    )}
+  >
+    {state === 'active' ? (
+      <Loader2 className="size-3.5 animate-spin" />
+    ) : state === 'done' ? (
+      <Check className="size-3.5" />
+    ) : state === 'failed' ? (
+      <X className="size-3.5" />
+    ) : (
+      number
+    )}
+  </span>
+)
 
 // Steps 1-2 are config edits done before the sync, step 4 happens after a successful sync
 const stepStates = (phase: Phase, pending: boolean): StepState[] => {
@@ -120,45 +164,71 @@ export const RemoveDataDiskWizard = ({
   ]
   const states = stepStates(phase, pending)
 
-  return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-semibold">
-            {m.remove_disk_title({ diskName })}
-          </h2>
-          <p className="mt-1 font-mono text-sm text-gray-500">{originalPath}</p>
-        </div>
+  const busy = removeMutation.isPending
 
-        <div className="p-6 overflow-y-auto space-y-4">
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !busy) onClose()
+      }}
+    >
+      <DialogContent
+        className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-2xl"
+        onInteractOutside={(event) => event.preventDefault()}
+      >
+        <DialogHeader className="border-b px-6 py-4 pr-12 text-left">
+          <DialogTitle>{m.remove_disk_title({ diskName })}</DialogTitle>
+          <DialogDescription className="break-all font-mono text-xs">
+            {originalPath}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-6 py-4">
           {phase === 'intro' && (
             <>
               {pending && (
-                <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-                  {m.remove_disk_resume()}
-                </div>
+                <Alert variant="warning">
+                  <Info />
+                  <AlertDescription>{m.remove_disk_resume()}</AlertDescription>
+                </Alert>
               )}
-              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-                ⚠️ {m.remove_disk_intro()}
-              </div>
+              <Alert variant="destructive">
+                <TriangleAlert />
+                <AlertDescription>{m.remove_disk_intro()}</AlertDescription>
+              </Alert>
             </>
           )}
 
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-gray-700">
+          <div className="flex flex-col gap-3">
+            <h3 className="text-sm font-semibold">
               {m.remove_disk_steps_title()}
             </h3>
-            <ol className="space-y-2">
+            <ol className="flex flex-col gap-4">
               {steps.map((step, index) => (
-                <li key={step.label} className="flex gap-3 text-sm">
-                  <span className="w-5 shrink-0 text-center">
-                    {STEP_ICONS[states[index]]}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="text-gray-800">
-                      {index + 1}. {step.label}
+                <li
+                  key={step.label}
+                  aria-current={states[index] === 'active' ? 'step' : undefined}
+                  className="relative flex gap-3 text-sm"
+                >
+                  {index < steps.length - 1 && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute top-7 -bottom-3 left-3 w-px bg-border"
+                    />
+                  )}
+                  <StepMarker state={states[index]} number={index + 1} />
+                  <div className="min-w-0 pt-0.5">
+                    <div
+                      className={cn(
+                        states[index] === 'todo'
+                          ? 'text-muted-foreground'
+                          : 'font-medium',
+                      )}
+                    >
+                      {step.label}
                     </div>
-                    <div className="font-mono text-xs text-gray-500 break-all">
+                    <div className="break-all font-mono text-xs text-muted-foreground">
                       {step.detail}
                     </div>
                   </div>
@@ -168,59 +238,59 @@ export const RemoveDataDiskWizard = ({
           </div>
 
           {phase === 'intro' && (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               {m.remove_disk_duration_hint()}
             </p>
           )}
 
           {phase === 'running' && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-              {m.remove_disk_running()}
-            </div>
+            <Alert variant="info">
+              <Loader2 className="animate-spin" />
+              <AlertDescription>{m.remove_disk_running()}</AlertDescription>
+            </Alert>
           )}
 
           {phase === 'done' && (
-            <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-              {m.remove_disk_done({ diskName })}
-            </div>
+            <Alert variant="success">
+              <CircleCheck />
+              <AlertDescription>
+                {m.remove_disk_done({ diskName })}
+              </AlertDescription>
+            </Alert>
           )}
 
           {phase === 'failed' && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-              {m.remove_disk_failed({ diskName })}
-            </div>
+            <ErrorAlert error={m.remove_disk_failed({ diskName })} />
           )}
 
           {otherJobRunning && (
-            <p className="text-sm text-yellow-700">
-              {m.remove_disk_job_running()}
-            </p>
+            <Alert variant="warning">
+              <Info />
+              <AlertDescription>{m.remove_disk_job_running()}</AlertDescription>
+            </Alert>
           )}
 
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+          {error && <ErrorAlert error={error} />}
         </div>
 
-        <div className="flex justify-end gap-3 p-6 border-t">
-          <Button onClick={onClose} variant="secondary">
+        <DialogFooter className="border-t px-6 py-4">
+          <Button onClick={onClose} variant="outline" disabled={busy}>
             {phase === 'intro' ? m.common_cancel() : m.common_close()}
           </Button>
           {(phase === 'intro' || phase === 'failed') && (
             <Button
               onClick={start}
-              variant="danger"
-              disabled={otherJobRunning || removeMutation.isPending}
+              variant="destructive"
+              disabled={otherJobRunning || busy}
             >
+              {busy && <Loader2 className="animate-spin" />}
               {pending || phase === 'failed'
                 ? m.remove_disk_retry()
                 : m.remove_disk_start()}
             </Button>
           )}
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
