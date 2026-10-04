@@ -12,7 +12,8 @@
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
-    "generate-pwa-assets": "pwa-assets-generator"
+    "generate-pwa-assets": "pwa-assets-generator",
+    "release": "sh -c 'git tag -a \"v$0\" -m \"v$0\" && git push origin \"v$0\"'"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
