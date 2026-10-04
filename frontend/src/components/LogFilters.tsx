@@ -1,7 +1,9 @@
 import type { SnapRaidCommand } from '@shared/types'
 import { Search, TriangleAlert, X } from 'lucide-react'
-import { getCommandIcon, getCommandLabel } from '../lib/commands'
+import { getCommandLabel } from '../lib/commands'
 import * as m from '../paraglide/messages'
+import { Input } from './ui/input'
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
 
 export type CommandFilter = SnapRaidCommand | 'all'
 
@@ -18,15 +20,11 @@ interface LogFiltersProps {
   problemCount: number
 }
 
-const chipClass = (active: boolean) =>
-  `inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-    active
-      ? 'border-blue-600 bg-blue-600 text-white'
-      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-  }`
+const PROBLEMS = 'problems'
 
-const countClass = (active: boolean) =>
-  `tabular-nums ${active ? 'text-white/70' : 'text-gray-400'}`
+const Count = ({ value }: { value: number }) => (
+  <span className="text-xs text-muted-foreground tabular-nums">{value}</span>
+)
 
 export const LogFilters = ({
   searchTerm,
@@ -38,82 +36,74 @@ export const LogFilters = ({
   commandCounts,
   totalCount,
   problemCount,
-}: LogFiltersProps) => (
-  <div className="space-y-3">
-    <div className="relative">
-      <Search
-        size={16}
-        className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-gray-400"
-      />
-      <input
-        type="search"
-        placeholder={m.log_filters_search_placeholder()}
-        aria-label={m.log_filters_search_placeholder()}
-        value={searchTerm}
-        onChange={(e) => onSearchChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 bg-white py-2 pr-9 pl-9 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
-      />
-      {searchTerm && (
-        <button
-          type="button"
-          onClick={() => onSearchChange('')}
-          aria-label={m.log_filters_clear_search()}
-          className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-        >
-          <X size={14} />
-        </button>
-      )}
-    </div>
+}: LogFiltersProps) => {
+  // One command at a time, the problems filter combines with it
+  const value = [filterCommand, ...(problemsOnly ? [PROBLEMS] : [])]
+  const handleChange = (next: string[]) => {
+    const problems = next.includes(PROBLEMS)
+    if (problems !== problemsOnly) {
+      onProblemsOnlyChange(problems)
+      return
+    }
+    const added = next.find(
+      (entry) => entry !== PROBLEMS && entry !== filterCommand,
+    )
+    if (added) onFilterChange(added as CommandFilter)
+    // Clicking the active command again shows all
+    else if (!next.includes(filterCommand)) onFilterChange('all')
+  }
 
-    <div className="flex flex-wrap gap-1.5">
-      <button
-        type="button"
-        aria-pressed={filterCommand === 'all'}
-        onClick={() => onFilterChange('all')}
-        className={chipClass(filterCommand === 'all')}
-      >
-        {m.log_filters_all()}
-        <span className={countClass(filterCommand === 'all')}>
-          {totalCount}
-        </span>
-      </button>
-      {commandCounts.map(([command, count]) => {
-        const Icon = getCommandIcon(command)
-        const active = filterCommand === command
-        return (
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="relative">
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder={m.log_filters_search_placeholder()}
+          aria-label={m.log_filters_search_placeholder()}
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="px-9 [&::-webkit-search-cancel-button]:hidden"
+        />
+        {searchTerm && (
           <button
             type="button"
-            key={command}
-            aria-pressed={active}
-            onClick={() => onFilterChange(active ? 'all' : command)}
-            className={chipClass(active)}
+            onClick={() => onSearchChange('')}
+            aria-label={m.log_filters_clear_search()}
+            className="absolute top-1/2 right-2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
           >
-            <Icon size={12} />
-            {getCommandLabel(command)}
-            <span className={countClass(active)}>{count}</span>
+            <X className="size-3.5" />
           </button>
-        )
-      })}
-      {problemCount > 0 && (
-        <button
-          type="button"
-          aria-pressed={problemsOnly}
-          onClick={() => onProblemsOnlyChange(!problemsOnly)}
-          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-            problemsOnly
-              ? 'border-red-600 bg-red-600 text-white'
-              : 'border-red-200 bg-red-50 text-red-700 hover:border-red-300'
-          }`}
-        >
-          <TriangleAlert size={12} />
-          {m.log_filters_problems()}
-          <span
-            className={`tabular-nums ${problemsOnly ? 'text-white/70' : 'text-red-400'}`}
+        )}
+      </div>
+
+      <ToggleGroup
+        type="multiple"
+        value={value}
+        onValueChange={handleChange}
+        className="flex w-full flex-wrap"
+      >
+        <ToggleGroupItem value="all" className="px-2.5">
+          {m.log_filters_all()}
+          <Count value={totalCount} />
+        </ToggleGroupItem>
+        {problemCount > 0 && (
+          <ToggleGroupItem
+            value={PROBLEMS}
+            className="px-2.5 data-[state=on]:text-red-700"
           >
-            {problemCount}
-          </span>
-        </button>
-      )}
+            <TriangleAlert className="size-3.5" />
+            {m.log_filters_problems()}
+            <Count value={problemCount} />
+          </ToggleGroupItem>
+        )}
+        {commandCounts.map(([command, count]) => (
+          <ToggleGroupItem key={command} value={command} className="px-2.5">
+            {getCommandLabel(command)}
+            <Count value={count} />
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
     </div>
-  </div>
-)
+  )
+}

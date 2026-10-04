@@ -1,11 +1,16 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { RefreshCw, Trash2 } from 'lucide-react'
-import { Button } from '../components/Button'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { LogList } from '../components/LogList'
 import { LogViewer } from '../components/LogViewer'
 import { PageLayout } from '../components/PageLayout'
-import { useLogs, useRotateLogs } from '../hooks/queries'
+import { Button } from '../components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '../components/ui/tooltip'
+import { useConfig, useLogs, useRotateLogs } from '../hooks/queries'
 import * as m from '../paraglide/messages'
 
 export const Route = createFileRoute('/logs')({
@@ -18,7 +23,8 @@ function LogsPage() {
   const { file: selectedLog = null } = Route.useSearch()
   const navigate = useNavigate({ from: '/logs' })
   const { confirm, toast } = useFeedback()
-  const { refetch, isFetching } = useLogs()
+  const { data: logs, refetch, isFetching } = useLogs()
+  const { data: config } = useConfig()
   const rotateLogs = useRotateLogs()
 
   // The selection lives in the URL, so a log can be linked and survives a reload
@@ -46,44 +52,67 @@ function LogsPage() {
     })
   }
 
+  const maxFiles = config?.logs.maxFiles ?? 0
+  const maxAge = config?.logs.maxAge ?? 0
+  const retention =
+    maxFiles > 0 && maxAge > 0
+      ? m.logs_retention_both({ files: maxFiles, days: maxAge })
+      : maxFiles > 0
+        ? m.logs_retention_files({ files: maxFiles })
+        : maxAge > 0
+          ? m.logs_retention_days({ days: maxAge })
+          : undefined
+  const description = [
+    logs && m.log_list_count({ count: logs.length }),
+    retention,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
   return (
     <PageLayout
       title={m.logs()}
+      description={description || undefined}
       actions={
         <div className="flex gap-2">
           <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
-          >
-            <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
-            {m.log_list_refresh()}
-          </Button>
-          <Button
-            variant="ghostDanger"
-            size="sm"
+            variant="outline"
             onClick={handleRotate}
             disabled={rotateLogs.isPending}
           >
-            <Trash2 size={14} />
+            <Trash2 />
             {m.log_list_clean_old()}
           </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => refetch()}
+                disabled={isFetching}
+                aria-label={m.log_list_refresh()}
+              >
+                <RefreshCw className={isFetching ? 'animate-spin' : ''} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{m.log_list_refresh()}</TooltipContent>
+          </Tooltip>
         </div>
       }
     >
-      {/* Without a selection both boxes share one height, with one the log sets its own */}
-      <div
-        className={`grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] ${selectedLog ? 'items-start' : ''}`}
-      >
-        {/* On small screens list and log take turns */}
-        <div className={`flex-col ${selectedLog ? 'hidden lg:flex' : 'flex'}`}>
-          <LogList selectedLog={selectedLog} onSelectLog={selectLog} />
-        </div>
-        <div
-          className={`flex-col lg:sticky lg:top-6 ${selectedLog ? 'flex' : 'hidden lg:flex'}`}
-        >
-          <LogViewer selectedLog={selectedLog} onSelectLog={selectLog} />
+      {/* List and log sit side by side once the page is wide enough, below that they take turns */}
+      <div className="@container">
+        <div className="flex flex-col gap-6 @4xl:flex-row @4xl:items-start">
+          <div
+            className={`min-w-0 flex-col @4xl:flex @4xl:w-80 @4xl:shrink-0 ${selectedLog ? 'hidden' : 'flex'}`}
+          >
+            <LogList selectedLog={selectedLog} onSelectLog={selectLog} />
+          </div>
+          <div
+            className={`min-w-0 flex-1 flex-col @4xl:sticky @4xl:top-20 @4xl:flex ${selectedLog ? 'flex' : 'hidden'}`}
+          >
+            <LogViewer selectedLog={selectedLog} onSelectLog={selectLog} />
+          </div>
         </div>
       </div>
     </PageLayout>
