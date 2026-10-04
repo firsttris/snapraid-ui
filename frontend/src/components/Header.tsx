@@ -1,35 +1,35 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useLocation } from '@tanstack/react-router'
 import {
-  Activity,
-  Bell,
-  Calendar,
-  FileText,
-  HardDrive,
+  ChevronRight,
   Languages,
-  LayoutDashboard,
   Loader2,
-  LogOut,
-  Menu,
   Monitor,
   Moon,
+  PanelLeft,
+  Search,
   Sun,
-  X,
 } from 'lucide-react'
-import { useState } from 'react'
-import { useLogout, useSession } from '../hooks/queries'
+import { useConfig } from '../hooks/queries'
+import { useAppShell } from '../hooks/useAppShell'
 import { useJob } from '../hooks/useJob'
+import { useSelectedConfig } from '../hooks/useSelectedConfig'
 import { getCommandLabel } from '../lib/commands'
-import { useTheme } from '../lib/theme'
+import { navItemOf } from '../lib/nav'
+import { type ThemePreference, useTheme } from '../lib/theme'
 import * as m from '../paraglide/messages'
 import { getLocale, locales, setLocale } from '../paraglide/runtime'
-
-const NAV_ITEMS = [
-  { to: '/', label: m.nav_dashboard, icon: LayoutDashboard },
-  { to: '/smart', label: m.nav_smart, icon: Activity },
-  { to: '/schedules', label: m.schedules, icon: Calendar },
-  { to: '/logs', label: m.logs, icon: FileText },
-  { to: '/notifications', label: m.nav_notifications, icon: Bell },
-] as const
+import { Button } from './ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu'
+import { Kbd } from './ui/kbd'
+import { Separator } from './ui/separator'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 const THEME_ICONS = { light: Sun, dark: Moon, system: Monitor } as const
 
@@ -50,13 +50,13 @@ const JobChip = () => {
   return (
     <Link
       to="/"
-      className="relative flex items-center gap-2 overflow-hidden rounded-full bg-cyan-900 px-3 py-1 text-xs font-medium ring-1 ring-cyan-400/30 ring-inset hover:bg-cyan-800"
+      className="ui-job-chip relative flex h-8 items-center gap-2 overflow-hidden rounded-full bg-blue-50 px-3 text-xs font-medium text-blue-700 transition-shadow hover:bg-blue-100"
       title={title}
       aria-label={title}
     >
       {progress && (
         <span
-          className="ui-stripes absolute inset-y-0 left-0 bg-cyan-600 transition-[width] duration-500"
+          className="ui-stripes absolute inset-y-0 left-0 bg-blue-200/70 transition-[width] duration-500"
           style={{ width: `${Math.min(progress.percent, 100)}%` }}
         />
       )}
@@ -65,121 +65,162 @@ const JobChip = () => {
         {isAborting ? m.nav_job_aborting() : label}
       </span>
       {progress && !isAborting && (
-        <span className="relative tabular-nums">{progress.percent}%</span>
+        <span className="relative tabular-nums">{progress.percent} %</span>
       )}
     </Link>
   )
 }
 
-export const Header = () => {
-  const [isOpen, setIsOpen] = useState(false)
+const ThemeMenu = () => {
   const theme = useTheme()
-  const ThemeIcon = THEME_ICONS[theme.preference]
+  const Icon = THEME_ICONS[theme.preference]
+  return (
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label={m.theme_label()}>
+              <Icon />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{m.theme_label()}</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>{m.theme_label()}</DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={theme.preference}
+          onValueChange={(value) => theme.setTheme(value as ThemePreference)}
+        >
+          {(['light', 'dark', 'system'] as const).map((value) => {
+            const ItemIcon = THEME_ICONS[value]
+            return (
+              <DropdownMenuRadioItem key={value} value={value}>
+                <ItemIcon className="text-muted-foreground" />
+                {THEME_LABELS[value]()}
+              </DropdownMenuRadioItem>
+            )
+          })}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+const LanguageMenu = () => {
   const currentLocale = getLocale()
+  return (
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="px-2.5"
+              aria-label={m.common_switch_language()}
+            >
+              <Languages />
+              <span className="text-xs">{currentLocale.toUpperCase()}</span>
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{m.common_switch_language()}</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent align="end">
+        <DropdownMenuRadioGroup
+          value={currentLocale}
+          onValueChange={(value) => setLocale(value as typeof currentLocale)}
+        >
+          {locales.map((locale) => (
+            <DropdownMenuRadioItem key={locale} value={locale}>
+              {new Intl.DisplayNames([locale], { type: 'language' }).of(
+                locale,
+              ) ?? locale}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+/**
+ * Top bar of every page: sidebar toggle, where you are, command palette and quick settings
+ */
+export const Header = () => {
+  const { toggleSidebar, setMobileNavOpen, setPaletteOpen } = useAppShell()
+  const { pathname } = useLocation()
   const job = useJob()
-  const { data: session } = useSession()
-  const logout = useLogout()
-
-  const toggleLocale = () => {
-    setLocale(locales[(locales.indexOf(currentLocale) + 1) % locales.length])
-  }
-
-  const linkClass =
-    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 hover:bg-white/5 hover:text-white transition-colors [&>svg]:transition-colors'
-  const activeLinkClass =
-    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium bg-white/10 text-white ring-1 ring-inset ring-white/10 [&>svg]:text-cyan-300'
-
-  const links = NAV_ITEMS.map(({ to, label, icon: Icon }) => (
-    <Link
-      key={to}
-      to={to}
-      onClick={() => setIsOpen(false)}
-      className={linkClass}
-      activeProps={{ className: activeLinkClass }}
-      activeOptions={{ exact: to === '/' }}
-    >
-      <Icon size={16} />
-      {label()}
-    </Link>
-  ))
+  const { data: config } = useConfig()
+  const { selectedConfig } = useSelectedConfig()
+  const configName = config?.snapraidConfigs.find(
+    (c) => c.path === selectedConfig,
+  )?.name
+  const page = navItemOf(pathname)
 
   return (
-    <header className="theme-fixed relative bg-gray-900 text-white shadow-md">
-      {/* Accent line in the colors of the login */}
-      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-cyan-400/60 via-indigo-500/40 to-transparent" />
-      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-8">
-        <Link to="/" className="group flex items-center gap-2.5 font-semibold">
-          <span className="relative">
-            <span className="absolute inset-0 rounded-lg bg-cyan-400/30 opacity-0 blur-md transition-opacity group-hover:opacity-100" />
-            <span className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-400/30 bg-gradient-to-br from-cyan-400/20 to-indigo-500/20">
-              <HardDrive size={17} className="text-cyan-300" />
-            </span>
-          </span>
-          <span className="text-lg">{m.app_title()}</span>
-        </Link>
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/85 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:px-4">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={m.sidebar_toggle()}
+            onClick={() => {
+              if (window.matchMedia('(min-width: 768px)').matches)
+                toggleSidebar()
+              else setMobileNavOpen(true)
+            }}
+          >
+            <PanelLeft />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {m.sidebar_toggle()} <Kbd className="ml-1">⌘B</Kbd>
+        </TooltipContent>
+      </Tooltip>
+      <Separator
+        orientation="vertical"
+        className="mr-1 data-[orientation=vertical]:h-4"
+      />
+      <nav
+        aria-label="Breadcrumb"
+        className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground"
+      >
+        {configName && (
+          <>
+            <span className="hidden truncate sm:inline">{configName}</span>
+            <ChevronRight className="hidden size-3.5 shrink-0 sm:inline" />
+          </>
+        )}
+        <span className="truncate font-medium text-foreground">
+          {page?.label() ?? m.app_title()}
+        </span>
+      </nav>
 
-        <nav className="hidden flex-1 items-center gap-1 md:flex">{links}</nav>
-
-        <div className="ml-auto flex items-center gap-2 md:ml-0">
-          {job.isRunning && <JobChip />}
-          <button
-            type="button"
-            onClick={theme.cycle}
-            className="rounded-lg p-2 transition-colors hover:bg-white/10"
-            title={m.theme_switch({ theme: THEME_LABELS[theme.preference]() })}
-            aria-label={m.theme_switch({
-              theme: THEME_LABELS[theme.preference](),
-            })}
-          >
-            <ThemeIcon size={18} />
-          </button>
-          <button
-            type="button"
-            onClick={toggleLocale}
-            className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-white/10"
-            aria-label={m.common_switch_language()}
-          >
-            <Languages size={18} />
-            <span className="text-sm font-medium">
-              {currentLocale.toUpperCase()}
-            </span>
-          </button>
-          {session?.enabled && (
-            <button
-              type="button"
-              onClick={() => logout.mutate()}
-              disabled={logout.isPending}
-              className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-white/10 disabled:opacity-50"
-              title={
-                session.username
-                  ? m.nav_signed_in_as({ username: session.username })
-                  : undefined
-              }
-              aria-label={m.nav_logout()}
-            >
-              <LogOut size={18} />
-              <span className="hidden text-sm font-medium lg:inline">
-                {m.nav_logout()}
-              </span>
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setIsOpen((prev) => !prev)}
-            className="rounded-lg p-2 transition-colors hover:bg-white/10 md:hidden"
-            aria-label={m.navigation()}
-            aria-expanded={isOpen}
-          >
-            {isOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
-        </div>
+      <div className="ml-auto flex items-center gap-1.5">
+        <Button
+          variant="secondary"
+          onClick={() => setPaletteOpen(true)}
+          className="hidden w-60 justify-start bg-muted/70 font-normal text-muted-foreground shadow-none lg:inline-flex"
+        >
+          <Search />
+          {m.palette_open()}
+          <Kbd className="ml-auto">⌘K</Kbd>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setPaletteOpen(true)}
+          className="lg:hidden"
+          aria-label={m.palette_open()}
+        >
+          <Search />
+        </Button>
+        {job.isRunning && <JobChip />}
+        <ThemeMenu />
+        <LanguageMenu />
       </div>
-
-      {isOpen && (
-        <nav className="ui-fade-in flex flex-col gap-1 border-t border-white/10 px-4 py-3 md:hidden">
-          {links}
-        </nav>
-      )}
     </header>
   )
 }

@@ -10,10 +10,14 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
+import { AppSidebar } from '../components/AppSidebar'
 import { AuthGate } from '../components/AuthGate'
+import { CommandPalette } from '../components/CommandPalette'
 import { FeedbackProvider } from '../components/Feedback'
 import { Header } from '../components/Header'
+import { TooltipProvider } from '../components/ui/tooltip'
 import { queryKeys, STATUS_CACHE_MAX_AGE } from '../hooks/queries'
+import { AppShellProvider } from '../hooks/useAppShell'
 import { JobProvider } from '../hooks/useJob'
 import { SelectedConfigProvider } from '../hooks/useSelectedConfig'
 import { THEME_INIT_SCRIPT } from '../lib/theme'
@@ -91,7 +95,7 @@ export const Route = createRootRoute({
       },
       {
         name: 'theme-color',
-        content: '#101828',
+        content: '#09090b',
       },
     ],
     links: [
@@ -143,8 +147,18 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <FeedbackProvider>
               <SelectedConfigProvider>
                 <JobProvider>
-                  <Header />
-                  {children}
+                  <TooltipProvider>
+                    <AppShellProvider>
+                      <div className="flex min-h-svh">
+                        <AppSidebar />
+                        <div className="flex min-w-0 flex-1 flex-col">
+                          <Header />
+                          {children}
+                        </div>
+                      </div>
+                      <CommandPalette />
+                    </AppShellProvider>
+                  </TooltipProvider>
                 </JobProvider>
               </SelectedConfigProvider>
             </FeedbackProvider>

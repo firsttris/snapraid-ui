@@ -1,3 +1,11 @@
+import { type ClassValue, clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
+/**
+ * Merge Tailwind classes, later ones win (shadcn/ui helper)
+ */
+export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs))
+
 /**
  * Format bytes to human-readable file size
  */

@@ -1,10 +1,12 @@
+import { cn } from '../lib/utils'
+
 /**
  * Placeholder in the shape of content that is still loading
  */
 export const Skeleton = ({ className = '' }: { className?: string }) => (
   <span
     aria-hidden="true"
-    className={`ui-shimmer block rounded bg-gray-200 ${className}`}
+    className={cn('ui-shimmer block rounded-md bg-muted', className)}
   />
 )
 
@@ -14,9 +16,9 @@ export const Skeleton = ({ className = '' }: { className?: string }) => (
 export const LoadingHint = ({ children }: { children: string }) => (
   <span
     role="status"
-    className="inline-flex items-center gap-2 text-sm text-gray-500"
+    className="inline-flex items-center gap-2 text-sm text-muted-foreground"
   >
-    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+    <span className="size-3.5 animate-spin rounded-full border-2 border-muted border-t-foreground" />
     {children}
   </span>
 )

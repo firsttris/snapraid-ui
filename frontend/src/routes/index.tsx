@@ -37,6 +37,7 @@ import {
   useStatus,
   useUsageHistory,
 } from '../hooks/queries'
+import { useAppShell } from '../hooks/useAppShell'
 import { useJob } from '../hooks/useJob'
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
 import {
@@ -228,6 +229,22 @@ function Dashboard() {
     [selectedConfig, job.isRunning, runCommand, refetchStatus, openReport],
   )
 
+  // A command picked in the command palette, possibly on another page
+  const { pendingCommand, clearPendingCommand } = useAppShell()
+  useEffect(() => {
+    if (!pendingCommand || !selectedConfig) return
+    clearPendingCommand()
+    if (job.isRunning) return
+    if (pendingCommand === 'fix') setShowUndeleteDialog(true)
+    else executeCommand(pendingCommand)
+  }, [
+    pendingCommand,
+    selectedConfig,
+    job.isRunning,
+    executeCommand,
+    clearPendingCommand,
+  ])
+
   const handleUndelete = useCallback(
     (
       mode: 'all-missing' | 'directory-missing' | 'specific',
@@ -287,7 +304,7 @@ function Dashboard() {
 
   return (
     <PageLayout title={m.nav_dashboard()}>
-      <ConfigBar disabled={job.isRunning}>
+      <ConfigBar>
         <ArrayHealthPanel
           status={statusData?.status}
           isStatusLoading={isStatusFetching}
