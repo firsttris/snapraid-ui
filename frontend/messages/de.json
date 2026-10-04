@@ -162,7 +162,6 @@
   "smart_monitor_temperature": "Temperatur",
   "smart_monitor_failure_probability": "Ausfallwahrscheinlichkeit",
   "smart_monitor_power_on_hours": "Betriebsstunden",
-  "smart_monitor_capacity": "Kapazität",
   "smart_monitor_serial": "Seriennummer",
   "smart_monitor_attributes": "SMART-Attribute",
   "schedules": "Zeitpläne",

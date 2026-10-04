@@ -162,7 +162,6 @@
   "smart_monitor_temperature": "Temperature",
   "smart_monitor_failure_probability": "Failure Probability",
   "smart_monitor_power_on_hours": "Power On Hours",
-  "smart_monitor_capacity": "Capacity",
   "smart_monitor_serial": "Serial",
   "smart_monitor_attributes": "SMART Attributes",
   "schedules": "Schedules",
