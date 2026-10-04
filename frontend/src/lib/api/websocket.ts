@@ -1,5 +1,5 @@
 import type { ForceOption } from '@shared/force-option'
-import type { SnapRaidStatus } from '@shared/types'
+import type { JobProgress, SnapRaidStatus } from '@shared/types'
 import { WS_URL } from './constants'
 
 // WebSocket state
@@ -20,6 +20,8 @@ const wsState = {
     ) => void
     onError?: (error: string, command: string, processId?: string) => void
     onStatus?: (status: SnapRaidStatus) => void
+    // Progress of sync, scrub, check and fix, read from their log
+    onProgress?: (progress: JobProgress, processId: string) => void
   },
 }
 
@@ -89,6 +91,9 @@ export const connectWebSocket = (handlers?: typeof wsState.handlers): void => {
           message.command,
           message.processId,
         )
+        break
+      case 'progress':
+        wsState.handlers.onProgress?.(message.progress, message.processId)
         break
       case 'status':
         wsState.handlers.onStatus?.(message.status)

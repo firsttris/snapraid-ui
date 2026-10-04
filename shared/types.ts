@@ -128,6 +128,16 @@ export interface RunningJob {
   processId: string;
   aborting?: boolean; // Abort requested, waiting for SnapRAID to save its state
   logFile?: string; // Log the job is writing, it has no result yet
+  progress?: JobProgress; // sync, scrub, check and fix, from their log
+}
+
+// Progress of a running job, from SnapRAID's `run:pos` log tags
+export interface JobProgress {
+  percent: number;
+  processedMB: number;
+  speedMBs?: number;   // Missing until SnapRAID has enough samples
+  etaMinutes?: number;
+  temperature?: number; // Hottest disk, only with thermal protection
 }
 
 // Outcome of the last job, for clients that missed its WebSocket completion (reload, reconnect)
