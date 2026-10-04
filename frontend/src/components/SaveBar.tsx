@@ -6,14 +6,13 @@ interface SaveBarProps {
 }
 
 // Save and cancel stay in reach at the bottom of the window while scrolling long forms.
-// The page needs bottom padding (SAVE_BAR_SPACE) so its end does not hide behind the bar
-export const SAVE_BAR_SPACE = 'pb-20'
+// The bar is sticky inside the page flow, so it never covers the sidebar and needs no extra page padding;
+// SAVE_BAR_SPACE stays for callers that still add it
+export const SAVE_BAR_SPACE = ''
 
 export const SaveBar = ({ hint, children }: SaveBarProps) => (
-  <div className="fixed inset-x-0 bottom-0 z-10 border-t border-gray-200 bg-white/95 backdrop-blur">
-    <div className="mx-auto flex max-w-7xl items-center justify-end gap-3 px-4 py-3 sm:px-6 lg:px-8">
-      {hint && <span className="text-sm text-gray-600">{hint}</span>}
-      {children}
-    </div>
+  <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-3 border-t bg-background/90 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/75">
+    {hint && <span className="text-sm text-muted-foreground">{hint}</span>}
+    {children}
   </div>
 )
