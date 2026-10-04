@@ -8,8 +8,8 @@ import {
   Tooltip,
   type TooltipItem,
 } from 'chart.js'
-import { useState } from 'react'
 import { Line } from 'react-chartjs-2'
+import { useTheme } from '../lib/theme'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 
@@ -17,6 +17,7 @@ ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Tooltip)
 
 type Metric = Exclude<keyof SmartHistoryPoint, 'date'>
 
+// Blue 500 of the palette, a mid tone that reads on light and dark cards
 const LINE_COLOR = 'rgb(59, 130, 246)'
 
 const METRICS: Array<{ key: Metric; label: () => string; unit: string }> = [
@@ -46,18 +47,20 @@ const MetricChart = ({
   label: string
   unit: string
 }) => {
+  // Re-renders on a theme switch, so the axes pick up the new token values
+  useTheme()
   const themeColor = (name: string) =>
     getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-  const gridColor = themeColor('--color-gray-200')
-  const tickColor = themeColor('--color-gray-500')
+  const gridColor = themeColor('--border')
+  const tickColor = themeColor('--muted-foreground')
   const values = points.map((point) => point[metric] ?? null)
   const latest = values.filter((value) => value !== null).at(-1)
 
   return (
     <div>
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-muted-foreground">
         {label}{' '}
-        <span className="font-semibold text-gray-900">
+        <span className="font-semibold text-foreground tabular-nums">
           {latest?.toLocaleString(getLocale())}
           {unit}
         </span>
@@ -115,6 +118,21 @@ const MetricChart = ({
   )
 }
 
+const shownMetrics = (points: SmartHistoryPoint[] | undefined) =>
+  !points || points.length < 2
+    ? []
+    : METRICS.filter(({ key }) =>
+        key === 'temperature'
+          ? points.some((point) => point.temperature !== undefined)
+          : points.some((point) => (point[key] ?? 0) > 0),
+      )
+
+/**
+ * Whether there is a history worth a chart: at least two days and a value to show
+ */
+export const hasSmartHistory = (points: SmartHistoryPoint[] | undefined) =>
+  shownMetrics(points).length > 0
+
 /**
  * Daily SMART values of a disk, hidden until there are at least two days to compare
  */
@@ -123,39 +141,20 @@ export const SmartHistoryCharts = ({
 }: {
   points: SmartHistoryPoint[] | undefined
 }) => {
-  const [expanded, setExpanded] = useState(false)
-  if (!points || points.length < 2) return null
-
-  const shown = METRICS.filter(({ key }) =>
-    key === 'temperature'
-      ? points.some((point) => point.temperature !== undefined)
-      : points.some((point) => (point[key] ?? 0) > 0),
-  )
-  if (shown.length === 0) return null
+  const shown = shownMetrics(points)
+  if (!points || shown.length === 0) return null
 
   return (
-    <div className="mt-3">
-      <button
-        type="button"
-        onClick={() => setExpanded(!expanded)}
-        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-      >
-        {expanded ? '▼' : '▶'}{' '}
-        {m.smart_history_title({ days: String(points.length) })}
-      </button>
-      {expanded && (
-        <div className="mt-2 grid gap-4 sm:grid-cols-2">
-          {shown.map(({ key, label, unit }) => (
-            <MetricChart
-              key={key}
-              points={points}
-              metric={key}
-              label={label()}
-              unit={unit}
-            />
-          ))}
-        </div>
-      )}
+    <div className="grid gap-6 sm:grid-cols-2">
+      {shown.map(({ key, label, unit }) => (
+        <MetricChart
+          key={key}
+          points={points}
+          metric={key}
+          label={label()}
+          unit={unit}
+        />
+      ))}
     </div>
   )
 }
