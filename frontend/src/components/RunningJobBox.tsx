@@ -1,6 +1,6 @@
+import type { JobProgress } from '@shared/types'
 import { Square } from 'lucide-react'
 import { getCommandLabel } from '../lib/commands'
-import type { JobProgress } from '../lib/progress'
 import * as m from '../paraglide/messages'
 
 interface RunningJobBoxProps {

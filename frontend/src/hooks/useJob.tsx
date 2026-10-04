@@ -1,5 +1,5 @@
 import type { ForceOption } from '@shared/force-option'
-import type { FinishedJob, RunningJob } from '@shared/types'
+import type { FinishedJob, JobProgress, RunningJob } from '@shared/types'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import {
@@ -8,7 +8,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react'
@@ -18,7 +17,6 @@ import { connectWebSocket } from '../lib/api/websocket'
 import { getCommandLabel } from '../lib/commands'
 import { localizeServer } from '../lib/i18n'
 import { createJobTracker } from '../lib/job-tracker'
-import { type JobProgress, parseProgress } from '../lib/progress'
 import * as m from '../paraglide/messages'
 import { queryKeys, useAbortJob, useCurrentJob } from './queries'
 
@@ -48,6 +46,7 @@ interface JobState {
   currentCommand: string
   isRunning: boolean
   lastResult: JobResult | null
+  progress: JobProgress | null
 }
 
 interface JobContextValue extends JobState {
@@ -115,6 +114,7 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
     currentCommand: '',
     isRunning: false,
     lastResult: null,
+    progress: null,
   })
 
   // The WebSocket handlers outlive renders, they reach the latest callbacks through this ref.
@@ -129,6 +129,7 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
       ...prev,
       isRunning: false,
       currentCommand: '',
+      progress: null,
       output: result?.error
         ? `${prev.output}\n\nError: ${localizeServer(result.error)}`
         : prev.output,
@@ -163,6 +164,8 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     connectWebSocket({
+      onProgress: (progress) =>
+        setState((prev) => ({ ...prev, isRunning: true, progress })),
       onOutput: (chunk, command) => {
         setState((prev) => ({
           ...prev,
@@ -242,6 +245,7 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
       isRunning: true,
       currentCommand: command,
       output: '',
+      progress: null,
     }))
   }, [])
 
@@ -276,10 +280,10 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
     })
   }, [abortMutation, confirm, toast, state.currentCommand])
 
-  const progress = useMemo(
-    () => (state.isRunning ? parseProgress(state.output) : null),
-    [state.isRunning, state.output],
-  )
+  // The WebSocket sends each new value, the polled job has the latest after a reload
+  const progress = state.isRunning
+    ? (state.progress ?? currentJob?.progress ?? null)
+    : null
 
   const value: JobContextValue = {
     ...state,

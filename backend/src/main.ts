@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { loadAppConfig } from "./config-parser.ts";
 import { broadcast, handleWebSocketUpgrade } from "./websocket.ts";
+import { setProgressListener } from "./executors/command-executor.ts";
 import { setBroadcast } from "./routes/snapraid.ts";
 import { createLogManager } from "./log-manager.ts";
 import { setLogManager } from "./routes/logs.ts";
@@ -91,6 +92,10 @@ const main = async (): Promise<void> => {
   // Set log manager for snapraid runner
   const { setRunnerLogManager, getRunner } = await import("./routes/snapraid.ts");
   setRunnerLogManager(logManager);
+  // Progress comes from the job's log, not its output, so it is sent on its own
+  setProgressListener((job, progress) =>
+    broadcast({ type: "progress", command: job.command, processId: job.processId, progress })
+  );
 
   // Initialize scheduler
   const schedulesConfigPath = resolveFromBase("schedules.json");

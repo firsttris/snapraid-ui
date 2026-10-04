@@ -1,8 +1,10 @@
-import type { SnapRaidCommand, CommandOutput, RunningJob, FinishedJob } from "@shared/types.ts";
+import type { SnapRaidCommand, CommandOutput, RunningJob, FinishedJob, JobProgress } from "@shared/types.ts";
 import { detectForceOption } from "@shared/force-option.ts";
 import type { LogManager } from "../log-manager.ts";
 import { basename } from "@std/path";
 import { snapraidCommand } from "../config.ts";
+import { parseRunPos } from "../parsers/progress-parser.ts";
+import { createLogTail } from "./log-tail.ts";
 
 /**
  * Global state for command executor
@@ -15,6 +17,41 @@ const state = {
   currentOutput: "",
   lastJob: null as FinishedJob | null,
   logManager: null as LogManager | null,
+  onProgress: null as ((job: RunningJob, progress: JobProgress) => void) | null,
+};
+
+// Commands that report their progress in the log; `--gui` makes SnapRAID write it there
+// (`run:pos` tags) instead of drawing a progress bar on the console
+const PROGRESS_COMMANDS: SnapRaidCommand[] = ["sync", "scrub", "check", "fix"];
+const PROGRESS_POLL_MS = 1000;
+
+/**
+ * Called with each new progress of the running job, e.g. to broadcast it
+ */
+export const setProgressListener = (listener: (job: RunningJob, progress: JobProgress) => void): void => {
+  state.onProgress = listener;
+};
+
+/**
+ * Follow the log of a running job and publish its progress until stopped
+ */
+const watchProgress = (processId: string, logPath: string): (() => Promise<void>) => {
+  const readNew = createLogTail(logPath);
+  const poll = async () => {
+    const progress = parseRunPos(await readNew());
+    const job = state.currentJob;
+    if (!progress || job?.processId !== processId) return;
+    state.currentJob = { ...job, progress };
+    state.onProgress?.(state.currentJob, progress);
+  };
+  let running = poll();
+  const timer = setInterval(() => {
+    running = running.then(poll).catch(() => {});
+  }, PROGRESS_POLL_MS);
+  return async () => {
+    clearInterval(timer);
+    await running.catch(() => {});
+  };
 };
 
 // Enough for the console and the progress bar, SnapRAID rewrites its progress line over and over
@@ -43,7 +80,7 @@ const buildCommandArgs = (
   logPath?: string
 ): string[] => {
   const baseArgs = [command, "-c", configPath];
-  const logArgs = logPath ? ["-l", logPath] : [];
+  const logArgs = logPath ? ["-l", logPath, ...(PROGRESS_COMMANDS.includes(command) ? ["--gui"] : [])] : [];
   return [...baseArgs, ...logArgs, ...additionalArgs];
 };
 
@@ -139,11 +176,14 @@ export const executeCommand = async (
 
     const process = cmd.spawn();
     state.processes.set(processId, process);
+    const stopWatching = logPath && PROGRESS_COMMANDS.includes(command)
+      ? watchProgress(processId, logPath)
+      : async () => {};
 
     const fullOutput = await readProcessStreams(process, (chunk) => {
       bufferOutput(chunk);
       onOutput(chunk);
-    });
+    }).finally(stopWatching);
     const status = await process.status;
     const aborted = state.abortRequested.has(processId);
     const result = {

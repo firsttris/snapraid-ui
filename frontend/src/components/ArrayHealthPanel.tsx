@@ -1,4 +1,5 @@
 import type {
+  JobProgress,
   LastRun,
   Schedule,
   SnapRaidCommand,
@@ -18,7 +19,6 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { getCommandDescription, getCommandLabel } from '../lib/commands'
-import type { JobProgress } from '../lib/progress'
 import { getResultLabel, RESULT_STYLES } from '../lib/run-result'
 import {
   daysSince,
