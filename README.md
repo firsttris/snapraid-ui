@@ -34,6 +34,8 @@ Run sync and scrub, schedule jobs and keep an eye on disk health, all from your 
 - **Login** via environment variables, no database needed
 - **Multilingual**: follows the browser language, switchable in the header
 - **Light and dark theme**: follows the system, switchable in the header
+- **Command palette**: Ctrl/Cmd+K runs SnapRAID commands, opens pages and switches configs, theme and animations
+- **Animations off, subtle or strong**: picked in the sidebar, off by default when the system asks to reduce motion
 
 ## 🐳 Quick start with Docker
 

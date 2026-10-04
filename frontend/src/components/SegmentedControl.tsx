@@ -18,6 +18,7 @@ export const SegmentedControl = <T extends string>({
     onValueChange={(next) => {
       if (next) onChange(next as T)
     }}
+    className="max-w-full flex-wrap"
   >
     {options.map((option) => (
       <ToggleGroupItem key={option.value} value={option.value} className="px-4">
