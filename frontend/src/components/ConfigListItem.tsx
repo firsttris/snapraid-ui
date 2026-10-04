@@ -1,8 +1,20 @@
 import type { ConfigFileCheck, SnapRaidConfig } from '@shared/types'
-import { AlertTriangle, Check, Pencil, Trash2, X } from 'lucide-react'
+import {
+  AlertTriangle,
+  Check,
+  Pencil,
+  Settings2,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { useState } from 'react'
+import { cn } from '@/lib/utils'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
+import { Badge } from './ui/badge'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Switch } from './ui/switch'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 interface ConfigListItemProps {
   config: SnapRaidConfig
@@ -18,36 +30,64 @@ const CheckSummary = ({ check }: { check?: ConfigFileCheck }) => {
 
   if (!check.exists || check.error) {
     return (
-      <span
-        className="inline-flex items-center gap-1 text-xs font-medium text-red-700"
-        title={check.error}
-      >
-        <AlertTriangle size={14} />
+      <Badge variant="destructive" title={check.error}>
+        <AlertTriangle />
         {check.exists
           ? m.config_manager_file_unreadable()
           : m.config_manager_file_missing()}
-      </span>
+      </Badge>
     )
   }
 
+  const summary = m.config_manager_summary({
+    data: check.dataDisks,
+    parity: check.parityLevels,
+    content: check.contentFiles,
+  })
   const incomplete =
     check.dataDisks === 0 ||
     check.parityLevels === 0 ||
     check.contentFiles === 0
+  if (incomplete) {
+    return (
+      <Badge variant="warning" title={m.config_manager_incomplete()}>
+        <AlertTriangle />
+        {summary}
+      </Badge>
+    )
+  }
   return (
-    <span
-      className={`inline-flex items-center gap-1 text-xs ${incomplete ? 'font-medium text-orange-700' : 'text-gray-500'}`}
-      title={incomplete ? m.config_manager_incomplete() : undefined}
-    >
-      {incomplete && <AlertTriangle size={14} />}
-      {m.config_manager_summary({
-        data: check.dataDisks,
-        parity: check.parityLevels,
-        content: check.contentFiles,
-      })}
+    <span className="text-xs text-muted-foreground tabular-nums">
+      {summary}
     </span>
   )
 }
+
+const IconAction = ({
+  label,
+  onClick,
+  destructive = false,
+  children,
+}: {
+  label: string
+  onClick: () => void
+  destructive?: boolean
+  children: React.ReactNode
+}) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant={destructive ? 'ghostDestructive' : 'ghost'}
+        size="icon-sm"
+        onClick={onClick}
+        aria-label={label}
+      >
+        {children}
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>{label}</TooltipContent>
+  </Tooltip>
+)
 
 export const ConfigListItem = ({
   config,
@@ -75,37 +115,34 @@ export const ConfigListItem = ({
 
   return (
     <div
-      className={`flex items-center justify-between gap-4 p-4 border rounded-lg transition-all ${config.enabled ? 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm' : 'bg-gray-50 border-gray-200'}`}
+      className={cn(
+        'flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border p-4 transition-colors sm:flex-nowrap',
+        config.enabled ? 'bg-card hover:bg-accent/40' : 'bg-muted/40',
+      )}
     >
-      <label className="relative inline-flex shrink-0 cursor-pointer items-center">
-        <input
-          type="checkbox"
-          role="switch"
-          checked={config.enabled}
-          aria-checked={config.enabled}
-          onChange={(e) => onToggle(e.target.checked)}
-          aria-label={m.config_manager_toggle_label({ name: config.name })}
-          title={
-            config.enabled
-              ? m.config_manager_enabled()
-              : m.config_manager_disabled()
-          }
-          className="peer sr-only"
-        />
-        <span className="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-green-500 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2" />
-        <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
-      </label>
+      <Switch
+        checked={config.enabled}
+        onCheckedChange={onToggle}
+        aria-label={m.config_manager_toggle_label({ name: config.name })}
+        title={
+          config.enabled
+            ? m.config_manager_enabled()
+            : m.config_manager_disabled()
+        }
+      />
 
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1 basis-48">
         {renaming ? (
           <form
-            className="flex items-center gap-1 mb-1"
+            // ConfigManager keeps the dialog open on Escape in here
+            data-escape-local=""
+            className="flex items-center gap-1"
             onSubmit={(e) => {
               e.preventDefault()
               submitRename()
             }}
           >
-            <input
+            <Input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -117,77 +154,73 @@ export const ConfigListItem = ({
                 }
               }}
               aria-label={m.config_manager_name_label()}
-              className="min-w-0 flex-1 px-2 py-1 border border-gray-300 rounded font-semibold text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              // biome-ignore lint/a11y/noAutofocus: the field replaces the name the user just chose to rename
+              className="h-8 min-w-0 flex-1 font-medium"
               autoFocus
             />
             <Button
               type="submit"
               variant="ghost"
-              size="iconSm"
+              size="icon-sm"
               aria-label={m.common_save()}
               disabled={!name.trim()}
             >
-              <Check size={16} />
+              <Check />
             </Button>
             <Button
               variant="ghost"
-              size="iconSm"
+              size="icon-sm"
               aria-label={m.common_cancel()}
               onClick={cancelRename}
             >
-              <X size={16} />
+              <X />
             </Button>
           </form>
         ) : (
-          <div className="flex items-center gap-1 mb-1">
-            <h4
-              className={`font-semibold text-lg truncate ${config.enabled ? 'text-gray-900' : 'text-gray-500'}`}
-            >
-              {config.name}
-            </h4>
-            <Button
-              variant="ghost"
-              size="iconSm"
-              onClick={() => {
-                setName(config.name)
-                setRenaming(true)
-              }}
-              aria-label={m.config_manager_rename()}
-              title={m.config_manager_rename()}
-            >
-              <Pencil size={14} />
-            </Button>
+          <div
+            className={cn(
+              'truncate text-sm font-semibold',
+              !config.enabled && 'text-muted-foreground',
+            )}
+          >
+            {config.name}
           </div>
         )}
-        <div className="text-sm text-gray-500 font-mono truncate">
+        <div className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
           {config.path}
         </div>
-        <div className="mt-1">
-          <CheckSummary check={check} />
-        </div>
+        {check && (
+          <div className="mt-1.5">
+            <CheckSummary check={check} />
+          </div>
+        )}
       </div>
 
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="ml-auto flex shrink-0 items-center gap-1">
         <Button
-          variant="ghost"
+          variant="outline"
+          size="sm"
           onClick={onEdit}
           disabled={fileMissing}
-          className="rounded-lg font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-700"
         >
-          <Pencil size={16} />
+          <Settings2 />
           {m.config_manager_edit()}
         </Button>
-        <Button
-          variant="ghostDanger"
-          size="icon"
-          onClick={onDelete}
-          aria-label={m.config_manager_delete()}
-          title={m.config_manager_delete()}
-          className="rounded-lg"
+        <IconAction
+          label={m.config_manager_rename()}
+          onClick={() => {
+            setName(config.name)
+            setRenaming(true)
+          }}
         >
-          <Trash2 size={16} />
-        </Button>
+          <Pencil />
+        </IconAction>
+        <IconAction
+          label={m.config_manager_delete()}
+          onClick={onDelete}
+          destructive
+        >
+          <Trash2 />
+        </IconAction>
       </div>
     </div>
   )

@@ -1,9 +1,16 @@
-import { Folder, X } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { ArrowUp, Folder, Loader2 } from 'lucide-react'
+import { useState } from 'react'
 import { useFilesystem } from '../hooks/queries'
-import { useDialogKeys } from '../hooks/useDialogKeys'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
+import { Alert, AlertDescription } from './ui/alert'
+import { Button } from './ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
 
 interface DirectoryBrowserProps {
   onSelect: (path: string) => void
@@ -18,8 +25,6 @@ export const DirectoryBrowser = ({
   title,
   currentValue,
 }: DirectoryBrowserProps) => {
-  const dialogRef = useRef<HTMLDivElement>(null)
-  useDialogKeys(dialogRef, onClose)
   const [currentPath, setCurrentPath] = useState<string>(currentValue || '')
 
   // TanStack Query hook
@@ -43,90 +48,84 @@ export const DirectoryBrowser = ({
   }
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click is a mouse shortcut, Escape closes too
-    <div
-      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose()
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
       }}
     >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        tabIndex={-1}
-        className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col outline-none"
+      <DialogContent
+        aria-describedby={undefined}
+        className="flex max-h-[80vh] flex-col gap-0 p-0 sm:max-w-2xl"
       >
-        <div className="p-4 border-b flex justify-between items-center">
-          <h3 className="text-lg font-semibold">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-            aria-label={m.common_close()}
-          >
-            <X size={20} />
-          </button>
-        </div>
+        <DialogHeader className="border-b px-6 py-4">
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
 
-        <div className="p-4 border-b bg-gray-50">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={goUp}
-              disabled={actualPath === '/'}
-              className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              ↑ {m.common_up()}
-            </button>
-            <div className="flex-1 text-sm text-gray-600 font-mono">
-              {actualPath || '/'}
-            </div>
+        <div className="flex items-center gap-2 border-b bg-muted/50 px-6 py-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goUp}
+            disabled={actualPath === '/'}
+          >
+            <ArrowUp />
+            {m.common_up()}
+          </Button>
+          <div className="min-w-0 flex-1 truncate font-mono text-sm text-muted-foreground">
+            {actualPath || '/'}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
           {loading && (
-            <div className="text-center text-gray-500">
-              {m.common_loading()}
+            <div className="flex justify-center py-6 text-muted-foreground">
+              <Loader2 className="size-5 animate-spin" />
+              <span className="sr-only">{m.common_loading()}</span>
             </div>
           )}
-          {error && <div className="text-red-600 text-sm">{String(error)}</div>}
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{String(error)}</AlertDescription>
+            </Alert>
+          )}
 
           {!loading && !error && entries.length === 0 && (
-            <div className="text-center text-gray-500">
+            <div className="py-6 text-center text-sm text-muted-foreground">
               {m.directory_browser_no_directories()}
             </div>
           )}
 
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {entries.map((entry) => (
               <button
                 type="button"
                 key={entry.path}
                 onClick={() => setCurrentPath(entry.path)}
-                className="w-full text-left px-3 py-2 rounded hover:bg-gray-100 flex items-center gap-2"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
-                <Folder size={18} className="shrink-0 text-blue-500" />
-                <span className="font-medium">{entry.name}</span>
+                <Folder className="size-4 shrink-0 text-blue-600" />
+                <span className="truncate font-medium">{entry.name}</span>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="p-4 border-t bg-gray-50 flex justify-between items-center">
-          <div className="text-sm text-gray-600">
+        <DialogFooter className="flex-col items-stretch gap-3 sm:items-center border-t bg-muted/50 px-6 py-4 sm:justify-between">
+          <div className="min-w-0 truncate text-sm text-muted-foreground">
             {m.common_selected()}:{' '}
-            <span className="font-mono">{actualPath || '/'}</span>
+            <span className="font-mono text-foreground">
+              {actualPath || '/'}
+            </span>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="outline" onClick={onClose}>
               {m.common_cancel()}
             </Button>
             <Button onClick={handleSelect}>{m.common_select()}</Button>
           </div>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
