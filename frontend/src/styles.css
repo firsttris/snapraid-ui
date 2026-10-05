@@ -1,4 +1,121 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+
+/* shadcn/ui design tokens, see components.json. The gray scale is zinc so older
+   components and the shadcn ones share one neutral palette. */
+@theme {
+  --color-gray-50: oklch(98.5% 0 0);
+  --color-gray-100: oklch(96.7% 0.001 286.375);
+  --color-gray-200: oklch(92% 0.004 286.32);
+  --color-gray-300: oklch(87.1% 0.006 286.286);
+  --color-gray-400: oklch(70.5% 0.015 286.067);
+  --color-gray-500: oklch(55.2% 0.016 285.938);
+  --color-gray-600: oklch(44.2% 0.017 285.786);
+  --color-gray-700: oklch(37% 0.013 285.805);
+  --color-gray-800: oklch(27.4% 0.006 286.033);
+  --color-gray-900: oklch(21% 0.006 285.885);
+  --color-gray-950: oklch(14.1% 0.005 285.823);
+}
+
+@theme inline {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(14.1% 0.005 285.823);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(14.1% 0.005 285.823);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(14.1% 0.005 285.823);
+  --primary: oklch(21% 0.006 285.885);
+  --primary-foreground: oklch(98.5% 0 0);
+  --secondary: oklch(96.7% 0.001 286.375);
+  --secondary-foreground: oklch(21% 0.006 285.885);
+  --muted: oklch(96.7% 0.001 286.375);
+  --muted-foreground: oklch(55.2% 0.016 285.938);
+  --accent: oklch(96.7% 0.001 286.375);
+  --accent-foreground: oklch(21% 0.006 285.885);
+  --destructive: oklch(57.7% 0.245 27.325);
+  --border: oklch(92% 0.004 286.32);
+  --input: oklch(92% 0.004 286.32);
+  --ring: oklch(70.5% 0.015 286.067);
+  --sidebar: oklch(98.5% 0 0);
+  --sidebar-foreground: oklch(14.1% 0.005 285.823);
+  --sidebar-primary: oklch(21% 0.006 285.885);
+  --sidebar-primary-foreground: oklch(98.5% 0 0);
+  --sidebar-accent: oklch(96.7% 0.001 286.375);
+  --sidebar-accent-foreground: oklch(21% 0.006 285.885);
+  --sidebar-border: oklch(92% 0.004 286.32);
+  --sidebar-ring: oklch(70.5% 0.015 286.067);
+  /* Accent of active navigation and running jobs */
+  --highlight: var(--color-blue-600);
+}
+
+:root[data-theme="dark"] {
+  --background: oklch(14.1% 0.005 285.823);
+  --foreground: oklch(98.5% 0 0);
+  --card: oklch(17% 0.005 285.9);
+  --card-foreground: oklch(98.5% 0 0);
+  --popover: oklch(19% 0.006 285.9);
+  --popover-foreground: oklch(98.5% 0 0);
+  --primary: oklch(92% 0.004 286.32);
+  --primary-foreground: oklch(21% 0.006 285.885);
+  --secondary: oklch(27.4% 0.006 286.033);
+  --secondary-foreground: oklch(98.5% 0 0);
+  --muted: oklch(27.4% 0.006 286.033);
+  --muted-foreground: oklch(70.5% 0.015 286.067);
+  --accent: oklch(27.4% 0.006 286.033);
+  --accent-foreground: oklch(98.5% 0 0);
+  --destructive: oklch(70.4% 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(55.2% 0.016 285.938);
+  --sidebar: oklch(16% 0.005 285.9);
+  --sidebar-foreground: oklch(98.5% 0 0);
+  --sidebar-primary: oklch(92% 0.004 286.32);
+  --sidebar-primary-foreground: oklch(21% 0.006 285.885);
+  --sidebar-accent: oklch(27.4% 0.006 286.033);
+  --sidebar-accent-foreground: oklch(98.5% 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(55.2% 0.016 285.938);
+  --highlight: oklch(70.7% 0.165 254.624);
+}
 
 /* Tailwind v4 draws borders without a color in currentColor; the components expect v3's light gray */
 @layer base {
@@ -7,7 +124,7 @@
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
+    border-color: var(--color-border, currentColor);
   }
 
   /* v4 dropped the pointer cursor on buttons */
@@ -18,10 +135,7 @@
 }
 
 body {
-  @apply m-0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
+  @apply m-0 bg-background text-foreground font-sans;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -155,23 +269,6 @@ body {
   }
 }
 
-@keyframes ui-fade {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes ui-dialog-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 @keyframes ui-bar-grow {
   from {
     width: 0;
@@ -244,14 +341,6 @@ body {
 }
 .ui-stagger > :nth-child(n + 5) {
   animation-delay: 240ms;
-}
-
-/* All dialogs share this overlay, so they open alike without touching each one */
-.fixed.inset-0.backdrop-blur-sm {
-  animation: ui-fade 0.2s ease-out both;
-}
-.fixed.inset-0.backdrop-blur-sm > * {
-  animation: ui-dialog-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* A box that swaps its state (health, mobile menu) */
@@ -334,24 +423,100 @@ body {
   animation: ui-bar-sheen 7s ease-in-out 1.2s infinite;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .ui-stagger > *,
-  .fixed.inset-0.backdrop-blur-sm,
-  .fixed.inset-0.backdrop-blur-sm > *,
-  .ui-fade-in,
-  .ui-bar,
-  .ui-shimmer,
-  .ui-stripes,
-  .ui-ping,
-  .ui-led,
-  .ui-bar-glow::after {
-    animation: none !important;
+/* ==========================================================================
+   Motion levels, set on <html data-motion> by lib/theme.ts:
+   off (also the default under "reduce motion"), subtle (default), strong.
+   ========================================================================== */
+
+/* Off: nothing moves except spinners; the login keeps its own animation */
+[data-motion="off"] *:not(.animate-spin):not([class*="login-"]),
+[data-motion="off"] *:not([class*="login-"])::before,
+[data-motion="off"] *:not([class*="login-"])::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Subtle: a soft light passes the progress bar instead of moving stripes, no glow */
+[data-motion="subtle"] .ui-stripes {
+  background-image: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: ui-bar-sheen 3s ease-in-out infinite;
+}
+[data-motion="subtle"] .ui-bar-glow::before {
+  display: none;
+}
+[data-motion="subtle"] .ui-stagger > :not(.fixed) {
+  animation-duration: 0.4s;
+}
+
+/* Strong: glow, lift and slide */
+@keyframes ui-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--highlight) 0%, transparent);
   }
+  50% {
+    box-shadow: 0 0 18px 2px color-mix(in oklab, var(--highlight) 45%, transparent);
+  }
+}
+@keyframes ui-indicator {
+  from {
+    transform: scaleY(0);
+  }
+}
+[data-motion="strong"] .ui-stagger > :not(.fixed) {
+  animation-duration: 0.7s;
+  animation-name: ui-rise-strong;
+}
+@keyframes ui-rise-strong {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.99);
+  }
+}
+[data-motion="strong"] .ui-stripes {
+  box-shadow: 0 0 12px 0 color-mix(in oklab, var(--highlight) 60%, transparent);
+}
+[data-motion="strong"] [data-slot="card"][data-lift] {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s;
+}
+[data-motion="strong"] [data-slot="card"][data-lift]:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px -14px rgb(0 0 0 / 0.3);
+}
+[data-motion="strong"] [data-slot="button"]:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+[data-motion="strong"] [data-slot="nav-link"]:hover {
+  transform: translateX(3px);
+}
+[data-motion="strong"] [data-slot="nav-link"][data-status="active"] {
+  background-image: linear-gradient(90deg, color-mix(in oklab, var(--highlight) 14%, transparent), transparent 95%);
+}
+[data-motion="strong"] [data-slot="nav-link"][data-status="active"] svg {
+  color: var(--highlight);
+}
+[data-motion="strong"] [data-slot="nav-link"][data-status="active"]::before {
+  background: var(--highlight);
+  box-shadow: 0 0 10px 1px var(--highlight);
+  animation: ui-indicator 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+[data-motion="subtle"] [data-slot="nav-link"][data-status="active"]::before {
+  animation: ui-indicator 0.3s ease-out both;
+}
+[data-motion="strong"] .ui-brand {
+  animation: ui-glow 3s ease-in-out infinite;
+}
+[data-motion="strong"] .ui-job-chip {
+  box-shadow: 0 0 0 1px var(--highlight), 0 0 16px -2px var(--highlight);
+}
+[data-motion="strong"] [data-slot="switch"][data-state="checked"] {
+  box-shadow: 0 0 10px -2px var(--highlight);
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
+  font-family: var(--font-mono);
 }
 
 /* ==========================================================================
@@ -362,22 +527,22 @@ code {
    Tailwind colors, see the values of the same names in tailwindcss/theme.css.
    ========================================================================== */
 
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --surface: #161a22;
-  --color-gray-50: #0d1016;
-  --color-gray-100: #1d222c;
-  --color-gray-200: #282e3a;
-  --color-gray-300: #363d4b;
-  --color-gray-400: #5d6574;
-  --color-gray-500: #8f97a4;
-  --color-gray-600: #a9b0bb;
-  --color-gray-700: #c4c9d1;
-  --color-gray-800: #dadde3;
-  --color-gray-900: #eef0f3;
-  --color-gray-950: #f8f9fa;
+  --surface: var(--card);
+  --color-gray-50: oklch(14.1% 0.005 285.823);
+  --color-gray-100: oklch(21% 0.006 285.885);
+  --color-gray-200: oklch(27.4% 0.006 286.033);
+  --color-gray-300: oklch(33% 0.008 286);
+  --color-gray-400: oklch(46% 0.012 286);
+  --color-gray-500: oklch(64% 0.014 286);
+  --color-gray-600: oklch(72% 0.014 286);
+  --color-gray-700: oklch(82% 0.008 286);
+  --color-gray-800: oklch(89% 0.005 286);
+  --color-gray-900: oklch(95% 0.002 286);
+  --color-gray-950: oklch(98.5% 0 0);
   --color-blue-50: color-mix(in oklab, oklch(62.3% 0.214 259.815) 14%, var(--surface));
   --color-blue-100: color-mix(in oklab, oklch(62.3% 0.214 259.815) 22%, var(--surface));
   --color-blue-200: color-mix(in oklab, oklch(62.3% 0.214 259.815) 34%, var(--surface));
@@ -459,15 +624,15 @@ code {
 
 /* Parts that are dark in both themes (header, login, log output) keep the original grays */
 [data-theme="dark"] .theme-fixed {
-  --color-gray-50: oklch(98.5% 0.002 247.839);
-  --color-gray-100: oklch(96.7% 0.003 264.542);
-  --color-gray-200: oklch(92.8% 0.006 264.531);
-  --color-gray-300: oklch(87.2% 0.01 258.338);
-  --color-gray-400: oklch(70.7% 0.022 261.325);
-  --color-gray-500: oklch(55.1% 0.027 264.364);
-  --color-gray-600: oklch(44.6% 0.03 256.802);
-  --color-gray-700: oklch(37.3% 0.034 259.733);
-  --color-gray-800: oklch(27.8% 0.033 256.848);
-  --color-gray-900: oklch(21% 0.034 264.665);
-  --color-gray-950: oklch(13% 0.028 261.692);
+  --color-gray-50: oklch(98.5% 0 0);
+  --color-gray-100: oklch(96.7% 0.001 286.375);
+  --color-gray-200: oklch(92% 0.004 286.32);
+  --color-gray-300: oklch(87.1% 0.006 286.286);
+  --color-gray-400: oklch(70.5% 0.015 286.067);
+  --color-gray-500: oklch(55.2% 0.016 285.938);
+  --color-gray-600: oklch(44.2% 0.017 285.786);
+  --color-gray-700: oklch(37% 0.013 285.805);
+  --color-gray-800: oklch(27.4% 0.006 286.033);
+  --color-gray-900: oklch(21% 0.006 285.885);
+  --color-gray-950: oklch(14.1% 0.005 285.823);
 }

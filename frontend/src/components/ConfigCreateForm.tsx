@@ -1,8 +1,12 @@
+import { FilePlus2 } from 'lucide-react'
 import { useState } from 'react'
 import { useBasePath, useCreateConfig } from '../hooks/queries'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
 import { errorMessage } from './Feedback'
+import { Alert, AlertDescription } from './ui/alert'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
 
 interface ConfigCreateFormProps {
   onCancel: () => void
@@ -18,9 +22,6 @@ const fileNameFromName = (name: string) => {
     .replace(/^-+|-+$/g, '')
   return slug ? `${slug}.conf` : ''
 }
-
-const inputClass =
-  'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all'
 
 export const ConfigCreateForm = ({
   onCancel,
@@ -56,76 +57,64 @@ export const ConfigCreateForm = ({
   return (
     <form
       onSubmit={handleSubmit}
-      className="mb-6 p-5 bg-linear-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200"
+      className="flex flex-col gap-4 rounded-lg border bg-muted/40 p-4"
     >
-      <h3 className="text-lg font-semibold mb-4 text-gray-900">
+      <h3 className="flex items-center gap-2 text-base font-semibold">
+        <FilePlus2 className="size-4 text-muted-foreground" />
         {m.config_manager_create_new()}
       </h3>
-      <div className="space-y-4">
-        <div>
-          <label
-            htmlFor="config-create-name"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            {m.config_manager_name_label()}
-          </label>
-          <input
-            id="config-create-name"
-            type="text"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value)
-              if (!fileNameEdited) setFileName(fileNameFromName(e.target.value))
-            }}
-            placeholder={m.config_manager_name_placeholder()}
-            className={inputClass}
-            // biome-ignore lint/a11y/noAutofocus: focus the first field when the create form opens
-            autoFocus
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="config-create-file"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            {m.config_manager_file_name_label()}
-          </label>
-          <input
-            id="config-create-file"
-            type="text"
-            value={fileName}
-            onChange={(e) => {
-              setFileName(e.target.value)
-              setFileNameEdited(true)
-            }}
-            placeholder="snapraid.conf"
-            className={`${inputClass} font-mono text-sm`}
-          />
-          {basePath && (
-            <p className="mt-1.5 text-xs text-gray-500">
-              {m.config_manager_file_name_help({ basePath })}
-            </p>
-          )}
-        </div>
-
-        {error && (
-          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            {error}
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="config-create-name">
+          {m.config_manager_name_label()}
+        </Label>
+        <Input
+          id="config-create-name"
+          type="text"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value)
+            if (!fileNameEdited) setFileName(fileNameFromName(e.target.value))
+          }}
+          placeholder={m.config_manager_name_placeholder()}
+          className="bg-background"
+          autoFocus
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="config-create-file">
+          {m.config_manager_file_name_label()}
+        </Label>
+        <Input
+          id="config-create-file"
+          type="text"
+          value={fileName}
+          onChange={(e) => {
+            setFileName(e.target.value)
+            setFileNameEdited(true)
+          }}
+          placeholder="snapraid.conf"
+          className="bg-background font-mono"
+        />
+        {basePath && (
+          <p className="text-xs text-muted-foreground">
+            {m.config_manager_file_name_help({ basePath })}
           </p>
         )}
+      </div>
 
-        <div className="flex gap-3 pt-2">
-          <Button type="submit" disabled={!canSubmit} className="rounded-lg">
-            {m.config_manager_create_button()}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={onCancel}
-            className="bg-white rounded-lg"
-          >
-            {m.common_cancel()}
-          </Button>
-        </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" disabled={!canSubmit}>
+          {m.config_manager_create_button()}
+        </Button>
+        <Button variant="outline" onClick={onCancel}>
+          {m.common_cancel()}
+        </Button>
       </div>
     </form>
   )

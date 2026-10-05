@@ -8,11 +8,12 @@ import { getResultLabel } from '../lib/run-result'
 import { dayKey, formatDayHeading } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
-import { Button } from './Button'
 import { errorMessage, useFeedback } from './Feedback'
 import { type CommandFilter, LogFilters } from './LogFilters'
 import { LogListItem } from './LogListItem'
-import { Skeleton } from './Skeleton'
+import { Button } from './ui/button'
+import { Card } from './ui/card'
+import { Skeleton } from './ui/skeleton'
 
 export const isProblem = (log: LogFile) =>
   log.result === 'warning' || log.result === 'error' || log.result === 'aborted'
@@ -150,12 +151,12 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
   }
 
   return (
-    <section className="flex flex-1 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
-      <div className="border-b border-gray-200 p-4">
-        <div className="mb-3 flex items-baseline justify-between gap-2">
-          <h2 className="font-semibold text-gray-900">{m.log_list_title()}</h2>
+    <Card className="flex-1 gap-0 overflow-hidden py-0">
+      <div className="flex flex-col gap-2.5 border-b p-3">
+        <div className="flex items-baseline justify-between gap-2 px-1">
+          <h2 className="text-base font-semibold">{m.log_list_title()}</h2>
           {!isLoading && (
-            <span className="text-xs text-gray-500 tabular-nums">
+            <span className="text-xs text-muted-foreground tabular-nums">
               {isFiltered
                 ? m.log_list_count_filtered({
                     shown: filteredLogs.length,
@@ -182,13 +183,13 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
       <div
         ref={listRef}
         onKeyDown={handleKeyDown}
-        className="max-h-[calc(100vh-280px)] min-h-48 flex-1 overflow-auto"
+        className="max-h-[calc(100vh-300px)] min-h-48 flex-1 overflow-auto"
       >
         {isLoading ? (
-          <div className="divide-y divide-gray-100" aria-busy="true">
+          <div className="flex flex-col gap-1 p-1.5" aria-busy="true">
             {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center gap-3 px-4 py-3">
-                <Skeleton className="h-9 w-9 rounded-lg" />
+              <div key={i} className="flex items-center gap-3 px-2.5 py-2">
+                <Skeleton className="size-4 rounded-full" />
                 <div className="flex-1">
                   <Skeleton className="h-4 w-24" />
                   <Skeleton className="mt-1.5 h-3 w-40" />
@@ -199,20 +200,24 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
         ) : filteredLogs.length === 0 ? (
           <div className="overflow-hidden">
             <div className="ui-fade-in flex flex-col items-center px-6 py-12 text-center">
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
-                {isFiltered ? <FilterX size={22} /> : <ScrollText size={22} />}
+              <div className="mb-3 flex size-12 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                {isFiltered ? (
+                  <FilterX className="size-5" />
+                ) : (
+                  <ScrollText className="size-5" />
+                )}
               </div>
-              <p className="font-medium text-gray-900">
+              <p className="font-medium">
                 {isFiltered ? m.log_list_no_matches() : m.log_list_no_logs()}
               </p>
-              <p className="mt-1 max-w-xs text-sm text-gray-500">
+              <p className="mt-1 max-w-xs text-sm text-muted-foreground">
                 {isFiltered
                   ? m.log_list_no_matches_hint()
                   : m.log_list_no_logs_hint()}
               </p>
               {isFiltered && (
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
                   onClick={resetFilters}
                   className="mt-4"
@@ -223,30 +228,32 @@ export const LogList = ({ selectedLog, onSelectLog }: LogListProps) => {
             </div>
           </div>
         ) : (
-          groups.map((group) => (
-            <div key={group.key}>
-              <h3 className="sticky top-0 z-10 border-y border-gray-100 bg-gray-50/95 px-4 py-1.5 text-xs font-semibold tracking-wide text-gray-500 uppercase backdrop-blur first:border-t-0">
-                {group.heading}
-              </h3>
-              <div className="divide-y divide-gray-100">
-                {group.logs.map((log) => (
-                  <LogListItem
-                    key={log.filename}
-                    log={log}
-                    isSelected={selectedLog === log.filename}
-                    isRunning={runningLog === log.filename}
-                    configName={
-                      showConfig ? configName(log.configPath) : undefined
-                    }
-                    onSelect={onSelectLog}
-                    onDelete={handleDelete}
-                  />
-                ))}
+          <div className="flex flex-col p-1.5">
+            {groups.map((group) => (
+              <div key={group.key}>
+                <h3 className="sticky top-0 z-10 bg-card/95 px-2.5 pt-2 pb-1 text-xs font-medium text-muted-foreground backdrop-blur">
+                  {group.heading}
+                </h3>
+                <div className="flex flex-col gap-0.5">
+                  {group.logs.map((log) => (
+                    <LogListItem
+                      key={log.filename}
+                      log={log}
+                      isSelected={selectedLog === log.filename}
+                      isRunning={runningLog === log.filename}
+                      configName={
+                        showConfig ? configName(log.configPath) : undefined
+                      }
+                      onSelect={onSelectLog}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
-    </section>
+    </Card>
   )
 }

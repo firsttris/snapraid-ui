@@ -2,6 +2,9 @@ import { EyeOff, Search, WrapText, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { classifyLogLine, type LogLineKind } from '../lib/log-parse'
 import * as m from '../paraglide/messages'
+import { Input } from './ui/input'
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 // Rendering tens of thousands of lines at once stalls the page
 const LINE_LIMIT = 2000
@@ -9,19 +12,12 @@ const LINE_LIMIT = 2000
 const LINE_STYLES: Record<LogLineKind, string> = {
   fatal: 'text-red-300 bg-red-500/15',
   error: 'text-red-300',
-  warning: 'text-yellow-200 bg-yellow-500/10',
+  warning: 'text-yellow-300 bg-yellow-500/10',
   status: 'text-gray-100',
-  summary: 'text-cyan-200',
+  summary: 'text-cyan-300',
   noise: 'text-gray-500',
   default: 'text-gray-300',
 }
-
-const toggleClass = (active: boolean) =>
-  `inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-    active
-      ? 'bg-blue-100 text-blue-700'
-      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-  }`
 
 // Tag name dimmed, so the values are what the eye lands on
 const TagLine = ({ text, query }: { text: string; query: string }) => {
@@ -109,55 +105,55 @@ export const LogRawView = ({ content, jump }: LogRawViewProps) => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 px-4 py-2">
+      <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2.5 sm:px-5">
         <div className="relative min-w-40 flex-1">
-          <Search
-            size={14}
-            className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-gray-400"
-          />
-          <input
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
             type="search"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder={m.log_raw_search()}
             aria-label={m.log_raw_search()}
-            className="w-full rounded-md border border-gray-300 bg-white py-1.5 pr-8 pl-8 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+            className="h-8 px-8 [&::-webkit-search-cancel-button]:hidden"
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => setSearchTerm('')}
               aria-label={m.log_filters_clear_search()}
-              className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded-sm p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
             >
-              <X size={12} />
+              <X className="size-3" />
             </button>
           )}
         </div>
         {query && (
-          <span className="text-xs text-gray-500 tabular-nums">
+          <span className="text-xs text-muted-foreground tabular-nums">
             {m.log_raw_matches({ count: visible.length })}
           </span>
         )}
-        <button
-          type="button"
-          aria-pressed={hideNoise}
-          onClick={() => setHideNoise(!hideNoise)}
-          className={toggleClass(hideNoise)}
-          title={m.log_raw_hide_noise_hint()}
+        <ToggleGroup
+          type="multiple"
+          value={[...(hideNoise ? ['noise'] : []), ...(wrap ? ['wrap'] : [])]}
+          onValueChange={(next) => {
+            setHideNoise(next.includes('noise'))
+            setWrap(next.includes('wrap'))
+          }}
         >
-          <EyeOff size={14} />
-          {m.log_raw_hide_noise()}
-        </button>
-        <button
-          type="button"
-          aria-pressed={wrap}
-          onClick={() => setWrap(!wrap)}
-          className={toggleClass(wrap)}
-        >
-          <WrapText size={14} />
-          {m.log_raw_wrap()}
-        </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <ToggleGroupItem value="noise" className="px-2.5 text-xs">
+                <EyeOff className="size-3.5" />
+                {m.log_raw_hide_noise()}
+              </ToggleGroupItem>
+            </TooltipTrigger>
+            <TooltipContent>{m.log_raw_hide_noise_hint()}</TooltipContent>
+          </Tooltip>
+          <ToggleGroupItem value="wrap" className="px-2.5 text-xs">
+            <WrapText className="size-3.5" />
+            {m.log_raw_wrap()}
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       <div

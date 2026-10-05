@@ -1,8 +1,18 @@
-import { ChevronDown, ChevronUp, Copy, Download, Trash2 } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Download,
+  type LucideIcon,
+  Trash2,
+} from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { renderConsoleOutput } from '../lib/progress'
 import * as m from '../paraglide/messages'
 import { useFeedback } from './Feedback'
+import { Button } from './ui/button'
+import { Card } from './ui/card'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 // Distance from the bottom within which the console keeps following new output
 const FOLLOW_THRESHOLD_PX = 40
@@ -15,6 +25,36 @@ interface OutputConsoleProps {
   lastFailed: boolean
   onClear: () => void
 }
+
+const IconAction = ({
+  icon: Icon,
+  label,
+  onClick,
+  disabled,
+  expanded,
+}: {
+  icon: LucideIcon
+  label: string
+  onClick: () => void
+  disabled?: boolean
+  expanded?: boolean
+}) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={onClick}
+        disabled={disabled}
+        aria-label={label}
+        aria-expanded={expanded}
+      >
+        <Icon />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>{label}</TooltipContent>
+  </Tooltip>
+)
 
 export const OutputConsole = ({
   output,
@@ -80,75 +120,52 @@ export const OutputConsole = ({
     URL.revokeObjectURL(url)
   }
 
-  const iconButton =
-    'p-1.5 rounded text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed'
-
   return (
-    <div className="bg-white shadow rounded-lg p-6">
+    <Card className="gap-4 p-5">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-xl font-semibold">{m.output_console_title()}</h2>
+        <h2 className="text-base font-semibold">{m.output_console_title()}</h2>
         <div className="flex items-center gap-1">
-          <button
-            type="button"
+          <IconAction
+            icon={Copy}
+            label={m.output_console_copy()}
             onClick={handleCopy}
             disabled={!output}
-            className={iconButton}
-            title={m.output_console_copy()}
-            aria-label={m.output_console_copy()}
-          >
-            <Copy size={16} />
-          </button>
-          <button
-            type="button"
+          />
+          <IconAction
+            icon={Download}
+            label={m.output_console_download()}
             onClick={handleDownload}
             disabled={!output}
-            className={iconButton}
-            title={m.output_console_download()}
-            aria-label={m.output_console_download()}
-          >
-            <Download size={16} />
-          </button>
-          <button
-            type="button"
+          />
+          <IconAction
+            icon={Trash2}
+            label={m.output_console_clear()}
             onClick={onClear}
             disabled={!output}
-            className={iconButton}
-            title={m.output_console_clear()}
-            aria-label={m.output_console_clear()}
-          >
-            <Trash2 size={16} />
-          </button>
-          <button
-            type="button"
+          />
+          <IconAction
+            icon={collapsed ? ChevronDown : ChevronUp}
+            label={
+              collapsed
+                ? m.output_console_expand()
+                : m.output_console_collapse()
+            }
             onClick={() => setCollapsed((prev) => !prev)}
-            className={iconButton}
-            title={
-              collapsed
-                ? m.output_console_expand()
-                : m.output_console_collapse()
-            }
-            aria-label={
-              collapsed
-                ? m.output_console_expand()
-                : m.output_console_collapse()
-            }
-            aria-expanded={!collapsed}
-          >
-            {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-          </button>
+            expanded={!collapsed}
+          />
         </div>
       </div>
       {!collapsed && (
         <div
           ref={outputRef}
           onScroll={handleScroll}
-          className={`mt-4 bg-black text-green-400 p-4 rounded font-mono text-sm overflow-y-auto whitespace-pre-wrap ${
+          className={`overflow-y-auto whitespace-pre-wrap rounded-lg bg-zinc-950 p-4 font-mono text-sm text-green-400 ring-1 ring-black/5 dark:ring-white/10 ${
             output ? 'h-96' : 'h-24'
           }`}
         >
           {text || m.output_console_no_output()}
         </div>
       )}
-    </div>
+    </Card>
   )
 }

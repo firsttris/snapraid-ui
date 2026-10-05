@@ -8,12 +8,19 @@ import {
   Loader2,
   Lock,
   LogIn,
+  Timer,
   User,
 } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 import { login } from '../lib/api/auth'
+import { cn } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale, locales, setLocale } from '../paraglide/runtime'
+import { Alert, AlertDescription } from './ui/alert'
+import { Button } from './ui/button'
+import { Card, CardContent, CardHeader } from './ui/card'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
 
 // Columns of the disk array in the background, the last two are parity
 const DISK_COUNT = 6
@@ -125,8 +132,11 @@ export const LoginPage = ({
           ? m.login_locked({ time: formatCountdown(lockedSeconds) })
           : null
 
+  // The login is dark in both themes, so it sets its colors instead of using the theme tokens
   const inputClass =
-    'w-full rounded-xl border border-white/10 bg-white/5 py-3 pr-4 pl-11 text-white placeholder-gray-500 outline-none transition focus:border-cyan-400/60 focus:bg-white/10 focus:ring-4 focus:ring-cyan-400/15'
+    'h-11 border-white/10 bg-white/5 pl-10 text-white shadow-none selection:bg-cyan-400/30 selection:text-white placeholder:text-gray-500 focus-visible:border-cyan-400/60 focus-visible:bg-white/10 focus-visible:ring-cyan-400/20 dark:bg-white/5'
+  const iconClass =
+    'pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-gray-500'
 
   return (
     <main className="theme-fixed relative flex min-h-screen items-center justify-center overflow-hidden bg-gray-950 px-4 py-12">
@@ -147,131 +157,140 @@ export const LoginPage = ({
         style={{ animationDelay: '-4s' }}
       />
 
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() =>
           setLocale(
             locales[(locales.indexOf(currentLocale) + 1) % locales.length],
           )
         }
-        className="absolute top-4 right-4 flex items-center gap-2 rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+        className="absolute top-4 right-4 text-gray-400 hover:bg-white/10 hover:text-white dark:hover:bg-white/10"
         aria-label={m.common_switch_language()}
       >
-        <Languages size={18} />
-        <span className="text-sm font-medium">
-          {currentLocale.toUpperCase()}
-        </span>
-      </button>
+        <Languages />
+        {currentLocale.toUpperCase()}
+      </Button>
 
       <div className="login-card relative w-full max-w-sm">
-        <div className="rounded-3xl border border-white/10 bg-gray-900/70 p-8 shadow-2xl shadow-black/50 backdrop-blur-xl">
-          <div className="mb-8 flex flex-col items-center text-center">
+        <Card className="gap-8 rounded-2xl border-white/10 bg-gray-900/70 py-8 text-white shadow-2xl shadow-black/50 backdrop-blur-xl">
+          <CardHeader className="flex flex-col items-center gap-0 px-8 text-center">
             <div className="relative mb-5">
               <div className="absolute inset-0 rounded-2xl bg-cyan-400/30 blur-xl" />
-              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-400/30 bg-gradient-to-br from-cyan-400/20 to-indigo-500/20">
-                <HardDrive size={30} className="text-cyan-300" />
+              <div className="relative flex size-14 items-center justify-center rounded-2xl border border-cyan-400/30 bg-gradient-to-br from-cyan-400/20 to-indigo-500/20">
+                <HardDrive className="size-7 text-cyan-300" />
               </div>
             </div>
             <p className="mb-1 text-xs font-semibold tracking-[0.2em] text-cyan-400 uppercase">
               {m.app_title()}
             </p>
-            <h1 className="text-2xl font-bold text-white">{m.login_title()}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {m.login_title()}
+            </h1>
             <p className="mt-1 text-sm text-gray-400">{m.login_subtitle()}</p>
-          </div>
+          </CardHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            <label className="block">
-              <span className="sr-only">{m.login_username()}</span>
-              <div className="relative">
-                <User
-                  size={18}
-                  className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-gray-500"
-                />
-                <input
-                  type="text"
-                  name="username"
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  required
-                  // biome-ignore lint/a11y/noAutofocus: the login form is the only thing on the page
-                  autoFocus
-                  placeholder={m.login_username()}
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className={inputClass}
-                />
-              </div>
-            </label>
-
-            <label className="block">
-              <span className="sr-only">{m.login_password()}</span>
-              <div className="relative">
-                <Lock
-                  size={18}
-                  className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-gray-500"
-                />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  autoComplete="current-password"
-                  required
-                  placeholder={m.login_password()}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={`${inputClass} pr-12`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-2 text-gray-500 transition-colors hover:text-gray-200"
-                  aria-label={
-                    showPassword
-                      ? m.login_hide_password()
-                      : m.login_show_password()
-                  }
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </label>
-
-            {errorMessage && (
-              <div
-                key={attempt}
-                role="alert"
-                className="login-shake flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-300"
-              >
-                <AlertCircle size={18} className="mt-px shrink-0" />
-                <span>{errorMessage}</span>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={
-                submitting || lockedSeconds > 0 || !username || !password
-              }
-              className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 py-3 font-semibold text-white shadow-lg shadow-cyan-500/20 transition hover:shadow-cyan-500/40 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-400/40 disabled:cursor-not-allowed disabled:opacity-50"
+          <CardContent className="px-8">
+            <form
+              onSubmit={handleSubmit}
+              className="flex flex-col gap-4"
+              noValidate
             >
-              <span className="login-sheen absolute inset-0" />
-              {submitting ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  {m.login_submitting()}
-                </>
-              ) : (
-                <>
-                  <LogIn
-                    size={18}
-                    className="transition-transform group-hover:translate-x-0.5"
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="login-username" className="text-gray-300">
+                  {m.login_username()}
+                </Label>
+                <div className="relative">
+                  <User className={iconClass} />
+                  <Input
+                    id="login-username"
+                    type="text"
+                    name="username"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    required
+                    autoFocus
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className={inputClass}
                   />
-                  {m.login_submit()}
-                </>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="login-password" className="text-gray-300">
+                  {m.login_password()}
+                </Label>
+                <div className="relative">
+                  <Lock className={iconClass} />
+                  <Input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={cn(inputClass, 'pr-11')}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute top-1/2 right-1.5 -translate-y-1/2 text-gray-500 hover:bg-white/10 hover:text-gray-200 dark:hover:bg-white/10"
+                    aria-label={
+                      showPassword
+                        ? m.login_hide_password()
+                        : m.login_show_password()
+                    }
+                  >
+                    {showPassword ? <EyeOff /> : <Eye />}
+                  </Button>
+                </div>
+              </div>
+
+              {errorMessage && (
+                <Alert
+                  key={attempt}
+                  className={cn(
+                    'login-shake',
+                    error?.kind === 'locked'
+                      ? 'border-amber-400/30 bg-amber-400/10 text-amber-200'
+                      : 'border-red-500/30 bg-red-500/10 text-red-300',
+                  )}
+                >
+                  {error?.kind === 'locked' ? <Timer /> : <AlertCircle />}
+                  <AlertDescription className="text-current tabular-nums">
+                    {errorMessage}
+                  </AlertDescription>
+                </Alert>
               )}
-            </button>
-          </form>
-        </div>
+
+              <Button
+                type="submit"
+                size="lg"
+                disabled={
+                  submitting || lockedSeconds > 0 || !username || !password
+                }
+                className="group relative mt-2 h-11 overflow-hidden bg-gradient-to-r from-cyan-500 to-indigo-500 font-semibold text-white shadow-lg shadow-cyan-500/20 hover:bg-transparent hover:shadow-cyan-500/40 focus-visible:ring-cyan-400/40"
+              >
+                <span className="login-sheen absolute inset-0" />
+                {submitting ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    {m.login_submitting()}
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="transition-transform group-hover:translate-x-0.5" />
+                    {m.login_submit()}
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
         <div className="mt-8 flex flex-col items-center gap-3">
           <DiskArray />

@@ -9,12 +9,25 @@ import type {
 } from '@shared/types'
 import { diskFreeSeries, forecastFill } from '@shared/usage-forecast'
 import { Link } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
-import { formatGB, usageBarColor } from '../lib/utils'
+import { ArrowRight } from 'lucide-react'
+import { type ReactNode, useState } from 'react'
+import { cn, formatGB, usageBarColor } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { LoadingHint, Skeleton } from './Skeleton'
-import { UsageHistoryChart } from './UsageHistoryChart'
+import { hasUsageHistory, UsageHistoryChart } from './UsageHistoryChart'
+import { Badge } from './ui/badge'
+import { Button } from './ui/button'
+import { Card } from './ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 
 // Parity reserve below this share of the fullest data disk is flagged as tight
 const PARITY_TIGHT_RATIO = 0.05
@@ -41,9 +54,9 @@ const TONE_TEXT: Record<Tone, string> = {
   error: 'text-red-700',
 }
 
-const TONE_BADGE: Record<Warning['tone'], string> = {
-  warning: 'bg-yellow-100 text-yellow-800',
-  error: 'bg-red-100 text-red-700',
+const TONE_BADGE: Record<Warning['tone'], 'warning' | 'destructive'> = {
+  warning: 'warning',
+  error: 'destructive',
 }
 
 const TONE_ICON: Record<Tone, string> = { ok: '✓', warning: '⚠', error: '⚠' }
@@ -61,7 +74,7 @@ const PowerDot = ({
 }: {
   state: DiskPowerStatus['status'] | undefined
 }) => {
-  if (!state || state === 'Unknown') return <span className="w-2.5 shrink-0" />
+  if (!state || state === 'Unknown') return <span className="size-2 shrink-0" />
   const [className, label] =
     state === 'Standby'
       ? ['border-2 border-gray-400', m.disks_power_standby()]
@@ -70,7 +83,7 @@ const PowerDot = ({
         : ['ui-led bg-green-500', m.disks_power_active()]
   return (
     <span
-      className={`h-2.5 w-2.5 shrink-0 rounded-full ${className}`}
+      className={`size-2 shrink-0 rounded-full ${className}`}
       title={label}
       role="img"
       aria-label={label}
@@ -85,102 +98,120 @@ const UsageBar = ({
   percent: number
   barClass: string
 }) => (
-  <div className="h-2 rounded-full bg-gray-200">
-    <div
-      className={`ui-bar ui-bar-glow h-full rounded-full ${barClass}`}
-      style={{ width: `${Math.min(percent, 100)}%` }}
-    />
+  <div className="flex items-center gap-3">
+    <div className="h-2 min-w-24 flex-1 rounded-full bg-muted">
+      <div
+        className={`ui-bar ui-bar-glow h-full rounded-full ${barClass}`}
+        style={{ width: `${Math.min(percent, 100)}%` }}
+      />
+    </div>
+    <span
+      className={cn(
+        'w-10 text-right font-mono text-xs tabular-nums',
+        percent >= 95
+          ? 'text-red-700'
+          : percent >= 85
+            ? 'text-yellow-700'
+            : 'text-foreground',
+      )}
+    >
+      {percent}%
+    </span>
   </div>
 )
 
 const DiskRow = ({
   name,
   role,
-  roleClass,
+  isParity,
   paths,
   power,
   percent,
   barClass,
+  files,
   free,
   total,
-  warning,
-  details,
+  notes,
   loading = false,
 }: {
   name: string
   role: string
-  roleClass: string
+  isParity: boolean
   paths: string[]
   power: DiskPowerStatus['status'] | undefined
   percent: number | undefined
   barClass: string
+  files: ReactNode
   free: number | undefined
   total: number | undefined
-  warning: Warning | null
-  details: ReactNode
+  notes: ReactNode
   loading?: boolean
 }) => (
-  <li className="grid items-center gap-x-6 gap-y-2 py-3 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_14rem]">
-    <div className="min-w-0">
-      <div className="flex items-center gap-2">
+  <TableRow>
+    <TableCell>
+      <div className="flex items-center gap-2.5">
         <PowerDot state={power} />
-        <span className="truncate font-medium text-gray-900">{name}</span>
-        <span
-          className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${roleClass}`}
-        >
-          {role}
-        </span>
+        <div className="min-w-0 max-w-44 sm:max-w-64">
+          <p className="truncate font-medium">{name}</p>
+          {paths.map((path) => (
+            // rtl moves the ellipsis to the start, the end of a path tells disks apart
+            <p
+              key={path}
+              dir="rtl"
+              className="truncate text-left font-mono text-xs text-muted-foreground"
+              title={path}
+            >
+              <bdi>{path}</bdi>
+            </p>
+          ))}
+        </div>
       </div>
-      {paths.map((path) => (
-        // rtl moves the ellipsis to the start, the end of a path tells disks apart
-        <p
-          key={path}
-          dir="rtl"
-          className="truncate pl-4.5 text-left text-xs text-gray-500"
-          title={path}
-        >
-          <bdi>{path}</bdi>
-        </p>
-      ))}
-    </div>
-
-    <div className="min-w-0">
+    </TableCell>
+    <TableCell>
+      <Badge variant={isParity ? 'parity' : 'outline'}>{role}</Badge>
+    </TableCell>
+    <TableCell className="w-[34%]">
       {loading ? (
-        <>
-          <Skeleton className="h-2 w-full rounded-full" />
-          <Skeleton className="mt-2 h-3 w-24" />
-        </>
+        <Skeleton className="h-2 w-full rounded-full" />
       ) : (
-        <>
-          {percent !== undefined && (
-            <UsageBar percent={percent} barClass={barClass} />
-          )}
-          <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-gray-500">
-            {details}
-          </div>
-        </>
+        percent !== undefined && (
+          <UsageBar percent={percent} barClass={barClass} />
+        )
       )}
-    </div>
-
-    <div className="flex flex-wrap items-center gap-2 text-sm md:justify-end">
-      {loading && <Skeleton className="h-4 w-28" />}
-      {!loading && percent !== undefined && free !== undefined && (
-        <span className="text-gray-700">
-          <span className="font-semibold">{percent}%</span> ·{' '}
-          {total !== undefined
-            ? m.disks_free_of({ free: formatGB(free), total: formatGB(total) })
-            : m.disks_free({ free: formatGB(free) })}
-        </span>
+    </TableCell>
+    <TableCell className="font-mono text-[13px] tabular-nums">
+      {loading ? <Skeleton className="h-4 w-14" /> : files}
+    </TableCell>
+    <TableCell className="text-right font-mono text-[13px] tabular-nums">
+      {loading ? (
+        <Skeleton className="ml-auto h-4 w-16" />
+      ) : (
+        free !== undefined && (
+          <span
+            title={
+              total !== undefined
+                ? m.disks_free_of({
+                    free: formatGB(free),
+                    total: formatGB(total),
+                  })
+                : m.disks_free({ free: formatGB(free) })
+            }
+          >
+            {formatGB(free)}
+          </span>
+        )
       )}
-      {warning && (
-        <span
-          className={`rounded px-2 py-0.5 text-xs font-medium ${TONE_BADGE[warning.tone]}`}
-        >
-          {warning.text}
-        </span>
+    </TableCell>
+    <TableCell className="min-w-56 whitespace-normal">
+      {loading ? (
+        <Skeleton className="h-4 w-28" />
+      ) : (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
+          {notes}
+        </div>
       )}
-    </div>
-  </li>
+    </TableCell>
+  </TableRow>
 )
 
 // Only worth a line while the disk would fill up within a year
@@ -192,39 +223,43 @@ const FillForecastNote = ({ daysUntilFull }: { daysUntilFull?: number }) => {
     return null
   const urgent = daysUntilFull <= FORECAST_URGENT_DAYS
   return (
-    <span
-      className={urgent ? 'font-medium text-red-700' : ''}
+    <Badge
+      variant={urgent ? 'destructive' : 'warning'}
       title={m.disks_forecast_hint()}
     >
-      {urgent ? '⚠ ' : ''}
       {m.disks_forecast({ days: String(daysUntilFull) })}
-    </span>
+    </Badge>
   )
 }
 
-const DataDetails = ({
+const DataNotes = ({
   stats,
+  warning,
+  power,
   daysUntilFull,
 }: {
   stats: DiskStatusInfo | undefined
+  warning: Warning | null
+  power: DiskPowerStatus['status'] | undefined
   daysUntilFull?: number
-}) => {
-  if (!stats) return <span>{m.disks_no_stats()}</span>
-  return (
-    <>
-      <span>{m.disks_files({ count: formatCount(stats.files) })}</span>
-      {stats.fragmentedFiles > 0 && (
-        <span>
-          {m.disks_fragmented({ count: formatCount(stats.fragmentedFiles) })}
-        </span>
-      )}
-      {stats.wastedGB > 0 && (
-        <span>{m.disks_wasted({ size: formatGB(stats.wastedGB) })}</span>
-      )}
-      <FillForecastNote daysUntilFull={daysUntilFull} />
-    </>
-  )
-}
+}) => (
+  <>
+    {warning && (
+      <Badge variant={TONE_BADGE[warning.tone]}>{warning.text}</Badge>
+    )}
+    {!stats && <span>{m.disks_no_stats()}</span>}
+    {stats && stats.fragmentedFiles > 0 && (
+      <span>
+        {m.disks_fragmented({ count: formatCount(stats.fragmentedFiles) })}
+      </span>
+    )}
+    {stats && stats.wastedGB > 0 && (
+      <span>{m.disks_wasted({ size: formatGB(stats.wastedGB) })}</span>
+    )}
+    <FillForecastNote daysUntilFull={daysUntilFull} />
+    {power === 'Standby' && <span>{m.disks_power_standby()}</span>}
+  </>
+)
 
 /**
  * Whether the parity can still grow to the size of the fullest data disk.
@@ -285,17 +320,29 @@ const sumFilesystems = (usage: ParityLevelUsage) => {
 
 // Rows until the config says which disks there are
 const SkeletonRow = () => (
-  <li className="grid items-center gap-x-6 gap-y-2 py-3 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_14rem]">
-    <div className="space-y-2">
-      <Skeleton className="h-4 w-24" />
-      <Skeleton className="h-3 w-36" />
-    </div>
-    <div>
+  <TableRow>
+    <TableCell>
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-3 w-36" />
+      </div>
+    </TableCell>
+    <TableCell>
+      <Skeleton className="h-5 w-14 rounded-full" />
+    </TableCell>
+    <TableCell>
       <Skeleton className="h-2 w-full rounded-full" />
-      <Skeleton className="mt-2 h-3 w-24" />
-    </div>
-    <Skeleton className="h-4 w-28 md:justify-self-end" />
-  </li>
+    </TableCell>
+    <TableCell>
+      <Skeleton className="h-4 w-14" />
+    </TableCell>
+    <TableCell>
+      <Skeleton className="ml-auto h-4 w-16" />
+    </TableCell>
+    <TableCell>
+      <Skeleton className="h-4 w-28" />
+    </TableCell>
+  </TableRow>
 )
 
 export const DisksPanel = ({
@@ -309,11 +356,14 @@ export const DisksPanel = ({
   isStatusLoading,
   isParityLoading,
 }: DisksPanelProps) => {
+  const [view, setView] = useState<'table' | 'history'>('table')
+
   // A config that fails to parse shows nothing, as before
   if (!parsedConfig && !isConfigLoading) return null
 
   const statusPending = !status && isStatusLoading
   const parityPending = !parityUsage && isParityLoading
+  const showHistory = hasUsageHistory(usageHistory)
 
   const statsByName = new Map(status?.disks?.map((disk) => [disk.name, disk]))
   const sizeByName = new Map(dataDiskUsage?.map((disk) => [disk.name, disk]))
@@ -325,30 +375,19 @@ export const DisksPanel = ({
     undefined,
   )
 
-  return (
-    <div className="bg-white shadow rounded-lg p-6 mb-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 className="text-xl font-semibold">{m.disks_title()}</h2>
-        <div className="flex flex-wrap items-baseline gap-x-4 text-sm text-gray-500">
-          {(!parsedConfig || statusPending) && (
-            <LoadingHint>{m.disks_loading()}</LoadingHint>
-          )}
-          {status?.totalUsedGB !== undefined &&
-            status.totalFreeGB !== undefined && (
-              <span>
-                {m.disks_summary({
-                  used: formatGB(status.totalUsedGB),
-                  free: formatGB(status.totalFreeGB),
-                })}
-              </span>
-            )}
-          <Link to="/smart" className="text-blue-600 hover:underline">
-            {m.disks_smart_link()} →
-          </Link>
-        </div>
-      </div>
-
-      <ul className="mt-2 divide-y divide-gray-100">
+  const table = (
+    <Table className="min-w-[760px]">
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          <TableHead>{m.disks_col_disk()}</TableHead>
+          <TableHead>{m.disks_col_type()}</TableHead>
+          <TableHead>{m.disks_col_usage()}</TableHead>
+          <TableHead>{m.disks_col_files()}</TableHead>
+          <TableHead className="text-right">{m.disks_col_free()}</TableHead>
+          <TableHead>{m.disks_col_status()}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {!parsedConfig && [1, 2, 3].map((row) => <SkeletonRow key={row} />)}
         {Object.entries(parsedConfig?.data ?? {}).map(([name, path]) => {
           const stats = statsByName.get(name)
@@ -361,22 +400,25 @@ export const DisksPanel = ({
             total && size?.freeGB != null
               ? Math.round((1 - size.freeGB / total) * 100)
               : stats?.usePercent
+          const power = powerByName.get(name)
           return (
             <DiskRow
               key={name}
               name={name}
               role={m.disks_role_data()}
-              roleClass="bg-blue-50 text-blue-700"
+              isParity={false}
               paths={[path]}
-              power={powerByName.get(name)}
+              power={power}
               percent={percent}
               barClass={usageBarColor(percent ?? 0)}
+              files={stats ? formatCount(stats.files) : '–'}
               free={free}
               total={total}
-              warning={percent !== undefined ? usageWarning(percent) : null}
-              details={
-                <DataDetails
+              notes={
+                <DataNotes
                   stats={stats}
+                  warning={percent !== undefined ? usageWarning(percent) : null}
+                  power={power}
                   daysUntilFull={
                     usageHistory
                       ? forecastFill(diskFreeSeries(usageHistory, name))
@@ -404,46 +446,104 @@ export const DisksPanel = ({
                 (sum, file) => sum + (file.fileSizeGB ?? 0),
                 0,
               )
+          const power = powerByName.get(parity.keyword)
 
           return (
             <DiskRow
               key={parity.keyword}
               name={parity.keyword}
               role={m.disks_role_parity({ level: String(parity.level) })}
-              roleClass="bg-purple-50 text-purple-700"
+              isParity
               paths={parity.paths}
-              power={powerByName.get(parity.keyword)}
+              power={power}
               percent={filesystem?.percent}
               // The parity file fills its disk by design, the check below is what matters
               barClass="bg-purple-500"
+              files={
+                fileSize != null && (
+                  <span
+                    title={m.disks_parity_file({ size: formatGB(fileSize) })}
+                  >
+                    {formatGB(fileSize)}
+                  </span>
+                )
+              }
               free={filesystem?.free}
               total={filesystem?.total}
-              warning={null}
               loading={parityPending}
-              details={
+              notes={
                 <>
-                  {fileSize === null ? (
+                  {fileSize === null && (
                     <span>{m.disks_parity_not_created()}</span>
-                  ) : (
-                    fileSize !== undefined && (
-                      <span>
-                        {m.disks_parity_file({ size: formatGB(fileSize) })}
-                      </span>
-                    )
                   )}
                   {check && (
                     <span className={`font-medium ${TONE_TEXT[check.tone]}`}>
                       {TONE_ICON[check.tone]} {check.text}
                     </span>
                   )}
+                  {power === 'Standby' && (
+                    <span>{m.disks_power_standby()}</span>
+                  )}
                 </>
               }
             />
           )
         })}
-      </ul>
+      </TableBody>
+    </Table>
+  )
 
-      <UsageHistoryChart points={usageHistory} />
-    </div>
+  return (
+    <Card lift className="gap-0 overflow-hidden py-0">
+      <Tabs
+        value={showHistory ? view : 'table'}
+        onValueChange={(value) => setView(value as 'table' | 'history')}
+        className="gap-0"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold">{m.disks_title()}</h2>
+            <div className="mt-0.5 text-sm text-muted-foreground">
+              {(!parsedConfig || statusPending) && (
+                <LoadingHint>{m.disks_loading()}</LoadingHint>
+              )}
+              {status?.totalUsedGB !== undefined &&
+                status.totalFreeGB !== undefined && (
+                  <span>
+                    {m.disks_summary({
+                      used: formatGB(status.totalUsedGB),
+                      free: formatGB(status.totalFreeGB),
+                    })}
+                  </span>
+                )}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {showHistory && (
+              <TabsList>
+                <TabsTrigger value="table">{m.disks_view_table()}</TabsTrigger>
+                <TabsTrigger value="history">
+                  {m.disks_view_history()}
+                </TabsTrigger>
+              </TabsList>
+            )}
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/smart">
+                {m.disks_smart_link()}
+                <ArrowRight />
+              </Link>
+            </Button>
+          </div>
+        </div>
+        <TabsContent value="table" className="border-t">
+          {table}
+        </TabsContent>
+        {showHistory && (
+          <TabsContent value="history" className="border-t px-5 py-4">
+            <UsageHistoryChart points={usageHistory} />
+          </TabsContent>
+        )}
+      </Tabs>
+    </Card>
   )
 }

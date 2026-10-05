@@ -9,7 +9,6 @@ import {
   Tooltip,
   type TooltipItem,
 } from 'chart.js'
-import { useState } from 'react'
 import { Line } from 'react-chartjs-2'
 import { formatGB } from '../lib/utils'
 import * as m from '../paraglide/messages'
@@ -26,16 +25,20 @@ const formatDate = (date: string) =>
     year: '2-digit',
   })
 
+// A trend needs at least two days to compare
+export const hasUsageHistory = (
+  points: UsagePoint[] | undefined,
+): points is UsagePoint[] => !!points && points.length >= 2
+
 /**
- * Protected data over time, hidden until there are at least two days to compare
+ * Protected data over time, renders nothing until there is a trend to show
  */
 export const UsageHistoryChart = ({
   points,
 }: {
   points: UsagePoint[] | undefined
 }) => {
-  const [expanded, setExpanded] = useState(false)
-  if (!points || points.length < 2) return null
+  if (!hasUsageHistory(points)) return null
 
   const forecast = forecastFill(points)
   const themeColor = (name: string) =>
@@ -44,83 +47,74 @@ export const UsageHistoryChart = ({
   const tickColor = themeColor('--color-gray-500')
 
   return (
-    <div className="mt-3 border-t border-gray-100 pt-3">
-      <button
-        type="button"
-        onClick={() => setExpanded(!expanded)}
-        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-      >
-        {expanded ? '▼' : '▶'}{' '}
+    <div>
+      <p className="mb-2 text-sm text-muted-foreground">
         {m.usage_history_title({ days: String(points.length) })}
-      </button>
-      {expanded && (
-        <div className="mt-2">
-          {forecast && (
-            <p className="mb-2 text-sm text-gray-500">
-              {forecast.gbPerMonth >= 0
-                ? m.usage_history_growth({
-                    size: formatGB(forecast.gbPerMonth),
-                  })
-                : m.usage_history_shrink({
-                    size: formatGB(-forecast.gbPerMonth),
-                  })}
-            </p>
-          )}
-          <div className="h-40">
-            <Line
-              aria-label={m.usage_history_protected()}
-              data={{
-                labels: points.map((point) => formatDate(point.date)),
-                datasets: [
-                  {
-                    data: points.map((point) => point.usedGB),
-                    borderColor: LINE_COLOR,
-                    backgroundColor: LINE_COLOR,
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    pointHitRadius: 12,
-                  },
-                ],
-              }}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    callbacks: {
-                      label: (item: TooltipItem<'line'>) =>
-                        `${m.usage_history_protected()}: ${formatGB(item.parsed.y ?? 0)}`,
-                    },
-                  },
+        {forecast && (
+          <>
+            {' · '}
+            {forecast.gbPerMonth >= 0
+              ? m.usage_history_growth({
+                  size: formatGB(forecast.gbPerMonth),
+                })
+              : m.usage_history_shrink({
+                  size: formatGB(-forecast.gbPerMonth),
+                })}
+          </>
+        )}
+      </p>
+      <div className="h-56">
+        <Line
+          aria-label={m.usage_history_protected()}
+          data={{
+            labels: points.map((point) => formatDate(point.date)),
+            datasets: [
+              {
+                data: points.map((point) => point.usedGB),
+                borderColor: LINE_COLOR,
+                backgroundColor: LINE_COLOR,
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                pointHitRadius: 12,
+              },
+            ],
+          }}
+          options={{
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (item: TooltipItem<'line'>) =>
+                    `${m.usage_history_protected()}: ${formatGB(item.parsed.y ?? 0)}`,
                 },
-                scales: {
-                  y: {
-                    ticks: {
-                      color: tickColor,
-                      maxTicksLimit: 4,
-                      callback: (value: string | number) =>
-                        formatGB(Number(value)),
-                    },
-                    grid: { color: gridColor },
-                  },
-                  x: {
-                    grid: { display: false },
-                    ticks: {
-                      color: tickColor,
-                      maxRotation: 0,
-                      autoSkip: true,
-                      maxTicksLimit: 6,
-                    },
-                  },
+              },
+            },
+            scales: {
+              y: {
+                ticks: {
+                  color: tickColor,
+                  maxTicksLimit: 4,
+                  callback: (value: string | number) => formatGB(Number(value)),
                 },
-              }}
-            />
-          </div>
-        </div>
-      )}
+                grid: { color: gridColor },
+              },
+              x: {
+                grid: { display: false },
+                ticks: {
+                  color: tickColor,
+                  maxRotation: 0,
+                  autoSkip: true,
+                  maxTicksLimit: 6,
+                },
+              },
+            },
+          }}
+        />
+      </div>
     </div>
   )
 }

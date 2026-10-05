@@ -3,8 +3,9 @@ import { Download, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { downloadBackup, restoreBackup } from '../lib/api/config'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
 import { errorMessage, useFeedback } from './Feedback'
+import { Button } from './ui/button'
+import { Separator } from './ui/separator'
 
 /**
  * Download the settings as one file and restore them, e.g. to move to a new server
@@ -61,26 +62,24 @@ export const BackupSection = () => {
   }
 
   return (
-    <div className="mt-6 border-t pt-6">
-      <h3 className="font-semibold text-gray-900">{m.backup_title()}</h3>
-      <p className="mt-1 text-sm text-gray-600">{m.backup_description()}</p>
+    <div className="flex flex-col">
+      <Separator className="mb-6" />
+      <h3 className="text-base font-semibold">{m.backup_title()}</h3>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {m.backup_description()}
+      </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={busy}
-          onClick={download}
-        >
-          <Download size={16} />
+        <Button variant="outline" size="sm" disabled={busy} onClick={download}>
+          <Download />
           {m.backup_download()}
         </Button>
         <Button
-          variant="secondary"
+          variant="outline"
           size="sm"
           disabled={busy}
           onClick={() => fileInput.current?.click()}
         >
-          <Upload size={16} />
+          <Upload />
           {m.backup_restore()}
         </Button>
         <input

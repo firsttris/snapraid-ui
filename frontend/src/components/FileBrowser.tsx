@@ -1,8 +1,10 @@
-import { FileText, Folder, X } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { ArrowUp, FileText, Folder, Loader2 } from 'lucide-react'
+import { useState } from 'react'
 import { useFilesystem } from '../hooks/queries'
-import { useDialogKeys } from '../hooks/useDialogKeys'
 import * as m from '../paraglide/messages'
+import { Alert, AlertDescription } from './ui/alert'
+import { Button } from './ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 
 interface FileBrowserProps {
   onSelect: (path: string) => void
@@ -10,8 +12,6 @@ interface FileBrowserProps {
 }
 
 export const FileBrowser = ({ onSelect, onClose }: FileBrowserProps) => {
-  const dialogRef = useRef<HTMLDivElement>(null)
-  useDialogKeys(dialogRef, onClose)
   const [currentPath, setCurrentPath] = useState<string>('')
 
   const { data, isLoading: loading, error } = useFilesystem(currentPath, 'conf')
@@ -26,65 +26,55 @@ export const FileBrowser = ({ onSelect, onClose }: FileBrowserProps) => {
   }
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click is a mouse shortcut, Escape closes too
-    <div
-      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose()
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
       }}
     >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        tabIndex={-1}
-        className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col outline-none"
+      <DialogContent
+        aria-describedby={undefined}
+        className="flex max-h-[80vh] flex-col gap-0 p-0 sm:max-w-2xl"
       >
-        <div className="p-4 border-b flex justify-between items-center">
-          <h3 className="text-lg font-semibold">
-            {m.config_manager_select_file()}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-            aria-label={m.common_close()}
-          >
-            <X size={20} />
-          </button>
-        </div>
+        <DialogHeader className="border-b px-6 py-4">
+          <DialogTitle>{m.config_manager_select_file()}</DialogTitle>
+        </DialogHeader>
 
-        <div className="p-4 border-b bg-gray-50">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={goUp}
-              disabled={actualPath === '/'}
-              className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              ↑ {m.directory_browser_up()}
-            </button>
-            <div className="flex-1 text-sm text-gray-600 font-mono">
-              {actualPath || '/'}
-            </div>
+        <div className="flex items-center gap-2 border-b bg-muted/50 px-6 py-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goUp}
+            disabled={actualPath === '/'}
+          >
+            <ArrowUp />
+            {m.directory_browser_up()}
+          </Button>
+          <div className="min-w-0 flex-1 truncate font-mono text-sm text-muted-foreground">
+            {actualPath || '/'}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
           {loading && (
-            <div className="text-center text-gray-500">
-              {m.common_loading()}
+            <div className="flex justify-center py-6 text-muted-foreground">
+              <Loader2 className="size-5 animate-spin" />
+              <span className="sr-only">{m.common_loading()}</span>
             </div>
           )}
-          {error && <div className="text-red-600 text-sm">{String(error)}</div>}
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{String(error)}</AlertDescription>
+            </Alert>
+          )}
 
           {!loading && !error && entries.length === 0 && (
-            <div className="text-center text-gray-500">
+            <div className="py-6 text-center text-sm text-muted-foreground">
               {m.config_manager_no_files_found()}
             </div>
           )}
 
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {entries.map((entry) => (
               <button
                 type="button"
@@ -96,21 +86,25 @@ export const FileBrowser = ({ onSelect, onClose }: FileBrowserProps) => {
                     onSelect(entry.path)
                   }
                 }}
-                className="w-full text-left px-3 py-2 rounded hover:bg-gray-100 flex items-center gap-2"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 {entry.isDirectory ? (
-                  <Folder size={18} className="shrink-0 text-blue-500" />
+                  <Folder className="size-4 shrink-0 text-blue-600" />
                 ) : (
-                  <FileText size={18} className="shrink-0 text-gray-500" />
+                  <FileText className="size-4 shrink-0 text-muted-foreground" />
                 )}
-                <span className={entry.isDirectory ? 'font-medium' : ''}>
+                <span
+                  className={
+                    entry.isDirectory ? 'truncate font-medium' : 'truncate'
+                  }
+                >
                   {entry.name}
                 </span>
               </button>
             ))}
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

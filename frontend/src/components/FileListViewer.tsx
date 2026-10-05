@@ -1,5 +1,18 @@
 import type { SnapRaidFileInfo } from '@shared/types'
+import { Search } from 'lucide-react'
+import { type ReactNode, useDeferredValue, useMemo, useState } from 'react'
 import * as m from '../paraglide/messages'
+import { getLocale } from '../paraglide/runtime'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
+import { Input } from './ui/input'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table'
 
 interface FileListViewerProps {
   files: SnapRaidFileInfo[]
@@ -21,6 +34,13 @@ function formatBytes(bytes: number): string {
   return `${(bytes / k ** i).toFixed(2)} ${sizes[i]}`
 }
 
+const StatTile = ({ label, value }: { label: string; value: ReactNode }) => (
+  <div className="rounded-lg border px-3 py-2">
+    <p className="text-xs text-muted-foreground">{label}</p>
+    <p className="text-lg font-semibold tabular-nums">{value}</p>
+  </div>
+)
+
 export function FileListViewer({
   files,
   totalFiles,
@@ -29,97 +49,133 @@ export function FileListViewer({
   isLoading,
   onClose,
 }: FileListViewerProps) {
-  return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b">
-          <div>
-            <h2 className="text-xl font-semibold">{m.filelist_title()}</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              {isLoading
-                ? m.common_loading()
-                : m.filelist_summary({
-                    files: totalFiles,
-                    size: formatBytes(totalSize),
-                    links: totalLinks,
-                  })}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <svg
-              aria-hidden="true"
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
+  const [filter, setFilter] = useState('')
+  const deferredFilter = useDeferredValue(filter.trim().toLowerCase())
+  const shown = useMemo(
+    () =>
+      deferredFilter
+        ? files.filter((file) =>
+            file.name.toLowerCase().includes(deferredFilter),
+          )
+        : files,
+    [files, deferredFilter],
+  )
+  const locale = getLocale()
 
-        <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <DialogContent
+        className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-6xl"
+        onInteractOutside={(e) => e.preventDefault()}
+        aria-describedby={undefined}
+      >
+        <DialogHeader className="gap-4 border-b p-6 pr-12 pb-4">
+          <DialogTitle>{m.filelist_title()}</DialogTitle>
           {isLoading ? (
-            <p className="text-sm text-gray-600 text-center py-8">
+            <p className="text-sm text-muted-foreground">
+              {m.common_loading()}
+            </p>
+          ) : (
+            <div className="grid grid-cols-3 gap-3 text-left sm:max-w-md">
+              <StatTile
+                label={m.filelist_files()}
+                value={totalFiles.toLocaleString(locale)}
+              />
+              <StatTile
+                label={m.filelist_size()}
+                value={formatBytes(totalSize)}
+              />
+              <StatTile
+                label={m.filelist_links()}
+                value={totalLinks.toLocaleString(locale)}
+              />
+            </div>
+          )}
+          {!isLoading && files.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  placeholder={m.report_filter_placeholder()}
+                  aria-label={m.report_filter_placeholder()}
+                  className="pl-8"
+                />
+              </div>
+              {deferredFilter && (
+                <span className="text-sm text-muted-foreground tabular-nums">
+                  {m.report_filter_count({
+                    shown: shown.length.toLocaleString(locale),
+                    total: files.length.toLocaleString(locale),
+                  })}
+                </span>
+              )}
+            </div>
+          )}
+        </DialogHeader>
+
+        <div className="min-h-0 flex-1 overflow-auto [&>[data-slot=table-container]]:overflow-visible">
+          {isLoading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
               {m.common_loading()}
             </p>
           ) : files.length === 0 ? (
-            <p className="text-sm text-gray-600 text-center py-8">
+            <p className="py-8 text-center text-sm text-muted-foreground">
               {m.filelist_no_files()}
             </p>
+          ) : shown.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              {m.report_filter_no_match()}
+            </p>
           ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[120px]">
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-muted">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[120px] text-right">
                     {m.filelist_size()}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[100px]">
+                  </TableHead>
+                  <TableHead className="w-[110px]">
                     {m.filelist_date()}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[80px]">
+                  </TableHead>
+                  <TableHead className="w-[90px]">
                     {m.filelist_time()}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {m.filelist_name()}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {files.map((file, index) => (
+                  </TableHead>
+                  <TableHead>{m.filelist_name()}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {shown.map((file, index) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: read-only report rows, never reordered; names may repeat
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 whitespace-nowrap font-mono text-sm text-right">
+                  <TableRow key={index}>
+                    <TableCell className="py-2 text-right font-mono tabular-nums">
                       {formatBytes(file.size)}
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap font-mono text-sm">
+                    </TableCell>
+                    <TableCell className="py-2 font-mono text-muted-foreground tabular-nums">
                       {file.date}
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap font-mono text-sm">
+                    </TableCell>
+                    <TableCell className="py-2 font-mono text-muted-foreground tabular-nums">
                       {file.time}
-                    </td>
-                    <td
-                      className="px-4 py-2 font-mono text-sm truncate max-w-[500px]"
+                    </TableCell>
+                    <TableCell
+                      className="max-w-[500px] truncate py-2 font-mono"
                       title={file.name}
                     >
                       {file.name}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

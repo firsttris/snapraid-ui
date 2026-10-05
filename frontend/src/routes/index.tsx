@@ -9,7 +9,12 @@ import type {
 } from '@shared/types'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrayHealthPanel } from '../components/ArrayHealthPanel'
+import {
+  ArrayHealthPanel,
+  DashboardActions,
+  getArrayHealth,
+  StatusAge,
+} from '../components/ArrayHealthPanel'
 import { CheckDialog } from '../components/CheckDialog'
 import { CheckViewer } from '../components/CheckViewer'
 import { ConfigBar } from '../components/ConfigBar'
@@ -37,6 +42,7 @@ import {
   useStatus,
   useUsageHistory,
 } from '../hooks/queries'
+import { useAppShell } from '../hooks/useAppShell'
 import { useJob } from '../hooks/useJob'
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
 import {
@@ -228,6 +234,22 @@ function Dashboard() {
     [selectedConfig, job.isRunning, runCommand, refetchStatus, openReport],
   )
 
+  // A command picked in the command palette, possibly on another page
+  const { pendingCommand, clearPendingCommand } = useAppShell()
+  useEffect(() => {
+    if (!pendingCommand || !selectedConfig) return
+    clearPendingCommand()
+    if (job.isRunning) return
+    if (pendingCommand === 'fix') setShowUndeleteDialog(true)
+    else executeCommand(pendingCommand)
+  }, [
+    pendingCommand,
+    selectedConfig,
+    job.isRunning,
+    executeCommand,
+    clearPendingCommand,
+  ])
+
   const handleUndelete = useCallback(
     (
       mode: 'all-missing' | 'directory-missing' | 'specific',
@@ -285,9 +307,41 @@ function Dashboard() {
           ? { command: 'scrub', option: lastRuns.scrub.forceOption }
           : null
 
+  const actionsDisabled = !selectedConfig || job.isRunning
+  const { syncDue } = getArrayHealth({
+    status: statusData?.status,
+    isStatusError,
+    isBusy: statusError instanceof SnapRaidBusyError,
+    lastSync: lastRuns?.sync,
+    lastScrub: lastRuns?.scrub,
+  })
+  const handleExecute = (command: SnapRaidCommand) =>
+    command === 'fix' ? setShowUndeleteDialog(true) : executeCommand(command)
+
   return (
-    <PageLayout title={m.nav_dashboard()}>
-      <ConfigBar disabled={job.isRunning}>
+    <PageLayout
+      title={m.nav_dashboard()}
+      description={
+        selectedConfig && (
+          <StatusAge
+            timestamp={statusData?.timestamp}
+            isLoading={isStatusFetching}
+            disabled={actionsDisabled}
+            onRefresh={() => refetchStatus()}
+          />
+        )
+      }
+      actions={
+        selectedConfig && (
+          <DashboardActions
+            onExecute={handleExecute}
+            disabled={actionsDisabled}
+            syncDue={syncDue}
+          />
+        )
+      }
+    >
+      <ConfigBar>
         <ArrayHealthPanel
           status={statusData?.status}
           isStatusLoading={isStatusFetching}
@@ -310,17 +364,12 @@ function Dashboard() {
                 }
               : undefined
           }
-          onRefresh={() => refetchStatus()}
-          onExecute={(command) =>
-            command === 'fix'
-              ? setShowUndeleteDialog(true)
-              : executeCommand(command)
-          }
+          onExecute={handleExecute}
           onAbort={job.abort}
           onFixErrors={handleFixErrors}
           onScrubBad={() => runCommand('scrub', ['-p', 'bad'])}
           onTouch={() => runCommand('touch')}
-          actionsDisabled={!selectedConfig || job.isRunning}
+          actionsDisabled={actionsDisabled}
         />
 
         {!job.isRunning && forceStop && (
@@ -333,19 +382,17 @@ function Dashboard() {
         )}
 
         {job.output && (
-          <div className="mb-6">
-            <OutputConsole
-              output={job.output}
-              command={job.currentCommand || job.lastResult?.command}
-              isRunning={job.isRunning}
-              lastFailed={
-                !!job.lastResult &&
-                !job.lastResult.aborted &&
-                (!!job.lastResult.error || job.lastResult.exitCode !== 0)
-              }
-              onClear={job.clearOutput}
-            />
-          </div>
+          <OutputConsole
+            output={job.output}
+            command={job.currentCommand || job.lastResult?.command}
+            isRunning={job.isRunning}
+            lastFailed={
+              !!job.lastResult &&
+              !job.lastResult.aborted &&
+              (!!job.lastResult.error || job.lastResult.exitCode !== 0)
+            }
+            onClear={job.clearOutput}
+          />
         )}
 
         <DisksPanel

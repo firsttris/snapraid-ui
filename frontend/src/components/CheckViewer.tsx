@@ -1,5 +1,30 @@
 import type { CheckFileInfo } from '@shared/types'
+import {
+  Check,
+  CircleCheck,
+  CircleHelp,
+  type LucideIcon,
+  RefreshCw,
+  Search,
+  TriangleAlert,
+  X,
+} from 'lucide-react'
+import { useDeferredValue, useMemo, useState } from 'react'
+import { cn } from '@/lib/utils'
 import * as m from '../paraglide/messages'
+import { getLocale } from '../paraglide/runtime'
+import { Alert, AlertDescription, AlertTitle } from './ui/alert'
+import { Badge } from './ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
+import { Input } from './ui/input'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table'
 
 interface CheckViewerProps {
   files: CheckFileInfo[]
@@ -11,6 +36,32 @@ interface CheckViewerProps {
   onClose: () => void
 }
 
+const STATUS_BADGE: Record<
+  string,
+  { variant: 'success' | 'destructive' | 'warning'; icon: LucideIcon }
+> = {
+  OK: { variant: 'success', icon: Check },
+  ERROR: { variant: 'destructive', icon: X },
+  REHASH: { variant: 'warning', icon: RefreshCw },
+}
+
+const StatTile = ({
+  label,
+  value,
+  className,
+}: {
+  label: string
+  value: string
+  className?: string
+}) => (
+  <div className="rounded-lg border px-3 py-2">
+    <p className="text-xs text-muted-foreground">{label}</p>
+    <p className={cn('text-lg font-semibold tabular-nums', className)}>
+      {value}
+    </p>
+  </div>
+)
+
 export function CheckViewer({
   files,
   totalFiles,
@@ -20,158 +71,165 @@ export function CheckViewer({
   isLoading,
   onClose,
 }: CheckViewerProps) {
-  const getStatusColor = (status: CheckFileInfo['status']) => {
-    switch (status) {
-      case 'OK':
-        return 'text-green-600 bg-green-50'
-      case 'ERROR':
-        return 'text-red-600 bg-red-50'
-      case 'REHASH':
-        return 'text-yellow-600 bg-yellow-50'
-      default:
-        return 'text-gray-600 bg-gray-50'
-    }
-  }
-
-  const getStatusIcon = (status: CheckFileInfo['status']) => {
-    switch (status) {
-      case 'OK':
-        return '✓'
-      case 'ERROR':
-        return '✗'
-      case 'REHASH':
-        return '⟳'
-      default:
-        return '?'
-    }
-  }
+  const [filter, setFilter] = useState('')
+  const deferredFilter = useDeferredValue(filter.trim().toLowerCase())
+  const shown = useMemo(
+    () =>
+      deferredFilter
+        ? files.filter((file) =>
+            file.name.toLowerCase().includes(deferredFilter),
+          )
+        : files,
+    [files, deferredFilter],
+  )
+  const locale = getLocale()
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b">
-          <div>
-            <h2 className="text-xl font-semibold">{m.check_report_title()}</h2>
-            {!isLoading && (
-              <div className="flex gap-4 mt-2">
-                <p className="text-sm text-gray-500">
-                  {m.check_report_total()}:{' '}
-                  <span className="font-semibold">{totalFiles}</span>
-                </p>
-                {errorCount > 0 && (
-                  <p className="text-sm text-red-600">
-                    {m.check_report_errors()}:{' '}
-                    <span className="font-semibold">{errorCount}</span>
-                  </p>
-                )}
-                {rehashCount > 0 && (
-                  <p className="text-sm text-yellow-600">
-                    {m.check_report_rehash()}:{' '}
-                    <span className="font-semibold">{rehashCount}</span>
-                  </p>
-                )}
-                {okCount > 0 && (
-                  <p className="text-sm text-green-600">
-                    {m.check_report_ok()}:{' '}
-                    <span className="font-semibold">{okCount}</span>
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <svg
-              aria-hidden="true"
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <DialogContent
+        className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-6xl"
+        onInteractOutside={(e) => e.preventDefault()}
+        aria-describedby={undefined}
+      >
+        <DialogHeader className="gap-4 border-b p-6 pr-12 pb-4">
+          <DialogTitle>{m.check_report_title()}</DialogTitle>
           {isLoading ? (
-            <p className="text-sm text-gray-600 text-center py-8">
+            <p className="text-sm text-muted-foreground">
+              {m.common_loading()}
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 text-left sm:grid-cols-4 lg:max-w-2xl">
+              <StatTile
+                label={m.check_report_total()}
+                value={totalFiles.toLocaleString(locale)}
+              />
+              {errorCount > 0 && (
+                <StatTile
+                  label={m.check_report_errors()}
+                  value={errorCount.toLocaleString(locale)}
+                  className="text-red-700"
+                />
+              )}
+              {rehashCount > 0 && (
+                <StatTile
+                  label={m.check_report_rehash()}
+                  value={rehashCount.toLocaleString(locale)}
+                  className="text-yellow-700"
+                />
+              )}
+              {okCount > 0 && (
+                <StatTile
+                  label={m.check_report_ok()}
+                  value={okCount.toLocaleString(locale)}
+                  className="text-green-700"
+                />
+              )}
+            </div>
+          )}
+          {!isLoading && files.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  placeholder={m.report_filter_placeholder()}
+                  aria-label={m.report_filter_placeholder()}
+                  className="pl-8"
+                />
+              </div>
+              {deferredFilter && (
+                <span className="text-sm text-muted-foreground tabular-nums">
+                  {m.report_filter_count({
+                    shown: shown.length.toLocaleString(locale),
+                    total: files.length.toLocaleString(locale),
+                  })}
+                </span>
+              )}
+            </div>
+          )}
+        </DialogHeader>
+
+        <div className="min-h-0 flex-1 overflow-auto [&>[data-slot=table-container]]:overflow-visible">
+          {isLoading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
               {m.common_loading()}
             </p>
           ) : files.length === 0 && errorCount === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">✓</div>
-              <p className="text-lg font-semibold text-green-600">
+            <div className="flex flex-col items-center gap-2 py-12 text-center">
+              <CircleCheck className="size-12 text-green-700" />
+              <p className="text-base font-semibold">
                 {m.check_report_all_success()}
               </p>
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm text-muted-foreground">
                 {m.check_report_no_errors()}
               </p>
             </div>
+          ) : shown.length === 0 && files.length > 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              {m.report_filter_no_match()}
+            </p>
           ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[100px]">
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-muted">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[120px]">
                     {m.check_report_status()}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {m.check_report_file_path()}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[200px]">
+                  </TableHead>
+                  <TableHead>{m.check_report_file_path()}</TableHead>
+                  <TableHead className="w-[200px]">
                     {m.check_report_details()}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {files.map((file, index) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: read-only report rows, never reordered; names may repeat
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 whitespace-nowrap text-center">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(file.status)}`}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {shown.map((file, index) => {
+                  const badge = STATUS_BADGE[file.status]
+                  const Icon = badge?.icon ?? CircleHelp
+                  return (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: read-only report rows, never reordered; names may repeat
+                    <TableRow key={index}>
+                      <TableCell className="py-2">
+                        <Badge variant={badge?.variant ?? 'secondary'}>
+                          <Icon />
+                          {file.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell
+                        className="max-w-[500px] truncate py-2 font-mono"
+                        title={file.name}
                       >
-                        <span className="mr-1">
-                          {getStatusIcon(file.status)}
-                        </span>
-                        {file.status}
-                      </span>
-                    </td>
-                    <td
-                      className="px-4 py-2 font-mono text-sm truncate max-w-[500px]"
-                      title={file.name}
-                    >
-                      {file.name}
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-600">
-                      {file.error || file.hash || '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        {file.name}
+                      </TableCell>
+                      <TableCell className="py-2 text-muted-foreground">
+                        {file.error || file.hash || '-'}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
           )}
         </div>
 
         {!isLoading && errorCount > 0 && (
-          <div className="p-4 bg-red-50 border-t border-red-100">
-            <p className="text-sm text-red-800">
-              <span className="font-semibold">
-                ⚠️ {m.check_report_warning_title()}:
-              </span>{' '}
-              {m.check_report_warning_message({ count: errorCount })}
-            </p>
+          <div className="border-t p-4">
+            <Alert variant="destructive">
+              <TriangleAlert />
+              <AlertTitle>{m.check_report_warning_title()}</AlertTitle>
+              <AlertDescription>
+                {m.check_report_warning_message({ count: errorCount })}
+              </AlertDescription>
+            </Alert>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

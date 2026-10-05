@@ -2,8 +2,10 @@ import { SlidersHorizontal } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSetConfigOption } from '../hooks/queries'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
 import { errorMessage } from './Feedback'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
 
 type OptionKey = 'autosave' | 'blocksize'
 
@@ -58,15 +60,10 @@ const OptionField = ({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label
-        htmlFor={id}
-        className="block text-sm font-medium text-gray-700 mb-1"
-      >
-        {label}
-      </label>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-1.5">
+      <Label htmlFor={id}>{label}</Label>
       <div className="flex gap-2">
-        <input
+        <Input
           id={id}
           type="number"
           min={1}
@@ -74,14 +71,15 @@ const OptionField = ({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder={m.options_not_set()}
-          className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+          aria-invalid={error ? true : undefined}
+          className="tabular-nums"
         />
-        <Button type="submit" size="sm" disabled={!changed || saving}>
+        <Button type="submit" variant="outline" disabled={!changed || saving}>
           {m.common_save()}
         </Button>
       </div>
-      <p className="mt-1 text-xs text-gray-500">{help}</p>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      <p className="text-xs text-muted-foreground">{help}</p>
+      {error && <p className="text-xs text-red-700">{error}</p>}
     </form>
   )
 }
@@ -100,12 +98,14 @@ export const OptionsSection = ({
   }
 
   return (
-    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-      <h3 className="mb-3 font-semibold text-gray-900 flex items-center gap-2">
-        <SlidersHorizontal size={20} />
-        {m.options_section_title()}
-      </h3>
-      <div className="grid gap-4 sm:grid-cols-2">
+    <section className="rounded-xl border bg-card shadow-sm">
+      <div className="border-b px-4 py-3">
+        <h3 className="flex items-center gap-2 text-base font-semibold">
+          <SlidersHorizontal className="size-4 text-muted-foreground" />
+          {m.options_section_title()}
+        </h3>
+      </div>
+      <div className="grid gap-4 p-4 sm:grid-cols-2">
         <OptionField
           id="option-autosave"
           label={m.options_autosave_label()}
@@ -123,6 +123,6 @@ export const OptionsSection = ({
           onSave={save('blocksize')}
         />
       </div>
-    </div>
+    </section>
   )
 }

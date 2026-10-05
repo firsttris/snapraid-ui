@@ -1,17 +1,23 @@
 import type { SnapRaidConfig } from '@shared/types'
 import { useQueryClient } from '@tanstack/react-query'
-import { FilePlus2, FolderOpen, X } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { FilePlus2, FolderOpen } from 'lucide-react'
+import { useState } from 'react'
 import { queryKeys, useRemoveConfig, useUpdateConfig } from '../hooks/queries'
-import { useDialogKeys } from '../hooks/useDialogKeys'
 import * as m from '../paraglide/messages'
 import { BackupSection } from './BackupSection'
-import { Button } from './Button'
 import { ConfigAddForm } from './ConfigAddForm'
 import { ConfigCreateForm } from './ConfigCreateForm'
 import { ConfigEditor } from './ConfigEditor'
 import { ConfigList } from './ConfigList'
 import { errorMessage, useFeedback } from './Feedback'
+import { Button } from './ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
 
 interface ConfigManagerProps {
   config: SnapRaidConfig[]
@@ -21,7 +27,6 @@ interface ConfigManagerProps {
 export const ConfigManager = ({ config, onClose }: ConfigManagerProps) => {
   const { confirm, toast } = useFeedback()
   const queryClient = useQueryClient()
-  const dialogRef = useRef<HTMLDivElement>(null)
   const [form, setForm] = useState<'add' | 'create' | null>(null)
   const [editingConfig, setEditingConfig] = useState<{
     path: string
@@ -30,8 +35,6 @@ export const ConfigManager = ({ config, onClose }: ConfigManagerProps) => {
 
   const removeConfigMutation = useRemoveConfig()
   const updateConfigMutation = useUpdateConfig()
-
-  useDialogKeys(dialogRef, onClose)
 
   const onError = (err: unknown) => toast.error(errorMessage(err))
 
@@ -56,102 +59,91 @@ export const ConfigManager = ({ config, onClose }: ConfigManagerProps) => {
   }
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click is a mouse shortcut, Escape closes too
-    <div
-      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose()
-      }}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="config-manager-title"
-        tabIndex={-1}
-        className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col outline-none"
+    <>
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open) onClose()
+        }}
       >
-        {/* Header */}
-        <div className="p-6 border-b flex justify-between items-start gap-4">
-          <div>
-            <h2
-              id="config-manager-title"
-              className="text-2xl font-semibold text-gray-900"
-            >
-              {m.config_manager_title()}
-            </h2>
-            <p className="mt-1 text-sm text-gray-600">
-              {m.config_manager_subtitle()}
-            </p>
+        <DialogContent
+          className="flex max-h-[85vh] flex-col gap-0 p-0 sm:max-w-3xl"
+          onEscapeKeyDown={(event) => {
+            // Escape in an inline field (rename) only leaves that field
+            if (
+              event.target instanceof Element &&
+              event.target.closest('[data-escape-local]')
+            ) {
+              event.preventDefault()
+            }
+          }}
+        >
+          <DialogHeader className="border-b px-6 py-5 pr-12">
+            <DialogTitle>{m.config_manager_title()}</DialogTitle>
+            <DialogDescription>{m.config_manager_subtitle()}</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">
+            {form === 'add' && (
+              <ConfigAddForm
+                onCancel={() => setForm(null)}
+                onSuccess={() => setForm(null)}
+              />
+            )}
+            {form === 'create' && (
+              <ConfigCreateForm
+                onCancel={() => setForm(null)}
+                onSuccess={(path, name) => {
+                  setForm(null)
+                  setEditingConfig({ path, name })
+                }}
+              />
+            )}
+            {form === null && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setForm('add')}
+                  className="h-auto border-dashed py-3 text-muted-foreground hover:text-foreground"
+                >
+                  <FolderOpen />
+                  {m.config_manager_add_existing()}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setForm('create')}
+                  className="h-auto border-dashed py-3 text-muted-foreground hover:text-foreground"
+                >
+                  <FilePlus2 />
+                  {m.config_manager_create_new()}
+                </Button>
+              </div>
+            )}
+
+            <ConfigList
+              configs={config}
+              onEdit={(cfg) =>
+                setEditingConfig({ path: cfg.path, name: cfg.name })
+              }
+              onDelete={handleRemove}
+              onRename={(cfg, name) =>
+                updateConfigMutation.mutate(
+                  { path: cfg.path, name },
+                  { onError },
+                )
+              }
+              onToggle={(cfg, enabled) =>
+                updateConfigMutation.mutate(
+                  { path: cfg.path, enabled },
+                  { onError },
+                )
+              }
+            />
+
+            <BackupSection />
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            aria-label={m.common_close()}
-          >
-            <X size={22} />
-          </Button>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {form === 'add' && (
-            <ConfigAddForm
-              onCancel={() => setForm(null)}
-              onSuccess={() => setForm(null)}
-            />
-          )}
-          {form === 'create' && (
-            <ConfigCreateForm
-              onCancel={() => setForm(null)}
-              onSuccess={(path, name) => {
-                setForm(null)
-                setEditingConfig({ path, name })
-              }}
-            />
-          )}
-          {form === null && (
-            <div className="mb-6 grid gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setForm('add')}
-                className="px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all text-gray-600 hover:text-blue-600 font-medium flex items-center justify-center gap-2"
-              >
-                <FolderOpen size={20} />
-                {m.config_manager_add_existing()}
-              </button>
-              <button
-                type="button"
-                onClick={() => setForm('create')}
-                className="px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all text-gray-600 hover:text-green-700 font-medium flex items-center justify-center gap-2"
-              >
-                <FilePlus2 size={20} />
-                {m.config_manager_create_new()}
-              </button>
-            </div>
-          )}
-
-          <ConfigList
-            configs={config}
-            onEdit={(cfg) =>
-              setEditingConfig({ path: cfg.path, name: cfg.name })
-            }
-            onDelete={handleRemove}
-            onRename={(cfg, name) =>
-              updateConfigMutation.mutate({ path: cfg.path, name }, { onError })
-            }
-            onToggle={(cfg, enabled) =>
-              updateConfigMutation.mutate(
-                { path: cfg.path, enabled },
-                { onError },
-              )
-            }
-          />
-
-          <BackupSection />
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {editingConfig && (
         <ConfigEditor
@@ -160,6 +152,6 @@ export const ConfigManager = ({ config, onClose }: ConfigManagerProps) => {
           onClose={closeEditor}
         />
       )}
-    </div>
+    </>
   )
 }

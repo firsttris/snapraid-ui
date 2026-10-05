@@ -1,5 +1,33 @@
 import type { DiffFileInfo } from '@shared/types'
+import {
+  ArrowRightLeft,
+  Check,
+  CircleCheck,
+  Copy,
+  type LucideIcon,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Search,
+  Trash2,
+  TriangleAlert,
+} from 'lucide-react'
+import { useDeferredValue, useMemo, useState } from 'react'
+import { cn } from '@/lib/utils'
 import * as m from '../paraglide/messages'
+import { getLocale } from '../paraglide/runtime'
+import { Alert, AlertDescription, AlertTitle } from './ui/alert'
+import { Badge } from './ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
+import { Input } from './ui/input'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table'
 
 interface DiffViewerProps {
   files: DiffFileInfo[]
@@ -15,6 +43,71 @@ interface DiffViewerProps {
   onClose: () => void
 }
 
+const STATUS: Record<
+  DiffFileInfo['status'],
+  { label: () => string; icon: LucideIcon; tint: string; text: string }
+> = {
+  equal: {
+    label: m.diff_report_equal,
+    icon: Check,
+    tint: 'bg-green-50 text-green-700',
+    text: 'text-green-700',
+  },
+  added: {
+    label: m.diff_report_new,
+    icon: Plus,
+    tint: 'bg-blue-50 text-blue-700',
+    text: 'text-blue-700',
+  },
+  removed: {
+    label: m.diff_report_deleted,
+    icon: Trash2,
+    tint: 'bg-red-50 text-red-700',
+    text: 'text-red-700',
+  },
+  updated: {
+    label: m.diff_report_modified,
+    icon: Pencil,
+    tint: 'bg-orange-50 text-orange-700',
+    text: 'text-orange-700',
+  },
+  moved: {
+    label: m.diff_report_moved,
+    icon: ArrowRightLeft,
+    tint: 'bg-purple-50 text-purple-700',
+    text: 'text-purple-700',
+  },
+  copied: {
+    label: m.diff_report_copied,
+    icon: Copy,
+    tint: 'bg-cyan-50 text-cyan-700',
+    text: 'text-cyan-700',
+  },
+  restored: {
+    label: m.diff_report_restored,
+    icon: RotateCcw,
+    tint: 'bg-green-50 text-green-700',
+    text: 'text-green-700',
+  },
+}
+
+const StatTile = ({
+  label,
+  value,
+  className,
+}: {
+  label: string
+  value: string
+  className?: string
+}) => (
+  <div className="rounded-lg border px-3 py-2">
+    <p className="text-xs text-muted-foreground">{label}</p>
+    <p className={cn('text-lg font-semibold tabular-nums', className)}>
+      {value}
+    </p>
+  </div>
+)
+
 export function DiffViewer({
   files,
   totalFiles,
@@ -28,47 +121,18 @@ export function DiffViewer({
   isLoading,
   onClose,
 }: DiffViewerProps) {
-  const getStatusColor = (status: DiffFileInfo['status']) => {
-    switch (status) {
-      case 'equal':
-        return 'text-green-600 bg-green-50'
-      case 'added':
-        return 'text-blue-600 bg-blue-50'
-      case 'removed':
-        return 'text-red-600 bg-red-50'
-      case 'updated':
-        return 'text-orange-600 bg-orange-50'
-      case 'moved':
-        return 'text-purple-600 bg-purple-50'
-      case 'copied':
-        return 'text-cyan-600 bg-cyan-50'
-      case 'restored':
-        return 'text-green-600 bg-green-50'
-      default:
-        return 'text-gray-600 bg-gray-50'
-    }
-  }
-
-  const getStatusIcon = (status: DiffFileInfo['status']) => {
-    switch (status) {
-      case 'equal':
-        return '✓'
-      case 'added':
-        return '➕'
-      case 'removed':
-        return '🗑️'
-      case 'updated':
-        return '📝'
-      case 'moved':
-        return '↔️'
-      case 'copied':
-        return '📋'
-      case 'restored':
-        return '♻️'
-      default:
-        return '?'
-    }
-  }
+  const [filter, setFilter] = useState('')
+  const deferredFilter = useDeferredValue(filter.trim().toLowerCase())
+  const shown = useMemo(
+    () =>
+      deferredFilter
+        ? files.filter((file) =>
+            file.name.toLowerCase().includes(deferredFilter),
+          )
+        : files,
+    [files, deferredFilter],
+  )
+  const locale = getLocale()
 
   const totalChanges =
     newFiles +
@@ -79,156 +143,154 @@ export function DiffViewer({
     restoredFiles
   const hasChanges = totalChanges > 0
 
-  return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b">
-          <div>
-            <h2 className="text-xl font-semibold">{m.diff_report_title()}</h2>
-            {!isLoading && (
-              <div className="flex gap-4 mt-2 flex-wrap">
-                <p className="text-sm text-gray-500">
-                  {m.diff_report_total()}:{' '}
-                  <span className="font-semibold">{totalFiles}</span>
-                </p>
-                {equalFiles > 0 && (
-                  <p className="text-sm text-green-600">
-                    {m.diff_report_equal()}:{' '}
-                    <span className="font-semibold">{equalFiles}</span>
-                  </p>
-                )}
-                {newFiles > 0 && (
-                  <p className="text-sm text-blue-600">
-                    {m.diff_report_new()}:{' '}
-                    <span className="font-semibold">{newFiles}</span>
-                  </p>
-                )}
-                {modifiedFiles > 0 && (
-                  <p className="text-sm text-orange-600">
-                    {m.diff_report_modified()}:{' '}
-                    <span className="font-semibold">{modifiedFiles}</span>
-                  </p>
-                )}
-                {deletedFiles > 0 && (
-                  <p className="text-sm text-red-600">
-                    {m.diff_report_deleted()}:{' '}
-                    <span className="font-semibold">{deletedFiles}</span>
-                  </p>
-                )}
-                {movedFiles > 0 && (
-                  <p className="text-sm text-purple-600">
-                    {m.diff_report_moved()}:{' '}
-                    <span className="font-semibold">{movedFiles}</span>
-                  </p>
-                )}
-                {copiedFiles > 0 && (
-                  <p className="text-sm text-cyan-600">
-                    {m.diff_report_copied()}:{' '}
-                    <span className="font-semibold">{copiedFiles}</span>
-                  </p>
-                )}
-                {restoredFiles > 0 && (
-                  <p className="text-sm text-green-600">
-                    {m.diff_report_restored()}:{' '}
-                    <span className="font-semibold">{restoredFiles}</span>
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <svg
-              aria-hidden="true"
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
+  const stats: Array<{ status: DiffFileInfo['status']; count: number }> = [
+    { status: 'equal', count: equalFiles },
+    { status: 'added', count: newFiles },
+    { status: 'updated', count: modifiedFiles },
+    { status: 'removed', count: deletedFiles },
+    { status: 'moved', count: movedFiles },
+    { status: 'copied', count: copiedFiles },
+    { status: 'restored', count: restoredFiles },
+  ]
 
-        <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <DialogContent
+        className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-6xl"
+        onInteractOutside={(e) => e.preventDefault()}
+        aria-describedby={undefined}
+      >
+        <DialogHeader className="gap-4 border-b p-6 pr-12 pb-4">
+          <DialogTitle>{m.diff_report_title()}</DialogTitle>
           {isLoading ? (
-            <p className="text-sm text-gray-600 text-center py-8">
+            <p className="text-sm text-muted-foreground">
+              {m.common_loading()}
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 text-left sm:grid-cols-4 lg:grid-cols-8">
+              <StatTile
+                label={m.diff_report_total()}
+                value={totalFiles.toLocaleString(locale)}
+              />
+              {stats
+                .filter(({ count }) => count > 0)
+                .map(({ status, count }) => (
+                  <StatTile
+                    key={status}
+                    label={STATUS[status].label()}
+                    value={count.toLocaleString(locale)}
+                    className={STATUS[status].text}
+                  />
+                ))}
+            </div>
+          )}
+          {!isLoading && files.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  placeholder={m.report_filter_placeholder()}
+                  aria-label={m.report_filter_placeholder()}
+                  className="pl-8"
+                />
+              </div>
+              {deferredFilter && (
+                <span className="text-sm text-muted-foreground tabular-nums">
+                  {m.report_filter_count({
+                    shown: shown.length.toLocaleString(locale),
+                    total: files.length.toLocaleString(locale),
+                  })}
+                </span>
+              )}
+            </div>
+          )}
+        </DialogHeader>
+
+        <div className="min-h-0 flex-1 overflow-auto [&>[data-slot=table-container]]:overflow-visible">
+          {isLoading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
               {m.common_loading()}
             </p>
           ) : !hasChanges && files.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">✓</div>
-              <p className="text-lg font-semibold text-green-600">
+            <div className="flex flex-col items-center gap-2 py-12 text-center">
+              <CircleCheck className="size-12 text-green-700" />
+              <p className="text-base font-semibold">
                 {m.diff_report_all_sync()}
               </p>
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm text-muted-foreground">
                 {m.diff_report_no_changes()}
               </p>
             </div>
+          ) : shown.length === 0 && files.length > 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              {m.report_filter_no_match()}
+            </p>
           ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[120px]">
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-muted">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[140px]">
                     {m.diff_report_status()}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {m.diff_report_file_path()}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[200px]">
+                  </TableHead>
+                  <TableHead>{m.diff_report_file_path()}</TableHead>
+                  <TableHead className="w-[160px]">
                     {m.diff_report_size()}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {files.map((file, index) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: read-only report rows, never reordered; names may repeat
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 whitespace-nowrap text-center">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(file.status)}`}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {shown.map((file, index) => {
+                  const status = STATUS[file.status]
+                  const Icon = status?.icon
+                  return (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: read-only report rows, never reordered; names may repeat
+                    <TableRow key={index}>
+                      <TableCell className="py-2">
+                        <Badge
+                          variant="outline"
+                          className={cn('border-transparent', status?.tint)}
+                        >
+                          {Icon && <Icon />}
+                          {status?.label() ?? file.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell
+                        className="max-w-[500px] truncate py-2 font-mono"
+                        title={file.name}
                       >
-                        <span className="mr-1">
-                          {getStatusIcon(file.status)}
-                        </span>
-                        {file.status}
-                      </span>
-                    </td>
-                    <td
-                      className="px-4 py-2 font-mono text-sm truncate max-w-[500px]"
-                      title={file.name}
-                    >
-                      {file.name}
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-600">
-                      {file.size || '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        {file.name}
+                      </TableCell>
+                      <TableCell className="py-2 font-mono text-muted-foreground tabular-nums">
+                        {file.size || '-'}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
           )}
         </div>
 
         {!isLoading && hasChanges && (
-          <div className="p-4 bg-orange-50 border-t border-orange-100">
-            <p className="text-sm text-orange-800">
-              <span className="font-semibold">
-                ⚠️ {m.diff_report_changes_detected()}:
-              </span>{' '}
-              {m.diff_report_changes_message({ count: totalChanges })}
-            </p>
+          <div className="border-t p-4">
+            <Alert variant="warning">
+              <TriangleAlert />
+              <AlertTitle>{m.diff_report_changes_detected()}</AlertTitle>
+              <AlertDescription>
+                {m.diff_report_changes_message({ count: totalChanges })}
+              </AlertDescription>
+            </Alert>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

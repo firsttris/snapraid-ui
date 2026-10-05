@@ -9,14 +9,6 @@ import {
 } from 'lucide-react'
 import * as m from '../paraglide/messages'
 
-export const RESULT_STYLES: Record<RunResult, string> = {
-  ok: 'bg-green-100 text-green-700',
-  warning: 'bg-yellow-100 text-yellow-800',
-  error: 'bg-red-100 text-red-700',
-  aborted: 'bg-gray-200 text-gray-700',
-  incomplete: 'bg-gray-200 text-gray-700',
-}
-
 export const RESULT_ICONS: Record<RunResult, LucideIcon> = {
   ok: CircleCheck,
   warning: TriangleAlert,

@@ -16,67 +16,99 @@ import {
   WORN_PERCENT,
 } from '@shared/smart-health'
 import type { SmartDiskInfo, SmartHistoryPoint } from '@shared/types'
-import { RefreshCw } from 'lucide-react'
-import { useState } from 'react'
+import {
+  AlertTriangle,
+  CircleCheck,
+  Moon,
+  OctagonAlert,
+  Wrench,
+} from 'lucide-react'
+import { type ReactNode, useState } from 'react'
 import {
   useNotificationSettings,
   useSmart,
   useSmartHistory,
 } from '../hooks/queries'
-import { formatRelativeTime } from '../lib/utils'
+import { cn } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
-import { Button } from './Button'
-import { SmartHistoryCharts } from './SmartHistoryCharts'
+import { hasSmartHistory, SmartHistoryCharts } from './SmartHistoryCharts'
+import { Alert, AlertDescription, AlertTitle } from './ui/alert'
+import { Badge } from './ui/badge'
+import { Card } from './ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 
 interface SmartMonitorProps {
   configPath: string
 }
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'OK':
-      return 'text-green-600 bg-green-50'
-    case 'FAIL':
-      return 'text-red-600 bg-red-50'
-    case 'PREFAIL':
-      return 'text-orange-600 bg-orange-50'
-    case 'LOGFAIL':
-      return 'text-yellow-600 bg-yellow-50'
-    case 'LOGERR':
-      return 'text-yellow-600 bg-yellow-50'
-    case 'SELFERR':
-      return 'text-yellow-600 bg-yellow-50'
-    default:
-      return 'text-gray-600 bg-gray-50'
-  }
-}
+type BadgeVariant = 'success' | 'warning' | 'destructive' | 'secondary'
 
-const getStatusBadge = (status: string) => {
-  const color = getStatusColor(status)
-  return (
-    <span className={`px-2 py-1 rounded text-xs font-semibold ${color}`}>
-      {status}
-    </span>
-  )
+const STATUS_VARIANT: Record<SmartDiskInfo['status'], BadgeVariant> = {
+  OK: 'success',
+  FAIL: 'destructive',
+  PREFAIL: 'destructive',
+  LOGFAIL: 'warning',
+  LOGERR: 'warning',
+  SELFERR: 'warning',
+  UNKNOWN: 'secondary',
 }
 
 const LEVEL_STYLES: Record<
   SmartLevel,
-  { card: string; box: string; icon: string }
+  { card: string; dot: string; text: string; box: string }
 > = {
-  ok: { card: 'border-gray-200', box: '', icon: '✅' },
+  ok: { card: '', dot: 'bg-green-500', text: '', box: '' },
   warning: {
-    card: 'border-yellow-300 ring-1 ring-yellow-300',
+    card: 'border-yellow-500/50',
+    dot: 'bg-yellow-500',
+    text: 'text-yellow-700',
     box: 'bg-yellow-50 text-yellow-800',
-    icon: '⚠️',
   },
   critical: {
-    card: 'border-red-400 ring-1 ring-red-400',
+    card: 'border-red-500/60',
+    dot: 'bg-red-500',
+    text: 'text-red-700',
     box: 'bg-red-50 text-red-800',
-    icon: '🚨',
   },
 }
+
+const LEVEL_LABEL: Record<Exclude<SmartLevel, 'ok'>, () => string> = {
+  warning: m.smart_level_warning,
+  critical: m.smart_level_critical,
+}
+
+const LEVEL_BADGE: Record<Exclude<SmartLevel, 'ok'>, BadgeVariant> = {
+  warning: 'warning',
+  critical: 'destructive',
+}
+
+// Raw SMART status while all is fine, the verdict once something stands out
+const StatusBadge = ({
+  disk,
+  level,
+}: {
+  disk: SmartDiskInfo
+  level: SmartLevel
+}) =>
+  disk.standby ? (
+    <Badge variant="secondary">
+      <Moon />
+      {m.smart_monitor_standby()}
+    </Badge>
+  ) : level === 'ok' ? (
+    <Badge variant={STATUS_VARIANT[disk.status]}>{disk.status}</Badge>
+  ) : (
+    <Badge variant={LEVEL_BADGE[level]}>{LEVEL_LABEL[level]()}</Badge>
+  )
 
 const ERROR_TEXT: Record<
   ErrorAttribute,
@@ -138,10 +170,10 @@ const HINT_TEXT: Record<SmartHint, () => string> = {
 // SnapRAID rates healthy disks at a few percent per year, only the threshold is worth a color
 const getFailureProbabilityColor = (probability: number, threshold: number) =>
   probability >= CRITICAL_FAILURE_PROBABILITY
-    ? 'text-red-600'
+    ? 'text-red-700'
     : probability >= threshold
-      ? 'text-orange-600'
-      : 'text-green-600'
+      ? 'text-orange-700'
+      : ''
 
 const formatPercent = (value: number, digits: number) =>
   value.toLocaleString(getLocale(), {
@@ -150,24 +182,36 @@ const formatPercent = (value: number, digits: number) =>
   })
 
 // Same limits as assessSmart, warm is still fine
-const getTemperatureColor = (celsius: number) =>
+const temperatureLevel = (celsius: number): SmartLevel =>
   celsius >= CRITICAL_CELSIUS
-    ? 'text-red-600'
+    ? 'critical'
     : celsius > HOT_CELSIUS
-      ? 'text-orange-600'
-      : 'text-green-600'
+      ? 'warning'
+      : 'ok'
+
+const TEMPERATURE_TEXT: Record<SmartLevel, string> = {
+  ok: '',
+  warning: 'text-orange-700',
+  critical: 'text-red-700',
+}
+
+const TEMPERATURE_BAR: Record<SmartLevel, string> = {
+  ok: 'bg-green-500',
+  warning: 'bg-orange-500',
+  critical: 'bg-red-500',
+}
 
 const getWearColor = (percent: number) =>
   percent >= CRITICAL_WEAR_PERCENT
-    ? 'text-red-600'
+    ? 'text-red-700'
     : percent >= WORN_PERCENT
-      ? 'text-orange-600'
-      : 'text-green-600'
+      ? 'text-orange-700'
+      : ''
 
 const ATTRIBUTE_ROW_STYLES: Record<SmartLevel, string> = {
   ok: '',
-  warning: 'bg-yellow-50 text-yellow-800',
-  critical: 'bg-red-50 text-red-800 font-semibold',
+  warning: 'bg-yellow-50 text-yellow-800 hover:bg-yellow-50',
+  critical: 'bg-red-50 text-red-800 font-semibold hover:bg-red-50',
 }
 
 const formatYears = (hours: number) =>
@@ -184,13 +228,17 @@ const driveType = (disk: SmartDiskInfo) =>
 const diskKey = (disk: SmartDiskInfo) => `${disk.device}:${disk.name}`
 const diskAnchor = (disk: SmartDiskInfo) =>
   `smart-disk-${diskKey(disk).replace(/[^\w-]/g, '_')}`
+const DETAILS_ID = 'smart-details'
+
+const hasAttributeProblem = (disk: SmartDiskInfo) =>
+  (disk.attributes ?? []).some((attr) => attributeLevel(attr, disk) !== 'ok')
 
 // Transfer errors that stopped growing, a past cable problem worth a mention but no warning
 const StableCrcNote = ({ disk }: { disk: SmartDiskInfo }) => {
   const raw = disk.attributes?.find((attr) => attr.id === CRC_ATTRIBUTE_ID)?.raw
   if (!disk.crcStableSince || !raw) return null
   return (
-    <p className="mb-3 text-sm text-gray-500">
+    <p className="text-xs text-muted-foreground">
       {m.smart_crc_stable({
         count: Number.parseInt(raw, 10).toLocaleString(getLocale()),
         date: new Date(disk.crcStableSince).toLocaleDateString(getLocale()),
@@ -199,238 +247,410 @@ const StableCrcNote = ({ disk }: { disk: SmartDiskInfo }) => {
   )
 }
 
+const Stat = ({
+  label,
+  title,
+  className,
+  children,
+}: {
+  label: string
+  title?: string
+  className?: string
+  children: ReactNode
+}) => (
+  <div className="min-w-0" title={title}>
+    <div className="truncate text-xs text-muted-foreground">{label}</div>
+    <div
+      className={cn(
+        'truncate text-lg font-semibold tabular-nums tracking-tight',
+        className,
+      )}
+    >
+      {children}
+    </div>
+  </div>
+)
+
+const Unit = ({ children }: { children: ReactNode }) => (
+  <span className="ml-0.5 text-sm font-normal text-muted-foreground">
+    {children}
+  </span>
+)
+
 const DiskCard = ({
   disk,
   assessment,
   threshold,
-  history,
+  selected,
+  onSelect,
 }: {
   disk: SmartDiskInfo
   assessment: SmartAssessment
   threshold: number
-  history: SmartHistoryPoint[] | undefined
+  selected: boolean
+  onSelect: () => void
 }) => {
-  // Open right away when an attribute stands out, that is where the details are
-  const [expanded, setExpanded] = useState(() =>
-    (disk.attributes ?? []).some((attr) => attributeLevel(attr, disk) !== 'ok'),
-  )
   const style = LEVEL_STYLES[assessment.level]
+  const tempLevel =
+    disk.temperature === undefined ? 'ok' : temperatureLevel(disk.temperature)
+  const missing = <span className="text-muted-foreground">–</span>
 
   return (
-    <div
+    <Card
+      lift
       id={diskAnchor(disk)}
-      className={`scroll-mt-4 border rounded-lg p-4 hover:shadow-md transition-shadow ${style.card}`}
+      className={cn(
+        'relative scroll-mt-4 gap-4 p-5 has-[[data-select]:focus-visible]:ring-[3px] has-[[data-select]:focus-visible]:ring-ring/50',
+        style.card,
+        selected && 'ring-2 ring-ring',
+      )}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-semibold text-lg">{disk.name}</h3>
-            {disk.standby ? (
-              <span className="px-2 py-1 rounded text-xs font-semibold text-blue-700 bg-blue-50">
-                💤 {m.smart_monitor_standby()}
-              </span>
-            ) : (
-              getStatusBadge(disk.status)
-            )}
-          </div>
-          <p className="text-sm text-gray-600">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-2 font-semibold">
+            <span
+              aria-hidden
+              className={cn(
+                'size-2 shrink-0 rounded-full',
+                disk.standby ? 'bg-muted-foreground' : style.dot,
+              )}
+            />
+            {/* Covers the whole card, a click anywhere picks the disk */}
+            <button
+              type="button"
+              data-select
+              onClick={onSelect}
+              aria-pressed={selected}
+              aria-controls={DETAILS_ID}
+              className="truncate text-left outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
+            >
+              {disk.name}
+            </button>
+          </h3>
+          {(disk.model || disk.size) && (
+            <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+              {[disk.model, disk.size].filter(Boolean).join(' · ')}
+            </p>
+          )}
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
             {[disk.device, disk.interface, driveType(disk)]
               .filter(Boolean)
               .join(' · ')}
           </p>
-          {(disk.model || disk.family) && (
-            <p className="text-xs text-gray-500 mt-1">
-              {[disk.family, disk.model].filter(Boolean).join(' · ')}
-            </p>
-          )}
-          {disk.standby && (
-            <p className="text-xs text-gray-500 mt-1">
-              {m.smart_monitor_standby_hint()}
-            </p>
-          )}
         </div>
-
-        {disk.temperature !== undefined && (
-          <div className="text-right">
-            <div
-              className={`text-2xl font-bold ${getTemperatureColor(disk.temperature)}`}
-            >
-              {disk.temperature}°C
-            </div>
-            <div className="text-xs text-gray-500">
-              {m.smart_monitor_temperature()}
-            </div>
-          </div>
-        )}
+        <StatusBadge disk={disk} level={assessment.level} />
       </div>
 
+      {disk.standby ? (
+        <p className="text-sm text-muted-foreground">
+          {m.smart_monitor_standby_hint()}
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-3">
+            <Stat
+              label={m.smart_monitor_temperature()}
+              className={TEMPERATURE_TEXT[tempLevel]}
+            >
+              {disk.temperature === undefined ? (
+                missing
+              ) : (
+                <>
+                  {disk.temperature}
+                  <Unit>°C</Unit>
+                </>
+              )}
+            </Stat>
+            <Stat
+              label={m.smart_stat_failure()}
+              title={`${m.smart_monitor_failure_probability()} ${m.smart_monitor_per_year()}`}
+              className={
+                disk.failureProbability === undefined
+                  ? ''
+                  : getFailureProbabilityColor(
+                      disk.failureProbability,
+                      threshold,
+                    )
+              }
+            >
+              {disk.failureProbability === undefined ? (
+                missing
+              ) : (
+                <>
+                  {formatPercent(disk.failureProbability, 2)}
+                  <Unit>%</Unit>
+                </>
+              )}
+            </Stat>
+            <Stat
+              label={m.smart_stat_power_on()}
+              title={
+                disk.powerOnHours === undefined
+                  ? undefined
+                  : `${disk.powerOnHours.toLocaleString(getLocale())} ${m.smart_monitor_hours()} (${formatYears(disk.powerOnHours)} ${m.smart_monitor_years()})`
+              }
+            >
+              {disk.powerOnHours === undefined ? (
+                missing
+              ) : (
+                <>
+                  {formatYears(disk.powerOnHours)}
+                  <Unit>{m.smart_unit_years_short()}</Unit>
+                </>
+              )}
+            </Stat>
+          </div>
+
+          {/* Counters are only worth a line when they count something */}
+          {(disk.wearLevel !== undefined ||
+            !!disk.errorMedium ||
+            !!disk.errorProtocol) && (
+            <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+              {disk.wearLevel !== undefined && (
+                <div className="flex gap-1">
+                  <dt className="text-muted-foreground">
+                    {m.smart_monitor_wear_level()}
+                  </dt>
+                  <dd
+                    className={cn(
+                      'font-medium tabular-nums',
+                      getWearColor(disk.wearLevel),
+                    )}
+                  >
+                    {disk.wearLevel} %
+                  </dd>
+                </div>
+              )}
+              {!!disk.errorMedium && (
+                <div className="flex gap-1">
+                  <dt className="text-muted-foreground">
+                    {m.smart_monitor_media_errors()}
+                  </dt>
+                  <dd className="font-medium tabular-nums text-orange-700">
+                    {disk.errorMedium.toLocaleString(getLocale())}
+                  </dd>
+                </div>
+              )}
+              {!!disk.errorProtocol && (
+                <div className="flex gap-1">
+                  <dt className="text-muted-foreground">
+                    {m.smart_monitor_error_log()}
+                  </dt>
+                  <dd className="font-medium tabular-nums">
+                    {disk.errorProtocol.toLocaleString(getLocale())}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          )}
+
+          {disk.temperature !== undefined && (
+            <div
+              className="h-1.5 overflow-hidden rounded-full bg-muted"
+              title={m.smart_temperature_bar({
+                celsius: disk.temperature,
+                critical: CRITICAL_CELSIUS,
+              })}
+            >
+              <div
+                className={cn(
+                  'ui-bar h-full rounded-full',
+                  TEMPERATURE_BAR[tempLevel],
+                )}
+                style={{
+                  width: `${Math.min(100, Math.max(0, (disk.temperature / CRITICAL_CELSIUS) * 100))}%`,
+                }}
+              />
+            </div>
+          )}
+        </>
+      )}
+
       {assessment.reasons.length > 0 && (
-        <ul className={`mb-3 space-y-1 rounded-md p-3 text-sm ${style.box}`}>
+        <ul className={cn('space-y-1 rounded-md p-2.5 text-xs', style.box)}>
           {assessment.reasons.map((reason) => (
             <li key={reason.kind + describeSmartReason(reason)}>
-              {style.icon} {describeSmartReason(reason)}
+              {describeSmartReason(reason)}
             </li>
           ))}
         </ul>
       )}
 
       <StableCrcNote disk={disk} />
+    </Card>
+  )
+}
 
-      <div className="grid grid-cols-2 gap-4 text-sm">
-        {disk.failureProbability !== undefined && (
-          <div>
-            <div className="text-gray-500">
-              {m.smart_monitor_failure_probability()}
-            </div>
-            <div
-              className={`font-semibold ${getFailureProbabilityColor(disk.failureProbability, threshold)}`}
-            >
-              {formatPercent(disk.failureProbability, 2)} %{' '}
-              <span className="text-xs font-normal text-gray-500">
-                {m.smart_monitor_per_year()}
-              </span>
-            </div>
+type DetailTab = 'attributes' | 'history' | 'raw'
+
+const DiskDetails = ({
+  disk,
+  history,
+  rawOutput,
+}: {
+  disk: SmartDiskInfo
+  history: SmartHistoryPoint[] | undefined
+  rawOutput: string
+}) => {
+  const [tab, setTab] = useState<DetailTab>('attributes')
+  const attributes = disk.attributes ?? []
+  const tabs: DetailTab[] = [
+    ...(attributes.length > 0 ? (['attributes'] as const) : []),
+    ...(hasSmartHistory(history) ? (['history'] as const) : []),
+    ...(rawOutput ? (['raw'] as const) : []),
+  ]
+  // Another disk may lack the tab that was open
+  const current = tabs.includes(tab) ? tab : tabs[0]
+
+  const facts = [
+    disk.family,
+    disk.serial && `${m.smart_monitor_serial()} ${disk.serial}`,
+    disk.powerOnHours !== undefined &&
+      `${disk.powerOnHours.toLocaleString(getLocale())} ${m.smart_monitor_hours()} (${m.smart_monitor_power_on_hours()})`,
+  ].filter(Boolean)
+
+  return (
+    <Card id={DETAILS_ID} className="scroll-mt-4 gap-0 overflow-hidden py-0">
+      <Tabs
+        value={current}
+        onValueChange={(value) => setTab(value as DetailTab)}
+        className="gap-0"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold">
+              {disk.name} · {m.smart_monitor_attributes()}
+              {attributes.length > 0 && (
+                <span className="ml-1 font-normal text-muted-foreground">
+                  ({attributes.length})
+                </span>
+              )}
+            </h2>
+            {facts.length > 0 && (
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {facts.join(' · ')}
+              </p>
+            )}
           </div>
-        )}
-
-        {disk.powerOnHours !== undefined && (
-          <div>
-            <div className="text-gray-500">
-              {m.smart_monitor_power_on_hours()}
-            </div>
-            <div className="font-semibold">
-              {disk.powerOnHours.toLocaleString(getLocale())}{' '}
-              {m.smart_monitor_hours()}
-              <span className="text-xs text-gray-500 ml-1">
-                ({formatYears(disk.powerOnHours)} {m.smart_monitor_years()})
-              </span>
-            </div>
-          </div>
-        )}
-
-        {disk.wearLevel !== undefined && (
-          <div>
-            <div className="text-gray-500">{m.smart_monitor_wear_level()}</div>
-            <div className={`font-semibold ${getWearColor(disk.wearLevel)}`}>
-              {disk.wearLevel} %
-            </div>
-          </div>
-        )}
-
-        {/* Counters are only worth a line when they count something */}
-        {!!disk.errorMedium && (
-          <div>
-            <div className="text-gray-500">
-              {m.smart_monitor_media_errors()}
-            </div>
-            <div className="font-semibold text-orange-600">
-              {disk.errorMedium.toLocaleString(getLocale())}
-            </div>
-          </div>
-        )}
-
-        {!!disk.errorProtocol && (
-          <div>
-            <div className="text-gray-500">{m.smart_monitor_error_log()}</div>
-            <div className="font-semibold">
-              {disk.errorProtocol.toLocaleString(getLocale())}
-            </div>
-          </div>
-        )}
-
-        {disk.size && (
-          <div>
-            <div className="text-gray-500">{m.smart_monitor_capacity()}</div>
-            <div className="font-semibold text-sm">{disk.size}</div>
-          </div>
-        )}
-
-        {disk.serial && (
-          <div>
-            <div className="text-gray-500">{m.smart_monitor_serial()}</div>
-            <div className="font-mono text-xs">{disk.serial}</div>
-          </div>
-        )}
-      </div>
-
-      <SmartHistoryCharts points={history} />
-
-      {disk.attributes && disk.attributes.length > 0 && (
-        <div className="mt-3">
-          <button
-            type="button"
-            onClick={() => setExpanded(!expanded)}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-          >
-            {expanded ? '▼' : '▶'} {m.smart_monitor_attributes()} (
-            {disk.attributes.length})
-          </button>
-
-          {expanded && (
-            <div className="mt-2 overflow-x-auto">
-              <table className="min-w-full text-xs">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-2 py-1 text-left">
-                      {m.smart_monitor_id()}
-                    </th>
-                    <th className="px-2 py-1 text-left">
-                      {m.smart_monitor_name()}
-                    </th>
-                    <th className="px-2 py-1 text-right">
-                      {m.smart_monitor_value()}
-                    </th>
-                    <th className="px-2 py-1 text-right">
-                      {m.smart_monitor_worst()}
-                    </th>
-                    <th className="px-2 py-1 text-right">
-                      {m.smart_monitor_threshold()}
-                    </th>
-                    <th className="px-2 py-1 text-right">
-                      {m.smart_monitor_raw()}
-                    </th>
-                    <th className="px-2 py-1 text-left">
-                      {m.smart_monitor_status()}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {disk.attributes.map((attr) => (
-                    <tr
-                      key={attr.id}
-                      className={`border-t ${ATTRIBUTE_ROW_STYLES[attributeLevel(attr, disk)]}`}
-                    >
-                      <td className="px-2 py-1">{attr.id}</td>
-                      <td className="px-2 py-1">{attr.name}</td>
-                      <td className="px-2 py-1 text-right">{attr.value}</td>
-                      <td className="px-2 py-1 text-right">{attr.worst}</td>
-                      <td className="px-2 py-1 text-right">{attr.threshold}</td>
-                      <td className="px-2 py-1 text-right font-mono">
-                        {attr.raw}
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        {attr.flag}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {tabs.length > 0 && (
+            <TabsList className="max-w-full justify-start overflow-x-auto">
+              {tabs.includes('attributes') && (
+                <TabsTrigger value="attributes">
+                  {m.smart_monitor_attributes()}
+                </TabsTrigger>
+              )}
+              {tabs.includes('history') && (
+                <TabsTrigger value="history">
+                  {m.smart_history_title({
+                    days: String(history?.length ?? 0),
+                  })}
+                </TabsTrigger>
+              )}
+              {tabs.includes('raw') && (
+                <TabsTrigger value="raw">{m.smart_tab_raw()}</TabsTrigger>
+              )}
+            </TabsList>
           )}
         </div>
-      )}
-    </div>
+
+        {tabs.length === 0 && (
+          <p className="border-t px-5 py-4 text-sm text-muted-foreground">
+            {disk.standby
+              ? m.smart_monitor_standby_hint()
+              : m.smart_reason_unreadable()}
+          </p>
+        )}
+
+        <TabsContent value="attributes" className="border-t">
+          <Table className="min-w-[640px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>{m.smart_monitor_id()}</TableHead>
+                <TableHead>{m.smart_monitor_name()}</TableHead>
+                <TableHead className="text-right">
+                  {m.smart_monitor_value()}
+                </TableHead>
+                <TableHead className="text-right">
+                  {m.smart_monitor_worst()}
+                </TableHead>
+                <TableHead className="text-right">
+                  {m.smart_monitor_threshold()}
+                </TableHead>
+                <TableHead className="text-right">
+                  {m.smart_monitor_raw()}
+                </TableHead>
+                <TableHead>{m.smart_monitor_status()}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {attributes.map((attr) => {
+                const level = attributeLevel(attr, disk)
+                return (
+                  <TableRow
+                    key={attr.id}
+                    className={ATTRIBUTE_ROW_STYLES[level]}
+                  >
+                    <TableCell className="font-mono tabular-nums">
+                      {attr.id}
+                    </TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center gap-2">
+                        {attr.name}
+                        {level !== 'ok' && (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'border-transparent bg-card',
+                              LEVEL_STYLES[level].text,
+                            )}
+                          >
+                            {LEVEL_LABEL[level]()}
+                          </Badge>
+                        )}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right font-mono tabular-nums">
+                      {attr.value}
+                    </TableCell>
+                    <TableCell className="text-right font-mono tabular-nums">
+                      {attr.worst}
+                    </TableCell>
+                    <TableCell className="text-right font-mono tabular-nums">
+                      {attr.threshold}
+                    </TableCell>
+                    <TableCell className="text-right font-mono tabular-nums">
+                      {attr.raw}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {attr.flag}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </TabsContent>
+
+        <TabsContent value="history" className="border-t p-5">
+          <SmartHistoryCharts points={history} />
+        </TabsContent>
+
+        <TabsContent value="raw" className="border-t">
+          <pre className="max-h-[32rem] overflow-auto bg-muted/50 p-5 font-mono text-xs">
+            {rawOutput}
+          </pre>
+        </TabsContent>
+      </Tabs>
+    </Card>
   )
 }
 
 export const SmartMonitor = ({ configPath }: SmartMonitorProps) => {
-  const [showRawOutput, setShowRawOutput] = useState(false)
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const {
     data: report,
     isLoading: loading,
-    isFetching,
     error: queryError,
-    refetch,
   } = useSmart(configPath || undefined)
   const error = queryError?.message
   const { data: history } = useSmartHistory(
@@ -458,149 +678,144 @@ export const SmartMonitor = ({ configPath }: SmartMonitorProps) => {
     ({ assessment }) => assessment.level === 'warning',
   )
 
-  return (
-    <div className="bg-white shadow rounded-lg p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-semibold">{m.smart_monitor_title()}</h2>
-          {report && (
-            <p
-              className="text-sm text-gray-500 mt-1"
-              title={new Date(report.timestamp).toLocaleString(getLocale())}
-            >
-              {m.smart_monitor_last_updated()}:{' '}
-              {formatRelativeTime(report.timestamp, getLocale())}
-            </p>
-          )}
-        </div>
-        <Button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          variant="secondary"
-          size="iconSm"
-          aria-label={m.smart_monitor_refresh()}
-          title={m.smart_monitor_refresh()}
-        >
-          <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} />
-        </Button>
-      </div>
+  // Until a disk is picked, show the one that needs attention, that is where the details are
+  const selected =
+    assessed.find(({ disk }) => diskKey(disk) === selectedKey) ??
+    critical[0] ??
+    warnings[0] ??
+    assessed.find(({ disk }) => hasAttributeProblem(disk)) ??
+    assessed.find(({ disk }) => (disk.attributes ?? []).length > 0) ??
+    assessed[0]
 
+  const showDetails = (disk: SmartDiskInfo) => {
+    setSelectedKey(diskKey(disk))
+    document
+      .getElementById(DETAILS_ID)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  return (
+    <>
       {loading && (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
-          {m.smart_monitor_loading_hint()}
-        </div>
+        <Alert>
+          <AlertDescription>{m.smart_monitor_loading_hint()}</AlertDescription>
+        </Alert>
       )}
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded text-red-700">
-          <strong>{m.smart_monitor_error()}:</strong> {error}
-        </div>
+        <Alert variant="destructive">
+          <OctagonAlert />
+          <AlertTitle>{m.smart_monitor_error()}</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {report && report.disks.length > 0 && problems.length === 0 && (
-        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-          <p className="font-semibold">
-            ✅ {m.smart_monitor_all_ok({ count: report.disks.length })}
-          </p>
-          <p className="mt-1">{m.smart_monitor_all_ok_hint()}</p>
-        </div>
+        <Alert variant="success">
+          <CircleCheck />
+          <AlertTitle>
+            {m.smart_monitor_all_ok({ count: report.disks.length })}
+          </AlertTitle>
+          <AlertDescription>{m.smart_monitor_all_ok_hint()}</AlertDescription>
+        </Alert>
       )}
 
       {[
         {
           group: critical,
-          style: 'border-red-200 bg-red-50 text-red-800',
-          title: `🚨 ${m.smart_monitor_critical_message()}`,
+          variant: 'destructive' as const,
+          icon: <OctagonAlert />,
+          title: m.smart_monitor_critical_message(),
         },
         {
           group: warnings,
-          style: 'border-yellow-200 bg-yellow-50 text-yellow-800',
-          title: `⚠️ ${m.smart_monitor_warning_message()}`,
+          variant: 'warning' as const,
+          icon: <AlertTriangle />,
+          title: m.smart_monitor_warning_message(),
         },
       ]
         .filter(({ group }) => group.length > 0)
-        .map(({ group, style, title }) => (
-          <div
-            key={title}
-            className={`mb-4 rounded-lg border p-4 text-sm ${style}`}
-          >
-            <p className="font-semibold">{title}</p>
-            <ul className="mt-2 space-y-1">
-              {group.map(({ disk, assessment }) => (
-                <li key={diskKey(disk)}>
-                  <a
-                    href={`#${diskAnchor(disk)}`}
-                    className="font-semibold underline hover:no-underline"
-                  >
-                    {disk.name}
-                  </a>
-                  {': '}
-                  {assessment.reasons.map(describeSmartReason).join(', ')}
-                </li>
-              ))}
-            </ul>
-            {smartHints(group.map(({ assessment }) => assessment)).map(
-              (hint) => (
-                <p key={hint} className="mt-2">
-                  → {HINT_TEXT[hint]()}
-                </p>
-              ),
-            )}
-          </div>
+        .map(({ group, variant, icon, title }) => (
+          <Alert key={variant} variant={variant}>
+            {icon}
+            <AlertTitle className="font-semibold">{title}</AlertTitle>
+            <AlertDescription className="text-current">
+              <ul className="space-y-1">
+                {group.map(({ disk, assessment }) => (
+                  <li key={diskKey(disk)}>
+                    <a
+                      href={`#${DETAILS_ID}`}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        showDetails(disk)
+                      }}
+                      className="font-semibold underline underline-offset-2 hover:no-underline"
+                    >
+                      {disk.name}
+                    </a>
+                    {' · '}
+                    {assessment.reasons.map(describeSmartReason).join(', ')}
+                  </li>
+                ))}
+              </ul>
+              {smartHints(group.map(({ assessment }) => assessment)).map(
+                (hint) => (
+                  <p key={hint} className="flex items-start gap-1.5">
+                    <Wrench className="mt-1 size-3.5 shrink-0 opacity-70" />
+                    {HINT_TEXT[hint]()}
+                  </p>
+                ),
+              )}
+            </AlertDescription>
+          </Alert>
         ))}
 
       {report?.arrayFailureProbability !== undefined && (
-        <div className="mb-4 flex items-center gap-4 rounded-lg border border-gray-200 p-4 text-sm">
+        <Card className="flex-row items-center gap-4 px-5 py-4">
           {/* Grows with the number of disks, the per-disk threshold does not apply */}
-          <div className="text-2xl font-bold">
+          <div className="shrink-0 whitespace-nowrap text-2xl font-semibold tabular-nums tracking-tight">
             {formatPercent(report.arrayFailureProbability, 0)} %
           </div>
-          <div>
-            <p className="font-semibold">{m.smart_monitor_array_failure()}</p>
-            <p className="text-gray-500">
+          <div className="min-w-0 text-sm">
+            <p className="font-medium">{m.smart_monitor_array_failure()}</p>
+            <p className="text-muted-foreground">
               {m.smart_monitor_array_failure_hint()}
             </p>
           </div>
-        </div>
+        </Card>
       )}
 
       {report && report.disks.length > 0 ? (
         <>
-          <div className="grid gap-4 mb-4">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4">
             {assessed.map(({ disk, assessment }) => (
               <DiskCard
                 key={diskKey(disk)}
                 disk={disk}
                 assessment={assessment}
                 threshold={threshold}
-                history={history?.[disk.name]}
+                selected={selected?.disk === disk}
+                onSelect={() => setSelectedKey(diskKey(disk))}
               />
             ))}
           </div>
 
-          <div className="mt-6 border-t pt-4">
-            <button
-              type="button"
-              onClick={() => setShowRawOutput(!showRawOutput)}
-              className="text-sm text-gray-600 hover:text-gray-800"
-            >
-              {showRawOutput ? '▼' : '▶'} {m.smart_monitor_show_raw_output()}
-            </button>
-            {showRawOutput && (
-              <pre className="mt-2 p-4 bg-gray-50 rounded text-xs overflow-x-auto">
-                {report.rawOutput}
-              </pre>
-            )}
-          </div>
+          {selected && (
+            <DiskDetails
+              disk={selected.disk}
+              history={history?.[selected.disk.name]}
+              rawOutput={report.rawOutput}
+            />
+          )}
         </>
       ) : (
         !loading &&
         !error && (
-          <div className="text-center py-8 text-gray-500">
+          <Card className="items-center px-6 py-10 text-center text-sm text-muted-foreground shadow-none">
             {m.smart_monitor_no_disks()}
-          </div>
+          </Card>
         )
       )}
-    </div>
+    </>
   )
 }

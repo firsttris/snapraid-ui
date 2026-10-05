@@ -3,20 +3,36 @@ import {
   BarElement,
   CategoryScale,
   Chart as ChartJS,
+  Tooltip as ChartTooltip,
   LinearScale,
-  Tooltip,
   type TooltipItem,
 } from 'chart.js'
-import { RefreshCw, X } from 'lucide-react'
-import { type ReactNode, useRef, useState } from 'react'
+import {
+  ChevronRight,
+  CircleCheck,
+  CircleX,
+  Info,
+  type LucideIcon,
+  RefreshCw,
+  TriangleAlert,
+} from 'lucide-react'
+import { type ReactNode, useState } from 'react'
 import { Bar } from 'react-chartjs-2'
-import { useDialogKeys } from '../hooks/useDialogKeys'
-import { SCRUB_OLDEST_STALE_DAYS, scrubKeepingUp } from '../lib/utils'
+import { cn, SCRUB_OLDEST_STALE_DAYS, scrubKeepingUp } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
-import { Button } from './Button'
+import { Alert, AlertDescription, AlertTitle } from './ui/alert'
+import { Button } from './ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip)
+ChartJS.register(CategoryScale, LinearScale, BarElement, ChartTooltip)
 
 interface StatusModalProps {
   status: SnapRaidStatus
@@ -28,18 +44,19 @@ interface StatusModalProps {
 type Tone = 'ok' | 'info' | 'warning' | 'error'
 type Finding = { tone: Tone; title: string; message: string }
 
-const TONE_BOX: Record<Tone, string> = {
-  ok: 'bg-green-50 border-green-200 text-green-800',
-  info: 'bg-blue-50 border-blue-200 text-blue-800',
-  warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-  error: 'bg-red-50 border-red-200 text-red-800',
-}
+const TONE_ALERT: Record<Tone, 'success' | 'info' | 'warning' | 'destructive'> =
+  {
+    ok: 'success',
+    info: 'info',
+    warning: 'warning',
+    error: 'destructive',
+  }
 
-const TONE_ICON: Record<Tone, string> = {
-  ok: '✅',
-  info: 'ℹ️',
-  warning: '⚠️',
-  error: '❌',
+const TONE_ICON: Record<Tone, LucideIcon> = {
+  ok: CircleCheck,
+  info: Info,
+  warning: TriangleAlert,
+  error: CircleX,
 }
 
 const BAR_COLOR = 'rgb(59, 130, 246)'
@@ -130,12 +147,13 @@ const Stat = ({
   highlight?: boolean
   children: ReactNode
 }) => (
-  <div className="rounded-lg border border-gray-200 p-3" title={hint}>
-    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-      {label}
-    </p>
+  <div className="rounded-lg border p-3" title={hint}>
+    <p className="text-xs text-muted-foreground">{label}</p>
     <p
-      className={`mt-1 text-lg font-semibold ${highlight ? 'text-orange-600' : 'text-gray-900'}`}
+      className={cn(
+        'mt-1 text-lg font-semibold tabular-nums',
+        highlight && 'text-orange-700',
+      )}
     >
       {children}
     </p>
@@ -148,9 +166,7 @@ export function StatusModal({
   onClose,
   onRefresh,
 }: StatusModalProps) {
-  const dialogRef = useRef<HTMLDivElement>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  useDialogKeys(dialogRef, onClose)
 
   const refresh = async () => {
     setIsRefreshing(true)
@@ -232,74 +248,59 @@ export function StatusModal({
   }
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click is a mouse shortcut, Escape closes too
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose()
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
       }}
     >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="status-modal-title"
-        tabIndex={-1}
-        className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-white shadow-xl outline-none"
+      <DialogContent
+        className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-4xl"
+        onOpenAutoFocus={(event) => {
+          // Focus the dialog itself, not the refresh button (its tooltip
+          // would pop up right away)
+          event.preventDefault()
+          ;(event.currentTarget as HTMLElement | null)?.focus()
+        }}
       >
-        <div className="flex items-start justify-between gap-4 border-b p-4 sm:p-6">
-          <div>
-            <h3 id="status-modal-title" className="text-xl font-semibold">
-              {m.status_modal_title()}
-            </h3>
-            <p className="mt-1 text-sm text-gray-600">
+        <div className="flex items-start justify-between gap-4 border-b p-4 pr-12 sm:p-6 sm:pr-14">
+          <DialogHeader>
+            <DialogTitle>{m.status_modal_title()}</DialogTitle>
+            <DialogDescription>
               {m.status_modal_description()}
-            </p>
-          </div>
-          <div className="flex gap-1">
-            {onRefresh && (
-              <Button
-                onClick={refresh}
-                disabled={isRefreshing}
-                variant="ghost"
-                size="icon"
-                aria-label={m.status_modal_refresh()}
-                title={m.status_modal_refresh()}
-              >
-                <RefreshCw
-                  size={18}
-                  className={isRefreshing ? 'animate-spin' : ''}
-                />
-              </Button>
-            )}
-            <Button
-              onClick={onClose}
-              variant="ghost"
-              size="icon"
-              aria-label={m.common_close()}
-              title={m.common_close()}
-            >
-              <X size={18} />
-            </Button>
-          </div>
+            </DialogDescription>
+          </DialogHeader>
+          {onRefresh && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={refresh}
+                  disabled={isRefreshing}
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={m.status_modal_refresh()}
+                  className="-mt-2 sm:-mt-4"
+                >
+                  <RefreshCw className={isRefreshing ? 'animate-spin' : ''} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{m.status_modal_refresh()}</TooltipContent>
+            </Tooltip>
+          )}
         </div>
 
-        <div className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
           <div className="space-y-2">
-            {findings.map((finding) => (
-              <div
-                key={finding.title}
-                className={`flex items-start gap-3 rounded-lg border p-3 ${TONE_BOX[finding.tone]}`}
-              >
-                <span className="text-lg leading-6">
-                  {TONE_ICON[finding.tone]}
-                </span>
-                <div>
-                  <p className="font-semibold">{finding.title}</p>
-                  <p className="text-sm">{finding.message}</p>
-                </div>
-              </div>
-            ))}
+            {findings.map((finding) => {
+              const Icon = TONE_ICON[finding.tone]
+              return (
+                <Alert key={finding.title} variant={TONE_ALERT[finding.tone]}>
+                  <Icon />
+                  <AlertTitle>{finding.title}</AlertTitle>
+                  <AlertDescription>{finding.message}</AlertDescription>
+                </Alert>
+              )
+            })}
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -344,30 +345,33 @@ export function StatusModal({
 
           {history.length > 0 && (
             <div>
-              <h4 className="font-semibold">{m.status_modal_scrub_age()}</h4>
-              <p className="mt-1 mb-3 text-sm text-gray-600">
+              <h4 className="text-base font-semibold">
+                {m.status_modal_scrub_age()}
+              </h4>
+              <p className="mt-1 mb-3 text-sm text-muted-foreground">
                 {m.status_modal_scrub_age_hint({
                   days: String(SCRUB_OLDEST_STALE_DAYS),
                 })}
               </p>
-              <div className="h-56 rounded-lg border border-gray-200 p-3">
+              <div className="h-56 rounded-lg border p-3">
                 <Bar data={chartData} options={chartOptions} />
               </div>
             </div>
           )}
 
           {status.rawOutput.trim() && (
-            <details className="rounded-lg border border-gray-200">
-              <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-gray-700">
+            <details className="group rounded-lg border">
+              <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+                <ChevronRight className="size-4 text-muted-foreground transition-transform group-open:rotate-90" />
                 {m.status_modal_raw_output()}
               </summary>
-              <pre className="overflow-x-auto border-t border-gray-200 bg-gray-50 p-4 font-mono text-xs text-gray-800">
+              <pre className="overflow-x-auto border-t bg-muted/50 p-4 font-mono text-xs">
                 {status.rawOutput}
               </pre>
             </details>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -1,10 +1,15 @@
-import { FileText, Plus, Trash2 } from 'lucide-react'
+import { FileText, FolderOpen, Plus, Trash2, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { useAddContentFile, useRemoveContentFile } from '../hooks/queries'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
 import { DirectoryBrowser } from './DirectoryBrowser'
+import { ErrorAlert } from './ErrorAlert'
 import { errorMessage, useFeedback } from './Feedback'
+import { Alert, AlertDescription } from './ui/alert'
+import { Badge } from './ui/badge'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 interface ContentFileSectionProps {
   configPath: string
@@ -68,92 +73,110 @@ export const ContentFileSection = ({
   }
 
   return (
-    <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-      <div className="flex justify-between items-center mb-1">
-        <h3 className="font-semibold text-purple-900 flex items-center gap-2">
-          <FileText size={20} />
-          {m.content_section_title()} ({content.length})
-        </h3>
+    <section className="rounded-xl border bg-card shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-2 border-b px-4 py-3">
+        <div className="flex min-w-0 flex-col gap-1">
+          <h3 className="flex items-center gap-2 text-base font-semibold">
+            <FileText className="size-4 text-muted-foreground" />
+            {m.content_section_title()}
+            <Badge variant="secondary" className="tabular-nums">
+              {content.length}
+            </Badge>
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {m.content_section_help()}
+          </p>
+        </div>
         {!showAdd && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowAdd(true)}
-          >
-            <Plus size={14} />
+          <Button variant="outline" size="sm" onClick={() => setShowAdd(true)}>
+            <Plus />
             {m.common_add()}
           </Button>
         )}
       </div>
-      <p className="mb-3 text-sm text-purple-700">{m.content_section_help()}</p>
 
-      {error && (
-        <div className="mb-3 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-          {error}
-        </div>
-      )}
+      <div className="flex flex-col gap-3 p-4">
+        {error && <ErrorAlert error={error} />}
 
-      {showAdd && (
-        <form
-          onSubmit={handleAdd}
-          className="mb-3 p-3 bg-white rounded border border-purple-200"
-        >
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newPath}
-              onChange={(e) => setNewPath(e.target.value)}
-              placeholder={m.content_section_path_placeholder()}
-              aria-label={m.content_section_title()}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono text-sm"
-              // biome-ignore lint/a11y/noAutofocus: focus the field when the add form opens
-              autoFocus
-            />
-            <Button variant="secondary" onClick={() => setShowBrowser(true)}>
-              {m.config_manager_browse_button()}
-            </Button>
-          </div>
-          <div className="flex gap-2 mt-2">
-            <Button
-              type="submit"
-              size="sm"
-              disabled={addMutation.isPending || !newPath.trim()}
-            >
-              {addMutation.isPending ? m.common_adding() : m.common_add()}
-            </Button>
-            <Button variant="secondary" size="sm" onClick={closeAdd}>
-              {m.common_cancel()}
-            </Button>
-          </div>
-        </form>
-      )}
-
-      <div className="space-y-2">
-        {content.length === 0 ? (
-          <div className="text-sm font-medium text-red-600">
-            {m.content_section_none()}
-          </div>
-        ) : (
-          content.map((path) => (
-            <div
-              key={path}
-              className="flex justify-between items-center bg-white p-3 rounded border border-purple-200"
-            >
-              <div className="font-mono text-sm text-gray-700 flex-1 truncate">
-                {path}
-              </div>
+        {showAdd && (
+          <form
+            onSubmit={handleAdd}
+            className="flex flex-col gap-3 rounded-lg border border-dashed bg-muted/40 p-3"
+          >
+            <div className="flex gap-2">
+              <Input
+                value={newPath}
+                onChange={(e) => setNewPath(e.target.value)}
+                placeholder={m.content_section_path_placeholder()}
+                aria-label={m.content_section_title()}
+                className="bg-background font-mono"
+                autoFocus
+              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowBrowser(true)}
+                    aria-label={m.config_manager_browse_button()}
+                  >
+                    <FolderOpen />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {m.config_manager_browse_button()}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <div className="flex gap-2">
               <Button
-                variant="ghostDanger"
-                size="iconSm"
-                onClick={() => handleRemove(path)}
-                aria-label={m.common_remove()}
-                title={m.common_remove()}
-                className="ml-3"
+                type="submit"
+                size="sm"
+                disabled={addMutation.isPending || !newPath.trim()}
               >
-                <Trash2 size={16} />
+                {addMutation.isPending ? m.common_adding() : m.common_add()}
+              </Button>
+              <Button variant="outline" size="sm" onClick={closeAdd}>
+                {m.common_cancel()}
               </Button>
             </div>
-          ))
+          </form>
+        )}
+
+        {content.length === 0 ? (
+          <Alert variant="destructive">
+            <TriangleAlert />
+            <AlertDescription>{m.content_section_none()}</AlertDescription>
+          </Alert>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {content.map((path) => (
+              <li
+                key={path}
+                className="flex items-center gap-3 rounded-lg border bg-background px-3 py-2 dark:bg-input/20"
+              >
+                <span
+                  className="min-w-0 flex-1 truncate font-mono text-sm"
+                  title={path}
+                >
+                  {path}
+                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghostDestructive"
+                      size="icon-sm"
+                      onClick={() => handleRemove(path)}
+                      aria-label={m.common_remove()}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{m.common_remove()}</TooltipContent>
+                </Tooltip>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 
@@ -168,6 +191,6 @@ export const ContentFileSection = ({
           title={m.content_section_select_directory()}
         />
       )}
-    </div>
+    </section>
   )
 }

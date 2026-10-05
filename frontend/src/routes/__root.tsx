@@ -10,10 +10,15 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
+import { AppSidebar } from '../components/AppSidebar'
 import { AuthGate } from '../components/AuthGate'
+import { CommandPalette } from '../components/CommandPalette'
 import { FeedbackProvider } from '../components/Feedback'
 import { Header } from '../components/Header'
+import { Button } from '../components/ui/button'
+import { TooltipProvider } from '../components/ui/tooltip'
 import { queryKeys, STATUS_CACHE_MAX_AGE } from '../hooks/queries'
+import { AppShellProvider } from '../hooks/useAppShell'
 import { JobProvider } from '../hooks/useJob'
 import { SelectedConfigProvider } from '../hooks/useSelectedConfig'
 import { THEME_INIT_SCRIPT } from '../lib/theme'
@@ -65,17 +70,16 @@ const persistOptions = {
 
 export const Route = createRootRoute({
   notFoundComponent: () => (
-    <div style={{ padding: '2rem', textAlign: 'center' }}>
-      <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+    <main className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-24 text-center">
+      <p className="font-mono text-sm text-muted-foreground">404</p>
+      <h1 className="text-3xl font-semibold tracking-tight">
         {m.not_found_title()}
       </h1>
-      <p style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>
-        {m.not_found_message()}
-      </p>
-      <Link to="/" style={{ color: '#0066cc', textDecoration: 'underline' }}>
-        {m.not_found_go_home()}
-      </Link>
-    </div>
+      <p className="max-w-md text-muted-foreground">{m.not_found_message()}</p>
+      <Button asChild>
+        <Link to="/">{m.not_found_go_home()}</Link>
+      </Button>
+    </main>
   ),
   head: () => ({
     meta: [
@@ -91,7 +95,7 @@ export const Route = createRootRoute({
       },
       {
         name: 'theme-color',
-        content: '#101828',
+        content: '#09090b',
       },
     ],
     links: [
@@ -143,8 +147,18 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <FeedbackProvider>
               <SelectedConfigProvider>
                 <JobProvider>
-                  <Header />
-                  {children}
+                  <TooltipProvider>
+                    <AppShellProvider>
+                      <div className="flex min-h-svh">
+                        <AppSidebar />
+                        <div className="flex min-w-0 flex-1 flex-col">
+                          <Header />
+                          {children}
+                        </div>
+                      </div>
+                      <CommandPalette />
+                    </AppShellProvider>
+                  </TooltipProvider>
                 </JobProvider>
               </SelectedConfigProvider>
             </FeedbackProvider>

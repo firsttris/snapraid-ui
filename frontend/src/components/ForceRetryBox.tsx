@@ -2,8 +2,9 @@ import { FORCE_FLAGS, type ForceOption } from '@shared/force-option'
 import { ShieldAlert } from 'lucide-react'
 import { getCommandLabel } from '../lib/commands'
 import * as m from '../paraglide/messages'
-import { Button } from './Button'
 import { useFeedback } from './Feedback'
+import { Alert, AlertDescription, AlertTitle } from './ui/alert'
+import { Button } from './ui/button'
 
 const TEXT: Record<
   ForceOption,
@@ -45,20 +46,21 @@ export const ForceRetryBox = ({
   }
 
   return (
-    <div className="mb-6 flex flex-wrap items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
-      <ShieldAlert size={20} className="mt-0.5 shrink-0" />
-      <div className="min-w-0 flex-1">
-        <p className="font-semibold">{title()}</p>
-        <p className="mt-1 text-sm">{message()}</p>
-      </div>
-      <Button
-        variant="dangerOutline"
-        size="sm"
-        disabled={disabled}
-        onClick={retry}
-      >
-        {m.force_retry({ command: label })}
-      </Button>
-    </div>
+    <Alert variant="destructive">
+      <ShieldAlert />
+      <AlertTitle className="font-semibold">{title()}</AlertTitle>
+      <AlertDescription>
+        <p>{message()}</p>
+        <Button
+          variant="destructiveOutline"
+          size="sm"
+          disabled={disabled}
+          onClick={retry}
+          className="mt-2"
+        >
+          {m.force_retry({ command: label })}
+        </Button>
+      </AlertDescription>
+    </Alert>
   )
 }
