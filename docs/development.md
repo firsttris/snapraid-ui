@@ -210,9 +210,11 @@ GitHub Actions workflows in `.github/workflows/`:
 |---|---|---|
 | `ci.yml` | Push and pull request to `master`; called by the release workflow | Backend: `deno check src/main.ts`, `deno test --allow-all`. Frontend: `npm ci`, `npx biome check`, `npm run typecheck`, `npm test`, `npm run build` |
 | `release.yml` | Push of a `v*` tag; manual run | Runs CI, then the shared Docker release workflow from `firsttris/workflows`. A tag `vX.Y.Z` publishes `tristanteu/snapraid-ui:X.Y.Z`, `:X.Y` and `:latest`, updates the Docker Hub description and creates the GitHub release. A manual run on `master` runs the same checks and pushes `:edge`, without a release |
+| `bump.yml` | Manual run | Raises the highest `vX.Y.Z` tag (patch, minor or major), tags the current commit and starts `release.yml` on it (shared [`bump-version`](https://github.com/firsttris/workflows#bump-version)) |
 | `snapraid-release.yml` | Mondays 06:00 UTC; manual run | Compares the pinned `SNAPRAID_VERSION` with SnapRAID's latest release and opens an issue with a checklist if they differ |
 
-The tag is the version; there is no version file. To release, from `frontend/`:
+The tag is the version; there is no version file. To release, run *Bump version* in the Actions tab,
+or from `frontend/`:
 
 ```bash
 npm run release 1.2.3    # creates the annotated tag v1.2.3 and pushes it
