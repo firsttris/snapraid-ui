@@ -8,7 +8,14 @@ import type {
   SnapRaidCommand,
 } from '@shared/types'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import {
   ArrayHealthPanel,
   DashboardActions,
@@ -28,7 +35,6 @@ import { ForceRetryBox } from '../components/ForceRetryBox'
 import { OutputConsole } from '../components/OutputConsole'
 import { PageLayout } from '../components/PageLayout'
 import { ScrubDialog } from '../components/ScrubDialog'
-import { StatusModal } from '../components/StatusModal'
 import { SyncPreviewDialog } from '../components/SyncPreviewDialog'
 import { UndeleteDialog } from '../components/UndeleteDialog'
 import {
@@ -54,6 +60,13 @@ import {
   SnapRaidBusyError,
 } from '../lib/api/snapraid'
 import * as m from '../paraglide/messages'
+
+// chart.js is only loaded once the status dialog is opened
+const StatusModal = lazy(() =>
+  import('../components/StatusModal').then((module) => ({
+    default: module.StatusModal,
+  })),
+)
 
 export const Route = createFileRoute('/')({
   component: Dashboard,
@@ -506,12 +519,14 @@ function Dashboard() {
         )}
 
         {showStatusModal && statusData && (
-          <StatusModal
-            status={statusData.status}
-            lastScrub={lastRuns?.scrub}
-            onClose={() => setShowStatusModal(false)}
-            onRefresh={refetchStatus}
-          />
+          <Suspense fallback={null}>
+            <StatusModal
+              status={statusData.status}
+              lastScrub={lastRuns?.scrub}
+              onClose={() => setShowStatusModal(false)}
+              onRefresh={refetchStatus}
+            />
+          </Suspense>
         )}
       </ConfigBar>
     </PageLayout>

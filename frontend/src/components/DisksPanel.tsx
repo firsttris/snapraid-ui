@@ -10,12 +10,11 @@ import type {
 import { diskFreeSeries, forecastFill } from '@shared/usage-forecast'
 import { Link } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
-import { type ReactNode, useState } from 'react'
+import { lazy, type ReactNode, Suspense, useState } from 'react'
 import { cn, formatGB, usageBarColor } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { LoadingHint, Skeleton } from './Skeleton'
-import { hasUsageHistory, UsageHistoryChart } from './UsageHistoryChart'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
@@ -28,6 +27,14 @@ import {
   TableRow,
 } from './ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
+import { hasUsageHistory } from './usageHistory'
+
+// chart.js is only loaded once the history tab is opened
+const UsageHistoryChart = lazy(() =>
+  import('./UsageHistoryChart').then((module) => ({
+    default: module.UsageHistoryChart,
+  })),
+)
 
 // Parity reserve below this share of the fullest data disk is flagged as tight
 const PARITY_TIGHT_RATIO = 0.05
@@ -540,7 +547,9 @@ export const DisksPanel = ({
         </TabsContent>
         {showHistory && (
           <TabsContent value="history" className="border-t px-5 py-4">
-            <UsageHistoryChart points={usageHistory} />
+            <Suspense fallback={null}>
+              <UsageHistoryChart points={usageHistory} />
+            </Suspense>
           </TabsContent>
         )}
       </Tabs>

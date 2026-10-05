@@ -13,6 +13,7 @@ import { Line } from 'react-chartjs-2'
 import { formatGB } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
+import { hasUsageHistory } from './usageHistory'
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Tooltip)
 
@@ -24,11 +25,6 @@ const formatDate = (date: string) =>
     month: 'short',
     year: '2-digit',
   })
-
-// A trend needs at least two days to compare
-export const hasUsageHistory = (
-  points: UsagePoint[] | undefined,
-): points is UsagePoint[] => !!points && points.length >= 2
 
 /**
  * Protected data over time, renders nothing until there is a trend to show
