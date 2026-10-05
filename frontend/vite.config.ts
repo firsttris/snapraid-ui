@@ -21,7 +21,11 @@ const config = defineConfig({
       strategy: ['cookie', 'preferredLanguage', 'globalVariable', 'baseLocale'],
     }),
     devtools(),
-    nitro(),
+    nitro({
+      // Writes .gz and .br next to the client assets; the server sends them to
+      // browsers that accept them instead of the uncompressed files
+      compressPublicAssets: { gzip: true, brotli: true },
+    }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),
@@ -58,7 +62,15 @@ const config = defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
+        // Not every JS chunk and font subset: the scripts are hashed and served
+        // as immutable, so the browser cache keeps the ones a page needs, and
+        // precaching all of them (chart.js included) cost every first visit
+        // about 1.5 MB in the background. Only the Latin fonts are precached,
+        // other subsets load when a text needs them.
+        globPatterns: [
+          '**/*.{css,ico,png,svg}',
+          'assets/geist-*latin-wght-normal-*.woff2',
+        ],
         // Pages are rendered by the server and API data has to be live, so neither is cached
         navigateFallback: null,
       },
