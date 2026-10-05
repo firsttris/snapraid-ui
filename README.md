@@ -3,13 +3,19 @@
 # SnapRAID UI
 
 **A modern web interface for [SnapRAID](https://www.snapraid.it/).**<br>
-Run sync and scrub, schedule jobs and keep an eye on disk health, all from your browser.
+Sync, scrub, schedule and watch your disks, from any browser, without touching the command line.
 
 [![CI](https://github.com/firsttris/snapraid-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/firsttris/snapraid-ui/actions/workflows/ci.yml)
 [![Docker Pulls](https://img.shields.io/docker/pulls/tristanteu/snapraid-ui?logo=docker&logoColor=white)](https://hub.docker.com/r/tristanteu/snapraid-ui)
 [![Image Size](https://img.shields.io/docker/image-size/tristanteu/snapraid-ui/latest?logo=docker&logoColor=white&label=image)](https://hub.docker.com/r/tristanteu/snapraid-ui)
 [![Platforms](https://img.shields.io/badge/platform-amd64%20%7C%20arm64-lightgrey)](https://hub.docker.com/r/tristanteu/snapraid-ui/tags)
 [![SnapRAID](https://img.shields.io/badge/SnapRAID-14.x-2ea44f)](https://www.snapraid.it/)
+
+[Features](#-features) •
+[Screenshots](#-screenshots) •
+[Quick start](#-quick-start) •
+[Documentation](#-documentation) •
+[Development](#️-development)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
@@ -18,24 +24,74 @@ Run sync and scrub, schedule jobs and keep an eye on disk health, all from your 
 
 </div>
 
+## 💡 Why?
+
+SnapRAID is a great way to protect a home server's disks, but day to day it means cron jobs, log files and
+remembering the right flags. SnapRAID UI puts all of it in one place:
+
+- **See the state of your array at a glance** instead of reading `snapraid status` output.
+- **Run and schedule jobs with a click**, with live output and a log of every run.
+- **Hear about problems right away** through push, e-mail or webhook, before a second disk fails.
+- **Get guided through the hard parts**, like replacing a failed disk or a run SnapRAID stopped for safety.
+
 ## ✨ Features
 
-- **Array health at a glance**: last sync and scrub, scrub coverage, next scheduled job
-- **One-click commands**: sync (optionally with pre-hash), scrub, status, diff, check (files only or with parity, per disk), fix, touch and dup to find duplicate files, with live output over WebSocket
-- **Scheduler**: cron-based jobs, no crontab editing; a sync can run touch before and scrub after it as one nightly routine
-- **Notifications** via ntfy push, e-mail or webhook (Discord, Slack, Home Assistant …) when a job fails, scrub finds damaged data, a scheduled sync is skipped or a disk shows SMART problems
-- **Disk replacement wizard**: restores a failed data or parity disk step by step (`fix -d`, `check -a`, `sync`) and pauses scheduled jobs meanwhile
-- **Disk overview**: capacity, usage, file counts, fragmentation and parity headroom per disk; a usage history and an estimate of when each disk runs full
-- **SMART monitoring**: health, temperature, failure probability and SSD wear per disk; flags reallocated/pending sectors, read and CRC errors, highlights the affected attributes and tells you what to do (replace the disk, check the cable, improve cooling); a daily history per disk shows trends, and CRC errors only warn while their count grows
-- **Safety stops explained**: when SnapRAID stops a run because files suddenly have zero size, a disk looks empty or disks changed their UUID, the dashboard explains why and offers a confirmed run with `--force-zero`, `--force-empty` or `--force-uuid`
-- **Logs**: history of every run with full output, searchable and filterable; old logs are rotated automatically (100 files / 30 days by default) or on demand
-- **Config management**: add existing or create new `snapraid.conf` files, rename, enable/disable, and edit disks, content files, excludes, pool and options visually or as text
-- **Backup**: download settings, schedules, notification settings, histories and SnapRAID configs as one file and restore them on a new server
-- **Login** via environment variables, no database needed
-- **Multilingual**: follows the browser language, switchable in the header
-- **Light and dark theme**: follows the system, switchable in the header
-- **Command palette**: Ctrl/Cmd+K runs SnapRAID commands, opens pages and switches configs, theme and animations
-- **Animations off, subtle or strong**: picked in the sidebar, off by default when the system asks to reduce motion
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 📊 Array overview
+- Health, last sync and scrub, scrub coverage, next job
+- Usage, files and parity headroom per disk
+- Usage history and a forecast of when each disk is full
+
+</td>
+<td width="50%" valign="top">
+
+### ⚡ Commands
+- Sync with preview, scrub plans, status, diff, check, fix
+- Live output while a job runs
+- Clear explanations when SnapRAID stops a run for safety
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 🗓️ Automation
+- Cron schedules without editing a crontab
+- Nightly routine: touch, sync, then scrub
+- Sync guard that skips a sync after mass deletions
+
+</td>
+<td width="50%" valign="top">
+
+### 🔔 Monitoring
+- SMART health, temperature and failure probability
+- Notifications via ntfy, e-mail or webhook
+- Searchable logs of every run
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 🧰 Disk management
+- Visual and text editor for `snapraid.conf`
+- Wizards to replace or remove a disk
+- Backup and restore of all settings
+
+</td>
+<td width="50%" valign="top">
+
+### 🎨 Made for everyday use
+- Light and dark theme, works on the phone
+- Command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>)
+- English, German and Italian, optional login
+
+</td>
+</tr>
+</table>
 
 ## 📸 Screenshots
 
@@ -49,24 +105,20 @@ Run sync and scrub, schedule jobs and keep an eye on disk health, all from your 
     <td width="50%"><img src="docs/screenshots/notifications.png" alt="Notification channels and events"><br><sub><b>Notifications</b>: ntfy, e-mail or webhook</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/command-palette.png" alt="Command palette"><br><sub><b>Command palette</b> (Ctrl/Cmd+K)</sub></td>
+    <td width="50%"><img src="docs/screenshots/command-palette.png" alt="Command palette"><br><sub><b>Command palette</b>: run commands and jump to pages</sub></td>
     <td width="50%" align="center"><img src="docs/screenshots/mobile.png" alt="Dashboard on a phone" width="45%"><br><sub><b>On the phone</b></sub></td>
   </tr>
 </table>
 
-## 🐳 Quick start with Docker
+## 🚀 Quick start
 
-The image ships with SnapRAID 14.10, so nothing needs to be installed on the host.
-
-> [!IMPORTANT]
-> **Use the bundled SnapRAID, not the one from your distribution.** The UI reads SnapRAID's structured log, which exists only since SnapRAID 14.0, and current distributions still ship older versions (Debian 13: 12.4, Ubuntu 24.04 LTS: 12.3). The bundled binary is built from an official, pinned SnapRAID release that the UI is tested against.
->
-> If cron jobs on the host run SnapRAID for the same array, move them to the UI's scheduler, so that one SnapRAID version maintains the array.
+The Docker image ships with SnapRAID 14, so nothing needs to be installed on the host.
 
 ```bash
 docker run -d --name snapraid-ui \
   --privileged \
   -p 3000:80 \
+  -e TZ=Europe/Berlin \
   -e SNAPRAID_UI_USERNAME=admin \
   -e SNAPRAID_UI_PASSWORD=change-me \
   -v ./snapraid:/app/snapraid \
@@ -76,115 +128,56 @@ docker run -d --name snapraid-ui \
   tristanteu/snapraid-ui:latest
 ```
 
-Open **http://localhost:3000** and add your `snapraid.conf` in *Manage Configurations*.
+Put your `snapraid.conf` into `./snapraid/` (or add or create one under *Manage Configurations*) and open
+**http://localhost:3000**.
 
-**Mount your disks at the same paths as on the host**, so the paths in `snapraid.conf` stay valid. Parity and content locations must be writable. `--privileged` is only needed for SMART data and the disk power state.
+- Mount your disks **at the same paths as on the host**, so the paths in `snapraid.conf` stay valid.
+- `--privileged` is only needed for SMART data and the disk power state.
+- `TZ` sets the time zone your schedules run in (UTC otherwise).
+- Prefer Compose or Podman? See [Installation](docs/installation.md).
 
-### Docker Compose
+> [!IMPORTANT]
+> Use the bundled SnapRAID rather than your distribution's. The UI reads SnapRAID's structured log, which
+> exists only since version 14.0, and most distributions still ship 12.x. If cron jobs on the host run
+> SnapRAID for the same array, move them to the UI's scheduler.
 
-```bash
-curl -O https://raw.githubusercontent.com/firsttris/snapraid-ui/master/docker/docker-compose.yml
-# add your disks under volumes:, then
-docker compose up -d
-```
+## 📖 Documentation
 
-For Podman with systemd, use the Quadlet files in [docker/](docker/).
+Everything in detail lives in [docs/](docs/README.md):
 
-### Configuration
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `SNAPRAID_BASE_PATH` | `/app/snapraid` | Holds `config.json`, `schedules.json`, logs and your SnapRAID configs. Mount it as a volume. |
-| `SNAPRAID_BIN` | `/usr/local/bin/snapraid` | SnapRAID binary. The bundled one is used unless you point this elsewhere. |
-| `SNAPRAID_EXTRA_ARGS` | *(empty)* | Extra arguments for every SnapRAID call |
-| `SNAPRAID_UI_USERNAME` | *(empty)* | Username for the login. The login is active once username and password are both set. |
-| `SNAPRAID_UI_PASSWORD` | *(empty)* | Password for the login |
-| `SNAPRAID_UI_SESSION_HOURS` | `168` | How long a login lasts (7 days by default) |
-
-### Login
-
-Set `SNAPRAID_UI_USERNAME` and `SNAPRAID_UI_PASSWORD` to protect the UI. No database is involved: the credentials come from the environment, and a login is a signed, HTTP-only session cookie. Without both variables the UI stays open as before, e.g. if you already run it behind an auth proxy; the backend logs a warning then.
-
-- The key that signs sessions is stored in `SNAPRAID_BASE_PATH/.session-secret`, so logins survive restarts. Delete the file to log everyone out.
-- Changing the password also ends all existing logins.
-- After 5 failed attempts a client has to wait 15 minutes.
-- The cookie is marked `Secure` when the request came in over HTTPS (`X-Forwarded-Proto: https` from your reverse proxy). Use HTTPS if the UI is reachable from outside your LAN.
-
-**Using your own SnapRAID binary:** only needed for special builds, the bundled one is the recommended choice. Mount the binary and point `SNAPRAID_BIN` at it. It has to be version 14.0 or newer (`snapraid --version`), otherwise status, reports and notifications stay empty, because the UI parses SnapRAID's structured log output.
-
-```bash
-  -v /usr/bin/snapraid:/usr/bin/snapraid:ro \
-  -e SNAPRAID_BIN=/usr/bin/snapraid \
-```
-
-### Image tags
-
-| Tag | Content |
+| | |
 |---|---|
-| `latest` | Latest release |
-| `1.2.3`, `1.2` | Specific release |
+| [Installation](docs/installation.md) | Docker, Compose and Podman, disks and paths, reverse proxy, updates |
+| [Configuration](docs/configuration.md) | Environment variables, data directory, log retention |
+| [Using SnapRAID UI](docs/usage.md) | Dashboard, commands, reports, safety stops, command palette |
+| [Scheduling](docs/scheduling.md) · [Notifications](docs/notifications.md) | Automate jobs and get told when something goes wrong |
+| [SMART & disk health](docs/smart.md) · [Logs](docs/logs.md) | What the UI watches and how to read it |
+| [Managing disks](docs/disks.md) | Config editor, adding, replacing and removing disks, backup |
+| [Security](docs/security.md) · [Troubleshooting](docs/troubleshooting.md) | Login and exposure, common problems |
+| [Architecture](docs/architecture.md) · [Development](docs/development.md) | How it works, API, contributing |
 
 ## 🛠️ Development
 
-Requires Node.js 22+ and Deno 2.5+.
+Requires Node.js 22+, Deno 2.5+ and the fish shell for `start.sh`.
 
 ```bash
-git clone https://github.com/firsttris/snapraid-ui
-cd snapraid-ui
+git clone https://github.com/firsttris/snapraid-ui && cd snapraid-ui
 ./install.sh
-./start.sh           # uses ./snapraid and the snapraid binary on your PATH
-./start.sh --demo    # sandbox with fake disks, no real array or SnapRAID install needed
+./start.sh --demo   # sandbox with fake disks, no real array needed
 ```
 
-Frontend runs on http://localhost:3000, backend API on http://localhost:8080. `Ctrl+C` stops both.
-
-`--demo` runs `dev/setup.sh`, which builds a pinned SnapRAID into `dev/bin/` (needs `curl`, `gcc`, `make`) and creates `dev/sandbox/` with three data disks, a parity disk and a few pending changes. Since the sandbox disks have no SMART data, `SNAPRAID_DEMO=1` makes the backend report made-up SMART values and power states for them (see `backend/src/demo.ts`). `dev/setup.sh --reset` starts over.
-
-<details>
-<summary>Stopping leftover processes</summary>
-
-```bash
-pgrep -af "src/main.ts"                                   # show running backends
-pkill -f "deno task dev"; pkill -f "deno run.*src/main.ts"
-pkill -f "vite dev"
-```
-
-</details>
-
-### Building the image locally
-
-```bash
-docker build -f docker/Dockerfile -t snapraid-ui .
-```
-
-Pushing a `v*` tag publishes a multi-arch image to Docker Hub via GitHub Actions.
-
-### Stack
-
-- **Backend**: Deno + Hono, WebSocket for live output, file-based storage
-- **Frontend**: React 19, TanStack Start/Router/Query, Tailwind CSS, Paraglide i18n
-- **Container**: Nginx reverse proxy, Supervisor, bundled SnapRAID
-
-### Translations
-
-The UI speaks English, German and Italian. All texts live in `frontend/messages/{en,de,it}.json`
-([Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJs)); components call them as
-`m.key()`. The backend does not know the viewer's language: for errors a user can run into it sends
-the key and its inputs (`msg("server_error_…", { … })` from `shared/i18n.ts`), and the frontend
-renders them. Notifications are the exception, they go out in the language set for them.
-`frontend/src/lib/__tests__/i18n.test.ts` checks that every language has the same keys and
-placeholders, and that every message is used and every used key exists.
+The frontend runs on http://localhost:3000, the API on http://localhost:8080. Built with Deno + Hono,
+React 19, TanStack Start, Tailwind CSS and shadcn/ui. See [Development](docs/development.md) for the
+project layout, tests and translations.
 
 ## 🤝 Contributing
 
-Issues and pull requests are welcome. Please run `npx biome check`, `npm run typecheck` and the tests (`deno test` in `backend/`, `npm test` in `frontend/`) before opening a PR.
-
-## 📄 License
-
-MIT
+Issues and pull requests are welcome. Please run `npx biome check`, `npm run typecheck` and the tests
+(`deno test --allow-all` in `backend/`, `npm test` in `frontend/`) before opening a pull request.
 
 ---
 
 <div align="center">
-<sub>Not affiliated with the SnapRAID project. SnapRAID is developed by Andrea Mazzoleni.</sub>
+<sub>License: MIT<br>
+Not affiliated with the SnapRAID project. SnapRAID is developed by Andrea Mazzoleni.</sub>
 </div>

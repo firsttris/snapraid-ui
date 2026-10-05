@@ -1,0 +1,235 @@
+# Development
+
+This page gets you from a fresh clone to a running development setup, and covers the project layout, tests, linting, translations, UI components, building the image and the release process. For how the pieces fit together, see [Architecture](architecture.md).
+
+## Requirements
+
+| Tool | Version | Needed for |
+|---|---|---|
+| [Node.js](https://nodejs.org/) | 22 or newer | Frontend (CI and the image use Node 22) |
+| [Deno](https://deno.com/) | 2.5 or newer | Backend (CI uses 2.5.x, the image 2.5.6). `./start.sh --demo` downloads Deno into `dev/tools/` if none is installed |
+| [fish](https://fishshell.com/) | | `start.sh` is a fish script |
+| `curl`, `tar`, `gcc`, `make` | | Building SnapRAID for the demo sandbox (`dev/setup.sh`); `unzip` too if Deno has to be downloaded |
+| SnapRAID | 14.0 or newer | Only for running against a real array without `--demo`; it has to be on your `PATH` or set via `SNAPRAID_BIN` |
+| Docker or Podman | | Only for building the image |
+
+## Getting started
+
+```bash
+git clone https://github.com/firsttris/snapraid-ui
+cd snapraid-ui
+./install.sh          # npm install in frontend/, deno cache in backend/
+./start.sh --demo     # sandbox with fake disks, no real array needed
+```
+
+Open **http://localhost:3000**. The frontend dev server runs on port 3000, the backend API and WebSocket on port 8080. `Ctrl+C` stops both.
+
+`./start.sh` has two modes:
+
+| Command | Data directory | SnapRAID binary | Extra |
+|---|---|---|---|
+| `./start.sh` | `./snapraid/` (created on first start, ignored by git) | `snapraid` from your `PATH` | Works against your real configs |
+| `./start.sh --demo` | `dev/sandbox/` | `dev/bin/snapraid` | Sets `SNAPRAID_EXTRA_ARGS=--test-skip-device` and `SNAPRAID_DEMO=1` |
+
+Under the hood it starts `deno task dev` in `backend/` (with `--watch`, so the backend restarts on changes) and `npm run dev` in `frontend/` (Vite with hot reload). You can run these two commands yourself in separate terminals; set `SNAPRAID_BASE_PATH` and friends first (see [Configuration](configuration.md)), otherwise the backend uses `../snapraid` relative to `backend/`.
+
+> [!NOTE]
+> In development the frontend calls the backend directly at `http://localhost:8080` (`frontend/src/lib/api/constants.ts`), and the backend only accepts credentials from the same hostname. Open the dev frontend as `http://localhost:3000`, not via a LAN IP.
+
+<details>
+<summary>Stopping leftover processes</summary>
+
+```bash
+pgrep -af "src/main.ts"                                   # show running backends
+pkill -f "deno task dev"; pkill -f "deno run.*src/main.ts"
+pkill -f "vite dev"
+```
+
+</details>
+
+## Demo sandbox
+
+`dev/setup.sh` (run automatically by `./start.sh --demo`, a no-op once everything exists) prepares a self-contained SnapRAID environment:
+
+- builds SnapRAID (`SNAPRAID_VERSION`, default 14.10) from the official release tarball into `dev/bin/snapraid`, cached in `dev/.cache/`;
+- downloads Deno (`DENO_VERSION`, default 2.9.7) into `dev/tools/` if `deno` is not installed;
+- creates `dev/sandbox/` with three data "disks" (`disks/d1`–`d3`), a parity directory, a `snapraid.conf`, `config.json` and an empty `schedules.json`, filled with random files;
+- runs an initial sync, then adds, changes and deletes a file so that `diff`, `status` and `sync` have something to show.
+
+All sandbox disks are directories on one filesystem, which SnapRAID only accepts with `--test-skip-device`. Since they have no SMART data or power state, `SNAPRAID_DEMO=1` makes the backend return generated `smart` and `probe` results in the real structured log format (`backend/src/demo.ts`): a healthy HDD, an SSD, an HDD with growing reallocated sectors and a sleeping parity disk.
+
+```bash
+dev/setup.sh --reset                         # recreate the sandbox from scratch
+SNAPRAID_VERSION=14.10 dev/setup.sh --reset  # build another SnapRAID release
+```
+
+`dev/bin/`, `dev/.cache/`, `dev/sandbox/` and `dev/tools/` are ignored by git.
+
+## Project structure
+
+```text
+backend/
+  deno.json            tasks, import map (Hono, Croner, Nodemailer, @std/*, @shared/)
+  src/
+    main.ts            app setup, middleware, startup
+    routes/            HTTP routes per area
+    executors/         job runner (spawn, stream, progress, abort)
+    parsers/           structured log parsers, tests and real SnapRAID fixtures
+    __tests__/         backend unit tests
+    *.ts               auth, scheduler, notifications, log manager, histories, wizards, backup, demo
+frontend/
+  messages/            UI texts: en.json, de.json, it.json
+  project.inlang/      Paraglide/inlang project settings
+  scripts/             add-messages.py
+  public/              favicon, PWA icons
+  src/
+    routes/            pages (file-based routing), __root.tsx
+    components/        feature components; ui/ = shadcn/ui primitives
+    hooks/             TanStack Query hooks, running job state, selected config
+    lib/               API client, WebSocket, log parsing, theme, i18n, commands
+    lib/__tests__/     frontend unit tests
+shared/                types and logic used by backend and frontend
+docker/                Dockerfile, Compose file, Quadlet units, nginx and supervisor config
+dev/setup.sh           demo sandbox
+install.sh, start.sh   local setup and start
+```
+
+Both sides import shared code as `@shared/…`: the backend through the import map in `backend/deno.json`, the frontend through the `paths` in `frontend/tsconfig.json`. Keep code in `shared/` free of Deno- or browser-specific APIs.
+
+## Scripts
+
+Frontend (`frontend/package.json`, run with `npm run <script>` in `frontend/`):
+
+| Script | What it does |
+|---|---|
+| `dev` | Vite dev server on port 3000 |
+| `build` | Production build into `.output/` |
+| `serve` | `vite preview` of the build |
+| `paraglide` | Compile `messages/*.json` into `src/paraglide/` |
+| `typecheck` | `paraglide`, then `tsc --noEmit` |
+| `test` | Vitest, single run |
+| `check` / `lint` / `format` | Biome check (lint + format + import order) / lint only / format only |
+| `generate-pwa-assets` | Regenerate `favicon.ico`, PWA and Apple icons from `public/favicon.svg` |
+| `release` | Create and push a release tag, see [Releases](#ci-and-releases) |
+
+Backend (`backend/deno.json`, run with `deno task <task>` in `backend/`):
+
+| Task | What it does |
+|---|---|
+| `dev` | Run `src/main.ts` with `--watch` |
+| `start` | Run `src/main.ts` |
+
+Both tasks use the same permissions as the container: `--allow-net --allow-read --allow-write --allow-run --allow-env --allow-sys=networkInterfaces,hostname`.
+
+## Tests
+
+```bash
+cd backend && deno test --allow-all    # as in CI
+cd frontend && npm test
+```
+
+- **Backend** tests use `Deno.test` with `@std/assert`. Parser tests in `backend/src/parsers/__tests__/` run against real SnapRAID logs in `fixtures/`; when SnapRAID's log format changes, add or update a fixture from a real run. Other tests cover auth, backup/restore, config paths, the disk wizards, `--force-*` detection, the log manager, notifications, the SMART baseline and history, and the usage history.
+- **Frontend** tests use Vitest and live in `frontend/src/lib/__tests__/`: log parsing, progress, the job tracker and the i18n checks described [below](#translations). Run them from `frontend/`, they read `messages/` and `../backend/src` by relative path.
+
+## Linting and type checking
+
+| | Command | Where |
+|---|---|---|
+| Frontend lint + format | `npx biome check` (add `--write` to fix) | `frontend/` |
+| Frontend types | `npm run typecheck` | `frontend/` |
+| Backend types | `deno check src/main.ts` | `backend/` |
+
+Biome (`frontend/biome.json`) uses the recommended rules, 2-space indentation, single quotes, double quotes in JSX, no semicolons, and organizes imports. It covers `frontend/src/` except the generated `routeTree.gen.ts`, `src/paraglide/` and `styles.css`. The backend has no linter configured; it follows the style of the existing code (double quotes, semicolons).
+
+`npm run typecheck` compiles the Paraglide messages first, because components import them from the generated `src/paraglide/`.
+
+## Translations
+
+The UI is available in English, German and Italian. All texts are in `frontend/messages/{en,de,it}.json` in the inlang message format (`@inlang/plugin-message-format`); `en` is the base locale (`frontend/project.inlang/settings.json`). Placeholders are written as `{name}`.
+
+- **Frontend:** import the messages as `import * as m from '../paraglide/messages'` (relative path) and call `m.key({ … })`.
+- **Backend:** for errors a user can see, return `msg("server_error_…", { … })` from `shared/i18n.ts` instead of text. The frontend renders the key in the UI language with `localizeServer()`. Notification texts are not in the message files; they are in `backend/src/notification-events.ts` and `backend/src/routes/notifications.ts`, one block per language.
+
+To add, change or remove a key in all three files at once, use the helper script from `frontend/`:
+
+```bash
+python3 scripts/add-messages.py '{"dashboard_new_hint": {"en": "Hello {name}", "de": "Hallo {name}", "it": "Ciao {name}"}}'
+python3 scripts/add-messages.py --remove dashboard_new_hint old_key
+```
+
+Every key needs all three languages, otherwise the script exits with an error. Existing keys are overwritten. The script takes a file lock, so several editors (or agents) can run it in parallel.
+
+`frontend/src/lib/__tests__/i18n.test.ts` fails when:
+
+- a language is missing a key, has an empty text, or uses different placeholders than English;
+- a key is not used anywhere in the frontend or backend code;
+- the code uses a key (`m.key(` or `msg("key"`) that does not exist.
+
+Adding a language touches more than a JSON file: the `locales` in `project.inlang/settings.json`, the locale list in `scripts/add-messages.py` and in `i18n.test.ts`, the `language` type of `NotificationSettings` in `shared/types.ts`, and the notification texts in the backend.
+
+## UI components
+
+The UI is built with [shadcn/ui](https://ui.shadcn.com/) on top of Radix UI and Tailwind CSS v4, with icons from [lucide](https://lucide.dev/). `frontend/components.json` configures the *new-york* style, base color *zinc*, CSS variables in `src/styles.css`, and the aliases `@/components/ui`, `@/lib/utils` and `@/hooks`.
+
+The primitives in `frontend/src/components/ui/` are owned by the project and can be edited. To add another one, run the shadcn CLI in `frontend/`, for example:
+
+```bash
+npx shadcn@latest add popover
+```
+
+Colors come from the CSS variables in `src/styles.css`, which define the light and dark theme. Use these tokens (`bg-background`, `text-muted-foreground`, …) instead of fixed colors so both themes keep working. Charts use Chart.js through `react-chartjs-2`; the command palette uses `cmdk`; toasts use `sonner`.
+
+## Building the image
+
+From the repository root:
+
+```bash
+docker build -f docker/Dockerfile -t snapraid-ui .
+# pin another SnapRAID release
+docker build -f docker/Dockerfile --build-arg SNAPRAID_VERSION=14.10 -t snapraid-ui .
+# or build and start with Compose
+docker compose -f docker/docker-compose.yml up --build
+```
+
+The build context is the whole repository; `.dockerignore` leaves out `node_modules`, test files, the local `snapraid/` data and `dev/`. See [Architecture](architecture.md#container-layout) for the stages and [Installation](installation.md) for running the image.
+
+### Updating SnapRAID
+
+The image pins one SnapRAID release that the parsers are tested against. A weekly workflow opens an issue when a newer stable release is out. To bump it:
+
+1. Read SnapRAID's `HISTORY` for changes to the structured log (`--log`).
+2. Change `SNAPRAID_VERSION` in `docker/Dockerfile` **and** `dev/setup.sh`.
+3. Run `SNAPRAID_VERSION=<new> dev/setup.sh --reset`, start `./start.sh --demo` and run status, diff, sync, scrub, check, list, dup, touch and smart in the UI.
+4. For a major version, compare the log tags with the fixtures in `backend/src/parsers/__tests__/fixtures/`.
+
+## CI and releases
+
+GitHub Actions workflows in `.github/workflows/`:
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `ci.yml` | Push and pull request to `master`; called by the release workflow | Backend: `deno check src/main.ts`, `deno test --allow-all`. Frontend: `npm ci`, `npx biome check`, `npm run typecheck`, `npm test`, `npm run build` |
+| `release.yml` | Push of a `v*` tag; manual run | Runs CI, then the shared Docker release workflow from `firsttris/workflows`. A tag `vX.Y.Z` publishes `tristanteu/snapraid-ui:X.Y.Z`, `:X.Y` and `:latest`, updates the Docker Hub description and creates the GitHub release. A manual run on `master` runs the same checks and pushes `:edge`, without a release |
+| `snapraid-release.yml` | Mondays 06:00 UTC; manual run | Compares the pinned `SNAPRAID_VERSION` with SnapRAID's latest release and opens an issue with a checklist if they differ |
+
+The tag is the version; there is no version file. To release, from `frontend/`:
+
+```bash
+npm run release 1.2.3    # creates the annotated tag v1.2.3 and pushes it
+```
+
+## Contributing
+
+Issues and pull requests are welcome at [github.com/firsttris/snapraid-ui](https://github.com/firsttris/snapraid-ui). Before opening a pull request, run what CI runs:
+
+```bash
+cd frontend && npx biome check && npm run typecheck && npm test
+cd backend && deno check src/main.ts && deno test --allow-all
+```
+
+A few conventions that keep the code base consistent:
+
+- Read SnapRAID's structured log, not its console text, when you need data from a run. Add a fixture from a real run for new parsers.
+- New user-facing texts go into all three message files (use `add-messages.py`); backend errors use `msg()`.
+- Types shared between backend and frontend belong in `shared/types.ts`.
+- When you add or change an endpoint, update the [API reference](architecture.md#api-reference).
