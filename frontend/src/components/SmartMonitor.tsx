@@ -23,7 +23,7 @@ import {
   OctagonAlert,
   Wrench,
 } from 'lucide-react'
-import { type ReactNode, useState } from 'react'
+import { lazy, type ReactNode, Suspense, useState } from 'react'
 import {
   useNotificationSettings,
   useSmart,
@@ -32,7 +32,7 @@ import {
 import { cn } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
-import { hasSmartHistory, SmartHistoryCharts } from './SmartHistoryCharts'
+import { hasSmartHistory } from './smartHistory'
 import { Alert, AlertDescription, AlertTitle } from './ui/alert'
 import { Badge } from './ui/badge'
 import { Card } from './ui/card'
@@ -45,6 +45,13 @@ import {
   TableRow,
 } from './ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
+
+// chart.js is only loaded once the history tab is opened
+const SmartHistoryCharts = lazy(() =>
+  import('./SmartHistoryCharts').then((module) => ({
+    default: module.SmartHistoryCharts,
+  })),
+)
 
 interface SmartMonitorProps {
   configPath: string
@@ -632,7 +639,9 @@ const DiskDetails = ({
         </TabsContent>
 
         <TabsContent value="history" className="border-t p-5">
-          <SmartHistoryCharts points={history} />
+          <Suspense fallback={null}>
+            <SmartHistoryCharts points={history} />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="raw" className="border-t">

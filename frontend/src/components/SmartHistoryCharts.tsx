@@ -10,24 +10,13 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import { useTheme } from '../lib/theme'
-import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
+import { type Metric, shownMetrics } from './smartHistory'
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Tooltip)
 
-type Metric = Exclude<keyof SmartHistoryPoint, 'date'>
-
 // Blue 500 of the palette, a mid tone that reads on light and dark cards
 const LINE_COLOR = 'rgb(59, 130, 246)'
-
-const METRICS: Array<{ key: Metric; label: () => string; unit: string }> = [
-  { key: 'temperature', label: m.smart_history_temperature, unit: ' °C' },
-  { key: 'reallocated', label: m.smart_history_reallocated, unit: '' },
-  { key: 'pending', label: m.smart_history_pending, unit: '' },
-  { key: 'crc', label: m.smart_history_crc, unit: '' },
-  { key: 'mediaErrors', label: m.smart_history_media_errors, unit: '' },
-  { key: 'wear', label: m.smart_history_wear, unit: ' %' },
-]
 
 const formatDate = (date: string) =>
   new Date(`${date}T00:00:00`).toLocaleDateString(getLocale(), {
@@ -117,21 +106,6 @@ const MetricChart = ({
     </div>
   )
 }
-
-const shownMetrics = (points: SmartHistoryPoint[] | undefined) =>
-  !points || points.length < 2
-    ? []
-    : METRICS.filter(({ key }) =>
-        key === 'temperature'
-          ? points.some((point) => point.temperature !== undefined)
-          : points.some((point) => (point[key] ?? 0) > 0),
-      )
-
-/**
- * Whether there is a history worth a chart: at least two days and a value to show
- */
-export const hasSmartHistory = (points: SmartHistoryPoint[] | undefined) =>
-  shownMetrics(points).length > 0
 
 /**
  * Daily SMART values of a disk, hidden until there are at least two days to compare
