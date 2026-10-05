@@ -37,6 +37,23 @@ Run sync and scrub, schedule jobs and keep an eye on disk health, all from your 
 - **Command palette**: Ctrl/Cmd+K runs SnapRAID commands, opens pages and switches configs, theme and animations
 - **Animations off, subtle or strong**: picked in the sidebar, off by default when the system asks to reduce motion
 
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/smart.png" alt="SMART monitoring with per-disk health and attributes"><br><sub><b>SMART</b>: health, temperature and failure probability per disk</sub></td>
+    <td width="50%"><img src="docs/screenshots/logs.png" alt="Log history with run overview"><br><sub><b>Logs</b>: every run with result, figures and raw output</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/schedules.png" alt="Scheduled jobs"><br><sub><b>Schedules</b>: nightly sync with touch and scrub, weekly scrub, SMART check</sub></td>
+    <td width="50%"><img src="docs/screenshots/notifications.png" alt="Notification channels and events"><br><sub><b>Notifications</b>: ntfy, e-mail or webhook</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/command-palette.png" alt="Command palette"><br><sub><b>Command palette</b> (Ctrl/Cmd+K)</sub></td>
+    <td width="50%" align="center"><img src="docs/screenshots/mobile.png" alt="Dashboard on a phone" width="45%"><br><sub><b>On the phone</b></sub></td>
+  </tr>
+</table>
+
 ## 🐳 Quick start with Docker
 
 The image ships with SnapRAID 14.10, so nothing needs to be installed on the host.

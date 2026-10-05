@@ -91,7 +91,7 @@ export const LogListItem = ({
           <span className="block truncate font-medium">
             {getCommandLabel(log.command)}
           </span>
-          <span className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+          <span className="flex flex-wrap items-center gap-x-1.5 whitespace-nowrap text-xs text-muted-foreground">
             <time
               dateTime={log.timestamp}
               title={new Date(log.timestamp).toLocaleString()}
