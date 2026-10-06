@@ -5,6 +5,7 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+    types: [opened, synchronize, reopened, ready_for_review]
   # The release workflow runs the same checks before it publishes anything.
   workflow_call:
 
@@ -14,6 +15,8 @@ concurrency:
 
 jobs:
   backend:
+    # Draft pull requests do not build; "Ready for review" starts the run
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -27,6 +30,7 @@ jobs:
       - run: deno test --allow-all
 
   frontend:
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     defaults:
       run:
