@@ -826,5 +826,7 @@
   "report_filter_no_match": "Nessuna voce corrisponde al filtro.",
   "report_filter_count": "{shown} di {total}",
   "filelist_files": "File",
-  "filelist_links": "Link"
+  "filelist_links": "Link",
+  "sidebar_version": "SnapRAID UI v{version}",
+  "sidebar_release_notes": "Novità di questa versione"
 }

@@ -15,6 +15,7 @@ import { useSelectedConfig } from '../hooks/useSelectedConfig'
 import { NAV_ITEMS } from '../lib/nav'
 import { type MotionPreference, useMotion } from '../lib/theme'
 import { cn } from '../lib/utils'
+import { APP_VERSION, releaseUrl } from '../lib/version'
 import * as m from '../paraglide/messages'
 import { Button } from './ui/button'
 import {
@@ -199,6 +200,18 @@ const UserBox = () => {
   )
 }
 
+const VersionLink = () => (
+  <a
+    href={releaseUrl()}
+    target="_blank"
+    rel="noreferrer"
+    title={m.sidebar_release_notes()}
+    className="self-start px-2.5 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
+  >
+    {m.sidebar_version({ version: APP_VERSION })}
+  </a>
+)
+
 const SidebarBody = ({ onNavigate }: { onNavigate: () => void }) => {
   const { openConfigDialog } = useAppShell()
   const { selectedConfig } = useSelectedConfig()
@@ -267,6 +280,7 @@ const SidebarBody = ({ onNavigate }: { onNavigate: () => void }) => {
       <div className="mt-auto flex flex-col gap-4">
         <MotionSetting />
         <UserBox />
+        <VersionLink />
       </div>
     </div>
   )
