@@ -10,7 +10,7 @@ import {
   Sun,
 } from 'lucide-react'
 import { useConfig } from '../hooks/queries'
-import { useAppShell } from '../hooks/useAppShell'
+import { isSidebarDocked, useAppShell } from '../hooks/useAppShell'
 import { useJob } from '../hooks/useJob'
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
 import { getCommandLabel } from '../lib/commands'
@@ -167,8 +167,7 @@ export const Header = () => {
             size="icon-sm"
             aria-label={m.sidebar_toggle()}
             onClick={() => {
-              if (window.matchMedia('(min-width: 768px)').matches)
-                toggleSidebar()
+              if (isSidebarDocked()) toggleSidebar()
               else setMobileNavOpen(true)
             }}
           >

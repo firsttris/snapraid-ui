@@ -32,6 +32,14 @@ interface AppShellContextValue {
 const AppShellContext = createContext<AppShellContextValue | null>(null)
 
 /**
+ * Whether the sidebar sits next to the page (from Tailwind lg, as in AppSidebar);
+ * below that, on phones and tablets, it opens as a sheet
+ */
+export const isSidebarDocked = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia('(min-width: 1024px)').matches
+
+/**
  * State of the app frame: sidebar, command palette and the config dialogs,
  * which the sidebar and the pages open alike
  */
@@ -77,7 +85,8 @@ export const AppShellProvider = ({ children }: { children: ReactNode }) => {
         setPaletteOpen((open) => !open)
       } else if (key === 'b') {
         event.preventDefault()
-        toggleSidebar()
+        if (isSidebarDocked()) toggleSidebar()
+        else setMobileNavOpen((open) => !open)
       }
     }
     window.addEventListener('keydown', onKeyDown)

@@ -158,7 +158,7 @@ const DiskRow = ({
     <TableCell>
       <div className="flex items-center gap-2.5">
         <PowerDot state={power} />
-        <div className="min-w-0 max-w-44 sm:max-w-64">
+        <div className="min-w-0 max-w-36 @4xl:max-w-64">
           <p className="truncate font-medium">{name}</p>
           {paths.map((path) => (
             // rtl moves the ellipsis to the start, the end of a path tells disks apart
@@ -177,7 +177,7 @@ const DiskRow = ({
     <TableCell>
       <Badge variant={isParity ? 'parity' : 'outline'}>{role}</Badge>
     </TableCell>
-    <TableCell className="w-[34%]">
+    <TableCell className="w-[30%] @4xl:w-[34%]">
       {loading ? (
         <Skeleton className="h-2 w-full rounded-full" />
       ) : (
@@ -186,7 +186,9 @@ const DiskRow = ({
         )
       )}
     </TableCell>
-    <TableCell className="font-mono text-[13px] tabular-nums">
+    <TableCell
+      className={cn(FILES_COLUMN, 'font-mono text-[13px] tabular-nums')}
+    >
       {loading ? <Skeleton className="h-4 w-14" /> : files}
     </TableCell>
     <TableCell className="text-right font-mono text-[13px] tabular-nums">
@@ -209,7 +211,7 @@ const DiskRow = ({
         )
       )}
     </TableCell>
-    <TableCell className="min-w-56 whitespace-normal">
+    <TableCell className="min-w-36 whitespace-normal">
       {loading ? (
         <Skeleton className="h-4 w-28" />
       ) : (
@@ -325,6 +327,9 @@ const sumFilesystems = (usage: ParityLevelUsage) => {
     : undefined
 }
 
+// The file count is the least needed column, it makes room for the status on tablets
+const FILES_COLUMN = 'hidden @4xl:table-cell'
+
 // Rows until the config says which disks there are
 const SkeletonRow = () => (
   <TableRow>
@@ -340,7 +345,7 @@ const SkeletonRow = () => (
     <TableCell>
       <Skeleton className="h-2 w-full rounded-full" />
     </TableCell>
-    <TableCell>
+    <TableCell className={FILES_COLUMN}>
       <Skeleton className="h-4 w-14" />
     </TableCell>
     <TableCell>
@@ -383,13 +388,13 @@ export const DisksPanel = ({
   )
 
   const table = (
-    <Table className="min-w-[760px]">
+    <Table className="min-w-[680px]">
       <TableHeader>
         <TableRow className="hover:bg-transparent">
           <TableHead>{m.disks_col_disk()}</TableHead>
           <TableHead>{m.disks_col_type()}</TableHead>
           <TableHead>{m.disks_col_usage()}</TableHead>
-          <TableHead>{m.disks_col_files()}</TableHead>
+          <TableHead className={FILES_COLUMN}>{m.disks_col_files()}</TableHead>
           <TableHead className="text-right">{m.disks_col_free()}</TableHead>
           <TableHead>{m.disks_col_status()}</TableHead>
         </TableRow>
@@ -501,7 +506,7 @@ export const DisksPanel = ({
   )
 
   return (
-    <Card lift className="gap-0 overflow-hidden py-0">
+    <Card lift className="@container gap-0 overflow-hidden py-0">
       <Tabs
         value={showHistory ? view : 'table'}
         onValueChange={(value) => setView(value as 'table' | 'history')}
