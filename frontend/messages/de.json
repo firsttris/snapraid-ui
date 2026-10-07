@@ -840,5 +840,7 @@
   "report_filter_no_match": "Keine Einträge passen zum Filter.",
   "report_filter_count": "{shown} von {total}",
   "filelist_files": "Dateien",
-  "filelist_links": "Links"
+  "filelist_links": "Links",
+  "sidebar_version": "SnapRAID UI v{version}",
+  "sidebar_release_notes": "Was ist neu in dieser Version"
 }

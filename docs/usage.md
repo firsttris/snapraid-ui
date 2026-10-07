@@ -26,7 +26,7 @@ The sidebar on the left holds everything that is not specific to one page:
 | *Animations* | *Off*, *Subtle* or *Strong*, see [below](#theme-language-and-animations). |
 | User box | Shown only when the login is enabled: your username and a *Log out* button. See [Security](security.md). |
 
-Your browser remembers the selected configuration and whether the sidebar is open.
+Your browser remembers the selected configuration and whether the sidebar is open. Below 1024 px (phones and tablets) the sidebar is hidden and opens over the page from the button at the top left; the version is shown at its bottom.
 
 If no configuration is set up yet (or all are disabled), the dashboard shows *Welcome to SnapRAID UI* with a button to *Manage Configurations*.
 
@@ -106,7 +106,7 @@ The *Disks* card lists every data and parity disk of the configuration. The head
 | *Disk* | Name and path from the config. A dot shows the power state: green for *Active*, light green for *Idle*, an empty ring for *Standby (spun down)*. |
 | *Type* | *Data* or *Parity 1*, *Parity 2*, … |
 | *Usage* | Fill level of the filesystem. Yellow from 85 % (*Filling up*), red from 95 % (*Almost full*). Parity disks use a purple bar, because a parity file fills its disk by design. |
-| *Files* | Number of files on a data disk; size of the parity file on a parity disk |
+| *Files* | Number of files on a data disk; size of the parity file on a parity disk. Left out when the card is narrow (tablets), so *Status* stays in view |
 | *Free* | Free space; hover for the total size |
 | *Status* | Notes such as fragmented files, wasted space, the estimated fill-up date (*full in about N days*) and standby |
 

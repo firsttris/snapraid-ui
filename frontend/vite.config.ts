@@ -6,8 +6,11 @@ import viteReact from '@vitejs/plugin-react'
 import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import pkg from './package.json' with { type: 'json' }
 
 const config = defineConfig({
+  // The running version for the sidebar, raised by the release (package.json)
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   resolve: {
     // resolve path aliases (@/*, @shared/*) from tsconfig.json
     tsconfigPaths: true,

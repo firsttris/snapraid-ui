@@ -768,97 +768,101 @@ export const ArrayHealthPanel = ({
           <HintRow key={hint.key} hint={hint} disabled={actionsDisabled} />
         ))}
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
-        <Tile
-          label={m.health_title()}
-          corner={!isLoading && <HealthBadge health={health} />}
-        >
-          {isLoading ? (
-            <>
-              <Skeleton className="h-7 w-28" />
-              <LoadingHint>{m.health_loading()}</LoadingHint>
-            </>
-          ) : (
-            <div key={health} role="status" className="ui-fade-in space-y-2">
-              <TileValue className={HEALTH_STYLES[health].value}>
-                {getHealthTitle(
-                  health,
-                  overdue.some((hint) => hint.key === 'sync'),
-                  overdue.some((hint) => hint.key === 'scrub'),
+      {/* Two by two on tablets and next to a sidebar, in one row once there is room */}
+      <div className="@container">
+        <div className="grid grid-cols-1 gap-4 @lg:grid-cols-2 @4xl:grid-cols-4">
+          <Tile
+            label={m.health_title()}
+            corner={!isLoading && <HealthBadge health={health} />}
+          >
+            {isLoading ? (
+              <>
+                <Skeleton className="h-7 w-28" />
+                <LoadingHint>{m.health_loading()}</LoadingHint>
+              </>
+            ) : (
+              <div key={health} role="status" className="ui-fade-in space-y-2">
+                <TileValue className={HEALTH_STYLES[health].value}>
+                  {getHealthTitle(
+                    health,
+                    overdue.some((hint) => hint.key === 'sync'),
+                    overdue.some((hint) => hint.key === 'scrub'),
+                  )}
+                </TileValue>
+                {!hasNotice && message && <TileCaption>{message}</TileCaption>}
+                {isBusy && status && statusTimestamp && (
+                  <TileCaption>
+                    <span className="flex items-center gap-1">
+                      <Hourglass className="size-3 shrink-0" />
+                      {m.health_busy_stale({
+                        time: formatRelativeTime(statusTimestamp, getLocale()),
+                      })}
+                    </span>
+                  </TileCaption>
                 )}
-              </TileValue>
-              {!hasNotice && message && <TileCaption>{message}</TileCaption>}
-              {isBusy && status && statusTimestamp && (
-                <TileCaption>
-                  <span className="flex items-center gap-1">
-                    <Hourglass className="size-3 shrink-0" />
-                    {m.health_busy_stale({
-                      time: formatRelativeTime(statusTimestamp, getLocale()),
-                    })}
-                  </span>
-                </TileCaption>
-              )}
-            </div>
-          )}
-        </Tile>
-        <LastRunTile
-          label={m.health_last_sync()}
-          icon={RefreshCw}
-          run={lastSync}
-          staleDays={SYNC_STALE_DAYS}
-          running={runningJob?.command === 'sync'}
-          // A readable status needs a content file, so a sync ran before
-          missingLabel={status ? m.health_no_log() : m.health_never()}
-        />
-        <LastRunTile
-          label={m.health_last_scrub()}
-          icon={ScanSearch}
-          run={lastScrub}
-          staleDays={SCRUB_STALE_DAYS}
-          running={runningJob?.command === 'scrub'}
-          missingLabel={
-            status?.scrubPercentage ? m.health_no_log() : m.health_never()
-          }
-        >
-          <ScrubCoverage
-            status={status}
-            keepingUp={keepingUp}
-            hasScrubSchedule={hasScrubSchedule || isSchedulesLoading}
+              </div>
+            )}
+          </Tile>
+          <LastRunTile
+            label={m.health_last_sync()}
+            icon={RefreshCw}
+            run={lastSync}
+            staleDays={SYNC_STALE_DAYS}
+            running={runningJob?.command === 'sync'}
+            // A readable status needs a content file, so a sync ran before
+            missingLabel={status ? m.health_no_log() : m.health_never()}
           />
-        </LastRunTile>
-        <Tile
-          label={m.health_next_job()}
-          corner={<CalendarClock className="size-4 text-muted-foreground" />}
-        >
-          {isSchedulesLoading ? (
-            <TileSkeleton />
-          ) : nextSchedule?.nextRun ? (
-            <>
-              <TileValue
-                title={new Date(nextSchedule.nextRun).toLocaleString()}
-              >
-                {formatRelativeTime(nextSchedule.nextRun, getLocale())}
-              </TileValue>
-              <TileCaption>
-                <p className="truncate">
-                  {nextSchedule.name} ({getCommandLabel(nextSchedule.command)})
-                </p>
-              </TileCaption>
-            </>
-          ) : (
-            <>
-              <TileValue className="text-muted-foreground">
-                {m.health_no_schedule()}
-              </TileValue>
-              <Link
-                to="/schedules"
-                className="text-[13px] font-medium underline-offset-4 hover:underline"
-              >
-                {m.health_setup_schedule()} →
-              </Link>
-            </>
-          )}
-        </Tile>
+          <LastRunTile
+            label={m.health_last_scrub()}
+            icon={ScanSearch}
+            run={lastScrub}
+            staleDays={SCRUB_STALE_DAYS}
+            running={runningJob?.command === 'scrub'}
+            missingLabel={
+              status?.scrubPercentage ? m.health_no_log() : m.health_never()
+            }
+          >
+            <ScrubCoverage
+              status={status}
+              keepingUp={keepingUp}
+              hasScrubSchedule={hasScrubSchedule || isSchedulesLoading}
+            />
+          </LastRunTile>
+          <Tile
+            label={m.health_next_job()}
+            corner={<CalendarClock className="size-4 text-muted-foreground" />}
+          >
+            {isSchedulesLoading ? (
+              <TileSkeleton />
+            ) : nextSchedule?.nextRun ? (
+              <>
+                <TileValue
+                  title={new Date(nextSchedule.nextRun).toLocaleString()}
+                >
+                  {formatRelativeTime(nextSchedule.nextRun, getLocale())}
+                </TileValue>
+                <TileCaption>
+                  <p className="truncate">
+                    {nextSchedule.name} ({getCommandLabel(nextSchedule.command)}
+                    )
+                  </p>
+                </TileCaption>
+              </>
+            ) : (
+              <>
+                <TileValue className="text-muted-foreground">
+                  {m.health_no_schedule()}
+                </TileValue>
+                <Link
+                  to="/schedules"
+                  className="text-[13px] font-medium underline-offset-4 hover:underline"
+                >
+                  {m.health_setup_schedule()} →
+                </Link>
+              </>
+            )}
+          </Tile>
+        </div>
       </div>
     </>
   )

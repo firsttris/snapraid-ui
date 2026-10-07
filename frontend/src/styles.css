@@ -483,7 +483,8 @@ body {
 }
 [data-motion="strong"] [data-slot="card"][data-lift]:hover {
   transform: translateY(-3px);
-  box-shadow: 0 14px 30px -14px rgb(0 0 0 / 0.3);
+  /* Only the shadow layer of the card's box-shadow, a selection or focus ring (ring-*) stays */
+  --tw-shadow: 0 14px 30px -14px rgb(0 0 0 / 0.3);
 }
 [data-motion="strong"] [data-slot="button"]:not(:disabled):hover {
   transform: translateY(-1px);

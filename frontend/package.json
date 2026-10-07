@@ -1,5 +1,6 @@
 {
   "name": "snapraid-ui",
+  "version": "1.2.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,7 +14,7 @@
     "lint": "biome lint",
     "check": "biome check",
     "generate-pwa-assets": "pwa-assets-generator",
-    "release": "sh -c 'git tag -a \"v$0\" -m \"v$0\" && git push origin \"v$0\"'"
+    "release": "sh scripts/release.sh"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
