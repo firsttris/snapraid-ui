@@ -61,7 +61,7 @@ Start it:
 docker compose up -d
 ```
 
-Then open `http://<your-server>:3000`. The repository contains the same file as [`docker/docker-compose.yml`](../docker/docker-compose.yml), with all optional settings commented out.
+Then open `http://<your-server>:3000`. The repository contains the same file as [`docker/docker-compose.yml`](https://github.com/firsttris/snapraid-ui/blob/master/docker/docker-compose.yml), with all optional settings commented out.
 
 ## Docker run
 
@@ -86,7 +86,7 @@ Set `TZ` to your time zone, otherwise schedules run in UTC. All environment vari
 
 ## Podman Quadlet
 
-The repository ships a [Quadlet](https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html) unit, [`docker/snapraid-app.container`](../docker/snapraid-app.container), and a network, [`docker/snapraid-net.network`](../docker/snapraid-net.network), so systemd manages the container.
+The repository ships a [Quadlet](https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html) unit, [`docker/snapraid-app.container`](https://github.com/firsttris/snapraid-ui/blob/master/docker/snapraid-app.container), and a network, [`docker/snapraid-net.network`](https://github.com/firsttris/snapraid-ui/blob/master/docker/snapraid-net.network), so systemd manages the container.
 
 SMART data needs a privileged container, and that needs **rootful** Podman. For a system-wide install that starts at boot:
 

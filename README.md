@@ -143,7 +143,7 @@ Put your `snapraid.conf` into `./snapraid/` (or add or create one under *Manage 
 
 ## 📖 Documentation
 
-Everything in detail lives in [docs/](docs/README.md):
+Everything in detail lives in [docs/](docs/README.md), also as a website with search: **https://firsttris.github.io/snapraid-ui/**
 
 | | |
 |---|---|

@@ -1,0 +1,22 @@
+/* App colors: dark tile of the logo, cyan to indigo tint (frontend/public/favicon.svg) */
+:root {
+  --md-primary-fg-color: #101828;
+  --md-primary-fg-color--light: #1e293b;
+  --md-primary-fg-color--dark: #0b1220;
+  --md-accent-fg-color: #4f46e5;
+}
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #101828;
+  --md-accent-fg-color: #00d3f2;
+}
+/* Screenshots: rounded corners and a shadow, never wider than the text */
+.md-typeset img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .18);
+}
+/* Wide tables (environment variables, API reference, events) */
+.md-typeset table:not([class]) {
+  font-size: .75rem;
+}

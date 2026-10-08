@@ -113,4 +113,4 @@ The limits are applied **when the backend starts** and when you click **Clean Ol
 To delete a single log, use the trash icon next to it in the list (shown on hover) or *Delete* in the log view. The log of a running job can't be deleted.
 
 > [!TIP]
-> The dashboard reads the last sync and scrub, the [safety stop notice](usage.md#safety-stops---force-) and the *Check Report* from the logs. If you delete those logs, the *Last sync* and *Last scrub* cards show *No log*, and the check report is no longer available until the next check.
+> The dashboard reads the last sync and scrub, the [safety stop notice](usage.md#safety-stops) and the *Check Report* from the logs. If you delete those logs, the *Last sync* and *Last scrub* cards show *No log*, and the check report is no longer available until the next check.

@@ -1,0 +1,118 @@
+# Documentation as a website: https://firsttris.github.io/snapraid-ui/
+# Source is docs/, built with MkDocs Material (.github/workflows/docs.yml).
+# Locally: pip install -r requirements-docs.txt && mkdocs serve
+site_name: SnapRAID UI
+site_description: >-
+  SnapRAID UI, a web interface for SnapRAID: run and schedule sync, scrub and
+  check, watch SMART health, get notified, manage disks and configurations.
+site_url: https://firsttris.github.io/snapraid-ui/
+repo_url: https://github.com/firsttris/snapraid-ui
+repo_name: firsttris/snapraid-ui
+edit_uri: edit/master/docs/
+copyright: >-
+  License MIT · SnapRAID is a project by Andrea Mazzoleni.
+  This project is not affiliated with SnapRAID.
+
+docs_dir: docs
+# Pages as usage.html instead of usage/: this keeps the relative image paths
+# of the <img> tags working, which must also work on GitHub
+use_directory_urls: false
+
+nav:
+  - Overview: README.md
+  - Getting started:
+      - Installation: installation.md
+      - Configuration: configuration.md
+      - Security: security.md
+  - Using SnapRAID UI:
+      - Using SnapRAID UI: usage.md
+      - Scheduling: scheduling.md
+      - Notifications: notifications.md
+      - SMART & disk health: smart.md
+      - Logs: logs.md
+      - Managing disks: disks.md
+      - Troubleshooting: troubleshooting.md
+  - Behind the scenes:
+      - Architecture: architecture.md
+      - Development: development.md
+
+theme:
+  name: material
+  language: en
+  logo: assets/icon.svg
+  favicon: assets/favicon.png
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    # Follows the system setting, switchable like in the app
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Dark theme
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Light theme
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - toc.follow
+    - content.code.copy
+    - content.action.edit
+    - content.tabs.link
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+plugins:
+  - search:
+      lang: en
+  - git-revision-date-localized:
+      type: date
+      locale: en
+      fallback_to_build_date: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      permalink_title: Link to this section
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/firsttris/snapraid-ui
+      name: Source code on GitHub
+    - icon: fontawesome/brands/docker
+      link: https://github.com/firsttris/snapraid-ui/pkgs/container/snapraid-ui
+      name: Container image
