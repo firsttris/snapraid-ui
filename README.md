@@ -185,7 +185,8 @@ Issues and pull requests are welcome. Please run `npx biome check`, `npm run typ
 ⭐ Like SnapRAID UI? A [star on GitHub](https://github.com/firsttris/snapraid-ui) helps others find it.<br>
 🐛 [Report a bug](https://github.com/firsttris/snapraid-ui/issues/new) · 💡 [Request a feature](https://github.com/firsttris/snapraid-ui/issues/new)
 
-<sub>License: <a href="LICENSE">MIT</a> · © Tristan Teufel and contributors<br>
+<sub>License: <a href="LICENSE">AGPL-3.0</a> (MIT up to v1.2.5) · © Tristan Teufel and contributors<br>
+Changed versions you pass on or run for others must offer their source code under the AGPL; a commercial license without these obligations is available via <a href="https://teufel-it.de">teufel-it.de</a>.<br>
 Not affiliated with the SnapRAID project. SnapRAID is developed by Andrea Mazzoleni.</sub>
 
 </div>
