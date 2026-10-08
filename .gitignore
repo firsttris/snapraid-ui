@@ -24,3 +24,6 @@ dev/tools/
 # Paraglide (generated from frontend/messages/*.json) and the inlang cache
 frontend/src/paraglide/
 frontend/project.inlang/cache/
+
+# MkDocs build (mkdocs build)
+site/

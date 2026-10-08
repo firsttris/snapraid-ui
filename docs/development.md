@@ -212,6 +212,7 @@ GitHub Actions workflows in `.github/workflows/`:
 | `release.yml` | Push of a `v*` tag; manual run | Runs CI, then the shared Docker release workflow from `firsttris/workflows`. A tag `vX.Y.Z` publishes `tristanteu/snapraid-ui:X.Y.Z`, `:X.Y` and `:latest`, updates the Docker Hub description and creates the GitHub release. A manual run on `master` runs the same checks and pushes `:edge`, without a release |
 | `bump.yml` | Manual run | Raises the version in `frontend/package.json` (patch, minor or major), commits it, tags the commit `vX.Y.Z` and starts `release.yml` on it (shared [`bump-version`](https://github.com/firsttris/workflows#bump-version)) |
 | `snapraid-release.yml` | Mondays 06:00 UTC; manual run | Compares the pinned `SNAPRAID_VERSION` with SnapRAID's latest release and opens an issue with a checklist if they differ |
+| `docs.yml` | Push to `master` that changes `docs/`, `mkdocs.yml` or `requirements-docs.txt`; manual run | Builds `docs/` with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) (`mkdocs build --strict`, broken links fail the build) and publishes it to GitHub Pages at https://firsttris.github.io/snapraid-ui/. Locally: `pip install -r requirements-docs.txt && mkdocs serve` |
 
 The version lives in `frontend/package.json`, the tag is `v` + that version (the release checks
 that they match), and the sidebar shows it bottom left. To release, run *Bump version* in the

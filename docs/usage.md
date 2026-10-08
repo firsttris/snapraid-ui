@@ -9,7 +9,7 @@ This page walks you through the SnapRAID UI: finding your way around, reading th
 - [Dashboard](#dashboard)
 - [Running commands](#running-commands)
 - [Live output and progress](#live-output-and-progress)
-- [Safety stops (--force-*)](#safety-stops---force-)
+- [Safety stops](#safety-stops)
 - [Theme, language and animations](#theme-language-and-animations)
 
 ## Layout
@@ -226,9 +226,9 @@ When a job ends, a message such as *"Sync" finished successfully* or *"Sync" fai
 
 Jobs run on the server, not in your browser. You can close the tab or reload the page; when you come back, the dashboard reconnects to the running job and shows its output so far. Jobs started by a schedule or in another tab show up the same way, and the dashboard switches to the configuration the job belongs to. The full output of every job is kept in its [log](logs.md).
 
-## Safety stops (--force-*)
+## Safety stops
 
-SnapRAID refuses to run when the situation looks like data loss, and names an option that would run it anyway. The dashboard recognises these stops, explains them and offers a confirmed retry. The notice appears for the job you just ran and also for the last sync or scrub found in the logs, for example one started by a schedule overnight.
+SnapRAID refuses to run when the situation looks like data loss, and names a `--force-*` option that would run it anyway. The dashboard recognises these stops, explains them and offers a confirmed retry. The notice appears for the job you just ran and also for the last sync or scrub found in the logs, for example one started by a schedule overnight.
 
 | Notice | Typical cause | Retry option |
 |---|---|---|
