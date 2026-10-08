@@ -222,6 +222,17 @@ Actions tab, or from `frontend/`:
 npm run release minor    # patch (default), minor, major or x.y.z: raises package.json, commits, tags vX.Y.Z and pushes
 ```
 
+## Social preview image
+
+The image GitHub shows when the repository is shared (*Settings → General → Social preview*) is
+`docs/social-preview.png`, 1280 × 640. It is rendered from `scripts/social-preview/social-preview.html`
+with headless Chromium. After changing the template or the dashboard screenshot, render it again and
+upload it in the settings:
+
+```bash
+sh scripts/social-preview/render.sh
+```
+
 ## Contributing
 
 Issues and pull requests are welcome at [github.com/firsttris/snapraid-ui](https://github.com/firsttris/snapraid-ui). Before opening a pull request, run what CI runs:
