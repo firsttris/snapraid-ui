@@ -181,6 +181,11 @@ Issues and pull requests are welcome. Please run `npx biome check`, `npm run typ
 ---
 
 <div align="center">
-<sub>License: MIT<br>
+
+⭐ Like SnapRAID UI? A [star on GitHub](https://github.com/firsttris/snapraid-ui) helps others find it.<br>
+🐛 [Report a bug](https://github.com/firsttris/snapraid-ui/issues/new) · 💡 [Request a feature](https://github.com/firsttris/snapraid-ui/issues/new)
+
+<sub>License: <a href="LICENSE">MIT</a> · © Tristan Teufel and contributors<br>
 Not affiliated with the SnapRAID project. SnapRAID is developed by Andrea Mazzoleni.</sub>
+
 </div>
