@@ -2,19 +2,21 @@
 
 # SnapRAID UI
 
-**A modern web interface for [SnapRAID](https://www.snapraid.it/).**<br>
-Sync, scrub, schedule and watch your disks, from any browser, without touching the command line.
+**A modern, self-hosted web interface for [SnapRAID](https://www.snapraid.it/).**<br>
+Sync, scrub, schedule and watch your disks and their SMART health from any browser, without touching the command line.<br>
+One Docker image for your home server or NAS, with SnapRAID 14 included.
 
 [![CI](https://github.com/firsttris/snapraid-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/firsttris/snapraid-ui/actions/workflows/ci.yml)
 [![Docker Pulls](https://img.shields.io/docker/pulls/tristanteu/snapraid-ui?logo=docker&logoColor=white)](https://hub.docker.com/r/tristanteu/snapraid-ui)
 [![Image Size](https://img.shields.io/docker/image-size/tristanteu/snapraid-ui/latest?logo=docker&logoColor=white&label=image)](https://hub.docker.com/r/tristanteu/snapraid-ui)
 [![Platforms](https://img.shields.io/badge/platform-amd64%20%7C%20arm64-lightgrey)](https://hub.docker.com/r/tristanteu/snapraid-ui/tags)
 [![SnapRAID](https://img.shields.io/badge/SnapRAID-14.x-2ea44f)](https://www.snapraid.it/)
+[![Docs](https://img.shields.io/badge/docs-firsttris.github.io-4f46e5?logo=materialformkdocs&logoColor=white)](https://firsttris.github.io/snapraid-ui/)
 
 [Features](#-features) •
 [Screenshots](#-screenshots) •
 [Quick start](#-quick-start) •
-[Documentation](#-documentation) •
+[Documentation](https://firsttris.github.io/snapraid-ui/) •
 [Development](#️-development)
 
 <picture>
@@ -134,7 +136,7 @@ Put your `snapraid.conf` into `./snapraid/` (or add or create one under *Manage 
 - Mount your disks **at the same paths as on the host**, so the paths in `snapraid.conf` stay valid.
 - `--privileged` is only needed for SMART data and the disk power state.
 - `TZ` sets the time zone your schedules run in (UTC otherwise).
-- Prefer Compose or Podman? See [Installation](docs/installation.md).
+- Prefer Compose or Podman? See [Installation](https://firsttris.github.io/snapraid-ui/installation.html).
 
 > [!IMPORTANT]
 > Use the bundled SnapRAID rather than your distribution's. The UI reads SnapRAID's structured log, which
@@ -143,18 +145,19 @@ Put your `snapraid.conf` into `./snapraid/` (or add or create one under *Manage 
 
 ## 📖 Documentation
 
-Everything in detail lives in [docs/](docs/README.md), also as a website with search: **https://firsttris.github.io/snapraid-ui/**
+The full documentation, with search, is at **[firsttris.github.io/snapraid-ui](https://firsttris.github.io/snapraid-ui/)**.
+Its source lives in [docs/](docs/README.md).
 
 | | |
 |---|---|
-| [Installation](docs/installation.md) | Docker, Compose and Podman, disks and paths, reverse proxy, updates |
-| [Configuration](docs/configuration.md) | Environment variables, data directory, log retention |
-| [Using SnapRAID UI](docs/usage.md) | Dashboard, commands, reports, safety stops, command palette |
-| [Scheduling](docs/scheduling.md) · [Notifications](docs/notifications.md) | Automate jobs and get told when something goes wrong |
-| [SMART & disk health](docs/smart.md) · [Logs](docs/logs.md) | What the UI watches and how to read it |
-| [Managing disks](docs/disks.md) | Config editor, adding, replacing and removing disks, backup |
-| [Security](docs/security.md) · [Troubleshooting](docs/troubleshooting.md) | Login and exposure, common problems |
-| [Architecture](docs/architecture.md) · [Development](docs/development.md) | How it works, API, contributing |
+| [Installation](https://firsttris.github.io/snapraid-ui/installation.html) | Docker, Compose and Podman, disks and paths, reverse proxy, updates |
+| [Configuration](https://firsttris.github.io/snapraid-ui/configuration.html) | Environment variables, data directory, log retention |
+| [Using SnapRAID UI](https://firsttris.github.io/snapraid-ui/usage.html) | Dashboard, commands, reports, safety stops, command palette |
+| [Scheduling](https://firsttris.github.io/snapraid-ui/scheduling.html) · [Notifications](https://firsttris.github.io/snapraid-ui/notifications.html) | Automate jobs and get told when something goes wrong |
+| [SMART & disk health](https://firsttris.github.io/snapraid-ui/smart.html) · [Logs](https://firsttris.github.io/snapraid-ui/logs.html) | What the UI watches and how to read it |
+| [Managing disks](https://firsttris.github.io/snapraid-ui/disks.html) | Config editor, adding, replacing and removing disks, backup |
+| [Security](https://firsttris.github.io/snapraid-ui/security.html) · [Troubleshooting](https://firsttris.github.io/snapraid-ui/troubleshooting.html) | Login and exposure, common problems |
+| [Architecture](https://firsttris.github.io/snapraid-ui/architecture.html) · [Development](https://firsttris.github.io/snapraid-ui/development.html) | How it works, API, contributing |
 
 ## 🛠️ Development
 
@@ -167,7 +170,7 @@ git clone https://github.com/firsttris/snapraid-ui && cd snapraid-ui
 ```
 
 The frontend runs on http://localhost:3000, the API on http://localhost:8080. Built with Deno + Hono,
-React 19, TanStack Start, Tailwind CSS and shadcn/ui. See [Development](docs/development.md) for the
+React 19, TanStack Start, Tailwind CSS and shadcn/ui. See [Development](https://firsttris.github.io/snapraid-ui/development.html) for the
 project layout, tests and translations.
 
 ## 🤝 Contributing
