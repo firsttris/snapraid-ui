@@ -1,0 +1,64 @@
+<!doctype html>
+<!-- Template for the repository's social preview image (Settings → Social preview), 1280 × 640.
+     Render: sh scripts/social-preview/render.sh → docs/social-preview.png -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 640px; overflow: hidden; }
+  body {
+    position: relative;
+    font-family: Inter, "Inter Display", ui-sans-serif, system-ui, sans-serif;
+    color: #f1f5f9;
+    /* The logo's tint: cyan top left, indigo bottom right */
+    background:
+      radial-gradient(60% 55% at 8% 0%, rgba(0,211,242,.20), transparent 70%),
+      radial-gradient(45% 50% at 100% 100%, rgba(97,95,255,.26), transparent 70%),
+      linear-gradient(135deg, #101828, #0a0d14);
+  }
+  .grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(#1a2233 1px, transparent 1px),
+      linear-gradient(90deg, #1a2233 1px, transparent 1px);
+    background-size: 32px 32px; opacity: .55;
+  }
+  .head { position: absolute; left: 64px; top: 56px; display: flex; align-items: center; gap: 22px; }
+  .head img { width: 84px; height: 84px; border-radius: 19px; box-shadow: 0 8px 30px rgba(0,211,242,.30); }
+  h1 { font-size: 60px; font-weight: 700; letter-spacing: -1.8px; line-height: 1; }
+  .sub { position: absolute; left: 64px; top: 168px; font-size: 25px; color: #cbd5e1; letter-spacing: -.2px; }
+  .sub b { color: #f8fafc; font-weight: 600; }
+  .chips { position: absolute; left: 64px; top: 222px; display: flex; gap: 10px; }
+  .chip {
+    font-size: 15px; font-weight: 500; color: #e2e8f0; padding: 7px 14px; border-radius: 999px;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .chip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .shot {
+    position: absolute; left: 64px; top: 292px; width: 1152px; height: 400px; overflow: hidden;
+    border-radius: 14px 14px 0 0; border: 1px solid rgba(255,255,255,.12); border-bottom: 0;
+    box-shadow: 0 -10px 60px rgba(97,95,255,.22);
+    -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent 100%);
+            mask-image: linear-gradient(180deg, #000 70%, transparent 100%);
+  }
+  .shot img { width: 100%; display: block; }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="head">
+    <img src="../../frontend/public/favicon.svg" alt="">
+    <h1>SnapRAID UI</h1>
+  </div>
+  <p class="sub">A modern, self-hosted web interface for <b>SnapRAID</b>.</p>
+  <div class="chips">
+    <span class="chip"><i style="background:#00d3f2"></i>Sync, scrub &amp; schedule</span>
+    <span class="chip"><i style="background:#4ade80"></i>SMART disk health</span>
+    <span class="chip"><i style="background:#facc15"></i>ntfy, e-mail &amp; webhook alerts</span>
+    <span class="chip"><i style="background:#818cf8"></i>Docker, SnapRAID 14 included</span>
+  </div>
+  <div class="shot"><img src="../../docs/screenshot-dark.png" alt=""></div>
+</body>
+</html>
