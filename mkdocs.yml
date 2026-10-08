@@ -10,7 +10,7 @@ repo_url: https://github.com/firsttris/snapraid-ui
 repo_name: firsttris/snapraid-ui
 edit_uri: edit/master/docs/
 copyright: >-
-  License MIT · SnapRAID is a project by Andrea Mazzoleni.
+  License AGPL-3.0 · SnapRAID is a project by Andrea Mazzoleni.
   This project is not affiliated with SnapRAID.
 
 docs_dir: docs
