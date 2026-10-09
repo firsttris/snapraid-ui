@@ -58,6 +58,8 @@ const SYNC_SCRUB_PLANS: ScrubPlan[] = ['default', 'percent', 'new']
 
 // Default for new sync schedules: skip when more files were deleted than this
 const DEFAULT_MAX_DELETED_FILES = 50
+// As snapraid-daemon's sync_threshold_updates
+const DEFAULT_MAX_UPDATED_FILES = 100
 
 // A setting with title, hint and a switch on the right, extra fields below when on
 const OptionRow = ({
@@ -132,6 +134,13 @@ export const ScheduleForm = ({
   const [maxDeletedFiles, setMaxDeletedFiles] = useState(
     String(schedule?.maxDeletedFiles ?? DEFAULT_MAX_DELETED_FILES),
   )
+  // New schedules get it, existing ones keep what they had (older ones have none)
+  const [updateGuard, setUpdateGuard] = useState(
+    schedule ? schedule.maxUpdatedFiles != null : true,
+  )
+  const [maxUpdatedFiles, setMaxUpdatedFiles] = useState(
+    String(schedule?.maxUpdatedFiles ?? DEFAULT_MAX_UPDATED_FILES),
+  )
   // New sync schedules suggest the full nightly routine
   const [touchBefore, setTouchBefore] = useState(
     schedule ? !!schedule.touchBefore : true,
@@ -145,12 +154,11 @@ export const ScheduleForm = ({
         ? parseScrubArgs(schedule.scrubAfter)
         : DEFAULT_SCRUB_OPTIONS,
   )
-  const maxDeletedValue = Number(maxDeletedFiles)
+  const isLimit = (value: string) =>
+    value.trim() !== '' && Number.isInteger(Number(value)) && Number(value) >= 0
   const isGuardValid =
-    !syncGuard ||
-    (maxDeletedFiles.trim() !== '' &&
-      Number.isInteger(maxDeletedValue) &&
-      maxDeletedValue >= 0)
+    (!syncGuard || isLimit(maxDeletedFiles)) &&
+    (!updateGuard || isLimit(maxUpdatedFiles))
   const isOptionsValid =
     command === 'scrub'
       ? isValidScrubOptions(scrubOptions)
@@ -223,7 +231,10 @@ export const ScheduleForm = ({
           : command === 'sync' && preHash
             ? ['-h']
             : [],
-      maxDeletedFiles: command === 'sync' && syncGuard ? maxDeletedValue : null,
+      maxDeletedFiles:
+        command === 'sync' && syncGuard ? Number(maxDeletedFiles) : null,
+      maxUpdatedFiles:
+        command === 'sync' && updateGuard ? Number(maxUpdatedFiles) : null,
       touchBefore: command === 'sync' && touchBefore,
       scrubAfter:
         command === 'sync' && scrubAfter ? scrubArgs(scrubAfterOptions) : null,
@@ -323,7 +334,33 @@ export const ScheduleForm = ({
                 min={0}
                 value={maxDeletedFiles}
                 onChange={(e) => setMaxDeletedFiles(e.target.value)}
-                aria-invalid={!isGuardValid || undefined}
+                aria-invalid={
+                  (syncGuard && !isLimit(maxDeletedFiles)) || undefined
+                }
+                className="font-mono tabular-nums"
+              />
+            </div>
+          </OptionRow>
+          <OptionRow
+            id={fieldId('update-guard')}
+            title={m.schedules_update_guard()}
+            hint={m.schedules_update_guard_hint()}
+            checked={updateGuard}
+            onCheckedChange={setUpdateGuard}
+          >
+            <div className="flex max-w-48 flex-col gap-2">
+              <Label htmlFor={fieldId('max-updated')}>
+                {m.schedules_update_guard_label()}
+              </Label>
+              <Input
+                id={fieldId('max-updated')}
+                type="number"
+                min={0}
+                value={maxUpdatedFiles}
+                onChange={(e) => setMaxUpdatedFiles(e.target.value)}
+                aria-invalid={
+                  (updateGuard && !isLimit(maxUpdatedFiles)) || undefined
+                }
                 className="font-mono tabular-nums"
               />
             </div>

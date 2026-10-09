@@ -38,4 +38,17 @@ export const notificationsApi = {
     if (!response.ok) throw await apiError(response)
     return response.json()
   },
+
+  // Pings the heartbeat URL as entered, before it is saved
+  heartbeat: async (
+    settings: NotificationSettings,
+  ): Promise<{ ok: boolean; error?: string }> => {
+    const response = await apiFetch(`${API_BASE}/notifications/heartbeat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settings }),
+    })
+    if (!response.ok) throw await apiError(response)
+    return response.json()
+  },
 }

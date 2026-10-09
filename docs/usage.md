@@ -99,7 +99,7 @@ When there is something to do, a notice above the cards offers the matching acti
 - **Disk failing**: the disks SMART rates as critical, with a link to the *SMART details*.
 - **Overdue sync or scrub**: *Start sync* / *Start scrub*, and *Set up a schedule* if no enabled schedule scrubs this configuration.
 - **Sync incomplete**: *Run sync again* and a link to the log of the failed sync.
-- **Bad blocks**: the two recommended steps *1. Repair (fix -e)*, which restores the bad blocks from parity after a confirmation, and *2. Verify (scrub -p bad)*, which checks that the repair worked.
+- **Bad blocks**: *Repair and verify* restores the bad blocks from parity (`fix -e`) after a confirmation, and then checks them again (`scrub -p bad`), which clears them once they are good. The scrub only follows a successful repair, and only if no other job started in between. *Verify only (scrub -p bad)* runs the check alone, e.g. after a repair done by hand.
 - **Files without sub-second timestamps**: *Run touch*, so SnapRAID can reliably detect moved and copied files (`snapraid touch`).
 
 ### Disks
@@ -113,9 +113,11 @@ The *Disks* card lists every data and parity disk of the configuration. The head
 | *Usage* | Fill level of the filesystem. Yellow from 85 % (*Filling up*), red from 95 % (*Almost full*). Parity disks use a purple bar, because a parity file fills its disk by design. |
 | *Files* | Number of files on a data disk; size of the parity file on a parity disk. Left out when the card is narrow (tablets), so *Status* stays in view |
 | *Free* | Free space; hover for the total size |
-| *Status* | Notes such as fragmented files, wasted space, the estimated fill-up date (*full in about N days*) and standby. A disk that is not available is marked *Missing* or *Not mounted?*, one on another filesystem *Other filesystem*, and one SMART rates as critical *SMART critical* |
+| *Status* | The temperature from SMART, with a small chart of the last 30 SMART reads (hover for the range): yellow from 45 °C, red from 50 °C. Then notes such as fragmented files, wasted space, the estimated fill-up date (*full in about N days*) and standby. A disk that is not available is marked *Missing* or *Not mounted?*, one on another filesystem *Other filesystem*, and one SMART rates as critical *SMART critical* |
 
 The power state is checked once a minute in a way that does not wake sleeping disks, and not at all while a job is running. Some controllers can't report it; the dot is then left out.
+
+The `⋯` menu next to a disk spins it up (`snapraid up -d <disk>`) or down (`snapraid down -d <disk>`), *Spin up/down* in the header does the same for all disks of the array. Spinning up all disks before a long job saves the wait for each disk; spinning one down helps when you know it will not be used for a while. Both are refused while a job runs. If the disk can't be controlled, for example without `smartctl` or behind some USB bridges, the message SnapRAID gave is shown. For spinning down automatically, see [Automation](automation.md#spin-down-idle-disks).
 
 For parity disks the *Status* column checks whether the parity can still grow as large as the fullest data disk, which SnapRAID needs for a sync:
 

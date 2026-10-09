@@ -3,10 +3,11 @@ import { type Schedule, SECRET_MASK, type SmartDiskInfo } from "@shared/types.ts
 import {
   DEFAULT_NOTIFICATION_SETTINGS,
   maskSecrets,
+  pingHeartbeat,
   resolveSecrets,
   validateNotificationSettings,
 } from "../notifications.ts";
-import { buildRunNotification, buildSkipNotification, diffSmartProblems } from "../notification-events.ts";
+import { buildRunNotification, buildSkipNotification, diffSmartProblems, heartbeatAfterRun } from "../notification-events.ts";
 import { failedReport, parseRunReport } from "../run-report.ts";
 import { combineResults, scheduleSteps } from "../scheduler.ts";
 import { assessSmart, attributeLevel, smartHints } from "@shared/smart-health.ts";
@@ -100,10 +101,24 @@ Deno.test("buildSkipNotification - explains the sync guard", () => {
     result: "skipped",
     skipReason: "too_many_deleted",
     deletedFiles: 812,
-  }, 50);
+    limit: 50,
+  });
 
   assertEquals(notification.event, "schedule_skipped");
   assertStringIncludes(notification.message, "812 deleted files, more than the limit of 50");
+});
+
+Deno.test("buildSkipNotification - warns about mass changes, as ransomware leaves them", () => {
+  const notification = buildSkipNotification("en", "Nightly", "/cfg/snapraid.conf", {
+    timestamp: "",
+    result: "skipped",
+    skipReason: "too_many_updated",
+    updatedFiles: 4210,
+    limit: 100,
+  });
+
+  assertStringIncludes(notification.message, "4210 changed files, more than the limit of 100");
+  assertStringIncludes(notification.message, "ransomware");
 });
 
 Deno.test("buildSkipNotification - names the missing disks", () => {
@@ -272,4 +287,53 @@ Deno.test("attributeLevel - failed and watched attributes stand out", () => {
   assertEquals(attributeLevel({ ...attribute, whenFailed: "now" }), "critical");
   assertEquals(attributeLevel({ ...attribute, id: 197, raw: "8" }), "warning");
   assertEquals(attributeLevel({ ...attribute, id: 197, raw: "0" }), "ok");
+});
+
+Deno.test("heartbeat - pinged after a successful scheduled run only", async () => {
+  const settings = { ...DEFAULT_NOTIFICATION_SETTINGS, heartbeat: { enabled: true, url: "http://hc/ping" } };
+  let pings = 0;
+  const run = (reports: Parameters<typeof heartbeatAfterRun>[0], notRun: string[] = [], enabled = true) =>
+    heartbeatAfterRun(
+      reports,
+      notRun,
+      () => Promise.resolve({ ...settings, heartbeat: { ...settings.heartbeat, enabled } }),
+      () => {
+        pings++;
+        return Promise.resolve();
+      },
+    );
+  const ok = parseRunReport("sync", SYNC_LOG, { exitCode: 0 }, 1);
+
+  await run([ok]);
+  assertEquals(pings, 1);
+  await run([ok, failedReport("scrub", "boom")]);
+  await run([ok], ["scrub"]);
+  await run([]);
+  await run([ok], [], false);
+  assertEquals(pings, 1);
+});
+
+Deno.test("heartbeat - a plain GET, an error status is a failed ping", async () => {
+  const requests: string[] = [];
+  const server = Deno.serve({ port: 0, onListen: () => {} }, (request) => {
+    requests.push(`${request.method} ${new URL(request.url).pathname}`);
+    return new Response(null, { status: new URL(request.url).pathname === "/down" ? 404 : 200 });
+  });
+  const url = (path: string) => `http://127.0.0.1:${server.addr.port}${path}`;
+  try {
+    await pingHeartbeat({ ...DEFAULT_NOTIFICATION_SETTINGS, heartbeat: { enabled: true, url: url("/ping/abc") } });
+    let failed = false;
+    await pingHeartbeat({ ...DEFAULT_NOTIFICATION_SETTINGS, heartbeat: { enabled: true, url: url("/down") } })
+      .catch(() => (failed = true));
+    assertEquals(requests, ["GET /ping/abc", "GET /down"]);
+    assert(failed);
+  } finally {
+    await server.shutdown();
+  }
+});
+
+Deno.test("validateNotificationSettings - the heartbeat needs an http(s) URL", () => {
+  const heartbeat = (url: string) => ({ ...DEFAULT_NOTIFICATION_SETTINGS, heartbeat: { enabled: true, url } });
+  assertEquals(typeof validateNotificationSettings(heartbeat("hc-ping.com/abc")), "string");
+  assertEquals(validateNotificationSettings(heartbeat("https://hc-ping.com/abc")), null);
 });

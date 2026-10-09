@@ -10,10 +10,12 @@ import {configOperationsRoutes} from "./config-operations.ts";
 import {hardwareRoutes} from "./hardware.ts";
 import { setReportsRunner, reportsRoutes } from "./reports.ts";
 import { getUsageHistory, recordUsage } from "../usage-history.ts";
+import { rememberStatus } from "../status-cache.ts";
 import { parseStatusOutput } from "../parsers/status-parser.ts";
 import { parseCheckOutput } from "../parsers/check-parser.ts";
 import { createDiskReplacementRoutes } from "./disk-replacement.ts";
 import { notifyManualRun } from "../notification-events.ts";
+import { isSuccessful } from "../run-report.ts";
 import { findDiskIssues } from "../disk-check.ts";
 import { msg } from "@shared/i18n.ts";
 import { EngineBusyError, getEngine, type JobOutcome } from "../engine/engine.ts";
@@ -152,14 +154,15 @@ snapraid.get("/check-report", async (c) => {
 });
 
 /**
- * Run a command in the background, streaming output and result via WebSocket
+ * Run a command in the background, streaming output and result via WebSocket.
+ * Resolves with the outcome once it finished, null when it could not run.
  */
 const startJob = (
   command: SnapRaidCommand,
   configPath: string,
   args: string[],
   afterRun?: (outcome: JobOutcome) => Promise<void>,
-): void => {
+): Promise<JobOutcome | null> =>
   (async () => {
     const engine = getEngine();
     try {
@@ -209,6 +212,7 @@ const startJob = (
           status,
         });
       }
+      return outcome;
     } catch (error) {
       state.broadcastFn({
         type: "error",
@@ -217,9 +221,41 @@ const startJob = (
         error: String(error),
         timestamp: new Date().toISOString(),
       });
+      return null;
     }
   })();
+
+/**
+ * Repair the blocks scrub marked as bad from parity (`fix -e`), then check them again
+ * (`scrub -p bad`), which clears them once they are good. The scrub only runs after a
+ * successful fix and when no other job started in between.
+ */
+export const heal = async (
+  configPath: string,
+  run: (command: SnapRaidCommand, args: string[]) => Promise<JobOutcome | null>,
+  isBusy: () => boolean,
+): Promise<SnapRaidCommand[]> => {
+  const fix = await run("fix", ["-e"]);
+  if (!fix || !isSuccessful(fix.report.result) || isBusy()) return ["fix"];
+  await run("scrub", ["-p", "bad"]);
+  return ["fix", "scrub"];
 };
+
+// POST /api/snapraid/heal - fix -e, then scrub -p bad, one after the other
+snapraid.post("/heal", async (c) => {
+  const { configPath: relativePath } = await c.req.json();
+  if (!relativePath) {
+    return c.json({ error: "Missing configPath" }, 400);
+  }
+  if (getEngine().currentJob()) {
+    return c.json({ error: msg("server_error_job_running") }, 409);
+  }
+
+  const configPath = resolveFromBase(relativePath);
+  heal(configPath, (command, args) => startJob(command, configPath, args), () => !!getEngine().currentJob())
+    .catch((error) => console.error("Heal failed:", error));
+  return c.json({ success: true }, 202);
+});
 
 // POST /api/snapraid/execute - Execute SnapRAID command
 snapraid.post("/execute", async (c) => {
@@ -302,7 +338,10 @@ snapraid.get("/status", async (c) => {
   try {
     const configPath = resolveFromBase(relativePath);
     const { status, exitCode } = await getEngine().readStatus(configPath);
-    if (exitCode === 0) await recordUsage(configPath, status);
+    if (exitCode === 0) {
+      await recordUsage(configPath, status);
+      rememberStatus(configPath, status);
+    }
 
     return c.json({
       status,

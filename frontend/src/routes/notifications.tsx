@@ -8,6 +8,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   AlertCircle,
   ExternalLink,
+  HeartPulse,
   Mail,
   Send,
   Shuffle,
@@ -132,11 +133,13 @@ function NotificationForm({ initial }: { initial: NotificationSettings }) {
   const save = useSaveNotificationSettings()
   const [settings, setSettings] = useState(initial)
   const [saved, setSaved] = useState(initial)
-  const [testing, setTesting] = useState<NotificationChannel | null>(null)
+  const [testing, setTesting] = useState<
+    NotificationChannel | 'heartbeat' | null
+  >(null)
 
   const dirty = JSON.stringify(settings) !== JSON.stringify(saved)
 
-  const update = <K extends 'email' | 'ntfy' | 'webhook'>(
+  const update = <K extends 'email' | 'ntfy' | 'webhook' | 'heartbeat'>(
     channel: K,
     changes: Partial<NotificationSettings[K]>,
   ) => setSettings((s) => ({ ...s, [channel]: { ...s[channel], ...changes } }))
@@ -173,6 +176,20 @@ function NotificationForm({ initial }: { initial: NotificationSettings }) {
     }
   }
 
+  const handleHeartbeatTest = async () => {
+    setTesting('heartbeat')
+    try {
+      const result = await notificationsApi.heartbeat(settings)
+      if (result.ok) toast.success(m.notifications_heartbeat_sent())
+      else
+        toast.error(m.notifications_test_failed({ error: result.error ?? '' }))
+    } catch (error) {
+      toast.error(errorMessage(error))
+    } finally {
+      setTesting(null)
+    }
+  }
+
   const testButton = (channel: NotificationChannel) => (
     <Button
       variant="outline"
@@ -187,7 +204,7 @@ function NotificationForm({ initial }: { initial: NotificationSettings }) {
     </Button>
   )
 
-  const { email, ntfy, webhook } = settings
+  const { email, ntfy, webhook, heartbeat } = settings
 
   return (
     <div className={`flex flex-col gap-6 ${SAVE_BAR_SPACE}`}>
@@ -410,6 +427,41 @@ function NotificationForm({ initial }: { initial: NotificationSettings }) {
               />
             </div>
             <p className={hintClass}>{m.notifications_webhook_hint()}</p>
+          </ChannelCard>
+
+          <ChannelCard
+            icon={<HeartPulse />}
+            iconClass="bg-rose-50 text-rose-700"
+            title={m.notifications_heartbeat_title()}
+            description={m.notifications_heartbeat_desc()}
+            enabled={heartbeat.enabled}
+            onToggle={(enabled) => update('heartbeat', { enabled })}
+            actions={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleHeartbeatTest}
+                disabled={testing !== null || !heartbeat.url}
+              >
+                <Send />
+                {testing === 'heartbeat'
+                  ? m.notifications_test_sending()
+                  : m.notifications_heartbeat_test()}
+              </Button>
+            }
+          >
+            <div className={fieldClass}>
+              <Label htmlFor="heartbeat-url">URL</Label>
+              <Input
+                id="heartbeat-url"
+                type="url"
+                value={heartbeat.url}
+                onChange={(e) => update('heartbeat', { url: e.target.value })}
+                placeholder="https://hc-ping.com/…"
+                className="bg-background font-mono"
+              />
+            </div>
+            <p className={hintClass}>{m.notifications_heartbeat_hint()}</p>
           </ChannelCard>
 
           <Card className="mt-3 gap-4 p-5">

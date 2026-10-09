@@ -312,6 +312,11 @@ export interface Schedule {
   enabled: boolean;
   // sync only: skip the run when diff reports more deleted files, null disables the check
   maxDeletedFiles?: number | null;
+  // sync only: skip the run when diff reports more updated files, null disables the check.
+  // Ransomware encrypts files in place, the next sync would overwrite their parity.
+  maxUpdatedFiles?: number | null;
+  // The next timed run is skipped once, then this is cleared; "Run now" ignores it
+  skipNext?: boolean;
   // sync only: run `touch` first, files with a zero sub-second timestamp get one so moves are detected
   touchBefore?: boolean;
   // sync only: scrub args to run after a successful sync, null or missing runs no scrub
@@ -326,9 +331,11 @@ export interface Schedule {
 export type ScheduleSkipReason =
   | 'job_running'
   | 'too_many_deleted'
+  | 'too_many_updated'
   | 'diff_failed'
   | 'recovery_in_progress'
-  | 'disk_missing';
+  | 'disk_missing'
+  | 'skipped_once';
 
 // One command of a scheduled run, e.g. touch, sync and scrub of a nightly sync
 export interface ScheduleStepOutcome {
@@ -342,6 +349,8 @@ export interface ScheduleOutcome {
   result: RunResult | 'skipped';
   skipReason?: ScheduleSkipReason;
   deletedFiles?: number; // Deleted files diff reported, for too_many_deleted
+  updatedFiles?: number; // Updated files diff reported, for too_many_updated
+  limit?: number; // The limit that was exceeded, for too_many_deleted and too_many_updated
   disks?: string[]; // Missing or empty disks, for disk_missing
   error?: string;
   steps?: ScheduleStepOutcome[]; // Only for schedules that run more than one command
@@ -493,6 +502,11 @@ export interface MaintenanceSettings {
     enabled: boolean;
     idleMinutes: number;         // Spin a disk down after this long without reads or writes
   };
+  // Prometheus metrics at /api/metrics, from what SnapRAID UI already knows (no disk is woken up)
+  metrics: {
+    enabled: boolean;
+    token: string;               // Bearer token the scraper sends; empty for none
+  };
 }
 
 export interface DockerContainer {
@@ -583,6 +597,12 @@ export interface NotificationSettings {
     token: string;               // Access token for protected topics, may be empty
   };
   webhook: {
+    enabled: boolean;
+    url: string;
+  };
+  // Pinged after every successful scheduled run, e.g. a healthchecks.io or Uptime Kuma push URL.
+  // When the pings stop, that service raises the alarm: the server is down or the runs fail.
+  heartbeat: {
     enabled: boolean;
     url: string;
   };

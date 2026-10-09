@@ -850,6 +850,7 @@ export const ArrayHealthPanel = ({
                     disabled={actionsDisabled}
                     variant="destructive"
                     size="sm"
+                    title={m.health_heal_hint()}
                   >
                     {m.health_fix_errors()}
                   </Button>

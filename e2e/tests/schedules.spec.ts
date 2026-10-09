@@ -1,4 +1,6 @@
 // Scheduled jobs, started with "Run now" instead of waiting for their time
+import { appendFile, stat } from 'node:fs/promises'
+import { join } from 'node:path'
 import type { APIRequestContext } from '@playwright/test'
 import { createArray } from '../harness/array'
 import { API_URL } from '../harness/env'
@@ -7,7 +9,14 @@ import { expect, expectHealth, test } from '../harness/fixtures'
 interface StoredSchedule {
   id: string
   name: string
-  lastOutcome?: { result: string; skipReason?: string; disks?: string[]; steps?: { command: string; result: string }[] }
+  skipNext?: boolean
+  lastOutcome?: {
+    result: string
+    skipReason?: string
+    disks?: string[]
+    updatedFiles?: number
+    steps?: { command: string; result: string }[]
+  }
 }
 
 // The outcome of the schedule's next run; between the steps of a routine no job runs for a moment
@@ -83,4 +92,57 @@ test('a disk that is not mounted pauses the scheduled sync', async ({ page, app 
   expect(await array.snapraid('diff')).toMatch(/No differences/)
   await page.goto('/')
   await expectHealth(page, 'All good')
+})
+
+test('mass changes, as ransomware leaves them, stop the scheduled sync', async ({ page, app }) => {
+  const array = await createArray('ransomware')
+  // Encrypted in place: same names, other content
+  for (const file of ['photos/holiday.jpg', 'photos/birthday.jpg', 'documents/contract.pdf']) {
+    await appendFile(join(array.disk('d1'), file), 'encrypted')
+  }
+  await app.addArray(array, 'Ransomware')
+  const content = join(array.dir, 'parity', 'snapraid.content')
+  const syncedAt = (await stat(content)).mtimeMs
+
+  await app.api.post(`${API_URL}/schedules`, {
+    data: {
+      name: 'Nightly sync',
+      command: 'sync',
+      configPath: array.storedPath,
+      cronExpression: '0 2 * * *',
+      maxDeletedFiles: 50,
+      maxUpdatedFiles: 2,
+    },
+  })
+  await page.goto('/schedules')
+  await expect(page.getByText('Skipped when more than 2 files were changed')).toBeVisible()
+  await page.getByRole('button', { name: 'Run now' }).click()
+
+  const outcome = await waitForOutcome(app.api, 'Nightly sync')
+  expect(outcome).toMatchObject({ result: 'skipped', skipReason: 'too_many_updated', updatedFiles: 3 })
+  await page.reload()
+  await expect(page.getByText(/3 changed files, more than allowed/)).toBeVisible()
+  // No sync ran: the content file, and with it the parity, is as before
+  expect((await stat(content)).mtimeMs).toBe(syncedAt)
+})
+
+test('the next run of a schedule can be skipped and taken back', async ({ page, app }) => {
+  const array = await createArray('skip')
+  await app.addArray(array, 'Skip')
+  await app.api.post(`${API_URL}/schedules`, {
+    data: { name: 'Nightly sync', command: 'sync', configPath: array.storedPath, cronExpression: '0 2 * * *' },
+  })
+  const stored = async () =>
+    ((await (await app.api.get(`${API_URL}/schedules`)).json()) as StoredSchedule[])[0]
+
+  await page.goto('/schedules')
+  await page.getByRole('button', { name: 'Skip next run' }).click()
+  await expect(page.getByText('The next run of Nightly sync is skipped')).toBeVisible()
+  await expect(page.getByText('Next run skipped')).toBeVisible()
+  expect((await stored()).skipNext).toBe(true)
+
+  await page.getByRole('button', { name: 'Run next time again' }).click()
+  await expect(page.getByText('Nightly sync runs next time again')).toBeVisible()
+  await expect(page.getByText('Next run skipped')).toBeHidden()
+  expect((await stored()).skipNext).toBe(false)
 })

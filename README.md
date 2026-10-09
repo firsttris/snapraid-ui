@@ -52,6 +52,7 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 
 ### ⚡ Commands
 - Sync with preview, scrub plans, status, diff, check, fix
+- Repair and verify bad blocks with one click
 - Live output while a job runs
 - Clear explanations when SnapRAID stops a run for safety
 
@@ -63,9 +64,10 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 ### 🗓️ Automation
 - Cron schedules without editing a crontab
 - Nightly routine: touch, sync, then scrub
-- Sync guard that skips a sync after mass deletions
+- Sync guard that skips a sync after mass deletions or mass changes (ransomware)
+- Skip the next run of a schedule, or run it right now
 - Pauses Docker containers during sync and scrub
-- Spins idle disks down
+- Spins idle disks down, or by hand
 
 </td>
 <td width="50%" valign="top">
@@ -73,7 +75,8 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 ### 🔔 Monitoring
 - SMART health, temperature and failure probability
 - Notices a disk that is not mounted before a sync drops its files
-- Notifications via ntfy, e-mail or webhook
+- Notifications via ntfy, e-mail or webhook, and a heartbeat for healthchecks.io or Uptime Kuma
+- Prometheus metrics for Grafana and alerts
 - Searchable logs of every run
 
 </td>

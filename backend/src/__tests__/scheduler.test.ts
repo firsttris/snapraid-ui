@@ -71,6 +71,44 @@ Deno.test("scheduler - the sync guard skips a sync with too many deletions", asy
   assertEquals(jobs, []);
   assertEquals(outcome?.skipReason, "too_many_deleted");
   assertEquals(outcome?.deletedFiles, 51);
+  assertEquals(outcome?.limit, 50);
+});
+
+Deno.test("scheduler - the sync guard skips a sync with too many updated files", async () => {
+  const { jobs, outcome } = await runOnce({ updatedFiles: 101 }, { maxUpdatedFiles: 100 });
+  assertEquals(jobs, []);
+  assertEquals(outcome?.skipReason, "too_many_updated");
+  assertEquals(outcome?.updatedFiles, 101);
+  assertEquals(outcome?.limit, 100);
+});
+
+Deno.test("scheduler - updated files are not checked without a limit, as in older schedules", async () => {
+  const { jobs } = await runOnce({ updatedFiles: 5000 });
+  assertEquals(jobs, ["touch", "sync", "scrub -p 8"]);
+});
+
+Deno.test("scheduler - skip next skips one timed run, run now still runs", async () => {
+  const dir = await Deno.makeTempDir();
+  const path = join(dir, "schedules.json");
+  const stored = async () => (JSON.parse(await Deno.readTextFile(path)) as ScheduleConfig).schedules[0];
+  try {
+    await Deno.writeTextFile(path, JSON.stringify({ schedules: [schedule({ skipNext: true })] }));
+    const engine = createFakeEngine();
+
+    await executeScheduledCommand(path, engine, undefined, "nightly", { manual: true });
+    assertEquals(engine.jobs, ["touch", "sync", "scrub -p 8"]);
+    assertEquals((await stored()).skipNext, true);
+
+    await executeScheduledCommand(path, engine, undefined, "nightly");
+    assertEquals(engine.jobs.length, 3);
+    assertEquals((await stored()).skipNext, false);
+    assertEquals((await stored()).lastOutcome?.skipReason, "skipped_once");
+
+    await executeScheduledCommand(path, engine, undefined, "nightly");
+    assertEquals(engine.jobs.length, 6);
+  } finally {
+    await Deno.remove(dir, { recursive: true });
+  }
 });
 
 Deno.test("scheduler - SnapRAID locked by another process: the disk check steps aside, the run goes on", async () => {

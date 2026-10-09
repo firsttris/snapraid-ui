@@ -55,6 +55,10 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
     enabled: false,
     url: "",
   },
+  heartbeat: {
+    enabled: false,
+    url: "",
+  },
 };
 
 const settingsPath = () => resolveFromBase(SETTINGS_FILE);
@@ -67,6 +71,7 @@ const withDefaults = (stored: Partial<NotificationSettings>): NotificationSettin
   email: { ...DEFAULT_NOTIFICATION_SETTINGS.email, ...stored.email },
   ntfy: { ...DEFAULT_NOTIFICATION_SETTINGS.ntfy, ...stored.ntfy },
   webhook: { ...DEFAULT_NOTIFICATION_SETTINGS.webhook, ...stored.webhook },
+  heartbeat: { ...DEFAULT_NOTIFICATION_SETTINGS.heartbeat, ...stored.heartbeat },
 });
 
 export const loadNotificationSettings = async (): Promise<NotificationSettings> => {
@@ -122,6 +127,9 @@ export const validateNotificationSettings = (settings: NotificationSettings): st
   }
   if (ntfy.enabled && (!ntfy.server || !ntfy.topic)) return "ntfy needs a server and a topic";
   if (webhook.enabled && !/^https?:\/\//.test(webhook.url)) return "The webhook URL must start with http:// or https://";
+  if (settings.heartbeat.enabled && !/^https?:\/\//.test(settings.heartbeat.url)) {
+    return "The heartbeat URL must start with http:// or https://";
+  }
   if (!(settings.smartFailureThreshold > 0 && settings.smartFailureThreshold <= 100)) {
     return "The SMART threshold must be between 1 and 100";
   }
@@ -214,6 +222,15 @@ const sendWebhook = async (settings: NotificationSettings, notification: Notific
     }),
     signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
   });
+  await ensureOk(response);
+};
+
+/**
+ * Tell the monitoring service that a scheduled run succeeded. Healthchecks.io, Uptime Kuma
+ * push monitors and Dead Man's Snitch all count a plain GET.
+ */
+export const pingHeartbeat = async (settings: NotificationSettings): Promise<void> => {
+  const response = await fetch(settings.heartbeat.url, { signal: AbortSignal.timeout(SEND_TIMEOUT_MS) });
   await ensureOk(response);
 };
 

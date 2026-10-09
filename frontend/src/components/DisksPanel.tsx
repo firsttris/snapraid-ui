@@ -5,20 +5,34 @@ import type {
   DiskStatusInfo,
   ParityLevelUsage,
   ParsedSnapRaidConfig,
+  SmartHistoryPoint,
   SnapRaidStatus,
   UsagePoint,
 } from '@shared/types'
 import { diskFreeSeries, forecastFill } from '@shared/usage-forecast'
 import { Link } from '@tanstack/react-router'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, ArrowUpFromLine, Moon, MoreHorizontal } from 'lucide-react'
 import { lazy, type ReactNode, Suspense, useState } from 'react'
 import { cn, formatGB, usageBarColor } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { LoadingHint, Skeleton } from './Skeleton'
+import {
+  sparklinePoints,
+  temperatureSeries,
+  temperatureTone,
+} from './temperatureTrend'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -48,6 +62,12 @@ interface DisksPanelProps {
   usageHistory: UsagePoint[] | undefined
   powerStates: DiskPowerStatus[] | undefined
   smartCritical: string[] // Disks SMART rates critical
+  // Current temperature by disk from the live SMART read, and the daily history for the trend
+  temperatures?: Record<string, number | undefined>
+  smartHistory?: Record<string, SmartHistoryPoint[]>
+  // Spin one disk, or all of them without a name, up or down
+  onPower?: (action: 'up' | 'down', disk?: string) => void
+  powerDisabled?: boolean
   // status and parity usage come from slower SnapRAID and df calls than the config
   isConfigLoading: boolean
   isStatusLoading: boolean
@@ -129,6 +149,106 @@ const PowerDot = ({
   )
 }
 
+const TONE_STROKE = {
+  ok: 'stroke-muted-foreground/60',
+  warm: 'stroke-yellow-600',
+  hot: 'stroke-red-600',
+}
+const TONE_VALUE = {
+  ok: 'text-foreground',
+  warm: 'text-yellow-700',
+  hot: 'text-red-700',
+}
+
+// Current temperature, with the trend of the last month when SMART was read on several days
+const TemperatureTrend = ({
+  current,
+  points,
+}: {
+  current: number | undefined
+  points: SmartHistoryPoint[] | undefined
+}) => {
+  const series = temperatureSeries(points)
+  const value = current ?? series.at(-1)
+  if (value === undefined)
+    return <span className="text-muted-foreground">–</span>
+  const tone = temperatureTone(value)
+  const line = sparklinePoints(series, 44, 16)
+  const range =
+    series.length > 1
+      ? m.disks_temperature_range({
+          min: String(Math.min(...series)),
+          max: String(Math.max(...series)),
+          days: String(series.length),
+        })
+      : undefined
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 font-mono tabular-nums"
+      title={range}
+    >
+      {line && (
+        <svg
+          width="44"
+          height="16"
+          viewBox="0 0 44 16"
+          aria-hidden="true"
+          className="shrink-0"
+        >
+          <polyline
+            points={line}
+            fill="none"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            className={TONE_STROKE[tone]}
+          />
+        </svg>
+      )}
+      <span className={TONE_VALUE[tone]}>{value} °C</span>
+    </span>
+  )
+}
+
+const PowerMenu = ({
+  name,
+  onPower,
+  disabled,
+}: {
+  name: string
+  onPower: (action: 'up' | 'down', disk?: string) => void
+  disabled: boolean
+}) => (
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={m.disks_actions({ disk: name })}
+      >
+        <MoreHorizontal />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end">
+      <DropdownMenuLabel>{name}</DropdownMenuLabel>
+      <DropdownMenuItem
+        disabled={disabled}
+        onSelect={() => onPower('up', name)}
+      >
+        <ArrowUpFromLine />
+        {m.disks_spin_up()}
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        disabled={disabled}
+        onSelect={() => onPower('down', name)}
+      >
+        <Moon />
+        {m.disks_spin_down()}
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
+)
+
 const UsageBar = ({
   percent,
   barClass,
@@ -170,6 +290,8 @@ const DiskRow = ({
   free,
   total,
   notes,
+  temperature,
+  actions,
   loading = false,
 }: {
   name: string
@@ -183,13 +305,15 @@ const DiskRow = ({
   free: number | undefined
   total: number | undefined
   notes: ReactNode
+  temperature?: ReactNode // First in the status column, when SMART knows one
+  actions?: ReactNode
   loading?: boolean
 }) => (
   <TableRow>
     <TableCell>
       <div className="flex items-center gap-2.5">
         <PowerDot state={power} />
-        <div className="min-w-0 max-w-36 @4xl:max-w-64">
+        <div className="min-w-0 max-w-36 flex-1 @4xl:max-w-64">
           <p className="truncate font-medium">{name}</p>
           {paths.map((path) => (
             // rtl moves the ellipsis to the start, the end of a path tells disks apart
@@ -203,6 +327,7 @@ const DiskRow = ({
             </p>
           ))}
         </div>
+        {actions}
       </div>
     </TableCell>
     <TableCell>
@@ -247,6 +372,7 @@ const DiskRow = ({
         <Skeleton className="h-4 w-28" />
       ) : (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
+          {temperature}
           {notes}
         </div>
       )}
@@ -396,6 +522,10 @@ export const DisksPanel = ({
   usageHistory,
   powerStates,
   smartCritical,
+  temperatures = {},
+  smartHistory = {},
+  onPower,
+  powerDisabled = false,
   isConfigLoading,
   isStatusLoading,
   isParityLoading,
@@ -423,6 +553,22 @@ export const DisksPanel = ({
       smartCritical={smartCritical.includes(name)}
     />
   )
+  const showTemperature =
+    Object.values(temperatures).some((value) => value !== undefined) ||
+    Object.values(smartHistory).some((points) =>
+      points.some((point) => point.temperature !== undefined),
+    )
+  const temperatureOf = (name: string) =>
+    showTemperature ? (
+      <TemperatureTrend
+        current={temperatures[name]}
+        points={smartHistory[name]}
+      />
+    ) : undefined
+  const actionsOf = (name: string) =>
+    onPower ? (
+      <PowerMenu name={name} onPower={onPower} disabled={powerDisabled} />
+    ) : undefined
   const fullest = status?.disks?.reduce<DiskStatusInfo | undefined>(
     (max, disk) => (!max || disk.usedGB > max.usedGB ? disk : max),
     undefined,
@@ -487,6 +633,8 @@ export const DisksPanel = ({
                   />
                 </>
               }
+              temperature={temperatureOf(name)}
+              actions={actionsOf(name)}
               loading={statusPending}
             />
           )
@@ -530,6 +678,8 @@ export const DisksPanel = ({
               }
               free={filesystem?.free}
               total={filesystem?.total}
+              temperature={temperatureOf(parity.keyword)}
+              actions={actionsOf(parity.keyword)}
               loading={parityPending}
               notes={
                 <>
@@ -587,6 +737,27 @@ export const DisksPanel = ({
                   {m.disks_view_history()}
                 </TabsTrigger>
               </TabsList>
+            )}
+            {onPower && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" disabled={powerDisabled}>
+                    <Moon />
+                    {m.disks_power_all()}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => onPower('up')}>
+                    <ArrowUpFromLine />
+                    {m.disks_spin_up_all()}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => onPower('down')}>
+                    <Moon />
+                    {m.disks_spin_down_all()}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             <Button variant="ghost" size="sm" asChild>
               <Link to="/smart">

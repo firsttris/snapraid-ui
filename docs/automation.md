@@ -49,6 +49,45 @@ How it works:
 > [!NOTE]
 > If the host already spins disks down, for example with `hdparm -S` or `hd-idle`, leave this off or use the same idle time. Frequent spin-ups wear disks more than running; very short idle times are not worth it for disks that are used every few minutes.
 
+## Prometheus metrics
+
+Exposes the state of the arrays for [Prometheus](https://prometheus.io) at `/api/metrics`, for Grafana dashboards and alerts. The values come from what SnapRAID UI already knows; a scrape runs neither SnapRAID nor `smartctl`, so it never wakes a disk.
+
+| Field | Default | Description |
+|---|---|---|
+| *Access token* | generated | Prometheus sends it as bearer token (`Authorization: Bearer <token>`). *New token* replaces it. Leave it empty only on a network you trust. |
+
+The page shows a ready `scrape_configs` entry for `prometheus.yml`. The login of the UI does not apply to `/api/metrics`, the token does; without it the endpoint answers 401, and 404 while the metrics are switched off.
+
+| Metric | Labels | Value |
+|---|---|---|
+| `snapraid_ui_up` | | Always 1 |
+| `snapraid_job_running`, `snapraid_job_info` | `command`, `config` | 1 while a job runs, and which |
+| `snapraid_last_sync_timestamp_seconds`, `snapraid_last_scrub_timestamp_seconds` | `config` | End of the last sync or scrub, from the logs |
+| `snapraid_last_sync_success`, `snapraid_last_scrub_success` | `config` | 1 when it succeeded (also with warnings) |
+| `snapraid_bad_blocks` | `config` | Blocks marked bad, repaired by *Repair and verify* |
+| `snapraid_sync_incomplete` | `config` | 1 when the last sync did not finish |
+| `snapraid_scrubbed_ratio`, `snapraid_oldest_scrub_days` | `config` | Share of the array scrubbed, age of the oldest scrub |
+| `snapraid_disks_unavailable` | `config` | Disks missing or empty, probably not mounted |
+| `snapraid_status_timestamp_seconds` | `config` | When the values above were read |
+| `snapraid_disk_used_bytes`, `snapraid_disk_free_bytes` | `config`, `disk` | Space at the last status read |
+| `snapraid_disk_temperature_celsius`, `snapraid_disk_reallocated_sectors`, `snapraid_disk_pending_sectors`, `snapraid_disk_crc_errors` | `config`, `disk` | From the last SMART read |
+| `snapraid_schedule_enabled`, `snapraid_schedule_next_run_timestamp_seconds`, `snapraid_schedule_last_run_timestamp_seconds` | `schedule`, `command` | Per schedule |
+| `snapraid_schedule_last_success`, `snapraid_schedule_last_skipped` | `schedule`, `command` | Result of its last run |
+
+The status values (bad blocks to `snapraid_disks_unavailable`) come from the last time the dashboard or a schedule read the status; after a restart of SnapRAID UI they return with the next read. Values SMART did not report are left out rather than reported as 0.
+
+Example alert rules:
+
+```yaml
+- alert: SnapraidSyncOverdue
+  expr: time() - snapraid_last_sync_timestamp_seconds > 2 * 86400
+- alert: SnapraidBadBlocks
+  expr: snapraid_bad_blocks > 0
+- alert: SnapraidDiskHot
+  expr: snapraid_disk_temperature_celsius >= 50
+```
+
 ## snapraid-daemon (experimental)
 
 [snapraid-daemon](https://github.com/amadvance/snapraid-daemon) is the SnapRAID author's own background service with a REST API. If you run it already, SnapRAID UI can hand the jobs of an array to it instead of calling SnapRAID itself. Turn it on with *snapraid-daemon* on the Automation page.

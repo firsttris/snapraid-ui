@@ -43,6 +43,12 @@ export const getOutcomeDetail = (
       return m.schedules_skip_too_many_deleted({
         count: outcome.deletedFiles ?? 0,
       })
+    case 'too_many_updated':
+      return m.schedules_skip_too_many_updated({
+        count: outcome.updatedFiles ?? 0,
+      })
+    case 'skipped_once':
+      return m.schedules_skip_once()
     case 'diff_failed':
       return m.schedules_skip_diff_failed({
         error: localizeServer(outcome.error ?? ''),
