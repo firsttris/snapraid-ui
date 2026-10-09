@@ -109,6 +109,7 @@ export const createFakeEngine = (options: FakeEngineOptions = {}): FakeEngine =>
       return Promise.resolve({ status: status(), exitCode: 0, log: "" });
     },
     readDiff: () => Promise.resolve(diff()),
+    readLastRuns: () => Promise.resolve(null),
     readSmart: () => Promise.resolve({ disks: [], rawOutput: "", exitCode: 0 }),
     readPowerStates: () =>
       Promise.resolve({

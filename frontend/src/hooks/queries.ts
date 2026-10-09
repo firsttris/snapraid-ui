@@ -36,6 +36,7 @@ import {
   saveConfig,
   updateConfig,
 } from '../lib/api/config'
+import { engineApi } from '../lib/api/engine'
 import { browseFilesystem, readFile, writeFile } from '../lib/api/filesystem'
 import { deleteLog, getLogContent, getLogs, rotateLogs } from '../lib/api/logs'
 import { maintenanceApi } from '../lib/api/maintenance'
@@ -102,6 +103,7 @@ export const queryKeys = {
   dockerContainers: (socketPath: string) =>
     ['maintenance', 'containers', socketPath] as const,
   spindown: ['maintenance', 'spindown'] as const,
+  engine: ['engine'] as const,
   diskReplacement: (path: string) => ['disk-replacement', path] as const,
   schedule: (id: string) => ['schedule', id] as const,
 }
@@ -937,5 +939,30 @@ export const useSpindownStatus = (enabled: boolean) => {
     queryFn: maintenanceApi.spindown,
     enabled,
     refetchInterval: SPINDOWN_REFRESH_MS,
+  })
+}
+
+// ====================
+// Engine: SnapRAID CLI or snapraid-daemon
+// ====================
+
+export const useEngineSettings = () => {
+  return useQuery({
+    queryKey: queryKeys.engine,
+    queryFn: engineApi.get,
+  })
+}
+
+export const useSaveEngineSettings = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: engineApi.save,
+    onSuccess: (state) => {
+      queryClient.setQueryData(queryKeys.engine, state)
+      // Status, disks and runs now come from the other engine
+      queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] !== queryKeys.engine[0],
+      })
+    },
   })
 }

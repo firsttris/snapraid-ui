@@ -118,6 +118,9 @@ export const createCliEngine = (logManager: LogManager | null): SnapRaidEngine =
       };
     },
 
+    // The log manager finds them in the logs this engine writes
+    readLastRuns: () => Promise.resolve(null),
+
     readPowerStates: async (configPath) => {
       if (DEMO_MODE) {
         const log = await demoProbeLog(configPath);

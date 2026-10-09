@@ -1,6 +1,8 @@
 import { join } from "@std/path";
 import { SNAPRAID_BIN, SNAPRAID_EXTRA_ARGS } from "../config.ts";
 import { createCliEngine } from "../engine/cli-engine.ts";
+import { createDaemonEngine } from "../engine/daemon-engine.ts";
+import { parseSnapRaidConfig } from "../config-parser.ts";
 import { createLogManager } from "../log-manager.ts";
 import { engineContract } from "./engine-contract.ts";
 import { createFakeEngine } from "./fake-engine.ts";
@@ -57,3 +59,29 @@ engineContract("cli", async () => {
     cleanup: () => Deno.remove(dir, { recursive: true }),
   };
 }, !cliAvailable);
+
+// A running snapraid-daemon serving a throwaway array, e.g. the one docs/development.md sets up:
+// SNAPRAID_TEST_DAEMON_URL=http://127.0.0.1:7627 SNAPRAID_TEST_DAEMON_CONF=/srv/dtest/snapraid.conf deno test --allow-all
+// The test adds files to the array's first data disk.
+const daemonUrl = Deno.env.get("SNAPRAID_TEST_DAEMON_URL");
+const daemonConf = Deno.env.get("SNAPRAID_TEST_DAEMON_CONF");
+
+engineContract("daemon", async () => {
+  const config = await parseSnapRaidConfig(daemonConf!);
+  const [firstDisk] = Object.values(config.data);
+  const added: string[] = [];
+  return {
+    // touch and status would go to the fallback, the contract does not run them
+    engine: createDaemonEngine({ url: daemonUrl!, fallback: createFakeEngine(), pollMs: 200 }),
+    configPath: daemonConf!,
+    dataDisks: Object.keys(config.data),
+    addFile: async (name) => {
+      const path = join(firstDisk, `${Date.now()}-${name}`);
+      added.push(path);
+      await Deno.writeFile(path, crypto.getRandomValues(new Uint8Array(30_000)));
+    },
+    cleanup: async () => {
+      for (const path of added) await Deno.remove(path).catch(() => {});
+    },
+  };
+}, !daemonUrl || !daemonConf);

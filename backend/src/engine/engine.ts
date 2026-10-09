@@ -7,6 +7,7 @@ import type {
   DiffReport,
   FinishedJob,
   JobProgress,
+  LastRuns,
   ProbeReport,
   RunningJob,
   SmartDiskInfo,
@@ -67,6 +68,8 @@ export interface SnapRaidEngine {
   readSmart(configPath: string): Promise<SmartReading>;
   /** Power state without waking disks. Throws EngineUnsupportedError when the controller can't tell */
   readPowerStates(configPath: string): Promise<ProbeReport>;
+  /** The last sync and scrub when the engine keeps them itself; null: read them from the UI's logs */
+  readLastRuns(configPath: string): Promise<LastRuns | null>;
 }
 
 /**
@@ -129,4 +132,26 @@ export const wrapJobs = (
   readDiff: (configPath) => engine.readDiff(configPath),
   readSmart: (configPath) => engine.readSmart(configPath),
   readPowerStates: (configPath) => engine.readPowerStates(configPath),
+  readLastRuns: (configPath) => engine.readLastRuns(configPath),
 });
+
+/**
+ * Always the engine in place right now, for those that keep a reference while the
+ * settings can switch the engine (scheduler, spindown)
+ */
+export const activeEngine: SnapRaidEngine = {
+  get kind() {
+    return getEngine().kind;
+  },
+  runJob: (request) => getEngine().runJob(request),
+  abortJob: (processId) => getEngine().abortJob(processId),
+  currentJob: () => getEngine().currentJob(),
+  currentOutput: () => getEngine().currentOutput(),
+  lastJob: () => getEngine().lastJob(),
+  onProgress: (listener) => getEngine().onProgress(listener),
+  readStatus: (configPath) => getEngine().readStatus(configPath),
+  readDiff: (configPath) => getEngine().readDiff(configPath),
+  readSmart: (configPath) => getEngine().readSmart(configPath),
+  readPowerStates: (configPath) => getEngine().readPowerStates(configPath),
+  readLastRuns: (configPath) => getEngine().readLastRuns(configPath),
+};

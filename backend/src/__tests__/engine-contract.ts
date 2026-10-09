@@ -64,7 +64,7 @@ export const engineContract = (name: string, setup: () => Promise<ContractSetup>
 
         await t.step("output goes to onOutput", async () => {
           const chunks: string[] = [];
-          await engine.runJob({ command: "status", configPath, onOutput: (chunk) => chunks.push(chunk) });
+          await engine.runJob({ command: "diff", configPath, onOutput: (chunk) => chunks.push(chunk) });
           assert(chunks.join("").length > 0);
         });
 

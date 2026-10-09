@@ -109,6 +109,10 @@ snapraid.get("/last-runs", async (c) => {
   const runningLog = job?.configPath === configPath ? job.logFile : undefined;
 
   try {
+    // snapraid-daemon keeps its own task history, its runs are not in the UI's logs
+    const fromEngine = await getEngine().readLastRuns(configPath);
+    if (fromEngine) return c.json(fromEngine);
+
     const [sync, scrub] = await Promise.all([
       state.logManager.findLastRun("sync", configPath, runningLog),
       state.logManager.findLastRun("scrub", configPath, runningLog),

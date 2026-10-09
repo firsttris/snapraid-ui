@@ -1,6 +1,6 @@
 # Automation
 
-Two things SnapRAID UI can do around the jobs, both off by default: pause Docker containers while SnapRAID reads the disks, and spin disks down once they have been idle for a while. Set them up under **Automation** in the sidebar.
+What SnapRAID UI can do around the jobs, all off by default: pause Docker containers while SnapRAID reads the disks, spin disks down once they have been idle for a while, and hand the jobs of an array to [snapraid-daemon](#snapraid-daemon-experimental). Set them up under **Automation** in the sidebar.
 
 <img src="screenshots/automation.png" alt="Automation settings with Docker containers and disk spindown" width="900">
 
@@ -48,3 +48,51 @@ How it works:
 
 > [!NOTE]
 > If the host already spins disks down, for example with `hdparm -S` or `hd-idle`, leave this off or use the same idle time. Frequent spin-ups wear disks more than running; very short idle times are not worth it for disks that are used every few minutes.
+
+## snapraid-daemon (experimental)
+
+[snapraid-daemon](https://github.com/amadvance/snapraid-daemon) is the SnapRAID author's own background service with a REST API. If you run it already, SnapRAID UI can hand the jobs of an array to it instead of calling SnapRAID itself. Turn it on with *snapraid-daemon* on the Automation page.
+
+<img src="screenshots/daemon.png" alt="snapraid-daemon settings with two daemons" width="900">
+
+A daemon serves exactly one array. For several arrays run one instance per array, as the daemon intends it: with systemd through its template unit, e.g. `systemctl enable --now snapraidd@media snapraidd@backup`, each with its own `snapraidd-<name>.conf`, `snapraid-<name>.conf` and port (`net_port`). In SnapRAID UI add one entry per daemon:
+
+| Field | Description |
+|---|---|
+| *Configuration the daemon serves* | The SnapRAID UI configuration of the array; each configuration can have one daemon. |
+| *Daemon address* | e.g. `http://127.0.0.1:7627`, the `net_port` of that instance. |
+| *Username*, *Password* | Only if the daemon has `net_auth_credential` set. The password is stored in `engine.json` (file mode `600`) and never sent back to the browser. |
+
+*Test connection* shows the daemon and SnapRAID version and the `snapraid.conf` the daemon serves, and warns when the daemon would do something on its own that SnapRAID UI also does.
+
+### Set up the daemon for it
+
+SnapRAID UI keeps the schedules, the notifications, the Docker pause and the spindown. Turn them off in the daemon, or both would run:
+
+```ini
+# snapraidd-<name>.conf
+maintenance_schedule =
+spindown_idle_minutes = 0
+hook_docker_pause =
+notify_result =
+notify_start =
+```
+
+### What runs where
+
+| | On the daemon | In SnapRAID UI |
+|---|---|---|
+| sync, scrub, check, fix, diff, SMART, power state, status of the array | ✓ | |
+| touch (the daemon has no touch job), dup, list, the config editor and the disk wizards | | ✓, through the SnapRAID CLI |
+| Schedules, notifications, Docker pause, spindown | | ✓ |
+| Configurations without a daemon | | ✓, through the SnapRAID CLI |
+
+As before, one job runs at a time across all arrays.
+
+### Limitations
+
+- snapraid-daemon 2.0 and SnapRAID 15 are release candidates. The daemon mode was tested with snapraid-daemon 2.0rc2 and SnapRAID 15.0rc2.
+- The daemon does not count files per disk, the *Files* column of the disks table shows "–".
+- *Last sync* and *Last scrub* come from the daemon's task history. Its logs are the daemon's, so there is no *Log* link and its runs don't show on the Logs page.
+- The daemon reports SMART attributes by name. SnapRAID UI maps the common ones (reallocated, pending and uncorrectable sectors, CRC errors, …) to their ids for its assessment; other attributes are shown without an id.
+- touch, dup and list call SnapRAID directly, so SnapRAID UI needs the disks mounted, and should have the same SnapRAID version as the daemon. touch runs as a job, one at a time as usual. Jobs the daemon starts by itself, e.g. from its own web UI, are not seen by SnapRAID UI.

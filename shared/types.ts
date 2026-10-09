@@ -55,7 +55,7 @@ export interface DiskInfo {
 
 export interface DiskStatusInfo {
   name: string;
-  files: number;
+  files?: number;          // Missing when the engine does not count them (snapraid-daemon)
   fragmentedFiles: number;
   excessFragments: number;
   wastedGB: number;
@@ -170,7 +170,7 @@ export type RunResult = 'ok' | 'warning' | 'error' | 'aborted' | 'incomplete';
 export interface LastRun {
   timestamp: string; // ISO string
   result: RunResult;
-  logFile: string;
+  logFile: string; // In the UI's logs; empty when it is somewhere else (snapraid-daemon's)
   forceOption?: ForceOption; // SnapRAID stopped for safety, this switch runs it anyway
 }
 
@@ -524,6 +524,33 @@ export interface SpindownStatus {
   idleMinutes: number;
   disks: SpindownDisk[];
   error?: string;                // Why disks could not be watched, e.g. no /proc/diskstats
+}
+
+// A snapraid-daemon instance; each serves one array (its -C), several run side by side (-i)
+export interface DaemonTarget {
+  configPath: string;      // The config the daemon serves, as listed in config.json
+  url: string;             // e.g. http://127.0.0.1:7627
+  username: string;        // Empty without net_auth_credential
+  password: string;        // SECRET_MASK when sent to the browser
+}
+
+// Which engine runs SnapRAID, stored in engine.json. In daemon mode each listed config runs on
+// its daemon, the other configs keep running on the CLI
+export interface EngineSettings {
+  mode: 'cli' | 'daemon';
+  daemons: DaemonTarget[];
+}
+
+// Something set up in the daemon that would run next to SnapRAID UI's own version of it
+export type DaemonWarning = 'schedule' | 'spindown' | 'docker_pause' | 'notifications' | 'other_array';
+
+export interface DaemonCheck {
+  ok: boolean;
+  error?: string;
+  daemonVersion?: string;
+  engineVersion?: string;  // SnapRAID version the daemon runs
+  engineConf?: string;     // snapraid.conf the daemon serves
+  warnings: DaemonWarning[];
 }
 
 // Notifications

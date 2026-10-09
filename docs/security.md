@@ -90,6 +90,7 @@ Everything lives in the data directory, see [Configuration](configuration.md#dat
 |---|---|---|
 | `.session-secret` | Key that signs sessions | Created with file mode `600` |
 | `notifications.json` | Notification settings, including the SMTP password and ntfy token | Plain text. The API never sends them back to the browser; the form shows a placeholder instead. |
+| `engine.json` | snapraid-daemon addresses and passwords | Plain text, file mode `600`. The API never sends the passwords back to the browser. |
 | `config.json`, `schedules.json`, histories | Settings and disk data | Plain text |
 | `logs/` | SnapRAID output, including file names from your disks | Plain text |
 

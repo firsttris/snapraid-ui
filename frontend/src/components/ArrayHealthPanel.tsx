@@ -591,7 +591,7 @@ const LastRunTile = ({
       </TileValue>
       <div className="flex flex-wrap items-center gap-1">
         {isStale && <Badge variant="warning">{m.health_stale()}</Badge>}
-        <LogLink logFile={run.logFile} />
+        {run.logFile && <LogLink logFile={run.logFile} />}
       </div>
       {children}
     </Tile>
