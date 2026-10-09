@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { parseSnapRaidConfig } from "../config-parser.ts";
-import { createSnapRaidRunner, type SnapRaidRunner } from "../snapraid-runner.ts";
+import { createSnapRaidRunner } from "../snapraid-runner.ts";
 import type { LogManager } from "../log-manager.ts";
-import type { CommandOutput, SnapRaidCommand } from "@shared/types.ts";
+import type { SnapRaidCommand } from "@shared/types.ts";
 import { snapraidCommand, resolveFromBase } from "../config.ts";
 import {diskManagementRoutes} from "./disk-management.ts";
 import { DiskRemovalError, ensureEmptyDir, finalizeDataDiskRemoval, prepareDataDiskRemoval } from "../disk-removal.ts";
@@ -12,17 +12,16 @@ import { setReportsRunner, reportsRoutes } from "./reports.ts";
 import { getUsageHistory, recordUsage } from "../usage-history.ts";
 import { parseStatusOutput } from "../parsers/status-parser.ts";
 import { parseCheckOutput } from "../parsers/check-parser.ts";
-import { isLockedOutput, STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
 import { createDiskReplacementRoutes } from "./disk-replacement.ts";
-import { readRunReport } from "../run-report.ts";
 import { notifyManualRun } from "../notification-events.ts";
 import { findDiskIssues } from "../disk-check.ts";
 import { msg } from "@shared/i18n.ts";
+import { EngineBusyError, getEngine, type JobOutcome } from "../engine/engine.ts";
 
 const snapraid = new Hono();
 
 const runner = createSnapRaidRunner();
-const commandHistory: CommandOutput[] = [];
+const commandHistory: JobOutcome[] = [];
 const MAX_HISTORY = 50;
 
 // Broadcast function will be injected
@@ -35,25 +34,8 @@ export const setBroadcast = (fn: (message: unknown) => void): void => {
   state.broadcastFn = fn;
 };
 
-export const setRunnerLogManager = (logManager: LogManager): void => {
-  runner.setLogManager(logManager);
+export const setSnapraidLogManager = (logManager: LogManager): void => {
   state.logManager = logManager;
-};
-
-export const getRunner = (): SnapRaidRunner => {
-  return runner;
-};
-
-/**
- * Read the structured log SnapRAID wrote for an executed command
- */
-const readStructuredLog = async (result: CommandOutput): Promise<string> => {
-  if (!result.logPath) return "";
-  try {
-    return await Deno.readTextFile(result.logPath);
-  } catch {
-    return "";
-  }
 };
 
 // Initialize runner for reports module
@@ -66,7 +48,7 @@ snapraid.route("/", hardwareRoutes);
 snapraid.route("/", reportsRoutes);
 snapraid.route("/", createDiskReplacementRoutes({
   startJob: (...args) => startJob(...args),
-  isBusy: () => !!runner.getCurrentJob(),
+  isBusy: () => !!getEngine().currentJob(),
 }));
 
 // Manually started commands worth a notification, when enabled in the settings
@@ -92,23 +74,22 @@ snapraid.get("/parse", async (c) => {
 
 // GET /api/snapraid/current-job - Get current running job
 snapraid.get("/current-job", (c) => {
-  const currentJob = runner.getCurrentJob();
-  return c.json(currentJob);
+  return c.json(getEngine().currentJob());
 });
 
 // GET /api/snapraid/last-job - Outcome of the last finished job, for clients that missed its completion
 snapraid.get("/last-job", (c) => {
-  return c.json(runner.getLastJob());
+  return c.json(getEngine().lastJob());
 });
 
 // POST /api/snapraid/abort - Abort the running job
 snapraid.post("/abort", (c) => {
-  const currentJob = runner.getCurrentJob();
+  const currentJob = getEngine().currentJob();
   if (!currentJob) {
     return c.json({ error: msg("server_error_no_job") }, 404);
   }
 
-  const aborted = runner.abortCommand(currentJob.processId);
+  const aborted = getEngine().abortJob(currentJob.processId);
   return c.json({ success: aborted });
 });
 
@@ -124,7 +105,7 @@ snapraid.get("/last-runs", async (c) => {
   }
 
   const configPath = resolveFromBase(relativePath);
-  const job = runner.getCurrentJob();
+  const job = getEngine().currentJob();
   const runningLog = job?.configPath === configPath ? job.logFile : undefined;
 
   try {
@@ -173,14 +154,16 @@ const startJob = (
   command: SnapRaidCommand,
   configPath: string,
   args: string[],
-  afterRun?: (result: CommandOutput) => Promise<void>,
+  afterRun?: (outcome: JobOutcome) => Promise<void>,
 ): void => {
   (async () => {
+    const engine = getEngine();
     try {
-      const result = await runner.executeCommand(
+      const outcome = await engine.runJob({
         command,
         configPath,
-        (chunk) => {
+        args,
+        onOutput: (chunk) => {
           state.broadcastFn({
             type: "output",
             command,
@@ -188,12 +171,12 @@ const startJob = (
             timestamp: new Date().toISOString(),
           });
         },
-        args,
-        afterRun
-      );
+        afterRun,
+      });
+      const result = outcome.output;
 
       // Add to history
-      commandHistory.unshift(result);
+      commandHistory.unshift(outcome);
       if (commandHistory.length > MAX_HISTORY) {
         commandHistory.pop();
       }
@@ -202,20 +185,20 @@ const startJob = (
       state.broadcastFn({
         type: "complete",
         command,
-        processId: runner.getLastJob()?.processId,
-        forceOption: runner.getLastJob()?.forceOption,
+        processId: engine.lastJob()?.processId,
+        forceOption: engine.lastJob()?.forceOption,
         exitCode: result.exitCode,
         aborted: result.aborted,
         timestamp: result.timestamp,
       });
 
       if (NOTIFIED_MANUAL_COMMANDS.includes(command)) {
-        await notifyManualRun(configPath, await readRunReport(command, result));
+        await notifyManualRun(configPath, outcome.report);
       }
 
       // Parse status if it was a status or diff command
       if (command === "status" || command === "diff") {
-        const log = await readStructuredLog(result);
+        const log = outcome.report.log;
         const status = { ...parseStatusOutput(log, result.output), diskIssues: await findDiskIssues(log) };
         state.broadcastFn({
           type: "status",
@@ -226,7 +209,7 @@ const startJob = (
       state.broadcastFn({
         type: "error",
         command,
-        processId: runner.getLastJob()?.processId,
+        processId: engine.lastJob()?.processId,
         error: String(error),
         timestamp: new Date().toISOString(),
       });
@@ -242,7 +225,7 @@ snapraid.post("/execute", async (c) => {
     return c.json({ error: "Missing command or configPath" }, 400);
   }
 
-  if (runner.getCurrentJob()) {
+  if (getEngine().currentJob()) {
     return c.json({ error: msg("server_error_job_running") }, 409);
   }
 
@@ -259,7 +242,7 @@ snapraid.post("/remove-data-disk", async (c) => {
     return c.json({ error: "Missing configPath or diskName" }, 400);
   }
 
-  if (runner.getCurrentJob()) {
+  if (getEngine().currentJob()) {
     return c.json({ error: msg("server_error_job_running") }, 409);
   }
 
@@ -271,8 +254,8 @@ snapraid.post("/remove-data-disk", async (c) => {
     await Deno.writeTextFile(configPath, config);
 
     // A failed or aborted sync leaves the disk pending, the wizard can retry it
-    startJob("sync", configPath, ["-E"], async (result) => {
-      if (result.exitCode !== 0 || result.aborted) return;
+    startJob("sync", configPath, ["-E"], async ({ output }) => {
+      if (output.exitCode !== 0 || output.aborted) return;
       const current = await Deno.readTextFile(configPath);
       await Deno.writeTextFile(configPath, finalizeDataDiskRemoval(current, diskName));
       await Deno.remove(emptyDir).catch(() => {});
@@ -289,7 +272,7 @@ snapraid.post("/remove-data-disk", async (c) => {
 
 // GET /api/history - Get command history
 snapraid.get("/history", (c) => {
-  return c.json(commandHistory);
+  return c.json(commandHistory.map((outcome) => outcome.output));
 });
 
 // GET /api/snapraid/status - Get parsed status from last status command or execute new one
@@ -298,47 +281,36 @@ snapraid.get("/status", async (c) => {
   
   // If no config path provided, try to get from last status in history
   if (!relativePath) {
-    const lastStatus = commandHistory.find(cmd => cmd.command.startsWith('snapraid status '));
+    const lastStatus = commandHistory.find((outcome) => outcome.report.command === "status");
     
     if (!lastStatus) {
       return c.json({ error: "No status command found in history. Please provide 'path' query parameter to execute status." }, 400);
     }
 
-    const parsedStatus = parseStatusOutput(await readStructuredLog(lastStatus), lastStatus.output);
+    const parsedStatus = parseStatusOutput(lastStatus.report.log, lastStatus.output.output);
     return c.json({
       status: parsedStatus,
-      timestamp: lastStatus.timestamp,
-      exitCode: lastStatus.exitCode,
+      timestamp: lastStatus.output.timestamp,
+      exitCode: lastStatus.output.exitCode,
     });
   }
 
-  // A running job holds SnapRAID's lock, status would only fail with a fatal error
-  if (runner.getCurrentJob()) {
-    return c.json({ error: msg("server_error_snapraid_busy"), busy: true }, 409);
-  }
-
-  // Execute new status command
   try {
     const configPath = resolveFromBase(relativePath);
-    const cmd = snapraidCommand(["-c", configPath, ...STRUCTURED_LOG_ARGS, "status"]);
-
-    const { code, stdout, stderr } = await cmd.output();
-    const { log, text } = splitStructuredOutput(new TextDecoder().decode(stderr));
-    if (isLockedOutput(log)) {
-      return c.json({ error: msg("server_error_snapraid_in_use"), busy: true }, 409);
-    }
-    const parsedStatus = {
-      ...parseStatusOutput(log, code === 0 ? new TextDecoder().decode(stdout) : text),
-      diskIssues: await findDiskIssues(log),
-    };
-    if (code === 0) await recordUsage(configPath, parsedStatus);
+    const { status, exitCode } = await getEngine().readStatus(configPath);
+    if (exitCode === 0) await recordUsage(configPath, status);
 
     return c.json({
-      status: parsedStatus,
+      status,
       timestamp: new Date().toISOString(),
-      exitCode: code,
+      exitCode,
     });
   } catch (error) {
+    // A running job or another SnapRAID process holds the lock
+    if (error instanceof EngineBusyError) {
+      const key = error.reason === "job" ? "server_error_snapraid_busy" : "server_error_snapraid_in_use";
+      return c.json({ error: msg(key), busy: true }, 409);
+    }
     return c.json({ error: String(error) }, 500);
   }
 });

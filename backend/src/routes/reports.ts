@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { SnapRaidRunner } from "../snapraid-runner.ts";
 import { resolveFromBase } from "../config.ts";
+import { getEngine } from "../engine/engine.ts";
 
 const reports = new Hono();
 
@@ -76,7 +77,7 @@ reports.get("/diff", async (c) => {
   const configPath = resolveFromBase(relativePath);
 
   try {
-    const result = await runner.runDiff(configPath);
+    const result = await getEngine().readDiff(configPath);
     return c.json(result);
   } catch (error) {
     return c.json({ error: String(error) }, 500);

@@ -2,8 +2,9 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { loadAppConfig } from "./config-parser.ts";
 import { broadcast, handleWebSocketUpgrade } from "./websocket.ts";
-import { setProgressListener } from "./executors/command-executor.ts";
-import { setBroadcast } from "./routes/snapraid.ts";
+import { setBroadcast, setSnapraidLogManager } from "./routes/snapraid.ts";
+import { getEngine, setEngine, wrapJobs } from "./engine/engine.ts";
+import { createCliEngine } from "./engine/cli-engine.ts";
 import { createLogManager } from "./log-manager.ts";
 import { setLogManager } from "./routes/logs.ts";
 import { createScheduler } from "./scheduler.ts";
@@ -93,39 +94,40 @@ const main = async (): Promise<void> => {
   // Inject log manager into routes
   setLogManager(logManager, config);
 
-  // Set log manager for snapraid runner
-  const { setRunnerLogManager, getRunner } = await import("./routes/snapraid.ts");
-  setRunnerLogManager(logManager);
+  // The SnapRAID CLI runs the jobs and reads the array
+  setEngine(createCliEngine(logManager));
+  setSnapraidLogManager(logManager);
+  const engine = getEngine();
   // Progress comes from the job's log, not its output, so it is sent on its own
-  setProgressListener((job, progress) =>
+  engine.onProgress((job, progress) =>
     broadcast({ type: "progress", command: job.command, processId: job.processId, progress })
   );
 
   // Initialize scheduler
   const schedulesConfigPath = resolveFromBase("schedules.json");
-  const runner = getRunner();
   // Report the end of scheduled jobs like manual ones, so clients stop showing them as running
-  const scheduler = createScheduler(schedulesConfigPath, {
-    ...runner,
-    executeCommand: async (command, ...rest) => {
+  const scheduler = createScheduler(
+    schedulesConfigPath,
+    wrapJobs(engine, async (request, runJob) => {
+      const { command } = request;
       try {
-        const result = await runner.executeCommand(command, ...rest);
+        const outcome = await runJob(request);
         broadcast({
           type: "complete",
           command,
-          processId: runner.getLastJob()?.processId,
-          forceOption: runner.getLastJob()?.forceOption,
-          exitCode: result.exitCode,
-          aborted: result.aborted,
-          timestamp: result.timestamp,
+          processId: engine.lastJob()?.processId,
+          forceOption: engine.lastJob()?.forceOption,
+          exitCode: outcome.output.exitCode,
+          aborted: outcome.output.aborted,
+          timestamp: outcome.output.timestamp,
         });
-        return result;
+        return outcome;
       } catch (error) {
-        broadcast({ type: "error", command, processId: runner.getLastJob()?.processId, error: String(error), timestamp: new Date().toISOString() });
+        broadcast({ type: "error", command, processId: engine.lastJob()?.processId, error: String(error), timestamp: new Date().toISOString() });
         throw error;
       }
-    },
-  });
+    }),
+  );
   
   // Set output callback for scheduled jobs
   scheduler.setOutputCallback((scheduleId, chunk) => {
@@ -154,7 +156,7 @@ const main = async (): Promise<void> => {
   // so it waits while a job runs and shortly before a scheduled one would start
   const SPINDOWN_SCHEDULE_MARGIN_MS = 2 * 60_000;
   const spindown = createSpindownMonitor(() =>
-    !!runner.getCurrentJob() ||
+    !!engine.currentJob() ||
     [...scheduler.getNextRuns().values()].some((next) =>
       next !== null && next.getTime() - Date.now() < SPINDOWN_SCHEDULE_MARGIN_MS
     )

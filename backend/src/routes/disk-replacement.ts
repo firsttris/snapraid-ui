@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { CommandOutput, ReplacementStep, SnapRaidCommand } from "@shared/types.ts";
+import type { ReplacementStep, SnapRaidCommand } from "@shared/types.ts";
 import { resolveFromBase } from "../config.ts";
 import {
   applyReplacementPath,
@@ -10,14 +10,14 @@ import {
   requiredDirectory,
   saveReplacement,
 } from "../disk-replacement.ts";
-import { readRunReport } from "../run-report.ts";
+import type { JobOutcome } from "../engine/engine.ts";
 import { msg } from "@shared/i18n.ts";
 
 type StartJob = (
   command: SnapRaidCommand,
   configPath: string,
   args: string[],
-  afterRun?: (result: CommandOutput) => Promise<void>,
+  afterRun?: (outcome: JobOutcome) => Promise<void>,
 ) => void;
 
 const isDirectory = async (path: string): Promise<boolean> => {
@@ -44,8 +44,7 @@ export const createDiskReplacementRoutes = ({ startJob, isBusy }: { startJob: St
 
   const runStep = (configPath: string, diskName: string, step: ReplacementStep) => {
     const { command, args } = STEP_ARGS[step](diskName);
-    startJob(command, resolveFromBase(configPath), args, async (output) => {
-      const report = await readRunReport(command, output);
+    startJob(command, resolveFromBase(configPath), args, async ({ report }) => {
       await recordReplacementStep(configPath, step, {
         result: report.result,
         finishedAt: new Date().toISOString(),

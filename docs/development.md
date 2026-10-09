@@ -126,9 +126,12 @@ Both tasks use the same permissions as the container: `--allow-net --allow-read 
 ```bash
 cd backend && deno test --allow-all    # as in CI
 cd frontend && npm test
+
+# Also run the engine contract against the SnapRAID CLI, with the binary from dev/setup.sh
+cd backend && SNAPRAID_BIN=../dev/bin/snapraid SNAPRAID_EXTRA_ARGS=--test-skip-device deno test --allow-all
 ```
 
-- **Backend** tests use `Deno.test` with `@std/assert`. Parser tests in `backend/src/parsers/__tests__/` run against real SnapRAID logs in `fixtures/`; when SnapRAID's log format changes, add or update a fixture from a real run. Other tests cover auth, backup/restore, config paths, the disk wizards, `--force-*` detection, the log manager, notifications, the SMART baseline and history, and the usage history.
+- **Backend** tests use `Deno.test` with `@std/assert`. Parser tests in `backend/src/parsers/__tests__/` run against real SnapRAID logs in `fixtures/`; when SnapRAID's log format changes, add or update a fixture from a real run. The [engine contract](architecture.md#snapraid-engine) runs against the fake engine always and against the CLI engine when `SNAPRAID_BIN` and `--test-skip-device` are set (otherwise it shows as *ignored*); the scheduler is tested against the fake engine. Other tests cover auth, backup/restore, config paths, the disk wizards, `--force-*` detection, the log manager, notifications, the SMART baseline and history, and the usage history.
 - **Frontend** tests use Vitest and live in `frontend/src/lib/__tests__/`: log parsing, progress, the job tracker and the i18n checks described [below](#translations). Run them from `frontend/`, they read `messages/` and `../backend/src` by relative path.
 
 ## Linting and type checking
@@ -195,12 +198,16 @@ The build context is the whole repository; `.dockerignore` leaves out `node_modu
 
 ### Updating SnapRAID
 
-The image pins one SnapRAID release that the parsers are tested against. A weekly workflow opens an issue when a newer stable release is out. To bump it:
+The image pins one SnapRAID release that the parsers are tested against. A weekly workflow (`upstream-release.yml`) opens an issue when a newer stable release is out. To bump it:
 
 1. Read SnapRAID's `HISTORY` for changes to the structured log (`--log`).
 2. Change `SNAPRAID_VERSION` in `docker/Dockerfile` **and** `dev/setup.sh`.
 3. Run `SNAPRAID_VERSION=<new> dev/setup.sh --reset`, start `./start.sh --demo` and run status, diff, sync, scrub, check, list, dup, touch and smart in the UI.
 4. For a major version, compare the log tags with the fixtures in `backend/src/parsers/__tests__/fixtures/`.
+
+### Watching snapraid-daemon
+
+Jobs, status, diff, SMART and the power state go through the [SnapRAID engine](architecture.md#snapraid-engine), so they could also run on snapraid-daemon's REST API one day. Its API was last compared with the version in `backend/src/engine/REVIEWED_DAEMON_VERSION`. The same weekly workflow opens an issue when snapraid-daemon has a newer tag. Then follow the checklist in [Keeping the engine in line with snapraid-daemon](architecture.md#keeping-the-engine-in-line-with-snapraid-daemon), above all: extend the interface when the daemon gained an API for something that is CLI-only today.
 
 ## CI and releases
 
@@ -211,7 +218,7 @@ GitHub Actions workflows in `.github/workflows/`:
 | `ci.yml` | Push and pull request to `master`; called by the release workflow | Backend: `deno check src/main.ts`, `deno test --allow-all`. Frontend: `npm ci`, `npx biome check`, `npm run typecheck`, `npm test`, `npm run build` |
 | `release.yml` | Push of a `v*` tag; manual run | Runs CI, then the shared Docker release workflow from `firsttris/workflows`. A tag `vX.Y.Z` publishes `tristanteu/snapraid-ui:X.Y.Z`, `:X.Y` and `:latest`, updates the Docker Hub description and creates the GitHub release. A manual run on `master` runs the same checks and pushes `:edge`, without a release |
 | `bump.yml` | Manual run | Raises the version in `frontend/package.json` (patch, minor or major), commits it, tags the commit `vX.Y.Z` and starts `release.yml` on it (shared [`bump-version`](https://github.com/firsttris/workflows#bump-version)) |
-| `snapraid-release.yml` | Mondays 06:00 UTC; manual run | Compares the pinned `SNAPRAID_VERSION` with SnapRAID's latest release and opens an issue with a checklist if they differ |
+| `upstream-release.yml` | Mondays 06:00 UTC; manual run | Two jobs, each opens an issue with a checklist. `snapraid` compares the pinned `SNAPRAID_VERSION` with SnapRAID's latest stable release. `snapraid-daemon` compares `backend/src/engine/REVIEWED_DAEMON_VERSION` with snapraid-daemon's newest tag, release candidates included |
 | `docs.yml` | Push to `master` that changes `docs/`, `mkdocs.yml` or `requirements-docs.txt`; manual run | Builds `docs/` with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) (`mkdocs build --strict`, broken links fail the build) and publishes it to GitHub Pages at https://firsttris.github.io/snapraid-ui/. Locally: `pip install -r requirements-docs.txt && mkdocs serve` |
 
 The version lives in `frontend/package.json`, the tag is `v` + that version (the release checks

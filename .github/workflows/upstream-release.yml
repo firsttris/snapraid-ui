@@ -1,0 +1,90 @@
+name: Upstream Release Check
+
+# Opens an issue when a project SnapRAID UI builds on has a newer version, so it is looked at on purpose:
+# - snapraid: the image pins a SnapRAID release (SNAPRAID_VERSION in docker/Dockerfile)
+# - snapraid-daemon: jobs, status, diff, SMART and the power state go through the SnapRAID engine
+#   (backend/src/engine/engine.ts), so they could also run on snapraid-daemon's REST API. Its API was
+#   last compared with backend/src/engine/REVIEWED_DAEMON_VERSION.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  snapraid:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compare pinned and latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pinned=$(sed -n 's/^ARG SNAPRAID_VERSION=//p' docker/Dockerfile)
+          # releases/latest skips pre-releases such as release candidates
+          latest=$(gh api repos/amadvance/snapraid/releases/latest --jq '.tag_name' | sed 's/^v//')
+          echo "Pinned: $pinned, latest: $latest"
+          if [ "$pinned" = "$latest" ]; then
+            exit 0
+          fi
+
+          title="SnapRAID $latest is available (pinned: $pinned)"
+          if gh issue list --state open --search "in:title \"SnapRAID $latest is available\"" --json number --jq 'length' | grep -qv '^0$'; then
+            echo "Issue already open"
+            exit 0
+          fi
+
+          gh issue create --title "$title" --body "$(cat <<BODY
+          SnapRAID [$latest](https://github.com/amadvance/snapraid/releases/tag/v$latest) is out, the image ships $pinned.
+
+          Before bumping \`SNAPRAID_VERSION\` in \`docker/Dockerfile\` and \`dev/setup.sh\`:
+
+          - [ ] Read the [HISTORY](https://github.com/amadvance/snapraid/blob/v$latest/HISTORY) for changes to the structured log (\`--log\`)
+          - [ ] \`SNAPRAID_VERSION=$latest dev/setup.sh --reset\`, then run status, diff, sync, scrub, check, list, dup, touch and smart in the UI
+          - [ ] A major version: compare the log tags with the parser fixtures in \`backend/src/parsers/__tests__/fixtures\`
+          BODY
+          )"
+
+  snapraid-daemon:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compare reviewed and newest version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          reviewed=$(tr -d '[:space:]' < backend/src/engine/REVIEWED_DAEMON_VERSION)
+          # Tags like v1.15, v2.0rc2 and v2.0. Release candidates count, the API changes in them.
+          # Sort key: 2.0rc2 -> 2.0.2, 2.0 -> 2.0.999, so a release sorts after its candidates
+          newest=$(git ls-remote --tags https://github.com/amadvance/snapraid-daemon.git \
+            | sed -n 's|.*refs/tags/v\([0-9]*\.[0-9]*\(rc[0-9]*\)\{0,1\}\)$|\1|p' \
+            | awk '{ key = $0; if (key ~ /rc/) sub(/rc/, ".", key); else key = key ".999"; print key, $0 }' \
+            | sort -V | tail -n 1 | cut -d' ' -f2)
+          echo "Reviewed: $reviewed, newest: $newest"
+          if [ -z "$newest" ] || [ "$reviewed" = "$newest" ]; then
+            exit 0
+          fi
+
+          title="snapraid-daemon $newest is available (engine reviewed against $reviewed)"
+          if gh issue list --state open --search "in:title \"snapraid-daemon $newest is available\"" --json number --jq 'length' | grep -qv '^0$'; then
+            echo "Issue already open"
+            exit 0
+          fi
+
+          gh issue create --title "$title" --body "$(cat <<BODY
+          snapraid-daemon [v$newest](https://github.com/amadvance/snapraid-daemon/tree/v$newest) is out, the SnapRAID engine was last compared with v$reviewed.
+
+          - [ ] Compare the API: [snapraidd.yaml v$reviewed...v$newest](https://github.com/amadvance/snapraid-daemon/compare/v$reviewed...v$newest) and the [HISTORY](https://github.com/amadvance/snapraid-daemon/blob/v$newest/HISTORY)
+          - [ ] An endpoint for something CLI-only today (\`dup\`, \`list\`, \`devices\`, config, ...)? Add a method to \`SnapRaidEngine\` in \`backend/src/engine/engine.ts\`, implement it in \`cli-engine.ts\`, move the callers and extend \`backend/src/__tests__/engine-contract.ts\`
+          - [ ] Update the tables in [docs/architecture.md](https://github.com/${{ github.repository }}/blob/master/docs/architecture.md#snapraid-engine)
+          - [ ] Put $newest into \`backend/src/engine/REVIEWED_DAEMON_VERSION\`
+          BODY
+          )"

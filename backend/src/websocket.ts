@@ -1,4 +1,4 @@
-import { getCurrentJob, getCurrentOutput } from "./executors/command-executor.ts";
+import { getEngine } from "./engine/engine.ts";
 
 // WebSocket connection management
 const wsClients = new Set<WebSocket>();
@@ -22,13 +22,14 @@ export const handleWebSocketUpgrade = (req: Request): Response => {
   socket.onopen = () => {
     wsClients.add(socket);
     // A client connecting mid-job (reload, reconnect) gets the output so far, before any new chunk
-    const job = getCurrentJob();
+    const engine = getEngine();
+    const job = engine.currentJob();
     if (job) {
       socket.send(JSON.stringify({
         type: "replay",
         command: job.command,
         processId: job.processId,
-        output: getCurrentOutput(),
+        output: engine.currentOutput(),
       }));
     }
   };

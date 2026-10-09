@@ -7,15 +7,14 @@ import type {
   ScheduleStepOutcome,
   SnapRaidCommand,
 } from "@shared/types.ts";
-import type { SnapRaidRunner } from "./snapraid-runner.ts";
+import type { SnapRaidEngine } from "./engine/engine.ts";
 import { existsSync } from "@std/fs";
 import { resolveFromBase } from "./config.ts";
-import { failedReport, isSuccessful, readRunReport, type RunReport } from "./run-report.ts";
+import { failedReport, isSuccessful, type RunReport } from "./run-report.ts";
 import { isReplacementInProgress } from "./disk-replacement.ts";
 import { withCrcBaseline } from "./smart-baseline.ts";
 import { recordSmartHistory } from "./smart-history.ts";
 import { notifyRun, notifySkipped, notifySmart } from "./notification-events.ts";
-import { parseSmartOutput } from "./parsers/smart-parser.ts";
 import { msg } from "@shared/i18n.ts";
 import { blockingIssues } from "./disk-check.ts";
 import { holdContainers } from "./container-pause.ts";
@@ -107,14 +106,14 @@ const skipped = (skip: Omit<ScheduleOutcome, "timestamp" | "result">): ScheduleO
 // An unattended sync after a disk went missing or empty would drop its files from parity,
 // so check the pending deletions first
 const checkSyncGuard = async (
-  runner: SnapRaidRunner,
+  engine: SnapRaidEngine,
   schedule: Schedule,
   snapraidConfigPath: string
 ): Promise<ScheduleOutcome | null> => {
   if (schedule.command !== "sync" || schedule.maxDeletedFiles == null) return null;
 
   try {
-    const diff = await runner.runDiff(snapraidConfigPath);
+    const diff = await engine.readDiff(snapraidConfigPath);
     if (diff.failed) {
       return skipped({ skipReason: "diff_failed", error: diff.rawOutput.trim().split("\n").pop() });
     }
@@ -133,14 +132,15 @@ const DISK_COMMANDS: SnapRaidCommand[] = ["sync", "scrub", "touch", "check", "fi
 
 // A missing or unmounted disk stops the run, someone has to look at it first
 const checkDisksGuard = async (
-  runner: SnapRaidRunner,
+  engine: SnapRaidEngine,
   schedule: Schedule,
   snapraidConfigPath: string
 ): Promise<ScheduleOutcome | null> => {
   if (!scheduleSteps(schedule).some((step) => DISK_COMMANDS.includes(step.command))) return null;
 
   try {
-    const missing = blockingIssues(await runner.checkDisks(snapraidConfigPath));
+    const { status } = await engine.readStatus(snapraidConfigPath);
+    const missing = blockingIssues(status.diskIssues ?? []);
     return missing.length > 0
       ? skipped({ skipReason: "disk_missing", disks: missing.map((issue) => issue.disk) })
       : null;
@@ -173,10 +173,10 @@ export const combineResults = (results: RunResult[]): RunResult =>
   results.find((result) => !isSuccessful(result)) ??
     (results.includes("warning") ? "warning" : "ok");
 
-// Execute scheduled command
-const executeScheduledCommand = async (
+// Execute scheduled command; exported for tests, the cron jobs call it
+export const executeScheduledCommand = async (
   configPath: string,
-  runner: SnapRaidRunner,
+  engine: SnapRaidEngine,
   onOutput: ((scheduleId: string, chunk: string) => void) | undefined,
   scheduleId: string
 ): Promise<void> => {
@@ -187,12 +187,12 @@ const executeScheduledCommand = async (
   const nextRun = activeJobs.get(scheduleId)?.nextRun()?.toISOString();
   const snapraidConfigPath = resolveFromBase(schedule.configPath);
 
-  const skip = runner.getCurrentJob()
+  const skip = engine.currentJob()
     ? skipped({ skipReason: "job_running" })
     : await isReplacementInProgress(schedule.configPath)
     ? skipped({ skipReason: "recovery_in_progress" })
-    : await checkDisksGuard(runner, schedule, snapraidConfigPath) ??
-      await checkSyncGuard(runner, schedule, snapraidConfigPath);
+    : await checkDisksGuard(engine, schedule, snapraidConfigPath) ??
+      await checkSyncGuard(engine, schedule, snapraidConfigPath);
   if (skip) {
     console.warn(`Scheduled job skipped: ${schedule.name} (${skip.skipReason})`);
     await updateStoredSchedule(configPath, scheduleId, { nextRun, lastOutcome: skip });
@@ -216,21 +216,20 @@ const executeScheduledCommand = async (
   try {
     for (const step of steps) {
       // A manual job may have started between two steps, SnapRAID would refuse to run next to it
-      if (reports.length > 0 && runner.getCurrentJob()) {
+      if (reports.length > 0 && engine.currentJob()) {
         reports.push(failedReport(step.command, "Another job started before this step"));
         break;
       }
       try {
-        const output = await runner.executeCommand(
-          step.command,
-          snapraidConfigPath,
-          (chunk) => onOutput?.(scheduleId, chunk),
-          step.args,
-        );
-        const report = await readRunReport(step.command, output);
+        const { report, smart } = await engine.runJob({
+          command: step.command,
+          configPath: snapraidConfigPath,
+          args: step.args,
+          onOutput: (chunk) => onOutput?.(scheduleId, chunk),
+        });
         reports.push(report);
-        if (step.command === "smart") {
-          const disks = await withCrcBaseline(snapraidConfigPath, parseSmartOutput(report.log));
+        if (smart) {
+          const disks = await withCrcBaseline(snapraidConfigPath, smart);
           await recordSmartHistory(snapraidConfigPath, disks);
           await notifySmart(snapraidConfigPath, disks);
         }
@@ -263,7 +262,7 @@ const executeScheduledCommand = async (
 // Start cron job for schedule
 const startCronJob = (
   configPath: string,
-  runner: SnapRaidRunner,
+  engine: SnapRaidEngine,
   onOutput: ((scheduleId: string, chunk: string) => void) | undefined,
   schedule: Schedule
 ): void => {
@@ -272,7 +271,7 @@ const startCronJob = (
 
   try {
     const job = new Cron(schedule.cronExpression, () =>
-      executeScheduledCommand(configPath, runner, onOutput, schedule.id)
+      executeScheduledCommand(configPath, engine, onOutput, schedule.id)
     );
 
     activeJobs.set(schedule.id, job);
@@ -297,7 +296,7 @@ const stopAllJobs = (): void => {
 };
 
 // Public API factory
-export const createScheduler = (configPath: string, runner: SnapRaidRunner) => {
+export const createScheduler = (configPath: string, engine: SnapRaidEngine) => {
   let outputCallback: ((scheduleId: string, chunk: string) => void) | undefined;
 
   return {
@@ -310,7 +309,7 @@ export const createScheduler = (configPath: string, runner: SnapRaidRunner) => {
       
       schedules
         .filter((schedule) => schedule.enabled)
-        .forEach((schedule) => startCronJob(configPath, runner, outputCallback, schedule));
+        .forEach((schedule) => startCronJob(configPath, engine, outputCallback, schedule));
     },
 
     // Schedules replaced on disk, e.g. by restoring a backup
@@ -319,7 +318,7 @@ export const createScheduler = (configPath: string, runner: SnapRaidRunner) => {
       const schedules = await loadSchedulesFromFile(configPath);
       schedules
         .filter((schedule) => schedule.enabled)
-        .forEach((schedule) => startCronJob(configPath, runner, outputCallback, schedule));
+        .forEach((schedule) => startCronJob(configPath, engine, outputCallback, schedule));
     },
 
     getSchedules: (): Promise<Schedule[]> => 
@@ -340,7 +339,7 @@ export const createScheduler = (configPath: string, runner: SnapRaidRunner) => {
       await saveSchedulesToFile(configPath, updated);
 
       if (newSchedule.enabled) {
-        startCronJob(configPath, runner, outputCallback, newSchedule);
+        startCronJob(configPath, engine, outputCallback, newSchedule);
       }
 
       return newSchedule;
@@ -370,10 +369,10 @@ export const createScheduler = (configPath: string, runner: SnapRaidRunner) => {
       if (wasEnabled && !updated.enabled) {
         stopCronJob(id);
       } else if (!wasEnabled && updated.enabled) {
-        startCronJob(configPath, runner, outputCallback, updated);
+        startCronJob(configPath, engine, outputCallback, updated);
       } else if (shouldRestart) {
         stopCronJob(id);
-        startCronJob(configPath, runner, outputCallback, updated);
+        startCronJob(configPath, engine, outputCallback, updated);
       }
 
       return updated;
