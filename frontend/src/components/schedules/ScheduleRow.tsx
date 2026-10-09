@@ -1,5 +1,5 @@
 import type { Schedule } from '@shared/types'
-import { Pencil, Play, Trash2 } from 'lucide-react'
+import { Pencil, Play, SkipForward, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import {
   getCommandIcon,
@@ -29,6 +29,7 @@ interface ScheduleRowProps {
   onToggle: () => void
   onRun: () => void
   runDisabled: boolean // A job is running
+  onSkipNext: () => void // Skip the next timed run, or take that back
 }
 
 const IconAction = ({
@@ -36,12 +37,14 @@ const IconAction = ({
   onClick,
   destructive = false,
   disabled = false,
+  pressed,
   children,
 }: {
   label: string
   onClick: () => void
   destructive?: boolean
   disabled?: boolean
+  pressed?: boolean
   children: ReactNode
 }) => (
   <Tooltip>
@@ -52,6 +55,8 @@ const IconAction = ({
         onClick={onClick}
         disabled={disabled}
         aria-label={label}
+        aria-pressed={pressed}
+        className={cn(pressed && 'bg-accent text-accent-foreground')}
       >
         {children}
       </Button>
@@ -68,6 +73,7 @@ export const ScheduleRow = ({
   onToggle,
   onRun,
   runDisabled,
+  onSkipNext,
 }: ScheduleRowProps) => {
   const Icon = getCommandIcon(schedule.command)
   const isSync = schedule.command === 'sync'
@@ -136,6 +142,9 @@ export const ScheduleRow = ({
             {!schedule.enabled && (
               <Badge variant="secondary">{m.schedules_disabled()}</Badge>
             )}
+            {schedule.enabled && schedule.skipNext && (
+              <Badge variant="warning">{m.schedules_skip_next_badge()}</Badge>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -157,6 +166,13 @@ export const ScheduleRow = ({
                   {m.schedules_guard_off()}
                 </span>
               ))}
+            {isSync && schedule.maxUpdatedFiles != null && (
+              <span>
+                {m.schedules_update_guard_summary({
+                  count: schedule.maxUpdatedFiles,
+                })}
+              </span>
+            )}
             <span className="min-w-0 truncate" title={schedule.configPath}>
               {m.schedules_field_config()}: {configName}
             </span>
@@ -219,6 +235,18 @@ export const ScheduleRow = ({
             disabled={runDisabled}
           >
             <Play />
+          </IconAction>
+          <IconAction
+            label={
+              schedule.skipNext
+                ? m.schedules_skip_next_undo()
+                : m.schedules_skip_next()
+            }
+            onClick={onSkipNext}
+            disabled={!schedule.enabled}
+            pressed={!!schedule.skipNext}
+          >
+            <SkipForward />
           </IconAction>
           <IconAction label={m.common_edit()} onClick={onEdit}>
             <Pencil />

@@ -55,6 +55,20 @@ export const executeCommand = async (
 }
 
 /**
+ * Repair the blocks marked as bad (fix -e), then check them again (scrub -p bad)
+ */
+export const healArray = async (configPath: string): Promise<void> => {
+  const response = await apiFetch(`${API_BASE}/snapraid/heal`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configPath }),
+  })
+  if (!response.ok) {
+    throw await apiError(response)
+  }
+}
+
+/**
  * Get command history
  */
 export const getHistory = async (): Promise<CommandOutput[]> => {
@@ -378,6 +392,22 @@ export const getSmartHistory = async (
   )
   if (!response.ok) throw await apiError(response)
   return response.json()
+}
+
+/**
+ * Spin disks up or down; no disks means the whole array
+ */
+export const setDiskPower = async (
+  configPath: string,
+  action: 'up' | 'down',
+  disks: string[] = [],
+): Promise<void> => {
+  const response = await apiFetch(`${API_BASE}/snapraid/power`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configPath, action, disks }),
+  })
+  if (!response.ok) throw await apiError(response)
 }
 
 /**

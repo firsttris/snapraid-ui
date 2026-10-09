@@ -37,7 +37,7 @@ test('sync shows the pending changes and writes them to parity', async ({ page, 
   await expect(page.getByRole('dialog', { name: 'Prepare sync' })).toContainText('No changes since the last sync')
 })
 
-test('scrub finds silently corrupted data and fix repairs it', async ({ page, app }) => {
+test('scrub finds silently corrupted data, one click repairs and verifies it', async ({ page, app }) => {
   const array = await createArray('recovery')
   const original = await array.readFile('d1', 'photos/holiday.jpg')
   await array.corrupt('d1', 'photos/holiday.jpg')
@@ -51,14 +51,13 @@ test('scrub finds silently corrupted data and fix repairs it', async ({ page, ap
 
   await expectHealth(page, 'Errors found', 60_000)
   await expect(page.getByText(/\d+ bad blocks found/)).toBeVisible()
-  await page.getByRole('button', { name: '1. Repair (fix -e)' }).click()
+  // One click: fix -e, then scrub -p bad, which clears the bad blocks
+  await page.getByRole('button', { name: 'Repair and verify' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Repair' }).click()
-  await app.expectFinished('Undelete')
+  await expectHealth(page, 'All good', 90_000)
+  await app.waitForIdle()
   expect((await array.readFile('d1', 'photos/holiday.jpg')).equals(original)).toBe(true)
-
-  await page.getByRole('button', { name: '2. Verify (scrub -p bad)' }).click()
-  await app.expectFinished('Scrub')
-  await expectHealth(page, 'All good')
+  expect(await array.snapraid('status')).toContain('No error detected')
 })
 
 test('undelete brings back a deleted file from parity', async ({ page, app }) => {
@@ -76,4 +75,19 @@ test('undelete brings back a deleted file from parity', async ({ page, app }) =>
 
   await app.expectFinished('Undelete')
   expect((await array.readFile('d2', 'movies/trailer.mkv')).equals(original)).toBe(true)
+})
+
+test('disks can be spun up and down by hand', async ({ page, app }) => {
+  const array = await createArray('power')
+  await app.addArray(array, 'Power')
+  await page.goto('/')
+
+  await page.getByRole('button', { name: 'Actions for d1' }).click()
+  await page.getByRole('menuitem', { name: 'Spin down' }).click()
+  // The test disks are directories: SnapRAID runs, and says it cannot spin them down
+  await expect(page.getByText(/Spun down: d1|Spindown is unsupported|Failed/)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Spin up/down' }).click()
+  await page.getByRole('menuitem', { name: 'Spin up all disks' }).click()
+  await expect(page.getByText(/Spun up: all disks|Spinup is unsupported|Failed/)).toBeVisible()
 })

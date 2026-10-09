@@ -261,15 +261,18 @@ export const getLastJob = (): FinishedJob | null => {
 /**
  * Execute snapraid command with given args (non-streaming)
  */
-export const executeSnapraidCommand = async (args: string[]): Promise<{ stdout: string, stderr: string }> => {
+export const executeSnapraidCommand = async (
+  args: string[],
+): Promise<{ stdout: string; stderr: string; code: number }> => {
   const cmd = snapraidCommand(args);
 
-  const { stdout, stderr } = await cmd.output();
+  const { stdout, stderr, code } = await cmd.output();
   const decoder = new TextDecoder();
-  
+
   return {
     stdout: decoder.decode(stdout),
     stderr: decoder.decode(stderr),
+    code,
   };
 };
 

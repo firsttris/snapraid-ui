@@ -3,6 +3,7 @@ import type { NotificationChannel, NotificationSettings } from "@shared/types.ts
 import {
   deliver,
   loadNotificationSettings,
+  pingHeartbeat,
   maskSecrets,
   resolveSecrets,
   saveNotificationSettings,
@@ -48,6 +49,21 @@ notifications.put("/", async (c) => {
     return c.json(maskSecrets(settings));
   } catch (error) {
     return c.json({ error: String(error) }, 500);
+  }
+});
+
+// POST /api/notifications/heartbeat - Ping the heartbeat URL of the given, possibly unsaved settings
+notifications.post("/heartbeat", async (c) => {
+  const { settings: body } = await c.req.json<{ settings: Partial<NotificationSettings> }>();
+  const settings = resolveSecrets(body, await loadNotificationSettings());
+  if (!/^https?:\/\//.test(settings.heartbeat.url)) {
+    return c.json({ error: "The heartbeat URL must start with http:// or https://" }, 400);
+  }
+  try {
+    await pingHeartbeat(settings);
+    return c.json({ ok: true });
+  } catch (error) {
+    return c.json({ ok: false, error: error instanceof Error ? error.message : String(error) });
   }
 });
 

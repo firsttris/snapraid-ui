@@ -95,7 +95,7 @@ Under *When to notify* you choose which events send a message:
 | Event | Default | `event` | Severity | When |
 |---|---|---|---|---|
 | *A job failed* | on | `job_failed` | error | SnapRAID stopped with an error, e.g. because a disk is missing. |
-| *Data errors found* | on | `data_errors` | error | A run reported I/O errors or silently corrupted blocks. The message points to the repair on the dashboard (*Repair (fix -e)*). |
+| *Data errors found* | on | `data_errors` | error | A run reported I/O errors or silently corrupted blocks. The message points to the repair on the dashboard (*Repair and verify*). |
 | *A scheduled job was skipped* | on | `schedule_skipped` | warning | A scheduled run did not start, see [When a schedule is skipped](scheduling.md#when-a-schedule-is-skipped). |
 | *SMART warning* | on | `smart_warning` | warning, or error if a disk is critical | A disk reports errors or is likely to fail, see [SMART warnings](#smart-warnings). |
 | *A job completed* | off | `job_succeeded` | info | A short summary after every successful run, e.g. how many files the sync added. |
@@ -148,11 +148,21 @@ Temperature, failure probability and SSD wear are only compared by kind, since t
 
 When you open the page for the first time, before any channel is set up, both fields are filled from your browser: the address you use to reach the UI and the current UI language. Check the address if you reach the UI through a reverse proxy or a different host name.
 
+### Heartbeat
+
+Not a message channel but the opposite: a sign of life. After every scheduled run that succeeded, SnapRAID UI sends a `GET` request to the heartbeat URL. Monitoring services such as [healthchecks.io](https://healthchecks.io), [Uptime Kuma](https://uptime.kuma.pet) push monitors or Dead Man's Snitch alert you when the pings stop, which covers what no notification can: the server is off, the container stopped, or every run fails or is skipped.
+
+| Field | Description |
+|---|---|
+| *URL* | The ping URL of the check, e.g. `https://hc-ping.com/<uuid>` or `https://uptime.example.com/api/push/<token>`. Must start with `http://` or `https://`. |
+
+Only scheduled runs ping, and only when every step succeeded (warnings count as success). Skipped, failed and aborted runs send no ping. Set the expected period of the check to your schedule, for a nightly sync one day plus some grace time. *Send ping* sends one ping with the URL as entered.
+
 ## Testing
 
 Each channel has a *Send test* button. It sends a test message with the values currently in the form, even unsaved ones and even while the channel is switched off, so you can try settings before saving them. You see *Test notification sent* or *Test failed: …* with the error, e.g. the HTTP status or the SMTP error.
 
-The test message has the title "Test notification" (in the message language), `event: "test"` and severity `info`.
+The test message has the title "Test notification" (in the message language), `event: "test"` and severity `info`. The heartbeat has *Send ping* instead, see [Heartbeat](#heartbeat).
 
 ## Good to know
 

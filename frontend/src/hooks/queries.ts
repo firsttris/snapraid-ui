@@ -59,6 +59,7 @@ import {
   getSmartHistory,
   getStatus,
   getUsageHistory,
+  healArray,
   parseSnapRaidConfig,
   probe,
   removeContentFile,
@@ -67,6 +68,7 @@ import {
   removeParityDisk,
   runDiskReplacementStep,
   setConfigOption,
+  setDiskPower,
   setPool,
   startDiskReplacement,
 } from '../lib/api/snapraid'
@@ -461,6 +463,35 @@ export const useExecuteCommand = (
       queryClient.invalidateQueries({ queryKey: queryKeys.currentJob })
     },
     ...options,
+  })
+}
+
+// The power state shows the result once the probe is read again
+export const useDiskPower = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      configPath,
+      action,
+      disks,
+    }: {
+      configPath: string
+      action: 'up' | 'down'
+      disks?: string[]
+    }) => setDiskPower(configPath, action, disks),
+    onSettled: (_data, _error, { configPath }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.probe(configPath) })
+    },
+  })
+}
+
+export const useHeal = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: healArray,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentJob })
+    },
   })
 }
 

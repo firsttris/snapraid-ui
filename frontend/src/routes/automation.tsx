@@ -9,7 +9,15 @@ import type {
   SpindownDisk,
 } from '@shared/types'
 import { createFileRoute } from '@tanstack/react-router'
-import { AlertCircle, Container, Moon, Plug, Plus, Trash2 } from 'lucide-react'
+import {
+  Activity,
+  AlertCircle,
+  Container,
+  Moon,
+  Plug,
+  Plus,
+  Trash2,
+} from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { PageLayout } from '../components/PageLayout'
@@ -172,6 +180,26 @@ function AutomationForm({
       </SectionCard>
 
       <SectionCard
+        icon={<Activity />}
+        iconClass="bg-orange-50 text-orange-700"
+        title={m.automation_metrics_title()}
+        description={m.automation_metrics_desc()}
+        enabled={settings.metrics.enabled}
+        onToggle={(enabled) =>
+          // A token from the start, the metrics name disks and paths
+          update('metrics', {
+            enabled,
+            token: settings.metrics.token || newToken(),
+          })
+        }
+      >
+        <MetricsFields
+          settings={settings.metrics}
+          onChange={(changes) => update('metrics', changes)}
+        />
+      </SectionCard>
+
+      <SectionCard
         icon={<Plug />}
         iconClass="bg-amber-50 text-amber-700"
         title={m.automation_daemon_title()}
@@ -216,6 +244,69 @@ function AutomationForm({
         </Button>
       </SaveBar>
     </div>
+  )
+}
+
+const newToken = () =>
+  Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) =>
+    b.toString(16).padStart(2, '0'),
+  ).join('')
+
+function MetricsFields({
+  settings,
+  onChange,
+}: {
+  settings: MaintenanceSettings['metrics']
+  onChange: (changes: Partial<MaintenanceSettings['metrics']>) => void
+}) {
+  const url =
+    typeof window === 'undefined'
+      ? '/api/metrics'
+      : `${window.location.origin}/api/metrics`
+  const target = url.replace(/^https?:\/\//, '').replace(/\/api\/metrics$/, '')
+  const scrapeConfig = [
+    'scrape_configs:',
+    '  - job_name: snapraid',
+    '    metrics_path: /api/metrics',
+    ...(url.startsWith('https:') ? ['    scheme: https'] : []),
+    ...(settings.token
+      ? ['    authorization:', `      credentials: ${settings.token}`]
+      : []),
+    '    static_configs:',
+    `      - targets: ['${target}']`,
+  ].join('\n')
+
+  return (
+    <>
+      <div className={fieldClass}>
+        <Label htmlFor="metrics-token">{m.automation_metrics_token()}</Label>
+        <div className="flex max-w-xl gap-2">
+          <Input
+            id="metrics-token"
+            value={settings.token}
+            onChange={(e) => onChange({ token: e.target.value })}
+            autoComplete="off"
+            className="bg-background font-mono"
+          />
+          <Button
+            variant="outline"
+            onClick={() => onChange({ token: newToken() })}
+          >
+            {m.automation_metrics_new_token()}
+          </Button>
+        </div>
+        <p className={hintClass}>{m.automation_metrics_token_hint()}</p>
+      </div>
+      <div className={fieldClass}>
+        <span className="text-sm font-medium">
+          {m.automation_metrics_scrape()}
+        </span>
+        <pre className="overflow-x-auto rounded-md border bg-background px-3 py-2 font-mono text-xs">
+          {scrapeConfig}
+        </pre>
+      </div>
+      <p className={hintClass}>{m.automation_metrics_hint()}</p>
+    </>
   )
 }
 

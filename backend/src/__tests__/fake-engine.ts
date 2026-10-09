@@ -15,6 +15,7 @@ export interface FakeEngineOptions {
   disks?: string[];
   diskIssues?: DiskIssue[];
   deletedFiles?: number;
+  updatedFiles?: number;
   results?: Partial<Record<SnapRaidCommand, RunResult>>;
 }
 
@@ -57,7 +58,7 @@ export const createFakeEngine = (options: FakeEngineOptions = {}): FakeEngine =>
     totalFiles: pending.length,
     equalFiles: 0,
     newFiles: pending.length,
-    modifiedFiles: 0,
+    modifiedFiles: options.updatedFiles ?? 0,
     deletedFiles: options.deletedFiles ?? 0,
     movedFiles: 0,
     copiedFiles: 0,

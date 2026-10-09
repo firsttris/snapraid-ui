@@ -97,6 +97,24 @@ function SchedulesPage() {
     }
   }
 
+  // Skips the next timed run once, or takes that back
+  const handleSkipNext = async (schedule: Schedule) => {
+    const skipNext = !schedule.skipNext
+    try {
+      await updateSchedule.mutateAsync({
+        id: schedule.id,
+        updates: { skipNext },
+      })
+      toast.success(
+        skipNext
+          ? m.schedules_skip_next_set({ name: schedule.name })
+          : m.schedules_skip_next_cleared({ name: schedule.name }),
+      )
+    } catch (error) {
+      toast.error(errorMessage(error))
+    }
+  }
+
   const handleToggle = async (id: string) => {
     try {
       await toggleSchedule.mutateAsync(id)
@@ -196,6 +214,7 @@ function SchedulesPage() {
                 onDelete={() => handleDelete(schedule.id)}
                 onToggle={() => handleToggle(schedule.id)}
                 onRun={() => handleRun(schedule.id, schedule.name)}
+                onSkipNext={() => handleSkipNext(schedule)}
                 runDisabled={job.isRunning || runSchedule.isPending}
               />
             ),

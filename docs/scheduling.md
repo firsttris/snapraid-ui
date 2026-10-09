@@ -66,16 +66,21 @@ If you start a job manually in the UI between two steps, the scheduler does not 
 
 ## Sync guard
 
-If a data disk is missing, not mounted or suddenly empty, an unattended sync would remove its files from the parity, which is exactly what you need to recover them. The sync guard protects against that.
+If a data disk is missing, not mounted or suddenly empty, an unattended sync would remove its files from the parity, which is exactly what you need to recover them. Ransomware does the same in another way: it encrypts files in place, and the next sync would replace their parity with that of the encrypted files. The sync guard protects against both.
 
-With *Skip sync when too many files were deleted* switched on (the default for new sync schedules), the scheduler first runs `snapraid diff`. The sync is skipped when:
+With *Skip sync when too many files were deleted* or *Skip sync when too many files were changed* switched on (both are the default for new sync schedules), the scheduler first runs `snapraid diff`. The sync is skipped when:
 
-- `diff` reports more deleted files than *Max. deleted files* (default **50**), or
+- `diff` reports more deleted files than *Max. deleted files* (default **50**),
+- `diff` reports more updated files than *Max. changed files* (default **100**, as `sync_threshold_updates` of snapraid-daemon), or
 - `diff` itself fails.
+
+After a skip for changed files, open a few of the changed files (*Diff* on the dashboard lists them). If they are unreadable, do not sync: restore them with *Undelete* (`fix`) from the parity, which still holds the old content. If you changed them yourself, for example by re-tagging a music collection, start the sync manually.
+
+Schedules created before this check have no limit for changed files; edit the schedule to switch it on.
 
 The schedule row then shows *Skipped* with the reason, and a [*A scheduled job was skipped*](notifications.md#events) notification is sent. Check with *Diff* on the dashboard whether a disk is missing. If the deletions are intended, start the sync manually.
 
-The row of a sync schedule shows the current setting, e.g. "Skipped when more than 50 files were deleted", or *No protection against deletions* when the guard is off.
+The row of a sync schedule shows the current settings, e.g. "Skipped when more than 50 files were deleted" and "Skipped when more than 100 files were changed", or *No protection against deletions* when that guard is off.
 
 > [!TIP]
 > Set the limit above what you delete on a normal day, but far below the number of files on your smallest data disk.
@@ -106,6 +111,8 @@ The header shows how many schedules are active and when the next one runs.
 
 Use the pencil to edit, the bin to delete (after a confirmation), and the switch to enable or disable a schedule. A disabled schedule stays saved but never runs.
 
+The skip button (*Skip next run*) leaves out the next timed run once, for example while you move files around or a disk is out for repair. The row shows *Next run skipped*; click the button again (*Run next time again*) to take it back. When the time comes, the run is recorded as *Skipped* with "Skipped once, as asked.", no notification is sent, and the schedule runs normally afterwards. *Run now* is not affected by it.
+
 The play button (*Run now*) starts a schedule once, right away, exactly as at its time: the same steps, the [sync guard](#sync-guard), the checks for missing disks, the Docker pause and the notifications. It works for disabled schedules too, so you can try a routine before you enable it. It is greyed out while a job is running.
 
 Every command of a scheduled run writes its own log, which you find under [Logs](logs.md). While a scheduled job runs, its output is sent to the live output like any other job.
@@ -119,11 +126,12 @@ A scheduled run does not start, and is recorded as *Skipped*, in these cases (ch
 | Another job (manual or scheduled) is already running | *Another job was running.* |
 | A disk of this configuration is being replaced with the [replacement wizard](disks.md) | *A disk is being replaced, scheduled jobs are paused.* |
 | A data disk is missing or empty, or a parity file is gone (`sync`, `scrub`, `touch`, `check` and `fix` only) | "d3 missing or empty, probably not mounted. …" |
-| The [sync guard](#sync-guard) stopped a sync | "… deleted files, more than allowed …" or "Diff before sync failed: …" |
+| The [sync guard](#sync-guard) stopped a sync | "… deleted files, more than allowed …", "… changed files, more than allowed …" or "Diff before sync failed: …" |
+| *Skip next run* was set | *Skipped once, as asked.* (no notification) |
 
 The disk check reads `snapraid status`, which only reads the content file and does not touch the disks. A disk counts as missing when its directory does not exist, or is empty (apart from `lost+found`) while the content file lists files on it. A disk on another filesystem than at the last sync is only flagged on the dashboard, it does not stop the schedule: that is expected after replacing a disk, and the next sync records the new filesystem.
 
-Skipped runs are not queued or retried. The schedule simply runs again at its next time. Each skip sends a *A scheduled job was skipped* notification, if that event is enabled under [Notifications](notifications.md#events).
+Skipped runs are not queued or retried. The schedule simply runs again at its next time. Each skip, except one you asked for, sends a *A scheduled job was skipped* notification, if that event is enabled under [Notifications](notifications.md#events).
 
 Scheduled jobs of a configuration stay paused from the start of a disk replacement until the wizard's final sync has succeeded. Schedules of other configurations keep running.
 

@@ -68,7 +68,7 @@ The image sets `SNAPRAID_BASE_PATH=/app/snapraid` and `SNAPRAID_BIN=/usr/local/b
 Middleware, in order:
 
 1. **CORS**: credentials are only accepted from an origin with the same hostname as the request, e.g. the dev frontend on `localhost:3000` calling `localhost:8080`.
-2. **Auth** (only when `SNAPRAID_UI_USERNAME` and `SNAPRAID_UI_PASSWORD` are both set): guards `/api/*` and `/ws`, except `/api/auth/*`. A missing or invalid session returns `401 {"error":"Unauthorized"}`. Sessions are HS256-signed JWTs in an HTTP-only `snapraid_session` cookie, see [Security](security.md).
+2. **Auth** (only when `SNAPRAID_UI_USERNAME` and `SNAPRAID_UI_PASSWORD` are both set): guards `/api/*` and `/ws`, except `/api/auth/*` and `/api/metrics`, which checks its own token. A missing or invalid session returns `401 {"error":"Unauthorized"}`. Sessions are HS256-signed JWTs in an HTTP-only `snapraid_session` cookie, see [Security](security.md).
 
 Module map:
 
@@ -310,6 +310,7 @@ Most endpoints that work on a SnapRAID config take its path: as the `path` query
 | GET | `/api/snapraid/current-job` | The running job, or `null` | `RunningJob`: `{command, configPath, startTime, processId, aborting?, logFile?, progress?}` |
 | GET | `/api/snapraid/last-job` | Outcome of the last finished job, or `null` | `FinishedJob`: `{command, processId, exitCode, aborted, error?, forceOption?, finishedAt}` |
 | POST | `/api/snapraid/abort` | Abort the running job (SIGINT) | `404` if no job runs. Returns `{success}` |
+| POST | `/api/snapraid/heal` | Repair the bad blocks (`fix -e`), then check them again (`scrub -p bad`), two jobs one after the other | Body `{configPath}`. `202`; `409` if a job is running. The scrub only follows a successful fix and only when no other job started in between |
 | GET | `/api/snapraid/history` | Results of the last 50 jobs started through `/execute` or the wizards since the backend started (in memory) | `CommandOutput[]` |
 
 ### Status and reports
@@ -334,6 +335,7 @@ Most endpoints that work on a SnapRAID config take its path: as the `path` query
 | GET | `/api/snapraid/smart` | Run `snapraid smart`; applies the CRC baseline and records the daily SMART history | Query `path`. Returns `SmartReport`: `{disks, arrayFailureProbability, timestamp, rawOutput}` |
 | GET | `/api/snapraid/smart-history` | Daily SMART values per disk | Query `path` |
 | GET | `/api/snapraid/probe` | Power state of the disks (`snapraid probe`) | Query `path`. Returns `ProbeReport`. `400` with `unsupported: true` if probing is not supported |
+| POST | `/api/snapraid/power` | Spin disks up or down (`snapraid up` / `down`, always through the CLI) | Body `{configPath, action: "up" \| "down", disks?}`, no disks for the whole array. `409` while a job runs; `500` with SnapRAID's last line when it failed |
 
 In demo mode (`SNAPRAID_DEMO=1`), `smart` and `probe` return generated values instead of running SnapRAID.
 
@@ -380,8 +382,9 @@ All of these take `configPath` in the body, edit the `snapraid.conf` line by lin
 |---|---|---|---|
 | GET | `/api/schedules` | All schedules | `Schedule[]` |
 | GET | `/api/schedules/:id` | One schedule | `404` if unknown |
-| POST | `/api/schedules` | Create a schedule | Body: `name`, `command`, `configPath`, `cronExpression` (required); `args`, `maxDeletedFiles`, `touchBefore`, `scrubAfter`, `enabled` (optional). Returns `201` with the `Schedule`; `400` on an invalid cron expression |
-| PUT | `/api/schedules/:id` | Update fields of a schedule | Body: partial `Schedule` |
+| POST | `/api/schedules` | Create a schedule | Body: `name`, `command`, `configPath`, `cronExpression` (required); `args`, `maxDeletedFiles`, `maxUpdatedFiles`, `touchBefore`, `scrubAfter`, `enabled` (optional). Returns `201` with the `Schedule`; `400` on an invalid cron expression |
+| PUT | `/api/schedules/:id` | Update fields of a schedule | Body: partial `Schedule`, e.g. `{skipNext: true}` to skip the next timed run once |
+| POST | `/api/schedules/:id/run` | Run a schedule once now, with its routine and checks, also a disabled one | `202`; `404` if unknown, `409` if a job is running |
 | DELETE | `/api/schedules/:id` | Delete a schedule | |
 | POST | `/api/schedules/:id/toggle` | Enable or disable a schedule | Returns the updated `Schedule` |
 | GET | `/api/schedules/next-runs` | Next run time per active schedule | `{[id]: ISO string \| null}`. Registered after `/:id`, so requests currently resolve to `GET /api/schedules/:id`; use the `nextRun` field of each schedule instead |
@@ -393,15 +396,17 @@ All of these take `configPath` in the body, edit the `snapraid.conf` line by lin
 | GET | `/api/notifications` | Notification settings with the SMTP password and ntfy token masked | `NotificationSettings` |
 | PUT | `/api/notifications` | Save settings; a masked secret keeps the stored value | Body: `NotificationSettings`. `400` if invalid |
 | POST | `/api/notifications/test` | Send a test message with the given, possibly unsaved settings | Body `{settings, channel?}` with `channel` = `email`, `ntfy` or `webhook` (default: all enabled channels). Returns `NotificationTestResult[]` |
+| POST | `/api/notifications/heartbeat` | Ping the heartbeat URL of the given, possibly unsaved settings | Body `{settings}`. Returns `{ok, error?}` |
 
 ### Automation
 
 | Method | Path | Description | Notes |
 |---|---|---|---|
-| GET | `/api/maintenance` | Docker pause and spindown settings | `MaintenanceSettings` |
+| GET | `/api/maintenance` | Docker pause, spindown and metrics settings | `MaintenanceSettings` |
 | PUT | `/api/maintenance` | Save settings | Body: `MaintenanceSettings`. `400` if invalid |
 | GET | `/api/maintenance/containers` | Containers on the Docker socket | Query `socket` (default: the saved one). Returns `DockerContainersReport`, `available: false` with the error when the socket can't be reached |
 | GET | `/api/maintenance/spindown` | Disks the spindown watches, their last activity and when they were spun down | `SpindownStatus` |
+| GET | `/api/metrics` | Prometheus metrics, see [Automation](automation.md#prometheus-metrics) | Text exposition format. Not behind the login; `Authorization: Bearer <token>` when a token is set (`401` otherwise), `404` while switched off |
 
 See [Notifications](notifications.md) for the settings and the webhook payload.
 

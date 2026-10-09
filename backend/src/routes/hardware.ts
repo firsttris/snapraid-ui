@@ -5,6 +5,8 @@ import { getDataDiskUsage, getParityUsage } from "../parity-usage.ts";
 import { withCrcBaseline } from "../smart-baseline.ts";
 import { getSmartHistory, recordSmartHistory } from "../smart-history.ts";
 import { EngineCommandError, EngineUnsupportedError, getEngine } from "../engine/engine.ts";
+import { type PowerAction, setDiskPower } from "../disk-power.ts";
+import { msg } from "@shared/i18n.ts";
 
 const hardware = new Hono();
 
@@ -81,6 +83,30 @@ hardware.get("/probe", async (c) => {
     if (error instanceof EngineCommandError) {
       return c.json({ error: error.message, exitCode: error.exitCode, rawOutput: error.rawOutput }, 500);
     }
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// POST /api/snapraid/power - Spin disks up or down: { configPath, action: "up" | "down", disks? }.
+// Without disks it acts on the whole array.
+hardware.post("/power", async (c) => {
+  const { configPath: relativePath, action, disks = [] } = await c.req.json<{
+    configPath?: string;
+    action?: PowerAction;
+    disks?: string[];
+  }>();
+  if (!relativePath || (action !== "up" && action !== "down") || !Array.isArray(disks)) {
+    return c.json({ error: "Missing configPath, or action is not up or down" }, 400);
+  }
+  // SnapRAID's lock would refuse it, and a job keeps its disks busy anyway
+  if (getEngine().currentJob()) {
+    return c.json({ error: msg("server_error_job_running") }, 409);
+  }
+
+  try {
+    const problem = await setDiskPower(action, resolveFromBase(relativePath), disks.map(String));
+    return problem ? c.json({ error: problem }, 500) : c.json({ success: true });
+  } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
 });

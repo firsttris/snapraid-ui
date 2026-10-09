@@ -8,7 +8,7 @@ import type {
 } from "@shared/types.ts";
 import { assessSmart, type SmartAssessment, type SmartReason, smartHints, smartSignature } from "@shared/smart-health.ts";
 import { resolveFromBase } from "./config.ts";
-import { loadNotificationSettings, type Notification, notify } from "./notifications.ts";
+import { loadNotificationSettings, type Notification, notify, pingHeartbeat } from "./notifications.ts";
 import { isSuccessful, type RunReport } from "./run-report.ts";
 import { parseLogTags, restOf, unescapeTagValue } from "./parsers/structured-log.ts";
 
@@ -30,11 +30,13 @@ const TEXT = {
     fixCounts: (recovered: number, unrecoverable: number) =>
       `${recovered} recovered, ${unrecoverable} unrecoverable`,
     notRun: "not run",
-    dataErrorsHint: "Blocks marked as bad can be repaired with \"Fix errors\" on the dashboard.",
+    dataErrorsHint: "Blocks marked as bad can be repaired with \"Repair and verify\" on the dashboard.",
     skip: {
       job_running: "Another job was running.",
       too_many_deleted: (count: number, max: number) =>
         `diff reports ${count} deleted files, more than the limit of ${max}. Check that no disk is missing, then start the sync manually.`,
+      too_many_updated: (count: number, max: number) =>
+        `diff reports ${count} changed files, more than the limit of ${max}. If you did not change that many files, check them before the next sync: ransomware encrypts files in place, a sync would overwrite their parity. If the changes are yours, start the sync manually.`,
       diff_failed: (error: string) => `diff failed: ${error}`,
       recovery_in_progress: "A disk is being replaced; scheduled jobs are paused until its sync is done.",
       disk_missing: (disks: string) =>
@@ -98,11 +100,13 @@ const TEXT = {
     fixCounts: (recovered: number, unrecoverable: number) =>
       `${recovered} wiederhergestellt, ${unrecoverable} nicht wiederherstellbar`,
     notRun: "nicht ausgeführt",
-    dataErrorsHint: "Als fehlerhaft markierte Blöcke lassen sich im Dashboard mit „Fehler beheben“ reparieren.",
+    dataErrorsHint: "Als fehlerhaft markierte Blöcke lassen sich im Dashboard mit „Reparieren und prüfen“ reparieren.",
     skip: {
       job_running: "Es lief gerade ein anderer Job.",
       too_many_deleted: (count: number, max: number) =>
         `diff meldet ${count} gelöschte Dateien, mehr als die Grenze von ${max}. Prüfe, ob eine Platte fehlt, und starte den Sync dann manuell.`,
+      too_many_updated: (count: number, max: number) =>
+        `diff meldet ${count} geänderte Dateien, mehr als die Grenze von ${max}. Wenn du nicht so viele Dateien geändert hast, prüfe sie vor dem nächsten Sync: Ransomware verschlüsselt Dateien an Ort und Stelle, ein Sync würde ihre Parität überschreiben. Stammen die Änderungen von dir, starte den Sync manuell.`,
       diff_failed: (error: string) => `diff ist fehlgeschlagen: ${error}`,
       recovery_in_progress: "Eine Platte wird gerade ersetzt, geplante Jobs pausieren bis zu ihrem Sync.",
       disk_missing: (disks: string) =>
@@ -168,11 +172,13 @@ const TEXT = {
     fixCounts: (recovered: number, unrecoverable: number) =>
       `${recovered} recuperati, ${unrecoverable} non recuperabili`,
     notRun: "non eseguito",
-    dataErrorsHint: "I blocchi segnati come danneggiati si possono riparare con «Ripara» nella dashboard.",
+    dataErrorsHint: "I blocchi segnati come danneggiati si possono riparare con «Ripara e verifica» nella dashboard.",
     skip: {
       job_running: "Era in esecuzione un altro job.",
       too_many_deleted: (count: number, max: number) =>
         `diff segnala ${count} file eliminati, più del limite di ${max}. Verifica che non manchi un disco, poi avvia il sync manualmente.`,
+      too_many_updated: (count: number, max: number) =>
+        `diff segnala ${count} file modificati, più del limite di ${max}. Se non hai modificato così tanti file, controllali prima del prossimo sync: un ransomware cifra i file sul posto e un sync sovrascriverebbe la loro parità. Se le modifiche sono tue, avvia il sync manualmente.`,
       diff_failed: (error: string) => `diff non riuscito: ${error}`,
       recovery_in_progress: "Un disco è in sostituzione; i job pianificati sono in pausa fino al suo sync.",
       disk_missing: (disks: string) =>
@@ -297,13 +303,14 @@ export const buildSkipNotification = (
   label: string,
   configPath: string,
   outcome: ScheduleOutcome,
-  maxDeletedFiles?: number | null,
 ): Notification => {
   const t = TEXT[lang];
   const reason = (() => {
     switch (outcome.skipReason) {
       case "too_many_deleted":
-        return t.skip.too_many_deleted(outcome.deletedFiles ?? 0, maxDeletedFiles ?? 0);
+        return t.skip.too_many_deleted(outcome.deletedFiles ?? 0, outcome.limit ?? 0);
+      case "too_many_updated":
+        return t.skip.too_many_updated(outcome.updatedFiles ?? 0, outcome.limit ?? 0);
       case "diff_failed":
         return t.skip.diff_failed(outcome.error ?? "");
       case "recovery_in_progress":
@@ -385,6 +392,22 @@ const safely = async (what: string, fn: () => Promise<void>) => {
   }
 };
 
+/**
+ * Ping the heartbeat URL after a scheduled run that succeeded; skipped and failed runs send none
+ */
+export const heartbeatAfterRun = (
+  reports: RunReport[],
+  notRun: string[],
+  load = loadNotificationSettings,
+  ping = pingHeartbeat,
+): Promise<void> =>
+  safely("heartbeat", async () => {
+    const settings = await load();
+    if (!settings.heartbeat.enabled || reports.length === 0 || notRun.length > 0) return;
+    if (!reports.every((report) => isSuccessful(report.result))) return;
+    await ping(settings);
+  });
+
 export const notifyRun = (
   label: string,
   configPath: string,
@@ -413,11 +436,10 @@ export const notifySkipped = (
   label: string,
   configPath: string,
   outcome: ScheduleOutcome,
-  maxDeletedFiles?: number | null,
 ): Promise<void> =>
   safely("skip", async () => {
     const settings = await loadNotificationSettings();
-    await notify(buildSkipNotification(settings.language, label, configPath, outcome, maxDeletedFiles));
+    await notify(buildSkipNotification(settings.language, label, configPath, outcome));
   });
 
 export const notifySmart = (configPath: string, disks: SmartDiskInfo[]): Promise<void> =>

@@ -144,9 +144,9 @@ export const createAuth = (options: AuthOptions) => {
     return c.json<AuthSession>({ enabled: true, authenticated: false });
   });
 
-  // Guards everything except the auth routes themselves
+  // Guards everything except the auth routes themselves and the metrics, which check their own token
   const middleware: MiddlewareHandler = async (c, next) => {
-    if (c.req.path.startsWith("/api/auth/")) return next();
+    if (c.req.path.startsWith("/api/auth/") || c.req.path === "/api/metrics") return next();
     if (!(await readSession(c))) {
       return c.json({ error: "Unauthorized" }, 401);
     }

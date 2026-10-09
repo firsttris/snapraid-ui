@@ -14,10 +14,11 @@ import { failedReport, isSuccessful, type RunReport } from "./run-report.ts";
 import { isReplacementInProgress } from "./disk-replacement.ts";
 import { withCrcBaseline } from "./smart-baseline.ts";
 import { recordSmartHistory } from "./smart-history.ts";
-import { notifyRun, notifySkipped, notifySmart } from "./notification-events.ts";
+import { heartbeatAfterRun, notifyRun, notifySkipped, notifySmart } from "./notification-events.ts";
 import { msg } from "@shared/i18n.ts";
 import { blockingIssues } from "./disk-check.ts";
 import { holdContainers } from "./container-pause.ts";
+import { rememberStatus } from "./status-cache.ts";
 
 // Module-level storage for active jobs
 const activeJobs = new Map<string, Cron>();
@@ -104,21 +105,26 @@ const skipped = (skip: Omit<ScheduleOutcome, "timestamp" | "result">): ScheduleO
 });
 
 // An unattended sync after a disk went missing or empty would drop its files from parity,
-// so check the pending deletions first
+// and after ransomware encrypted files in place it would overwrite theirs: check the pending
+// deletions and updates first
 const checkSyncGuard = async (
   engine: SnapRaidEngine,
   schedule: Schedule,
   snapraidConfigPath: string
 ): Promise<ScheduleOutcome | null> => {
-  if (schedule.command !== "sync" || schedule.maxDeletedFiles == null) return null;
+  const { maxDeletedFiles, maxUpdatedFiles } = schedule;
+  if (schedule.command !== "sync" || (maxDeletedFiles == null && maxUpdatedFiles == null)) return null;
 
   try {
     const diff = await engine.readDiff(snapraidConfigPath);
     if (diff.failed) {
       return skipped({ skipReason: "diff_failed", error: diff.rawOutput.trim().split("\n").pop() });
     }
-    if (diff.deletedFiles > schedule.maxDeletedFiles) {
-      return skipped({ skipReason: "too_many_deleted", deletedFiles: diff.deletedFiles });
+    if (maxDeletedFiles != null && diff.deletedFiles > maxDeletedFiles) {
+      return skipped({ skipReason: "too_many_deleted", deletedFiles: diff.deletedFiles, limit: maxDeletedFiles });
+    }
+    if (maxUpdatedFiles != null && diff.modifiedFiles > maxUpdatedFiles) {
+      return skipped({ skipReason: "too_many_updated", updatedFiles: diff.modifiedFiles, limit: maxUpdatedFiles });
     }
     return null;
   } catch (error) {
@@ -139,7 +145,8 @@ const checkDisksGuard = async (
   if (!scheduleSteps(schedule).some((step) => DISK_COMMANDS.includes(step.command))) return null;
 
   try {
-    const { status } = await engine.readStatus(snapraidConfigPath);
+    const { status, exitCode } = await engine.readStatus(snapraidConfigPath);
+    if (exitCode === 0) rememberStatus(snapraidConfigPath, status);
     const missing = blockingIssues(status.diskIssues ?? []);
     return missing.length > 0
       ? skipped({ skipReason: "disk_missing", disks: missing.map((issue) => issue.disk) })
@@ -173,12 +180,14 @@ export const combineResults = (results: RunResult[]): RunResult =>
   results.find((result) => !isSuccessful(result)) ??
     (results.includes("warning") ? "warning" : "ok");
 
-// Execute scheduled command; exported for tests, the cron jobs call it
+// Execute scheduled command; exported for tests, the cron jobs call it.
+// `manual` is "Run now", which runs even when the next timed run is to be skipped.
 export const executeScheduledCommand = async (
   configPath: string,
   engine: SnapRaidEngine,
   onOutput: ((scheduleId: string, chunk: string) => void) | undefined,
-  scheduleId: string
+  scheduleId: string,
+  { manual = false }: { manual?: boolean } = {},
 ): Promise<void> => {
   const schedules = await loadSchedulesFromFile(configPath);
   const schedule = schedules.find((s) => s.id === scheduleId);
@@ -186,6 +195,17 @@ export const executeScheduledCommand = async (
 
   const nextRun = activeJobs.get(scheduleId)?.nextRun()?.toISOString();
   const snapraidConfigPath = resolveFromBase(schedule.configPath);
+
+  // Asked for in the UI, so no notification
+  if (schedule.skipNext && !manual) {
+    console.log(`Scheduled job skipped once as asked: ${schedule.name}`);
+    await updateStoredSchedule(configPath, scheduleId, {
+      nextRun,
+      skipNext: false,
+      lastOutcome: skipped({ skipReason: "skipped_once" }),
+    });
+    return;
+  }
 
   const skip = engine.currentJob()
     ? skipped({ skipReason: "job_running" })
@@ -196,7 +216,7 @@ export const executeScheduledCommand = async (
   if (skip) {
     console.warn(`Scheduled job skipped: ${schedule.name} (${skip.skipReason})`);
     await updateStoredSchedule(configPath, scheduleId, { nextRun, lastOutcome: skip });
-    await notifySkipped(schedule.name, snapraidConfigPath, skip, schedule.maxDeletedFiles);
+    await notifySkipped(schedule.name, snapraidConfigPath, skip);
     return;
   }
 
@@ -257,6 +277,7 @@ export const executeScheduledCommand = async (
 
   const notRun = steps.slice(reports.length).map((step) => step.command);
   await notifyRun(schedule.name, snapraidConfigPath, reports, notRun);
+  await heartbeatAfterRun(reports, notRun);
 };
 
 // Start cron job for schedule
@@ -332,7 +353,7 @@ export const createScheduler = (configPath: string, engine: SnapRaidEngine) => {
       const schedules = await loadSchedulesFromFile(configPath);
       if (!schedules.some((s) => s.id === id)) throw new Error(msg("server_error_schedule_not_found"));
       if (engine.currentJob()) throw new Error(msg("server_error_job_running"));
-      const done = executeScheduledCommand(configPath, engine, outputCallback, id).catch((error) =>
+      const done = executeScheduledCommand(configPath, engine, outputCallback, id, { manual: true }).catch((error) =>
         console.error(`Schedule ${id} run failed:`, error)
       );
       return { done };

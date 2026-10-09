@@ -150,8 +150,9 @@ The test adds files to the array's first data disk. In `snapraidd.conf` set `net
 
 | Test | What happens |
 |---|---|
-| `array.spec.ts` | Dashboard health and disks; sync with its preview (new and deleted files); bit rot in a file, found by a full scrub, repaired by *Repair (fix -e)*, byte for byte; *Undelete* of a deleted file |
-| `schedules.spec.ts` | The nightly routine (touch, sync, scrub) created in the form and started with *Run now*; a scheduled sync skipped while a disk is empty (not mounted), the dashboard shows *Disk not available* |
+| `array.spec.ts` | Dashboard health and disks; sync with its preview (new and deleted files); bit rot in a file, found by a full scrub, repaired and verified by *Repair and verify*, byte for byte; *Undelete* of a deleted file; spinning disks up and down |
+| `schedules.spec.ts` | The nightly routine (touch, sync, scrub) created in the form and started with *Run now*; a scheduled sync skipped while a disk is empty (not mounted), the dashboard shows *Disk not available*; a sync skipped for mass changes, as ransomware leaves them; *Skip next run* and taking it back |
+| `monitoring.spec.ts` | The heartbeat pinged by *Send ping* and after a successful scheduled run; Prometheus metrics switched on, refused without the token, describing the array with it |
 | `notifications.spec.ts` | Webhook set up in the UI: the test message and the *job failed* message of a sync without its parity disk reach a local receiver |
 | `config.spec.ts` | A data disk added in the visual editor is in `snapraid.conf` and protected by the next sync |
 | `docker.spec.ts` | A container picked under Automation is paused during the sync and resumed after it (`docker events`); skipped without a Docker daemon |
@@ -162,7 +163,7 @@ cd e2e
 npm ci
 npx playwright install chromium   # once
 npm run setup                     # builds the tools into e2e/.tools, needs autoconf, automake, zlib1g-dev
-npm test                          # builds the frontend, starts everything, runs the tests (about 1.5 min)
+npm test                          # builds the frontend, starts everything, runs the tests (about 2 min)
 npm run test:image                # the same tests against the Docker image built from docker/Dockerfile
 ```
 

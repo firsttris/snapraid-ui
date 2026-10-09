@@ -16,6 +16,10 @@ export const DEFAULT_MAINTENANCE_SETTINGS: MaintenanceSettings = {
     enabled: false,
     idleMinutes: 30,
   },
+  metrics: {
+    enabled: false,
+    token: "",
+  },
 };
 
 // Commands worth pausing containers for, the others are quick or only read the content file
@@ -27,6 +31,7 @@ const settingsPath = () => resolveFromBase(SETTINGS_FILE);
 const withDefaults = (stored: Partial<MaintenanceSettings>): MaintenanceSettings => ({
   dockerPause: { ...DEFAULT_MAINTENANCE_SETTINGS.dockerPause, ...stored.dockerPause },
   spindown: { ...DEFAULT_MAINTENANCE_SETTINGS.spindown, ...stored.spindown },
+  metrics: { ...DEFAULT_MAINTENANCE_SETTINGS.metrics, ...stored.metrics },
 });
 
 export const loadMaintenanceSettings = async (): Promise<MaintenanceSettings> => {
@@ -52,6 +57,7 @@ export const normalizeMaintenanceSettings = (
   const normalized: MaintenanceSettings = {
     dockerPause: { ...settings.dockerPause, socketPath: settings.dockerPause.socketPath.trim(), containers, commands },
     spindown: { ...settings.spindown, idleMinutes: Math.round(settings.spindown.idleMinutes) },
+    metrics: { ...settings.metrics, token: settings.metrics.token.trim() },
   };
 
   const { dockerPause, spindown } = normalized;

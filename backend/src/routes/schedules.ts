@@ -64,6 +64,7 @@ schedules.post("/", async (c) => {
       cronExpression: body.cronExpression,
       args: body.args || [],
       maxDeletedFiles: body.maxDeletedFiles ?? null,
+      maxUpdatedFiles: body.maxUpdatedFiles ?? null,
       touchBefore: body.touchBefore ?? false,
       scrubAfter: body.scrubAfter ?? null,
       enabled: body.enabled ?? true,

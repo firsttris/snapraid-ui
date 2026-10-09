@@ -43,13 +43,16 @@ import { SyncPreviewDialog } from '../components/SyncPreviewDialog'
 import { UndeleteDialog } from '../components/UndeleteDialog'
 import {
   useDataDiskUsage,
+  useDiskPower,
   useExecuteCommand,
+  useHeal,
   useLastRuns,
   useNotificationSettings,
   useParityUsage,
   useProbe,
   useSchedules,
   useSmart,
+  useSmartHistory,
   useSnapRaidConfig,
   useStatus,
   useUsageHistory,
@@ -150,6 +153,36 @@ function Dashboard() {
 
   // smartctl leaves sleeping disks alone, the health tile flags disks about to fail
   const { data: smartReport } = useSmart(selectedConfig || undefined)
+  const { data: smartHistory } = useSmartHistory(
+    selectedConfig || undefined,
+    smartReport?.timestamp,
+  )
+  const temperatures = useMemo(
+    () =>
+      Object.fromEntries(
+        (smartReport?.disks ?? []).map((disk) => [disk.name, disk.temperature]),
+      ),
+    [smartReport],
+  )
+  const diskPower = useDiskPower()
+  const handlePower = useCallback(
+    (action: 'up' | 'down', disk?: string) => {
+      if (!selectedConfig) return
+      diskPower.mutate(
+        { configPath: selectedConfig, action, disks: disk ? [disk] : [] },
+        {
+          onSuccess: () =>
+            toast.success(
+              action === 'up'
+                ? m.disks_spun_up({ disk: disk ?? m.disks_all() })
+                : m.disks_spun_down({ disk: disk ?? m.disks_all() }),
+            ),
+          onError: (error) => toast.error(errorMessage(error)),
+        },
+      )
+    },
+    [selectedConfig, diskPower, toast],
+  )
   const { data: notificationSettings } = useNotificationSettings()
   const smartCritical = useMemo(() => {
     const threshold =
@@ -312,7 +345,9 @@ function Dashboard() {
     [selectedConfig, job.isRunning, runCommand],
   )
 
-  // Repair blocks that scrub marked as bad; `scrub -p bad` verifies the result
+  // Repair blocks that scrub marked as bad, then `scrub -p bad` verifies them, one run in the backend.
+  // The scrub shows up like a job started elsewhere once the fix is done.
+  const heal = useHeal()
   const handleFixErrors = useCallback(async () => {
     if (!selectedConfig || job.isRunning) return
     const confirmed = await confirm({
@@ -320,8 +355,12 @@ function Dashboard() {
       confirmLabel: m.health_fix_errors_start(),
       danger: true,
     })
-    if (confirmed) runCommand('fix', ['-e'])
-  }, [selectedConfig, job.isRunning, confirm, runCommand])
+    if (!confirmed) return
+    job.start('fix')
+    heal.mutate(selectedConfig, {
+      onError: (error) => job.fail('fix', error.message),
+    })
+  }, [selectedConfig, job.isRunning, job.start, job.fail, confirm, heal])
 
   const closeReport = () => setReport(null)
 
@@ -435,6 +474,10 @@ function Dashboard() {
           usageHistory={usageHistory}
           powerStates={probeReport?.disks}
           smartCritical={smartCritical}
+          temperatures={temperatures}
+          smartHistory={smartHistory}
+          onPower={handlePower}
+          powerDisabled={job.isRunning || diskPower.isPending}
           isConfigLoading={isConfigLoading}
           isStatusLoading={isStatusFetching}
           isParityLoading={isParityLoading}
