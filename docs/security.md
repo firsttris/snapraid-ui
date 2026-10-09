@@ -6,7 +6,7 @@ SnapRAID UI controls your array and runs with wide access to the host, so anyone
 
 Treat access to SnapRAID UI like root access to your server:
 
-- It runs SnapRAID commands that write to your disks, including `fix` and undelete.
+- It runs SnapRAID commands that write to your disks, including `fix` to recover files or a whole disk, and sets the owner and permissions of the files it recovered.
 - Its API reads and writes files by path inside the container, which runs as root. The config editor and file browser rely on this.
 - In the recommended setup the container is privileged, which gives processes in it broad access to the host's devices.
 

@@ -124,7 +124,7 @@ Mount everything the config refers to:
 
 | What | Access | Notes |
 |---|---|---|
-| Data disks | read-write | Read-only works for `sync` and `scrub`, but `fix`, undelete and `touch` write to the data disks. |
+| Data disks | read-write | Read-only works for `sync` and `scrub`, but `fix` (recovering files, replacing a disk) and `touch` write to the data disks, and recovered files get their owner and permissions set. |
 | Parity disks | read-write | SnapRAID writes the parity files. |
 | Content files | read-write | Every directory with a `content` file must be mounted and persistent. |
 | `/app/snapraid` | read-write | The app data directory, see [Configuration](configuration.md#data-directory). |
