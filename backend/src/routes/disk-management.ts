@@ -64,7 +64,9 @@ diskManagement.post("/add-data-disk", async (c) => {
 
     // Insert data line followed immediately by content line, then empty line
     const newDataLine = `data ${diskName} ${diskPath}`;
-    const contentPath = `${diskPath}/.snapraid.content`;
+    // SnapRAID excludes its content files by comparing the path as written, `/mnt/disk1//.snapraid.content`
+    // would not match and the file would be synced like a data file
+    const contentPath = join(diskPath, ".snapraid.content");
     const newContentLine = `content ${contentPath}`;
     
     const updatedLines = [

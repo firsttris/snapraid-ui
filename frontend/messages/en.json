@@ -928,5 +928,7 @@
   "automation_daemon_hint": "Each daemon runs sync, scrub, check, fix and diff and reports status, SMART and the power state of its array; for several arrays, run one instance each (snapraidd@<name>). Schedules, notifications, Docker pause, spindown, the config editor, touch, dup and list stay with SnapRAID UI, configurations without a daemon keep running on SnapRAID directly.",
   "automation_daemon_active": "Active",
   "automation_daemon_add": "Add a daemon for another array",
-  "automation_daemon_remove": "Remove"
+  "automation_daemon_remove": "Remove",
+  "schedules_run_now": "Run now",
+  "schedules_run_started": "{name} started"
 }

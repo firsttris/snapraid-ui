@@ -324,6 +324,20 @@ export const createScheduler = (configPath: string, engine: SnapRaidEngine) => {
     getSchedules: (): Promise<Schedule[]> => 
       loadSchedulesFromFile(configPath),
 
+    /**
+     * Run a schedule once, now, with the same checks as a timed run; also a disabled one.
+     * Resolves once it started, `done` when it finished.
+     */
+    runNow: async (id: string): Promise<{ done: Promise<void> }> => {
+      const schedules = await loadSchedulesFromFile(configPath);
+      if (!schedules.some((s) => s.id === id)) throw new Error(msg("server_error_schedule_not_found"));
+      if (engine.currentJob()) throw new Error(msg("server_error_job_running"));
+      const done = executeScheduledCommand(configPath, engine, outputCallback, id).catch((error) =>
+        console.error(`Schedule ${id} run failed:`, error)
+      );
+      return { done };
+    },
+
     getSchedule: async (id: string): Promise<Schedule | undefined> => {
       const schedules = await loadSchedulesFromFile(configPath);
       return schedules.find((s) => s.id === id);

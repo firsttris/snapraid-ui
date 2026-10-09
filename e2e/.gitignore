@@ -1,0 +1,5 @@
+node_modules/
+.tools/
+.run/
+test-results/
+playwright-report/

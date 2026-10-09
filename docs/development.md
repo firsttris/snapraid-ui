@@ -91,6 +91,7 @@ frontend/
 shared/                types and logic used by backend and frontend
 docker/                Dockerfile, Compose file, Quadlet units, nginx and supervisor config
 dev/setup.sh           demo sandbox
+e2e/                   end-to-end tests (Playwright) against real SnapRAID and snapraid-daemon
 install.sh, start.sh   local setup and start
 ```
 
@@ -142,6 +143,34 @@ The test adds files to the array's first data disk. In `snapraidd.conf` set `net
 
 - **Backend** tests use `Deno.test` with `@std/assert`. Parser tests in `backend/src/parsers/__tests__/` run against real SnapRAID logs in `fixtures/`; when SnapRAID's log format changes, add or update a fixture from a real run. The [engine contract](architecture.md#snapraid-engine) runs against the fake engine always and against the CLI engine when `SNAPRAID_BIN` and `--test-skip-device` are set (otherwise it shows as *ignored*); the scheduler is tested against the fake engine. Other tests cover auth, backup/restore, config paths, the disk wizards, `--force-*` detection, the log manager, notifications, the SMART baseline and history, and the usage history.
 - **Frontend** tests use Vitest and live in `frontend/src/lib/__tests__/`: log parsing, progress, the job tracker and the i18n checks described [below](#translations). Run them from `frontend/`, they read `messages/` and `../backend/src` by relative path.
+
+### End-to-end tests
+
+`e2e/` drives the whole application through a browser (Playwright, Chromium) against real SnapRAID and snapraid-daemon on throwaway arrays, so a change to the backend, the frontend or the Docker image is checked the way a user would notice it:
+
+| Test | What happens |
+|---|---|
+| `array.spec.ts` | Dashboard health and disks; sync with its preview (new and deleted files); bit rot in a file, found by a full scrub, repaired by *Repair (fix -e)*, byte for byte; *Undelete* of a deleted file |
+| `schedules.spec.ts` | The nightly routine (touch, sync, scrub) created in the form and started with *Run now*; a scheduled sync skipped while a disk is empty (not mounted), the dashboard shows *Disk not available* |
+| `notifications.spec.ts` | Webhook set up in the UI: the test message and the *job failed* message of a sync without its parity disk reach a local receiver |
+| `config.spec.ts` | A data disk added in the visual editor is in `snapraid.conf` and protected by the next sync |
+| `docker.spec.ts` | A container picked under Automation is paused during the sync and resumed after it (`docker events`); skipped without a Docker daemon |
+| `daemon.spec.ts` | Daemon mode switched on in the UI: *Test connection*, then a sync runs as a task of snapraid-daemon |
+
+```bash
+cd e2e
+npm ci
+npx playwright install chromium   # once
+npm run setup                     # builds the tools into e2e/.tools, needs autoconf, automake, zlib1g-dev
+npm test                          # builds the frontend, starts everything, runs the tests (about 1.5 min)
+npm run test:image                # the same tests against the Docker image built from docker/Dockerfile
+```
+
+`npm run setup` builds SnapRAID 14.10 (the version of the image) for the jobs SnapRAID UI runs itself, and SnapRAID 15 with snapraid-daemon at the version in `backend/src/engine/REVIEWED_DAEMON_VERSION`. The test disks are directories on one filesystem, so SnapRAID runs with `--test-skip-device`: the backend gets it through `SNAPRAID_EXTRA_ARGS`, the daemon through a small compiled wrapper as `sys_engine`.
+
+The global setup (`e2e/harness/global-setup.ts`) recreates `e2e/.run/` on every run: the backend's data directory, the arrays and a log per server. It starts snapraid-daemon on its own array, the backend (with `PORT`, `SNAPRAID_BASE_PATH` and `SNAPRAID_BIN` pointing into `e2e/`), the production build of the frontend and a small proxy that sends `/api` and `/ws` to the backend like nginx in the image. Each test creates its own array, adds it through the API and opens it; the `app` fixture removes it, and the schedules, afterwards. Tests run one after the other, the backend runs one job at a time.
+
+With `E2E_IMAGE=<image>` the container takes the place of backend, frontend and proxy: started as in `docker/docker-compose.yml`, with the data directory in `/app/snapraid`, the arrays at the same paths as on the host and the Docker socket mounted. It shares the host's network (nginx on port 80), so the backend reaches snapraid-daemon and the webhook receiver on `127.0.0.1`. `E2E_SKIP_BUILD=1` skips the frontend build of a local run. A failed test leaves a trace (`npx playwright show-trace e2e/test-results/…/trace.zip`) and the server logs in `e2e/.run/*.log`; CI uploads both.
 
 ## Linting and type checking
 
@@ -203,14 +232,14 @@ docker build -f docker/Dockerfile --build-arg SNAPRAID_VERSION=14.10 -t snapraid
 docker compose -f docker/docker-compose.yml up --build
 ```
 
-The build context is the whole repository; `.dockerignore` leaves out `node_modules`, test files, the local `snapraid/` data and `dev/`. See [Architecture](architecture.md#container-layout) for the stages and [Installation](installation.md) for running the image.
+The build context is the whole repository; `.dockerignore` leaves out `node_modules`, test files, the local `snapraid/` data, `dev/` and `e2e/`. See [Architecture](architecture.md#container-layout) for the stages and [Installation](installation.md) for running the image.
 
 ### Updating SnapRAID
 
 The image pins one SnapRAID release that the parsers are tested against. A weekly workflow (`upstream-release.yml`) opens an issue when a newer stable release is out. To bump it:
 
 1. Read SnapRAID's `HISTORY` for changes to the structured log (`--log`).
-2. Change `SNAPRAID_VERSION` in `docker/Dockerfile` **and** `dev/setup.sh`.
+2. Change `SNAPRAID_VERSION` in `docker/Dockerfile`, `dev/setup.sh` **and** `e2e/scripts/setup-tools.sh`.
 3. Run `SNAPRAID_VERSION=<new> dev/setup.sh --reset`, start `./start.sh --demo` and run status, diff, sync, scrub, check, list, dup, touch and smart in the UI.
 4. For a major version, compare the log tags with the fixtures in `backend/src/parsers/__tests__/fixtures/`.
 
@@ -224,7 +253,7 @@ GitHub Actions workflows in `.github/workflows/`:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | Push and pull request to `master`; called by the release workflow | Backend: `deno check src/main.ts`, `deno test --allow-all`. Frontend: `npm ci`, `npx biome check`, `npm run typecheck`, `npm test`, `npm run build` |
+| `ci.yml` | Push and pull request to `master`; called by the release workflow | Backend: `deno check src/main.ts`, `deno test --allow-all`. Frontend: `npm ci`, `npx biome check`, `npm run typecheck`, `npm test`, `npm run build`. [End-to-end tests](#end-to-end-tests) twice, against the local build and against the Docker image; the built tools are cached, a failure uploads traces and server logs |
 | `release.yml` | Push of a `v*` tag; manual run | Runs CI, then the shared Docker release workflow from `firsttris/workflows`. A tag `vX.Y.Z` publishes `tristanteu/snapraid-ui:X.Y.Z`, `:X.Y` and `:latest`, updates the Docker Hub description and creates the GitHub release. A manual run on `master` runs the same checks and pushes `:edge`, without a release |
 | `bump.yml` | Manual run | Raises the version in `frontend/package.json` (patch, minor or major), commits it, tags the commit `vX.Y.Z` and starts `release.yml` on it (shared [`bump-version`](https://github.com/firsttris/workflows#bump-version)) |
 | `upstream-release.yml` | Mondays 06:00 UTC; manual run | Two jobs, each opens an issue with a checklist. `snapraid` compares the pinned `SNAPRAID_VERSION` with SnapRAID's latest stable release. `snapraid-daemon` compares `backend/src/engine/REVIEWED_DAEMON_VERSION` with snapraid-daemon's newest tag, release candidates included |

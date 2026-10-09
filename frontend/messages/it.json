@@ -900,5 +900,7 @@
   "automation_daemon_hint": "Ogni daemon esegue sync, scrub, check, fix e diff e fornisce stato, SMART e alimentazione del suo array; per più array si avvia un'istanza ciascuno (snapraidd@<name>). Pianificazioni, notifiche, pausa Docker, spegnimento dischi, editor della configurazione, touch, dup e list restano a SnapRAID UI, le configurazioni senza daemon continuano a usare SnapRAID direttamente.",
   "automation_daemon_active": "Attivo",
   "automation_daemon_add": "Aggiungi un daemon per un altro array",
-  "automation_daemon_remove": "Rimuovi"
+  "automation_daemon_remove": "Rimuovi",
+  "schedules_run_now": "Esegui ora",
+  "schedules_run_started": "{name} avviato"
 }

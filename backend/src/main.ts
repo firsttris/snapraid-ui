@@ -85,7 +85,7 @@ const main = async (): Promise<void> => {
 
   // Use environment variables with config fallback
   const host = "0.0.0.0";
-  const port = 8080;
+  const port = Number(Deno.env.get("PORT") ?? 8080);
 
   // Initialize log manager
   const logManager = createLogManager(resolveFromBase(config.logs.directory));

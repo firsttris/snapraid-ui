@@ -66,6 +66,16 @@ export const schedulesApi = {
     return res.json()
   },
 
+  // Starts the schedule once, now; its result arrives like a timed run's
+  run: async (id: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE}/schedules/${id}/run`, {
+      method: 'POST',
+    })
+    if (!res.ok) {
+      throw await apiError(res)
+    }
+  },
+
   getNextRuns: async (): Promise<Record<string, string | null>> => {
     const res = await apiFetch(`${API_BASE}/schedules/next-runs`)
     if (!res.ok) throw await apiError(res)

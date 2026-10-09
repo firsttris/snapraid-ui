@@ -1,5 +1,5 @@
 import type { Schedule } from '@shared/types'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Play, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import {
   getCommandIcon,
@@ -27,17 +27,21 @@ interface ScheduleRowProps {
   onEdit: () => void
   onDelete: () => void
   onToggle: () => void
+  onRun: () => void
+  runDisabled: boolean // A job is running
 }
 
 const IconAction = ({
   label,
   onClick,
   destructive = false,
+  disabled = false,
   children,
 }: {
   label: string
   onClick: () => void
   destructive?: boolean
+  disabled?: boolean
   children: ReactNode
 }) => (
   <Tooltip>
@@ -46,6 +50,7 @@ const IconAction = ({
         variant={destructive ? 'ghostDestructive' : 'ghost'}
         size="icon-sm"
         onClick={onClick}
+        disabled={disabled}
         aria-label={label}
       >
         {children}
@@ -61,6 +66,8 @@ export const ScheduleRow = ({
   onEdit,
   onDelete,
   onToggle,
+  onRun,
+  runDisabled,
 }: ScheduleRowProps) => {
   const Icon = getCommandIcon(schedule.command)
   const isSync = schedule.command === 'sync'
@@ -206,6 +213,13 @@ export const ScheduleRow = ({
 
       <div className="flex shrink-0 flex-col-reverse items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
         <div className="flex items-center">
+          <IconAction
+            label={m.schedules_run_now()}
+            onClick={onRun}
+            disabled={runDisabled}
+          >
+            <Play />
+          </IconAction>
           <IconAction label={m.common_edit()} onClick={onEdit}>
             <Pencil />
           </IconAction>

@@ -809,6 +809,10 @@ export const useToggleSchedule = (
   })
 }
 
+export const useRunSchedule = () => {
+  return useMutation({ mutationFn: schedulesApi.run })
+}
+
 // ====================
 // Disk Replacement
 // ====================

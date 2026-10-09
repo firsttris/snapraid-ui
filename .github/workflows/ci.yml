@@ -56,3 +56,65 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  # SnapRAID, snapraid-daemon and the UI for real, driven through the browser (docs/development.md).
+  # local: backend and built frontend as processes; image: the Docker image from docker/Dockerfile
+  e2e:
+    if: ${{ !github.event.pull_request.draft }}
+    name: e2e (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [local, image]
+    defaults:
+      run:
+        working-directory: e2e
+    env:
+      E2E_IMAGE: ${{ matrix.target == 'image' && 'snapraid-ui:e2e' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            e2e/package-lock.json
+      - name: Cache SnapRAID and snapraid-daemon builds
+        uses: actions/cache@v4
+        with:
+          path: e2e/.tools
+          key: e2e-tools-${{ runner.os }}-${{ hashFiles('e2e/scripts/setup-tools.sh', 'backend/src/engine/REVIEWED_DAEMON_VERSION') }}
+      - name: Build SnapRAID 14, SnapRAID 15 and snapraid-daemon
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends autoconf automake zlib1g-dev
+          npm run setup
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx playwright install --with-deps chromium
+      - name: Install the frontend, the tests build it
+        if: matrix.target == 'local'
+        working-directory: frontend
+        run: npm ci
+      - name: Build the Docker image
+        if: matrix.target == 'image'
+        working-directory: .
+        run: docker build -t "$E2E_IMAGE" -f docker/Dockerfile .
+      - run: npm test
+      - name: Upload traces and server logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.target }}
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+            e2e/.run/*.log
+          retention-days: 7
+          include-hidden-files: true
