@@ -180,6 +180,8 @@ project layout, tests and translations.
 
 Issues and pull requests are welcome. Please run `npx biome check`, `npm run typecheck` and the tests
 (`deno test --allow-all` in `backend/`, `npm test` in `frontend/`) before opening a pull request.
+Changes to jobs, schedules or the Docker image are also covered by the end-to-end tests in `e2e/`,
+which CI runs against the local build and the image; see [Development](https://firsttris.github.io/snapraid-ui/development.html#end-to-end-tests) to run them locally.
 
 ---
 

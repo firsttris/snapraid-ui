@@ -159,7 +159,9 @@ The API was last compared with snapraid-daemon **`v2.0rc2`**; the version is in 
 
 `backend/src/__tests__/engine-contract.ts` holds what every engine has to do: a sync succeeds, the status lists the disks, the diff finds a new file, `afterRun` runs while the job is still current, and so on. `engine-contract.test.ts` runs it against the fake engine (`__tests__/fake-engine.ts`) always, against the CLI engine with a real SnapRAID binary, and against the daemon engine with a running snapraid-daemon (see [Development](development.md#tests)).
 
-Without a daemon, as in CI, `daemon-engine.test.ts` runs the daemon engine against a stand-in that answers like snapraid-daemon 2.0rc2: queuing and following a task, progress, abort, the fallback, auth and errors, and the mapping of its JSON to the UI's types. `engine-settings.test.ts` covers the settings and which engine runs which config, `scheduler.test.ts` the scheduler against the fake engine.
+Without a daemon, `daemon-engine.test.ts` runs the daemon engine against a stand-in that answers like snapraid-daemon 2.0rc2: queuing and following a task, progress, abort, the fallback, auth and errors, and the mapping of its JSON to the UI's types. `engine-settings.test.ts` covers the settings and which engine runs which config, `scheduler.test.ts` the scheduler against the fake engine.
+
+The [end-to-end tests](development.md#end-to-end-tests) run in CI against a real snapraid-daemon at the version in `REVIEWED_DAEMON_VERSION`: they switch to daemon mode in the UI, test the connection and check that a sync runs as a task of the daemon.
 
 ## Structured log parsing
 
