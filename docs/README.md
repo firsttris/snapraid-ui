@@ -23,7 +23,7 @@ Also as a website with search: **https://firsttris.github.io/snapraid-ui/**
 | [Notifications](notifications.md) | ntfy, e-mail and webhook, which events are sent, testing |
 | [SMART & disk health](smart.md) | SMART data, failure probability, warnings and what to do, usage history and fill-up forecast |
 | [Logs](logs.md) | The history of every run, filters, overview and raw log, retention |
-| [Managing disks](disks.md) | Managing configurations, the config editor, adding, replacing and removing disks, backup and restore |
+| [Managing disks](disks.md) | Managing arrays, the configuration page, adding, replacing and removing disks, backup and restore |
 | [Troubleshooting](troubleshooting.md) | Common problems and how to fix them |
 
 ## Behind the scenes

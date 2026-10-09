@@ -5,12 +5,18 @@ import { downloadBackup, restoreBackup } from '../lib/api/config'
 import * as m from '../paraglide/messages'
 import { errorMessage, useFeedback } from './Feedback'
 import { Button } from './ui/button'
-import { Separator } from './ui/separator'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
 
 /**
  * Download the settings as one file and restore them, e.g. to move to a new server
  */
-export const BackupSection = () => {
+export const BackupDialog = ({ onClose }: { onClose: () => void }) => {
   const { confirm, toast } = useFeedback()
   const queryClient = useQueryClient()
   const fileInput = useRef<HTMLInputElement>(null)
@@ -62,38 +68,43 @@ export const BackupSection = () => {
   }
 
   return (
-    <div className="flex flex-col">
-      <Separator className="mb-6" />
-      <h3 className="text-base font-semibold">{m.backup_title()}</h3>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {m.backup_description()}
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" disabled={busy} onClick={download}>
-          <Download />
-          {m.backup_download()}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          onClick={() => fileInput.current?.click()}
-        >
-          <Upload />
-          {m.backup_restore()}
-        </Button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          onChange={(event) => {
-            const file = event.target.files?.[0]
-            event.target.value = ''
-            if (file) restore(file)
-          }}
-        />
-      </div>
-    </div>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{m.backup_title()}</DialogTitle>
+          <DialogDescription>{m.backup_description()}</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={busy} onClick={download}>
+            <Download />
+            {m.backup_download()}
+          </Button>
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={() => fileInput.current?.click()}
+          >
+            <Upload />
+            {m.backup_restore()}
+          </Button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = ''
+              if (file) restore(file)
+            }}
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

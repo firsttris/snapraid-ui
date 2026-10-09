@@ -6,6 +6,7 @@ import * as m from '../paraglide/messages'
 import { DirectoryBrowser } from './DirectoryBrowser'
 import { ErrorAlert } from './ErrorAlert'
 import { useFeedback } from './Feedback'
+import { MountSuggestions } from './MountSuggestions'
 import { ReplaceDiskWizard } from './ReplaceDiskWizard'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
@@ -16,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 interface ParityDiskSectionProps {
   configPath: string
   parity: ParityLevel[]
+  usedPaths: string[]
   onAdd: (fullPath: string) => Promise<void>
   onRemove: (level: number) => Promise<void>
 }
@@ -25,6 +27,7 @@ const MAX_PARITY_LEVEL = 6
 export const ParityDiskSection = ({
   configPath,
   parity,
+  usedPaths,
   onAdd,
   onRemove,
 }: ParityDiskSectionProps) => {
@@ -136,6 +139,11 @@ export const ParityDiskSection = ({
             <p className="text-sm text-muted-foreground">
               {m.parity_disk_next_level({ keyword: nextKeyword })}
             </p>
+            <MountSuggestions
+              used={usedPaths}
+              warnNotEmpty
+              onPick={setNewParityPath}
+            />
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="parity-disk-path">
                 {m.parity_disk_directory_label()}

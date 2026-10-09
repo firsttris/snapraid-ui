@@ -51,6 +51,9 @@ import { formatGB } from '../lib/utils'
 import * as m from '../paraglide/messages'
 
 export const Route = createFileRoute('/setup')({
+  // From Manage arrays, where adding an existing config is right next to it
+  validateSearch: (search: Record<string, unknown>): { start?: 'new' } =>
+    search.start === 'new' ? { start: 'new' } : {},
   component: SetupPage,
 })
 
@@ -86,7 +89,8 @@ const warningText = (warning: CapacityWarning) =>
         })
 
 function SetupPage() {
-  const [step, setStep] = useState<Step>('choose')
+  const { start } = Route.useSearch()
+  const [step, setStep] = useState<Step>(start === 'new' ? 'disks' : 'choose')
   const [disks, setDisks] = useState<WizardDisk[] | null>(null)
   const [name, setName] = useState('')
 

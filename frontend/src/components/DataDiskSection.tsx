@@ -1,9 +1,11 @@
+import { nextDiskName } from '@shared/array-setup'
 import { Database, FolderOpen, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useDiskReplacement } from '../hooks/queries'
 import * as m from '../paraglide/messages'
 import { DirectoryBrowser } from './DirectoryBrowser'
 import { ErrorAlert } from './ErrorAlert'
+import { MountSuggestions } from './MountSuggestions'
 import { RemoveDataDiskWizard } from './RemoveDataDiskWizard'
 import { ReplaceDiskWizard } from './ReplaceDiskWizard'
 import { Badge } from './ui/badge'
@@ -16,6 +18,7 @@ interface DataDiskSectionProps {
   configPath: string
   data: Record<string, string>
   pendingRemoval: string[]
+  usedPaths: string[]
   onAdd: (name: string, path: string) => Promise<void>
 }
 
@@ -23,6 +26,7 @@ export const DataDiskSection = ({
   configPath,
   data,
   pendingRemoval,
+  usedPaths,
   onAdd,
 }: DataDiskSectionProps) => {
   // Captured on open, the wizard outlives the disk disappearing from the list
@@ -78,7 +82,13 @@ export const DataDiskSection = ({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setShowAddDataDisk(!showAddDataDisk)}
+          onClick={() => {
+            // The next free name, d1, d2, …, as the setup wizard picks them
+            if (!showAddDataDisk && !newDataDiskName) {
+              setNewDataDiskName(nextDiskName(Object.keys(data)))
+            }
+            setShowAddDataDisk(!showAddDataDisk)
+          }}
         >
           <Plus />
           {m.data_disk_add_disk()}
@@ -90,6 +100,10 @@ export const DataDiskSection = ({
 
         {showAddDataDisk && (
           <div className="flex flex-col gap-3 rounded-lg border border-dashed bg-muted/40 p-3">
+            <MountSuggestions
+              used={usedPaths}
+              onPick={(path) => setNewDataDiskPath(`${path}/`)}
+            />
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="data-disk-name">

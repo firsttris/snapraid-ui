@@ -29,7 +29,6 @@ import { getSession, logout } from '../lib/api/auth'
 import {
   addConfig,
   checkConfigs,
-  createConfig,
   getBasePath,
   getConfig,
   removeConfig,
@@ -356,17 +355,6 @@ export const useConfigChecks = (options?: { enabled?: boolean }) => {
 // ====================
 // Config Mutations
 // ====================
-
-export const useCreateConfig = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ name, fileName }: { name: string; fileName: string }) =>
-      createConfig(name, fileName),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.config })
-    },
-  })
-}
 
 export const useUpdateConfig = () => {
   const queryClient = useQueryClient()

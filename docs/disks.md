@@ -1,9 +1,9 @@
 # Configurations and disks
 
-SnapRAID UI works with your existing `snapraid.conf` files. This page explains how to add or create configurations, edit disks and settings in the config editor, replace a failed disk, remove a data disk and back up your settings.
+SnapRAID UI works with your existing `snapraid.conf` files. This page explains how to manage your arrays, edit disks and settings on the configuration page, replace a failed disk, remove a data disk and back up your settings.
 
-- [Managing configurations](#managing-configurations)
-- [The config editor](#the-config-editor)
+- [Managing arrays](#managing-arrays)
+- [The configuration page](#the-configuration-page)
 - [Adding disks and parity levels](#adding-disks-and-parity-levels)
 - [Replacing a failed disk](#replacing-a-failed-disk)
 - [Removing a data disk](#removing-a-data-disk)
@@ -12,9 +12,9 @@ SnapRAID UI works with your existing `snapraid.conf` files. This page explains h
 > [!NOTE]
 > All paths you enter (config files, disks, parity, content files) are paths **inside the container**. Mount your disks at the same paths as on the host so the paths in `snapraid.conf` stay valid, see [Installation](installation.md).
 
-## Managing configurations
+## Managing arrays
 
-Open **Manage Configurations** from the sidebar (or from the config selection menu, or the command palette). The dialog lists every SnapRAID config file the UI knows, with a short summary per file, such as `3 data · 1 parity · 4 content`.
+Open **Manage arrays** from the sidebar (or from the array selection menu, or the command palette). The dialog lists every array the UI knows, each with its SnapRAID config file and a short summary, such as `3 data · 1 parity · 4 content`.
 
 | Badge | Meaning |
 |---|---|
@@ -26,9 +26,9 @@ On the very first start, before `config.json` exists, the UI creates an entry na
 
 ### Set up a new array
 
-The setup wizard (`/setup`, offered on the dashboard as long as there is no configuration file) turns your disks into a working array:
+The setup wizard (`/setup`) turns your disks into a working array. The dashboard offers it as long as there is no configuration file; later, **Set up a new array** in *Manage arrays* starts it for another array:
 
-1. **Existing or new.** *Add existing configuration* opens *Manage Configurations* for a `snapraid.conf` you already have. *Set up a new array* starts the wizard.
+1. **Existing or new.** *Add existing configuration* opens *Manage arrays* for a `snapraid.conf` you already have. *Set up a new array* starts the wizard. Started with **Set up a new array** in *Manage arrays*, for a second array, the wizard begins right at this step.
 2. **Disks.** Give the array a name (it becomes the file name, `Media Server` → `media-server.conf`). The wizard lists the mounted filesystems with their size and used space, without system directories, the app's own folders and bind-mounted files. Choose a role for each: *Data*, *Parity* or *Not used*. Data disks get the names `d1`, `d2`, … which you can change. A disk that already holds a parity file is preselected as parity, empty disks are marked *empty*. *Add a folder* adds a path the list does not show, e.g. a subfolder.
 3. **Check.** The wizard needs at least one data and one parity disk (up to six), unique names and separate paths. It warns when a parity disk is smaller than the data on the largest data disk (the sync would fail), smaller than the largest data disk (fine until it fills up), or not empty.
 4. **Review.** The generated `snapraid.conf` is shown before it is written to the data folder. *Run the first sync right away* (on by default) starts it as soon as the array is created; on large disks it takes hours, the UI stays usable.
@@ -53,39 +53,32 @@ Data disks keep their files, SnapRAID only reads them. In Docker the wizard can 
 
 The file must exist, and the same file cannot be added twice. Files inside the data folder are stored with a relative path, so the data folder can move without breaking them.
 
-### Create a new config
+### Edit, rename, show or remove
 
-1. Click **Create new config**.
-2. Enter a *Configuration Name*. A *File name* is derived from it (`Media Server` becomes `media-server.conf`).
-3. Click **Create and edit**.
+- **Edit** opens the array's [configuration page](#the-configuration-page) and makes it the active array. A hidden array, or any array while a job runs, opens there without changing the active one.
+- **Rename** (in the **⋯** menu) changes the display name only. The file is not renamed.
+- The **switch** in front of each entry, *Shown* or *Hidden*, shows or hides the array in the array selection. A hidden array keeps its schedules, they go on running.
+- **Remove** (in the **⋯** menu) takes the array out of SnapRAID UI. The config file itself is kept.
 
-The file is created in the data folder; `.conf` is appended if you leave it out. File names may only contain letters, digits, `.`, `-` and `_`, and an existing file is never overwritten. The new file starts from a short template with three excludes (`*.unrecoverable`, `/tmp/`, `/lost+found/`) and comments; the config editor opens right away so you can add parity, content and data disks.
+## The configuration page
 
-### Rename, enable or remove
-
-- **Rename** (pencil icon) changes the display name only. The file is not renamed.
-- The **switch** in front of each entry shows or hides the configuration in the config selection.
-- **Remove** (trash icon) takes the configuration out of SnapRAID UI. The config file itself is kept.
-
-## The config editor
-
-Click **Edit** next to a configuration, or **Edit configuration** in the sidebar for the selected one. The editor has two modes, switched in its header.
+**Configuration** in the sidebar (under *Array*) opens the `snapraid.conf` of the active array as its own page, at `/array`. It has two modes, *Visual Editor* and *Text Editor*, and **Validate Config** next to them.
 
 ### Visual Editor
 
 > [!IMPORTANT]
 > Changes in the visual editor are written to the file immediately. There is no separate save step.
 
-The visual editor shows the configuration in sections:
+The visual editor shows the disks first and keeps the rest under **Advanced**, which opens by itself when the config has too few content files:
 
 | Section | What you can do |
 |---|---|
-| **Parity Disks** | Add the next parity level, replace a parity disk, remove the highest level. Split parity (several files per level) is shown as *split across N files*. |
-| **Content files** | Add or remove `content` lines. *Browse* picks a directory and appends `snapraid.content`. Removing a line keeps the file on disk. |
 | **Data Disks** | Add a data disk, replace or remove one. |
-| **Exclude Patterns** | Add or remove `exclude` lines, e.g. `*.bak`, `/tmp/`, `Thumbs.db`. The same pattern cannot be added twice. |
-| **Pooling** | Set, change or remove the `pool` directory, a virtual view of all files in your array using symbolic links. |
-| **Options** | `autosave` in GiB and `blocksize` in KiB. Leave a field empty and save to remove the line and use SnapRAID's default. |
+| **Parity Disks** | Add the next parity level, replace a parity disk, remove the highest level. Split parity (several files per level) is shown as *split across N files*. |
+| *Advanced:* **Content files** | Add or remove `content` lines. *Browse* picks a directory and appends `snapraid.content`. Removing a line keeps the file on disk. |
+| *Advanced:* **Exclude Patterns** | Add or remove `exclude` lines, e.g. `*.bak`, `/tmp/`, `Thumbs.db`. The same pattern cannot be added twice. |
+| *Advanced:* **Pooling** | Set, change or remove the `pool` directory, a virtual view of all files in your array using symbolic links. |
+| *Advanced:* **Options** | `autosave` in GiB and `blocksize` in KiB, saved when you leave the field or press <kbd>Enter</kbd>. Empty the field to remove the line and use SnapRAID's default. |
 
 > [!WARNING]
 > SnapRAID's default block size is 256 KiB. Changing `blocksize` on an existing array requires a completely new sync.
@@ -97,7 +90,7 @@ If a config contains no `content` line, the section shows a red warning: SnapRAI
 The text editor shows the raw file with syntax highlighting.
 
 - **Save Changes** (or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>S</kbd>) writes the file and then validates it automatically.
-- *● Unsaved changes* marks edits that are not written yet. Closing the editor or switching to the visual editor asks before it discards them.
+- *● Unsaved changes* marks edits that are not written yet. **Cancel** takes them back. Leaving the page, closing the tab or switching to the visual editor asks before it discards them.
 
 Use the text editor for everything the visual editor does not cover, for example `smartctl` or `nohidden` options.
 
@@ -110,7 +103,7 @@ Use the text editor for everything the visual editor does not cover, for example
 ### Data disk
 
 1. In **Data Disks**, click **Add Data Disk**.
-2. Enter a *Disk Name* (e.g. `d1`, must be unique in this config) and the *Mount Path* (e.g. `/mnt/disk1`), or pick it with the folder button.
+2. The *Disk Name* is filled in with the next free name (`d1`, `d2`, …); change it if you like, it must be unique in this config. For the *Mount Path*, click one of the **Detected disks**, the mounted filesystems that are not in the array yet with their size and free space (as in the setup wizard), or enter the path or pick it with the folder button.
 3. Click **Add**.
 
 The UI writes a `data` line and, directly below it, a content file on the new disk: `content <mount path>/.snapraid.content`. Remove that content line again if you do not want one on this disk. Run a sync afterwards to protect the new disk.
@@ -118,7 +111,7 @@ The UI writes a `data` line and, directly below it, a content file on the new di
 ### Parity level
 
 1. In **Parity Disks**, click **Add Parity Disk**. The form tells you which keyword the new level gets (`parity`, `2-parity`, …).
-2. Enter the *Parity Directory* (e.g. `/mnt/parity2`) and the *Parity Filename* (default `snapraid.parity`, must end with `.parity`).
+2. Enter the *Parity Directory* (e.g. `/mnt/parity2`), or click one of the **Detected disks** (a disk that is not empty is marked *Not empty*), and the *Parity Filename* (default `snapraid.parity`, must end with `.parity`).
 3. Click **Add**, then run a sync.
 
 A new parity disk always becomes the next level above the existing ones. SnapRAID supports at most 6 parity levels; each additional level protects against one more disk failure.
@@ -129,7 +122,7 @@ Only the **highest** parity level can be removed, because SnapRAID needs the lev
 
 The replace wizard restores a failed data or parity disk onto a new one, following "Recovering" in the SnapRAID manual. Mount the new, empty disk in the container first.
 
-1. In the editor, click **Replace** next to the failed disk.
+1. On the configuration page, click **Replace** next to the failed disk.
 2. Enter the new location:
    - data disk: *Mount point of the new disk* (or pick it with the folder button)
    - parity disk: *Parity file on the new disk*, ending with `.parity`
@@ -184,7 +177,7 @@ The wizard refuses to start when:
 
 ## Backup and restore
 
-At the bottom of **Manage Configurations**, **Backup** saves everything you configured in one JSON file, e.g. to move to a new server.
+**Backup** at the bottom of the sidebar (or in the command palette) saves everything you configured in one JSON file, e.g. to move to a new server.
 
 **Download backup** creates `snapraid-ui-backup-YYYY-MM-DD.json` with:
 

@@ -105,18 +105,18 @@ More about reading logs in [Logs](logs.md).
 
 SnapRAID UI works with ordinary `snapraid.conf` files. It keeps a list of them in `config.json` and reads and writes the files directly, so the SnapRAID command line can use the same files.
 
-In *Manage Configurations*:
+In *Manage arrays*:
 
 - **Add existing file** adds a config file by its path. Enter an absolute path, or a path relative to the data directory. The file must exist and be reachable inside the container.
-- **Create new config** creates `<file name>.conf` in the data directory from a template with a few common `exclude` rules. You then add parity, content and data disks in the visual editor.
-- **Rename** and the on/off switch change only the entry in `config.json`. A disabled config is hidden from the config selection.
+- **Set up a new array** starts the [setup wizard](disks.md#set-up-a-new-array), which writes `<name>.conf` in the data directory from the disks you pick.
+- **Rename** and the *Shown*/*Hidden* switch change only the entry in `config.json`. A hidden array leaves the array selection, its schedules keep running.
 - **Remove** takes the config off the list. The file itself is kept.
 
 Several configurations can be managed side by side, for example one per array. Each has its own schedules, logs, status and history.
 
 Editing a config file:
 
-- In the interface, use the visual editor or the text view. Changes in the visual editor are written to the file immediately. See [Managing disks](disks.md).
+- In the interface, open **Configuration** in the sidebar and use the visual editor or the text view. Changes in the visual editor are written to the file immediately. See [Managing disks](disks.md).
 - You can also edit the file on the host with any text editor. The UI reads the file each time it needs it, so changes show up after a page reload.
 
 SnapRAID UI doesn't keep previous versions of your config files. Make a copy or a *Download backup* before larger changes.

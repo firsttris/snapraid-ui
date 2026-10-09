@@ -1,6 +1,15 @@
 import type { SnapRaidCommand } from '@shared/types'
 import { useNavigate } from '@tanstack/react-router'
-import { Check, Monitor, Moon, Settings2, Sparkles, Sun } from 'lucide-react'
+import {
+  ArchiveRestore,
+  Check,
+  Layers,
+  Monitor,
+  Moon,
+  Settings2,
+  Sparkles,
+  Sun,
+} from 'lucide-react'
 import { useConfig } from '../hooks/queries'
 import { useAppShell } from '../hooks/useAppShell'
 import { useJob } from '../hooks/useJob'
@@ -10,7 +19,7 @@ import {
   getCommandIcon,
   getCommandLabel,
 } from '../lib/commands'
-import { NAV_ITEMS } from '../lib/nav'
+import { ARRAY_NAV_ITEM, NAV_ITEMS } from '../lib/nav'
 import { useMotion, useTheme } from '../lib/theme'
 import * as m from '../paraglide/messages'
 import {
@@ -102,7 +111,7 @@ export const CommandPalette = () => {
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading={m.palette_group_navigation()}>
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+          {[...NAV_ITEMS, ARRAY_NAV_ITEM].map(({ to, label, icon: Icon }) => (
             <CommandItem
               key={to}
               value={`nav ${label()}`}
@@ -130,8 +139,15 @@ export const CommandPalette = () => {
             value="config manage"
             onSelect={() => run(() => openConfigDialog('manager'))}
           >
-            <Settings2 />
+            <Layers />
             {m.config_manager_title()}
+          </CommandItem>
+          <CommandItem
+            value="backup"
+            onSelect={() => run(() => openConfigDialog('backup'))}
+          >
+            <ArchiveRestore />
+            {m.backup_title()}
           </CommandItem>
         </CommandGroup>
         <CommandSeparator />

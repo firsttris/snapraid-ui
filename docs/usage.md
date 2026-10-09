@@ -21,15 +21,16 @@ The sidebar on the left holds everything that is not specific to one page:
 
 | Element | What it does |
 |---|---|
-| *Active Configuration* | Switches the SnapRAID configuration that all pages work on. Only enabled configurations are listed. The dropdown also has *Edit configuration* and *Manage Configurations*. You can't switch while a job is running. |
+| *Active array* | Switches the SnapRAID array that all pages work on. Hidden arrays are not listed. The dropdown also has *Configuration* and *Manage arrays*. You can't switch while a job is running. |
 | *Overview* | Links to the pages *Dashboard*, *Recover files*, *SMART*, *Schedules*, *Logs*, *Notifications* and *Automation*. |
-| *Array* | *Edit configuration* opens the config editor for the active configuration, *Manage Configurations* lets you add, create, rename or enable configurations. See [Disks & configurations](disks.md). |
+| *Array* | *Configuration* opens the page with the `snapraid.conf` of the active array, *Manage arrays* lets you add, set up, rename, show or hide arrays. See [Disks & configurations](disks.md). |
+| *Backup* | Downloads or restores all settings in one file, see [Backup and restore](disks.md#backup-and-restore). |
 | *Animations* | *Off*, *Subtle* or *Strong*, see [below](#theme-language-and-animations). |
 | User box | Shown only when the login is enabled: your username and a *Log out* button. See [Security](security.md). |
 
 Your browser remembers the selected configuration and whether the sidebar is open. Below 1024 px (phones and tablets) the sidebar is hidden and opens over the page from the button at the top left; the version is shown at its bottom.
 
-If no configuration is set up yet (or all are disabled), the dashboard shows *Welcome to SnapRAID UI* with a button to *Manage Configurations*.
+If no configuration is set up yet (or all are disabled), the dashboard shows *Welcome to SnapRAID UI* with a button to *Manage arrays*.
 
 ### Header
 
@@ -54,8 +55,8 @@ Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>⌘</kbd>+<kbd>K</kbd> on a Mac) or cli
 | Group | Entries |
 |---|---|
 | *SnapRAID commands* | Sync, Scrub, Status, Diff, Check, Undelete, Touch, Duplicates, File List, Devices. Picking one opens the dashboard and starts the command there, including its dialog (for example the sync preview). Disabled while a job is running. |
-| *Navigation* | The five pages from the sidebar |
-| *Configuration* | *Switch to "…"* for every other enabled configuration, and *Manage Configurations* |
+| *Navigation* | The pages from the sidebar, including *Configuration* |
+| *Arrays* | *Switch to "…"* for every other shown array, *Manage arrays* and *Backup* |
 | *Settings* | *Theme: Light / Dark / System* and *Animations: Off / Subtle / Strong* |
 
 *Pool* is only available in the dashboard's *More commands* menu.

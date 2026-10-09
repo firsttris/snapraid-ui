@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react'
+import { ChevronRight, Loader2, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import {
   useAddDataDisk,
@@ -17,6 +17,7 @@ import { ExcludePatternSection } from './ExcludePatternSection'
 import { OptionsSection } from './OptionsSection'
 import { ParityDiskSection } from './ParityDiskSection'
 import { PoolSection } from './PoolSection'
+import { Badge } from './ui/badge'
 
 interface DiskManagerProps {
   configPath: string
@@ -132,44 +133,82 @@ export const DiskManager = ({ configPath, onUpdate }: DiskManagerProps) => {
     return <ErrorAlert error={m.disk_manager_load_failed()} />
   }
 
+  // A mount holding one of these is no candidate for a new disk
+  const usedPaths = [
+    ...Object.values(config.data),
+    ...config.parity.flatMap((level) => level.paths),
+    ...config.content,
+  ]
+
+  // Too few content files is a real problem, then the advanced settings start open
+  const contentMissing = config.content.length < config.parity.length + 1
+
   return (
     <div className="flex flex-col gap-4">
       {error && <ErrorAlert error={error} />}
-
-      <ParityDiskSection
-        configPath={configPath}
-        parity={config.parity}
-        onAdd={handleAddParity}
-        onRemove={handleRemoveParity}
-      />
-
-      <ContentFileSection
-        configPath={configPath}
-        content={config.content}
-        onUpdate={onUpdate}
-      />
 
       <DataDiskSection
         configPath={configPath}
         data={config.data}
         pendingRemoval={config.pendingRemoval}
+        usedPaths={usedPaths}
         onAdd={handleAddDataDisk}
       />
 
-      <ExcludePatternSection
-        exclude={config.exclude}
-        onAdd={handleAddExclude}
-        onRemove={handleRemoveExclude}
-      />
-
-      <PoolSection pool={config.pool} onPoolChange={handleSetPool} />
-
-      <OptionsSection
+      <ParityDiskSection
         configPath={configPath}
-        autosave={config.autosave}
-        blocksize={config.blocksize}
-        onUpdate={onUpdate}
+        parity={config.parity}
+        usedPaths={usedPaths}
+        onAdd={handleAddParity}
+        onRemove={handleRemoveParity}
       />
+
+      {/* What most arrays set once and leave alone */}
+      <details
+        className="group flex flex-col rounded-xl border bg-card shadow-sm"
+        open={contentMissing || undefined}
+      >
+        <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 [&::-webkit-details-marker]:hidden">
+          <ChevronRight className="size-4 text-muted-foreground transition-transform group-open:rotate-90" />
+          <span className="text-base font-semibold">
+            {m.config_advanced_title()}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {m.config_advanced_summary({
+              content: config.content.length,
+              exclude: config.exclude.length,
+            })}
+          </span>
+          {contentMissing && (
+            <Badge variant="warning">
+              <TriangleAlert />
+              {m.config_advanced_content_missing()}
+            </Badge>
+          )}
+        </summary>
+        <div className="flex flex-col gap-4 border-t p-4">
+          <ContentFileSection
+            configPath={configPath}
+            content={config.content}
+            onUpdate={onUpdate}
+          />
+
+          <ExcludePatternSection
+            exclude={config.exclude}
+            onAdd={handleAddExclude}
+            onRemove={handleRemoveExclude}
+          />
+
+          <PoolSection pool={config.pool} onPoolChange={handleSetPool} />
+
+          <OptionsSection
+            configPath={configPath}
+            autosave={config.autosave}
+            blocksize={config.blocksize}
+            onUpdate={onUpdate}
+          />
+        </div>
+      </details>
     </div>
   )
 }
