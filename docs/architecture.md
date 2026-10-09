@@ -81,7 +81,8 @@ Module map:
 | `websocket.ts` | WebSocket client set, `broadcast()`, replay of the running job on connect |
 | `executors/command-executor.ts` | Spawns long-running SnapRAID jobs, streams output, tracks the current and last job, follows progress, handles abort |
 | `executors/log-tail.ts` | Reads new lines that a running process appends to its log file |
-| `snapraid-runner.ts` | Facade over the executor plus short report commands (`devices`, `list`, `dup`, `diff`) |
+| `engine/engine.ts`, `engine/cli-engine.ts` | The [SnapRAID engine](#snapraid-engine) interface and its CLI implementation: jobs, status, diff, SMART, power state |
+| `snapraid-runner.ts` | Reports only the CLI gives (`devices`, `list`, `dup`) |
 | `parsers/*` | Parsers for SnapRAID's structured log: `status`, `diff`, `check`, `list`, `dup`, `smart`, `probe`, `devices`, progress (`run:pos`) |
 | `run-report.ts` | Summarizes a finished run (result, duration, error counts, sync changes) from its log |
 | `log-manager.ts` | Log file naming, listing, outcome detection, last run per config, rotation, deletion |
@@ -103,12 +104,51 @@ Module map:
 
 Every SnapRAID call goes through `snapraidCommand()` in `config.ts`: it runs `SNAPRAID_BIN` (default `snapraid`, in the image `/usr/local/bin/snapraid`) with the arguments from `SNAPRAID_EXTRA_ARGS` prepended. There are two ways a command runs:
 
-- **Jobs** (`POST /api/snapraid/execute`, the wizards, the scheduler) run through the command executor. Only one job runs at a time: a second start returns `409`. The executor runs `snapraid <command> -c <config> -l <logs>/<command>-YYYYMMDD-HHMMSS.log [--gui] [args…]`. `--gui` is added for `sync`, `scrub`, `check` and `fix`, which makes SnapRAID write its progress (`run:pos` tags) into the log instead of drawing a progress bar on the console. The log file name uses UTC.
+- **Jobs** (`POST /api/snapraid/execute`, the wizards, the scheduler) run through the engine's `runJob`, in the CLI engine the command executor. Only one job runs at a time: a second start returns `409`. The executor runs `snapraid <command> -c <config> -l <logs>/<command>-YYYYMMDD-HHMMSS.log [--gui] [args…]`. `--gui` is added for `sync`, `scrub`, `check` and `fix`, which makes SnapRAID write its progress (`run:pos` tags) into the log instead of drawing a progress bar on the console. The log file name uses UTC.
 - **Reports** (`status`, `diff`, `list`, `dup`, `smart`, `probe`, `devices`, `validate`) run directly and return their result in the HTTP response. They add `--log ">&2"`, so the structured log goes to stderr while the human-readable report stays on stdout. `GET /api/snapraid/status` refuses to run while a job is running (SnapRAID's lock would make it fail) and also reports `409` when another SnapRAID process, e.g. a host cron job, holds the lock.
 
 Aborting sends `SIGINT`, which SnapRAID treats like Ctrl+C: it stops at the next block and saves its state. The job stays current until the process has exited.
 
 When a job fails, the executor checks its output for SnapRAID's suggestion `'snapraid --force-zero|empty|uuid …'` (`shared/force-option.ts`) and reports it as `forceOption`, so the UI can offer a confirmed retry. See [Usage](usage.md) for the user side.
+
+## SnapRAID engine
+
+Everything the UI could get from [snapraid-daemon](https://github.com/amadvance/snapraid-daemon)'s REST API instead of calling the CLI itself sits behind one interface, `SnapRaidEngine` in `backend/src/engine/engine.ts`. Today there is one implementation, `createCliEngine()` in `engine/cli-engine.ts`, which wraps the command executor and the parsers. The routes, the scheduler, the WebSocket and `main.ts` only talk to `getEngine()`, so a second implementation on the daemon's API can be put in place without touching them.
+
+| Engine method | CLI engine (today) | snapraid-daemon equivalent |
+|---|---|---|
+| `runJob` | `snapraid <command> -l <log>` through the executor | `POST /snapraid/v1/schedule` with `{tasks: [{command, args}]}` for `sync`, `scrub`, `check`, `fix`, `diff`, `smart`, `probe`, `up`, `down`. The daemon has no `touch` and no `status` job |
+| `abortJob` | `SIGINT` to the process | `POST /snapraid/v1/stop` |
+| `currentJob`, `currentOutput`, `lastJob`, `onProgress` | Executor state, `run:pos` tags from the log | `GET /snapraid/v1/activity` and `/v1/tasks`, polled when the counters in `GET /snapraid/v1/state` change |
+| `readStatus` | `snapraid status` plus the disk check (`disk-check.ts`) | `GET /snapraid/v1/array`; per-disk health in `GET /snapraid/v2/disks` |
+| `readDiff` | `snapraid diff` | A `diff` task, then `GET /snapraid/v1/array?limit_diffs=…` |
+| `readSmart` | `snapraid smart` | `GET /snapraid/v2/disks` |
+| `readPowerStates` | `snapraid probe` | `GET /snapraid/v2/disks` (power state) |
+
+Stays with the UI whatever the engine, because the daemon has no API for it or it is the UI's own feature:
+
+- Editing and validating `snapraid.conf`, the disk wizards and `pool`: the daemon only reads `snapraid.conf`; its config API covers `snapraidd.conf`.
+- `dup`, `list` and `devices` (`snapraid-runner.ts`).
+- Schedules, notifications, Docker pause and spindown (`scheduler.ts`, `notifications.ts`, `container-pause.ts`, `spindown.ts`). With a daemon engine, its own `maintenance_schedule`, notifications, `hook_docker_pause` and spindown have to stay off, so they never run next to the UI's.
+
+Open points for a daemon engine:
+
+- **Logs and last runs** come from the log files the CLI engine writes (`log-manager.ts`). The daemon keeps its task history in `/v1/tasks`.
+- **`RunReport.log`** holds the CLI's structured log. A daemon engine fills the report's fields from the task directly and leaves `log` empty.
+- **SnapRAID's lock**: CLI-only commands (`dup`, `list`, config validation) still run `snapraid` themselves. With a daemon, they must check whether it holds the lock.
+
+### Keeping the engine in line with snapraid-daemon
+
+The API was last compared with snapraid-daemon **`v2.0rc2`**; the version is in `backend/src/engine/REVIEWED_DAEMON_VERSION`. A weekly workflow (`snapraid-daemon-release.yml`) opens an issue when a newer tag is out. For each new version:
+
+1. Compare `snapraidd.yaml` (the OpenAPI spec) between the reviewed and the new tag.
+2. If the daemon gained an endpoint for something in the "stays with the UI" list (for example `dup` or `list`), add a method to `SnapRaidEngine`, implement it in the CLI engine, move the callers to it and add a step to the contract tests.
+3. Update the tables above.
+4. Put the new version into `REVIEWED_DAEMON_VERSION`.
+
+### Tests
+
+`backend/src/__tests__/engine-contract.ts` holds what every engine has to do: a sync succeeds, the status lists the disks, the diff finds a new file, `afterRun` runs while the job is still current, and so on. `engine-contract.test.ts` runs it against the fake engine (`__tests__/fake-engine.ts`) always, and against the CLI engine with a real SnapRAID binary (see [Development](development.md#tests)). A daemon engine gets the same contract. The scheduler is tested against the fake engine (`scheduler.test.ts`).
 
 ## Structured log parsing
 

@@ -1,14 +1,10 @@
 import { Hono } from "hono";
-import { parseProbeOutput } from "../parsers/probe-parser.ts";
-import { parseSmartArrayFailure, parseSmartOutput } from "../parsers/smart-parser.ts";
-import { snapraidCommand, resolveFromBase } from "../config.ts";
-import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
+import { resolveFromBase } from "../config.ts";
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { getDataDiskUsage, getParityUsage } from "../parity-usage.ts";
 import { withCrcBaseline } from "../smart-baseline.ts";
 import { getSmartHistory, recordSmartHistory } from "../smart-history.ts";
-import { DEMO_MODE, demoProbeLog, demoSmartLog } from "../demo.ts";
-import { msg } from "@shared/i18n.ts";
+import { EngineCommandError, EngineUnsupportedError, getEngine } from "../engine/engine.ts";
 
 const hardware = new Hono();
 
@@ -23,38 +19,23 @@ hardware.get("/smart", async (c) => {
   const configPath = resolveFromBase(relativePath);
 
   try {
-    if (DEMO_MODE) {
-      const log = await demoSmartLog(configPath);
-      return c.json({
-        disks: parseSmartOutput(log),
-        arrayFailureProbability: parseSmartArrayFailure(log),
-        timestamp: new Date().toISOString(),
-        rawOutput: log,
-      });
-    }
-
-    const command = snapraidCommand(["-c", configPath, ...STRUCTURED_LOG_ARGS, "smart"]);
-
-    const { code, stdout, stderr } = await command.output();
-    const output = new TextDecoder().decode(stdout);
-    const { log, text: errorOutput } = splitStructuredOutput(new TextDecoder().decode(stderr));
-
-    const disks = await withCrcBaseline(configPath, parseSmartOutput(log));
+    const reading = await getEngine().readSmart(configPath);
+    const disks = await withCrcBaseline(configPath, reading.disks);
     await recordSmartHistory(configPath, disks);
 
     // SnapRAID exits with an error when a disk is FAIL or PREFAIL, the report is complete though
-    if (code !== 0 && disks.length === 0) {
-      return c.json({ 
-        error: errorOutput || "Failed to get SMART report",
-        exitCode: code 
+    if (reading.exitCode !== 0 && disks.length === 0) {
+      return c.json({
+        error: reading.error || "Failed to get SMART report",
+        exitCode: reading.exitCode,
       }, 500);
     }
 
     return c.json({
       disks,
-      arrayFailureProbability: parseSmartArrayFailure(log),
+      arrayFailureProbability: reading.arrayFailureProbability,
       timestamp: new Date().toISOString(),
-      rawOutput: output,
+      rawOutput: reading.rawOutput,
     });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
@@ -87,46 +68,19 @@ hardware.get("/probe", async (c) => {
   const configPath = resolveFromBase(relativePath);
 
   try {
-    if (DEMO_MODE) {
-      const log = await demoProbeLog(configPath);
-      return c.json({ disks: parseProbeOutput(log), timestamp: new Date().toISOString(), rawOutput: log });
-    }
-
-    const command = snapraidCommand(["-c", configPath, ...STRUCTURED_LOG_ARGS, "probe"]);
-
-    const { code, stdout, stderr } = await command.output();
-    const output = new TextDecoder().decode(stdout);
-    const { log, text: errorOutput } = splitStructuredOutput(new TextDecoder().decode(stderr));
-
-    // Check if probe is unsupported - can be in stdout, stderr, or both
-    // SnapRAID sometimes returns exit code 0 even when probe fails!
-    const combinedOutput = output + "\n" + errorOutput;
-    if (combinedOutput.includes("unsupported") || combinedOutput.includes("Probe is unsupported")) {
-      return c.json({ 
-        error: msg("server_error_probe_unsupported"),
+    return c.json(await getEngine().readPowerStates(configPath));
+  } catch (error) {
+    if (error instanceof EngineUnsupportedError) {
+      return c.json({
+        error: error.message,
         unsupported: true,
-        exitCode: code,
-        rawOutput: combinedOutput.trim()
+        exitCode: error.exitCode,
+        rawOutput: error.rawOutput,
       }, 400);
     }
-
-    if (code !== 0) {
-      return c.json({ 
-        error: errorOutput || "Failed to probe disk status",
-        exitCode: code,
-        rawOutput: combinedOutput.trim()
-      }, 500);
+    if (error instanceof EngineCommandError) {
+      return c.json({ error: error.message, exitCode: error.exitCode, rawOutput: error.rawOutput }, 500);
     }
-
-    // Parse probe output
-    const disks = parseProbeOutput(log);
-
-    return c.json({
-      disks,
-      timestamp: new Date().toISOString(),
-      rawOutput: output,
-    });
-  } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
 });
