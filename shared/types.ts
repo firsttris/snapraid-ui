@@ -631,3 +631,19 @@ export interface MountCandidate {
   empty: boolean;           // Nothing on it but lost+found
   snapraidFiles: string[];  // Parity or content files of an existing array at its top level
 }
+// Home Assistant over MQTT: discovery for one device per array, its state, and sync/scrub buttons
+export interface HomeAssistantSettings {
+  enabled: boolean;
+  url: string;              // mqtt://host:1883 or mqtts://host:8883
+  username: string;
+  password: string;         // Masked when sent to the browser
+  discoveryPrefix: string;  // Home Assistant's, "homeassistant" unless changed there
+  baseTopic: string;        // Where SnapRAID UI publishes state and listens for commands
+}
+
+export interface HomeAssistantStatus {
+  connected: boolean;
+  error?: string;
+  publishedAt?: string;     // Last state published, ISO
+}
+

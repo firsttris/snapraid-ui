@@ -25,6 +25,8 @@ export const PORTS = {
   daemon: 4176,
   // Receives the webhook notifications of the tests
   webhook: 4177,
+  // MQTT broker standing in for the one of Home Assistant
+  mqtt: 4178,
 }
 
 export const APP_URL = `http://127.0.0.1:${PORTS.app}`

@@ -49,6 +49,51 @@ How it works:
 > [!NOTE]
 > If the host already spins disks down, for example with `hdparm -S` or `hd-idle`, leave this off or use the same idle time. Frequent spin-ups wear disks more than running; very short idle times are not worth it for disks that are used every few minutes.
 
+## Home Assistant
+
+Each array of SnapRAID UI appears in [Home Assistant](https://www.home-assistant.io) as a device, through [MQTT discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery). No custom integration to install: Home Assistant's MQTT integration picks the entities up on its own.
+
+| Field | Default | Description |
+|---|---|---|
+| *MQTT broker* | | The broker Home Assistant uses, e.g. `mqtt://homeassistant.local:1883` for the Mosquitto add-on, or `mqtts://` for TLS. |
+| *Username*, *Password* | | Credentials on the broker; for the Mosquitto add-on a Home Assistant user. The password is stored in `home-assistant.json` (mode 600) and never sent back to the browser. |
+| *Discovery prefix* | `homeassistant` | Change it only if you changed it in Home Assistant. |
+| *Topic of SnapRAID UI* | `snapraid-ui` | Where the state is published and the buttons are received. |
+
+*Test connection* connects with the values as entered. After saving, the card shows *Connected* or *Not connected*.
+
+Entities of a device *SnapRAID &lt;name&gt;*:
+
+| Entity | Type | Value |
+|---|---|---|
+| Health | sensor | `ok`, `errors` (bad blocks), `disk_missing`, `sync_incomplete`, or `unknown` until the status was read once |
+| Problem | binary sensor (problem) | On when the health is not `ok` |
+| Job running | binary sensor (running) | On while a job of this array runs |
+| Bad blocks | sensor | Blocks marked bad by scrub or check |
+| Last sync, Last scrub | sensor (timestamp) | End of the last run |
+| Scrubbed | sensor (%) | Share of the array scrubbed |
+| *disk* temperature, *disk* used | sensor (°C, %) | Per disk, from the last SMART read and status read |
+| Sync, Scrub | button | Starts the job, scrub with the default plan |
+
+The *Sync* button runs with the sync guard of a new schedule: it is skipped when `diff` reports more than 50 deleted or 100 changed files, and the *A scheduled job was skipped* notification says why. Nothing starts while another job runs.
+
+The values come from what SnapRAID UI already knows, as for the [Prometheus metrics](#prometheus-metrics), so publishing never wakes a disk. State is published when it changes (checked every 5 seconds for jobs, every 30 seconds otherwise) and at least every 5 minutes, all as retained messages. `snapraid-ui/status` is `online` while SnapRAID UI is connected and `offline` otherwise (MQTT last will), so the entities turn unavailable when SnapRAID UI is down. When Home Assistant restarts, it gets the discovery again; entities of a removed array are removed.
+
+Example automation, a push to the phone when the array has a problem:
+
+```yaml
+automation:
+  - alias: SnapRAID problem
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.snapraid_media_problem
+        to: "on"
+    action:
+      - service: notify.mobile_app_phone
+        data:
+          message: "SnapRAID: {{ states('sensor.snapraid_media_health') }}"
+```
+
 ## Prometheus metrics
 
 Exposes the state of the arrays for [Prometheus](https://prometheus.io) at `/api/metrics`, for Grafana dashboards and alerts. The values come from what SnapRAID UI already knows; a scrape runs neither SnapRAID nor `smartctl`, so it never wakes a disk.

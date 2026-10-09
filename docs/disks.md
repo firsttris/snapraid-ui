@@ -193,6 +193,7 @@ At the bottom of **Manage Configurations**, **Backup** saves everything you conf
 | `config.json` | Configurations and app settings |
 | `schedules.json` | Schedules |
 | `notifications.json` | Notification settings |
+| `maintenance.json`, `engine.json`, `home-assistant.json` | Automation settings: Docker pause, spindown, metrics, snapraid-daemon, Home Assistant |
 | `smart-baseline.json`, `smart-history.json` | SMART history |
 | `usage-history.json` | Usage history |
 | SnapRAID configs | Every config file listed in `config.json` |
@@ -200,7 +201,7 @@ At the bottom of **Manage Configurations**, **Backup** saves everything you conf
 Logs and the state of a running disk replacement are not included.
 
 > [!WARNING]
-> The backup contains your notification passwords and tokens. Keep it private.
+> The backup contains your notification, daemon and MQTT passwords and tokens. Keep it private.
 
 **Restore backup** asks for confirmation, then writes the files back and restarts the schedules. Files the backup does not contain stay as they are. Some files are not restored, and the message lists them under *Not restored*:
 
