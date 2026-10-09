@@ -6,13 +6,19 @@ import { twMerge } from 'tailwind-merge'
  */
 export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs))
 
+const BYTE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+
 /**
- * Format bytes to human-readable file size
+ * Format bytes to a human-readable size, 1024-based like the file managers
  */
-export const formatFileSize = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+export const formatBytes = (bytes: number): string => {
+  let value = bytes
+  let unit = 0
+  while (value >= 1024 && unit < BYTE_UNITS.length - 1) {
+    value /= 1024
+    unit++
+  }
+  return unit === 0 ? `${bytes} B` : `${value.toFixed(1)} ${BYTE_UNITS[unit]}`
 }
 
 /**

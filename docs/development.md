@@ -54,7 +54,8 @@ pkill -f "vite dev"
 - builds SnapRAID (`SNAPRAID_VERSION`, default 14.10) from the official release tarball into `dev/bin/snapraid`, cached in `dev/.cache/`;
 - downloads Deno (`DENO_VERSION`, default 2.9.7) into `dev/tools/` if `deno` is not installed;
 - creates `dev/sandbox/` with the array "Media Array": four data "disks" (`disks/disk1`–`disk4`) and a parity disk (`disks/parity1`) filled with random files, a `snapraid.conf` and `config.json`;
-- runs sync, scrub, touch and sync again with their logs, then adds, changes and deletes a file and runs `diff` and `status`, so that every page has something to show;
+- puts copies of a few files on other disks, for the duplicates page;
+- runs sync, scrub, touch and sync again with their logs, then adds, changes, moves and deletes files and runs `diff` and `status`, so that every page has something to show;
 - gives the sandbox a past with `dev/seed-demo.ts`: the job logs move back in time (last sync 10 hours ago, scrub yesterday), `usage-history.json` gets two months of disk usage with one disk filling up, `schedules.json` a nightly sync with touch and scrub, a weekly scrub and a SMART check, and `maintenance.json` Docker pause and spindown.
 
 All sandbox disks are directories on one filesystem, which SnapRAID only accepts with `--test-skip-device`. They hold a few KiB and have no SMART data, power state or Docker next to them, so `SNAPRAID_DEMO=1` makes the backend answer like a real home server (`backend/src/demo.ts`):
@@ -149,7 +150,7 @@ cd backend && SNAPRAID_TEST_DAEMON_URL=http://127.0.0.1:7627 SNAPRAID_TEST_DAEMO
 The test adds files to the array's first data disk. In `snapraidd.conf` set `net_port = 127.0.0.1:7627` and leave `maintenance_schedule` empty. The daemon only runs a real binary as `sys_engine`, no script; for disks that share one filesystem, point it at a small compiled wrapper that adds `--test-skip-device`.
 
 - **Backend** tests use `Deno.test` with `@std/assert`. Parser tests in `backend/src/parsers/__tests__/` run against real SnapRAID logs in `fixtures/`; when SnapRAID's log format changes, add or update a fixture from a real run. The [engine contract](architecture.md#snapraid-engine) runs against the fake engine always and against the CLI engine when `SNAPRAID_BIN` and `--test-skip-device` are set (otherwise it shows as *ignored*); the scheduler is tested against the fake engine. Other tests cover auth, backup/restore, config paths, the disk wizards, `--force-*` detection, the log manager, notifications, the SMART baseline and history, and the usage history.
-- **Frontend** tests use Vitest and live in `frontend/src/lib/__tests__/`: log parsing, progress, the job tracker and the i18n checks described [below](#translations). Run them from `frontend/`, they read `messages/` and `../backend/src` by relative path.
+- **Frontend** tests use Vitest and live in `frontend/src/lib/__tests__/`: log parsing, progress, the job tracker, the changes, duplicates and protected files pages' logic and the i18n checks described [below](#translations). Run them from `frontend/`, they read `messages/` and `../backend/src` by relative path.
 
 ### End-to-end tests
 
@@ -157,10 +158,11 @@ The test adds files to the array's first data disk. In `snapraidd.conf` set `net
 
 | Test | What happens |
 |---|---|
-| `array.spec.ts` | Dashboard health and disks; sync with its preview (new and deleted files); bit rot in a file, found by a full scrub, repaired and verified by *Repair and verify*, byte for byte; *Recover files* from the commands menu restoring all deleted files (`fix -m`); spinning disks up and down |
+| `array.spec.ts` | Dashboard health and disks; sync with its preview (new and deleted files); bit rot in a file, found by a full scrub, repaired and verified by *Repair and verify*, byte for byte; *Recover files* from the commands menu restoring all deleted files (`fix -m`) on the *Changes* page; spinning disks up and down |
 | `schedules.spec.ts` | The nightly routine (touch, sync, scrub) created in the form and started with *Run now*; a scheduled sync skipped while a disk is empty (not mounted), the dashboard shows *Disk not available*; a sync skipped for mass changes, as ransomware leaves them; *Skip next run* and taking it back |
 | `setup.spec.ts` | The setup wizard after a first start: disks picked, the configuration written and synced, the placeholder entry replaced; a setup without parity or with a too small parity disk refused |
-| `recovery.spec.ts` | *Recover files*: a deleted file and an encrypted one restored byte for byte; a file of the same path on another disk left alone; restored files and a recreated folder get the owner and permissions of their folder, not `root` and `600` |
+| `changes.spec.ts` | *Changes*: a deleted file and an encrypted one restored byte for byte, the old `/recovery` address leading there; a file of the same path on another disk left alone; restored files and a recreated folder get the owner and permissions of their folder, not `root` and `600`; new files with their folder totals and a moved file listed, *Start sync* opening the sync preview; *Diff* in the commands menu leading to the page |
+| `files.spec.ts` | *Duplicates*: the copy chosen by path or by hand stays, the others are deleted, a copy changed since the sync is left alone with its reason, deleted copies drop out of the list and show up as deleted; *Protected files*: search (a file added after the sync is not found), totals per disk, opening a folder |
 | `smart.spec.ts` | SMART self-tests on the SMART page: a short test followed to *Passed* in the disk's log, a long one stopped; `smartctl` is a stand-in (`harness/bin/smartctl`), there are no disks to test |
 | `replace.spec.ts` | A failed data disk replaced in the wizard: its files come back from parity onto an empty disk, owned like the same folders on the other disk |
 | `home-assistant.spec.ts` | Home Assistant set up in the UI against an MQTT broker in the test: discovery and state arrive, the Scrub and Sync buttons run their jobs |

@@ -67,10 +67,10 @@ test('undelete in the commands menu brings back all deleted files from parity', 
   await app.addArray(array, 'Undelete')
   await page.goto('/')
 
-  // The menu entry leads to the Recover files page
+  // The menu entry leads to the deleted files on the changes page
   await page.getByRole('button', { name: 'More commands' }).click()
   await page.getByRole('menuitem', { name: /Recover files/ }).click()
-  await expect(page).toHaveURL(/\/recovery$/)
+  await expect(page).toHaveURL(/\/changes\?tab=deleted$/)
 
   await page.getByRole('button', { name: 'Restore all 1 deleted' }).click()
   await expect(page.getByRole('alertdialog')).toContainText('snapraid fix -m')

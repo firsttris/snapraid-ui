@@ -2,7 +2,7 @@ import type { LogFile } from '@shared/types'
 import { Loader2, Trash2 } from 'lucide-react'
 import { getCommandLabel } from '../lib/commands'
 import { getResultLabel, RESULT_ICONS } from '../lib/run-result'
-import { cn, formatDuration, formatFileSize, formatTime } from '../lib/utils'
+import { cn, formatBytes, formatDuration, formatTime } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { Badge } from './ui/badge'
@@ -106,7 +106,7 @@ export const LogListItem = ({
               </>
             )}
             <span aria-hidden="true">·</span>
-            <span className="tabular-nums">{formatFileSize(log.size)}</span>
+            <span className="tabular-nums">{formatBytes(log.size)}</span>
             {configName && (
               <>
                 <span aria-hidden="true">·</span>

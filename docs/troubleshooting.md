@@ -87,7 +87,7 @@ SnapRAID refuses to run when it looks like data loss. The dashboard explains the
 | *Stopped for safety: several disks have a new UUID* | Disks were replaced, or mount points got mixed up | Check that every disk is mounted at its path. Only continue with `--force-uuid` if you really replaced the disks. |
 
 > [!WARNING]
-> A forced run skips SnapRAID's safety check. A sync with a missing disk drops that disk's files from parity. If in doubt, run **Diff** first and look at the deleted files.
+> A forced run skips SnapRAID's safety check. A sync with a missing disk drops that disk's files from parity. If in doubt, open **Changes** first and look at the deleted files.
 
 See [Usage](usage.md) for how commands and the force option work.
 
@@ -99,7 +99,7 @@ The schedule list shows the reason of a skipped run, and you can get a notificat
 |---|---|
 | *Another job was running.* | A job was still running when the schedule was due. The run is skipped, not queued. Spread your schedules apart. |
 | *A disk is being replaced, scheduled jobs are paused.* | A [disk replacement](disks.md#replacing-a-failed-disk) of this configuration is in progress. Finish it, or click **Stop replacing** in the wizard. |
-| *N deleted files, more than allowed.* | The [sync guard](scheduling.md#sync-guard) found more deleted files than the limit. Check with **Diff** whether a disk is missing, then start the sync manually. |
+| *N deleted files, more than allowed.* | The [sync guard](scheduling.md#sync-guard) found more deleted files than the limit. Check on **Changes** whether a disk is missing, then start the sync manually. |
 | *Diff before sync failed: …* | The diff that the sync guard runs before the sync failed, often for the same reasons a sync would (missing disk, lock held by another process). |
 
 ## SMART and disk power state
@@ -133,7 +133,7 @@ Fix them by hand, e.g. `chown -R tristan:tristan /mnt/disk1/photos` and `chmod 6
 
 ### A recovered file is still listed as changed
 
-SnapRAID sometimes keeps the new modification time of a file it restored in place, to not mix it up with another file. Its content is the one of the last sync; *Recover files* hides it, and the next sync reads it again.
+SnapRAID sometimes keeps the new modification time of a file it restored in place, to not mix it up with another file. Its content is the one of the last sync; the *Changes* page hides it, and the next sync reads it again.
 
 ## Config editor and disk wizards
 

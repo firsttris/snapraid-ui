@@ -12,6 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ArrayRouteImport } from './routes/array'
 import { Route as AutomationRouteImport } from './routes/automation'
+import { Route as ChangesRouteImport } from './routes/changes'
+import { Route as DuplicatesRouteImport } from './routes/duplicates'
+import { Route as FilesRouteImport } from './routes/files'
 import { Route as LogsRouteImport } from './routes/logs'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as RecoveryRouteImport } from './routes/recovery'
@@ -32,6 +35,21 @@ const ArrayRoute = ArrayRouteImport.update({
 const AutomationRoute = AutomationRouteImport.update({
   id: '/automation',
   path: '/automation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangesRoute = ChangesRouteImport.update({
+  id: '/changes',
+  path: '/changes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DuplicatesRoute = DuplicatesRouteImport.update({
+  id: '/duplicates',
+  path: '/duplicates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FilesRoute = FilesRouteImport.update({
+  id: '/files',
+  path: '/files',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LogsRoute = LogsRouteImport.update({
@@ -69,6 +87,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/array': typeof ArrayRoute
   '/automation': typeof AutomationRoute
+  '/changes': typeof ChangesRoute
+  '/duplicates': typeof DuplicatesRoute
+  '/files': typeof FilesRoute
   '/logs': typeof LogsRoute
   '/notifications': typeof NotificationsRoute
   '/recovery': typeof RecoveryRoute
@@ -80,6 +101,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/array': typeof ArrayRoute
   '/automation': typeof AutomationRoute
+  '/changes': typeof ChangesRoute
+  '/duplicates': typeof DuplicatesRoute
+  '/files': typeof FilesRoute
   '/logs': typeof LogsRoute
   '/notifications': typeof NotificationsRoute
   '/recovery': typeof RecoveryRoute
@@ -92,6 +116,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/array': typeof ArrayRoute
   '/automation': typeof AutomationRoute
+  '/changes': typeof ChangesRoute
+  '/duplicates': typeof DuplicatesRoute
+  '/files': typeof FilesRoute
   '/logs': typeof LogsRoute
   '/notifications': typeof NotificationsRoute
   '/recovery': typeof RecoveryRoute
@@ -105,6 +132,9 @@ export interface FileRouteTypes {
     | '/'
     | '/array'
     | '/automation'
+    | '/changes'
+    | '/duplicates'
+    | '/files'
     | '/logs'
     | '/notifications'
     | '/recovery'
@@ -116,6 +146,9 @@ export interface FileRouteTypes {
     | '/'
     | '/array'
     | '/automation'
+    | '/changes'
+    | '/duplicates'
+    | '/files'
     | '/logs'
     | '/notifications'
     | '/recovery'
@@ -127,6 +160,9 @@ export interface FileRouteTypes {
     | '/'
     | '/array'
     | '/automation'
+    | '/changes'
+    | '/duplicates'
+    | '/files'
     | '/logs'
     | '/notifications'
     | '/recovery'
@@ -139,6 +175,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArrayRoute: typeof ArrayRoute
   AutomationRoute: typeof AutomationRoute
+  ChangesRoute: typeof ChangesRoute
+  DuplicatesRoute: typeof DuplicatesRoute
+  FilesRoute: typeof FilesRoute
   LogsRoute: typeof LogsRoute
   NotificationsRoute: typeof NotificationsRoute
   RecoveryRoute: typeof RecoveryRoute
@@ -168,6 +207,27 @@ declare module '@tanstack/react-router' {
       path: '/automation'
       fullPath: '/automation'
       preLoaderRoute: typeof AutomationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/changes': {
+      id: '/changes'
+      path: '/changes'
+      fullPath: '/changes'
+      preLoaderRoute: typeof ChangesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/duplicates': {
+      id: '/duplicates'
+      path: '/duplicates'
+      fullPath: '/duplicates'
+      preLoaderRoute: typeof DuplicatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/files': {
+      id: '/files'
+      path: '/files'
+      fullPath: '/files'
+      preLoaderRoute: typeof FilesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/logs': {
@@ -219,6 +279,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArrayRoute: ArrayRoute,
   AutomationRoute: AutomationRoute,
+  ChangesRoute: ChangesRoute,
+  DuplicatesRoute: DuplicatesRoute,
+  FilesRoute: FilesRoute,
   LogsRoute: LogsRoute,
   NotificationsRoute: NotificationsRoute,
   RecoveryRoute: RecoveryRoute,

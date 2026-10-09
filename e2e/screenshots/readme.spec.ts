@@ -85,6 +85,31 @@ test('notifications', async ({ page }) => {
   await shot(page, 'screenshots/notifications.png')
 })
 
+test('changes', async ({ page }) => {
+  await page.goto('/changes?tab=added')
+  await expect(page.getByRole('tab', { name: /New\s*\d/ })).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  await shot(page, 'screenshots/changes.png')
+})
+
+test('protected files', async ({ page }) => {
+  await page.goto('/files')
+  await page.getByLabel('Is my file protected?').fill('holiday')
+  await expect(page.getByText(/Protected: \d+ files match/)).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  await shot(page, 'screenshots/protected-files.png')
+})
+
+test('duplicates', async ({ page }) => {
+  await page.goto('/duplicates')
+  await expect(page.getByText(/files with copies/)).toBeVisible()
+  // The biggest group ticked, so the copies that go are marked
+  await page.getByTestId('duplicate-group').first().getByRole('checkbox').check()
+  await page.mouse.move(0, 0)
+  await page.waitForLoadState('networkidle')
+  await shot(page, 'screenshots/duplicates.png')
+})
+
 test('automation', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1330 })
   await page.goto('/automation')

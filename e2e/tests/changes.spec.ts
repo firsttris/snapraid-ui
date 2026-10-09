@@ -1,5 +1,6 @@
-// The recycle bin: files deleted or changed since the last sync come back from parity
-import { appendFile, chmod, chown, rm, stat, unlink } from 'node:fs/promises'
+// Changes since the last sync: files deleted or changed come back from parity, new and moved
+// ones are listed
+import { appendFile, chmod, chown, mkdir, rename, rm, stat, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createArray } from '../harness/array'
 import { expect, test } from '../harness/fixtures'
@@ -13,7 +14,9 @@ test('deleted and encrypted files are restored to their state of the last sync',
   await appendFile(join(array.disk('d1'), 'photos/holiday.jpg'), 'encrypted')
   await app.addArray(array, 'Recovery')
 
+  // The old Recover files address opens the deleted files
   await page.goto('/recovery')
+  await expect(page).toHaveURL(/\/changes\?tab=deleted$/)
   await expect(page.getByRole('tab', { name: /Deleted\s*1/ })).toBeVisible()
   await page.getByRole('checkbox', { name: 'movies/trailer.mkv' }).check()
   await page.getByRole('button', { name: 'Restore 1 files' }).click()
@@ -30,7 +33,7 @@ test('deleted and encrypted files are restored to their state of the last sync',
   expect((await array.readFile('d1', 'photos/holiday.jpg')).equals(holiday)).toBe(true)
 
   await expect(page.getByText('2 files restored')).toBeVisible()
-  await expect(page.getByText('Nothing to recover')).toBeVisible()
+  await expect(page.getByText('No changes: every file is as it was at the last sync.')).toBeVisible()
 })
 
 test('a file of the same path on another disk is left alone', async ({ page, app }) => {
@@ -42,8 +45,9 @@ test('a file of the same path on another disk is left alone', async ({ page, app
   await appendFile(join(array.disk('d2'), 'shared/notes.txt'), 'changed on d2')
   await app.addArray(array, 'Recovery disks')
 
-  await page.goto('/recovery')
-  await page.getByRole('tab', { name: /Changed\s*2/ }).click()
+  await page.goto('/changes')
+  // The first tab with files
+  await expect(page.getByRole('tab', { name: /Changed\s*2/ })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('searchbox', { name: 'Search files' }).or(page.getByLabel('Search files')).fill('d1')
   await page.getByRole('checkbox', { name: 'Select all shown files' }).check()
   await page.getByRole('button', { name: 'Restore 1 files' }).click()
@@ -66,7 +70,7 @@ test('restored files get the owner and permissions of their folder', async ({ pa
   await rm(join(array.disk('d1'), 'documents'), { recursive: true })
   await app.addArray(array, 'Recovery owner')
 
-  await page.goto('/recovery')
+  await page.goto('/changes?tab=deleted')
   await page.getByRole('button', { name: 'Restore all 2 deleted' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Restore all 2 deleted' }).click()
   await app.expectFinished('Restore')
@@ -93,4 +97,39 @@ test('restored files get the owner and permissions of their folder', async ({ pa
     gid: disk.gid,
     mode: disk.mode & 0o666,
   })
+})
+
+test('new files with their folder totals and moved files are listed, sync starts from there', async ({ page, app }) => {
+  const array = await createArray('changes-new')
+  await array.writeFile('d1', 'new/clips/x.bin', 10)
+  await array.writeFile('d2', 'videos/y.bin', 20)
+  await mkdir(join(array.disk('d1'), 'photos/2026'))
+  await rename(join(array.disk('d1'), 'photos/birthday.jpg'), join(array.disk('d1'), 'photos/2026/birthday.jpg'))
+  await app.addArray(array, 'Changes')
+
+  await page.goto('/changes')
+  await expect(page.getByText('New: 2 · Changed: 0 · Deleted: 0 · Moved/copied: 1')).toBeVisible()
+  await expect(page.getByText(/A sync protects 30\.0 KB of new files/)).toBeVisible()
+  // Nothing deleted or changed: the new files come first
+  await expect(page.getByRole('tab', { name: /New\s*2/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByText('not protected yet')).toBeVisible()
+  await expect(page.getByText('1 files · 20.0 KB')).toBeVisible()
+  await expect(page.getByRole('row', { name: /new\/clips\/x\.bin d1 10\.0 KB/ })).toBeVisible()
+
+  await page.getByRole('tab', { name: /Moved\/copied\s*1/ }).click()
+  await expect(page.getByRole('row', { name: /photos\/birthday\.jpg -> photos\/2026\/birthday\.jpg d1 Moved/ })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Start sync' }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByRole('dialog', { name: 'Prepare sync' })).toBeVisible()
+})
+
+test('the commands menu leads to the changes page for diff', async ({ page, app }) => {
+  const array = await createArray('changes-menu')
+  await app.addArray(array, 'Changes menu')
+  await page.goto('/')
+  await page.getByRole('button', { name: 'More commands' }).click()
+  await page.getByRole('menuitem', { name: /^Diff/ }).click()
+  await expect(page).toHaveURL(/\/changes$/)
+  await expect(page.getByText('No changes: every file is as it was at the last sync.')).toBeVisible()
 })

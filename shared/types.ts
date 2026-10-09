@@ -421,7 +421,7 @@ export interface DiffFileInfo {
   status: 'equal' | 'added' | 'removed' | 'updated' | 'moved' | 'copied' | 'restored';
   name: string;            // File path/name
   disk?: string;           // Data disk name
-  size?: string;           // File size if available
+  size?: number;           // Bytes, for new and changed files on a disk SnapRAID UI can read
 }
 
 // A file to bring back from parity: its data disk and its path on that disk, as diff reports it
@@ -452,6 +452,24 @@ export interface DuplicateFile {
   originalDisk: string;    // The earlier file with the same content
   originalName: string;
   size: number;            // Bytes
+  gone?: boolean;          // No longer on the disk, the content file lists it until the next sync
+  originalGone?: boolean;
+}
+
+// A duplicate to delete and the copy with the same content that stays
+export interface DuplicateDeletion {
+  disk: string;
+  path: string;            // Relative to the disk, as dup reports it
+  keepDisk: string;
+  keepPath: string;
+  size: number;            // Bytes, as dup reports it; both copies must still have it
+}
+
+export interface DuplicateSkip {
+  disk: string;
+  path: string;
+  reason: 'changed_since_sync' | 'missing' | 'size_differs' | 'kept_copy_deleted' | 'outside_disk' | 'unknown_disk' | 'failed';
+  error?: string;
 }
 
 export interface DupReport {

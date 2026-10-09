@@ -95,6 +95,7 @@ Module map:
 | `backup.ts` | Export and restore of settings, histories and SnapRAID configs |
 | `smart-selftest.ts` | SMART self-tests through `smartctl -j` (ATA and NVMe): start, stop, status and log per disk; keeps the spindown away from disks with a running test |
 | `recovery.ts`, `restore-ownership.ts` | Restoring files from parity, one `fix` per disk; after every `fix`, files it recreated (from its log) and the folders made for them take the owner and permissions of their folder |
+| `duplicates.ts` | Deleting duplicates safely: a copy goes only while it and the copy that stays are as at the last sync (not in the diff, the size `dup` reported); marks copies no longer on their disk |
 | `disk-check.ts` | Disks that are missing, empty or on another filesystem than the content file recorded, from the `status` log |
 | `maintenance-settings.ts` | Docker pause and spindown settings |
 | `docker.ts`, `container-pause.ts` | Docker Engine API over the unix socket; pausing containers for the duration of jobs, resuming leftovers after a restart |
@@ -322,9 +323,10 @@ Most endpoints that work on a SnapRAID config take its path: as the `path` query
 |---|---|---|---|
 | GET | `/api/snapraid/status` | Run `snapraid status` and parse it; also records the daily usage point | Query `path`. Returns `{status: SnapRaidStatus, timestamp, exitCode}`. `409` with `busy: true` while a job runs or another process holds SnapRAID's lock. Without `path`: the parsed last status from the in-memory history |
 | GET | `/api/snapraid/last-runs` | Last sync and scrub of a config, from the logs | Query `path`. Returns `{sync: LastRun \| null, scrub: LastRun \| null}` |
-| GET | `/api/snapraid/diff` | Run `snapraid diff` (sync preview) | Query `path`. Returns `DiffReport` with file list and counts |
+| GET | `/api/snapraid/diff` | Run `snapraid diff` (sync preview, Changes page) | Query `path`. Returns `DiffReport` with file list and counts; new and changed files carry their `size` (up to 50,000 of them) |
 | GET | `/api/snapraid/list` | Run `snapraid list` | Query `path`. Returns `ListReport` |
-| GET | `/api/snapraid/dup` | Duplicate files from the content file's hashes | Query `path`. Returns `DupReport` |
+| GET | `/api/snapraid/dup` | Duplicate files from the content file's hashes | Query `path`. Returns `DupReport`; a copy or original no longer on its disk is marked `gone` / `originalGone` |
+| POST | `/api/snapraid/duplicates/delete` | Delete duplicates, each only while it and the copy that stays are unchanged since the last sync | Body `{configPath, files: [{disk, path, keepDisk, keepPath, size}]}`, at most 5000. Runs `diff` first; returns `{deleted, skipped: [{disk, path, reason}]}` with `reason` `changed_since_sync`, `missing`, `size_differs`, `kept_copy_deleted`, `outside_disk`, `unknown_disk` or `failed`. `409` if a job is running |
 | GET | `/api/snapraid/devices` | Run `snapraid devices` | Query `path`. Returns `DevicesReport` |
 | GET | `/api/snapraid/check-report` | Files the last `check` of a config found, read from its log | Query `path`. Returns `CheckReport`; `404` if there was no check yet |
 | GET | `/api/snapraid/usage-history` | Daily usage of the array | Query `path`. Returns `UsagePoint[]` |
