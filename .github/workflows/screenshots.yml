@@ -31,12 +31,13 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      # dev/setup.sh builds SnapRAID for the sandbox; setup-deno unpacks Deno with unzip,
+      # which the Playwright image lacks
+      - name: Build tools
+        run: apt-get update && apt-get install -y --no-install-recommends build-essential curl unzip
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.5.x
-      # dev/setup.sh builds SnapRAID for the sandbox
-      - name: Build tools
-        run: apt-get update && apt-get install -y --no-install-recommends build-essential curl
       - name: Cache the SnapRAID build
         uses: actions/cache@v4
         with:
