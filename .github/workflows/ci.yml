@@ -93,7 +93,8 @@ jobs:
       - name: Build SnapRAID 14, SnapRAID 15 and snapraid-daemon
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends autoconf automake zlib1g-dev
+          # smartmontools: SnapRAID lists the disks on the SMART page with it, self-tests use a stand-in
+          sudo apt-get install -y --no-install-recommends autoconf automake zlib1g-dev smartmontools
           npm run setup
       - run: npm ci
       - run: npm run typecheck

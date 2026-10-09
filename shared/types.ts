@@ -243,6 +243,29 @@ export interface SmartAttribute {
   whenFailed?: 'now' | 'past'; // Normalized value is or was below its threshold
 }
 
+export type SelfTestType = 'short' | 'long';
+
+// One finished self-test from the disk's own log, newest first
+export interface SelfTestLogEntry {
+  type: string;          // As the disk names it, e.g. "Short offline", "Extended offline", "Short"
+  kind: SelfTestType | 'other';
+  result: 'passed' | 'failed' | 'aborted'; // Aborted: stopped by the host or a reset, not a finding
+  status: string;        // e.g. "Completed without error", "Completed: read failure", "Aborted by host"
+  powerOnHours?: number; // Power-on hours of the disk when it ran
+}
+
+// SMART self-tests of a disk, run by the disk's firmware: `smartctl -t short|long`
+export interface DiskSelfTest {
+  disk: string;
+  device: string;
+  supported: boolean;
+  standby?: boolean;     // Asleep: not read, so it is not woken
+  error?: string;        // Why nothing could be read
+  running?: { remainingPercent?: number };
+  durations?: { short?: number; long?: number }; // Minutes the disk expects
+  log: SelfTestLogEntry[];
+}
+
 export interface DiskPowerStatus {
   name: string;
   device: string;

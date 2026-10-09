@@ -6,6 +6,7 @@ import { withCrcBaseline } from "../smart-baseline.ts";
 import { getSmartHistory, recordSmartHistory } from "../smart-history.ts";
 import { EngineCommandError, EngineUnsupportedError, getEngine } from "../engine/engine.ts";
 import { type PowerAction, setDiskPower } from "../disk-power.ts";
+import { controlSelfTests, readSelfTests } from "../smart-selftest.ts";
 import { msg } from "@shared/i18n.ts";
 
 const hardware = new Hono();
@@ -106,6 +107,39 @@ hardware.post("/power", async (c) => {
   try {
     const problem = await setDiskPower(action, resolveFromBase(relativePath), disks.map(String));
     return problem ? c.json({ error: problem }, 500) : c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// GET /api/snapraid/smart-selftest?path= - Self-test status and log of each disk; sleeping disks are not woken
+hardware.get("/smart-selftest", async (c) => {
+  const relativePath = c.req.query("path");
+  if (!relativePath) return c.json({ error: "Missing path parameter" }, 400);
+  try {
+    return c.json(await readSelfTests(resolveFromBase(relativePath)));
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// POST /api/snapraid/smart-selftest - Start or stop self-tests: { configPath, disks, action: "short" | "long" | "abort" }
+hardware.post("/smart-selftest", async (c) => {
+  const { configPath: relativePath, disks, action } = await c.req.json<{
+    configPath?: string;
+    disks?: string[];
+    action?: string;
+  }>();
+  if (!relativePath || !Array.isArray(disks) || disks.length === 0 || !["short", "long", "abort"].includes(action ?? "")) {
+    return c.json({ error: "Missing configPath or disks, or action is not short, long or abort" }, 400);
+  }
+  // A job reads the same disks, the test would slow it down and be slowed down
+  if (action !== "abort" && getEngine().currentJob()) {
+    return c.json({ error: msg("server_error_job_running") }, 409);
+  }
+  try {
+    const failed = await controlSelfTests(resolveFromBase(relativePath), disks.map(String), action as "short" | "long" | "abort");
+    return c.json({ failed });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }

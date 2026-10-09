@@ -1,0 +1,69 @@
+#!/bin/sh
+# Stand-in for smartctl in the E2E tests: an ATA disk with self-tests, its state in
+# $FAKE_SMARTCTL_STATE. A started test is at 90 %, at 40 % on the next read, then done.
+# Only the calls SnapRAID UI makes for self-tests: -j with -t, -X or -c -l selftest.
+state_dir=${FAKE_SMARTCTL_STATE:-/tmp/fake-smartctl}
+mkdir -p "$state_dir"
+device=""
+action=read
+type=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -t) action=start; type=$2; shift ;;
+    -X) action=abort ;;
+    -n|-l|-d) shift ;;
+    -*) ;;
+    *) device=$1 ;;
+  esac
+  shift
+done
+key=$(printf '%s' "$device" | tr '/' '_')
+running="$state_dir/$key.running"
+log="$state_dir/$key.log"
+touch "$log"
+
+name_of() { [ "$1" = long ] && echo "Extended offline" || echo "Short offline"; }
+add_log() { { echo "$1|$2"; cat "$log"; } > "$log.new" && mv "$log.new" "$log"; }
+ok() { echo '{"smartctl":{"exit_status":0}}'; }
+
+case "$action" in
+  start)
+    echo "$type 90" > "$running"
+    ok
+    exit 0
+    ;;
+  abort)
+    if [ -f "$running" ]; then
+      read -r t _ < "$running"
+      rm -f "$running"
+      add_log "$(name_of "$t")" "Aborted by host"
+    fi
+    ok
+    exit 0
+    ;;
+esac
+
+status='{"value":0,"string":"completed without error","passed":true}'
+if [ -f "$running" ]; then
+  read -r t left < "$running"
+  if [ "$left" -le 40 ] && [ "$t" = short ]; then
+    rm -f "$running"
+    add_log "$(name_of "$t")" "Completed without error"
+  else
+    [ "$left" -gt 40 ] && echo "$t 40" > "$running"
+    status="{\"value\":$((240 + left / 10)),\"string\":\"in progress, ${left}% remaining\",\"remaining_percent\":$left}"
+  fi
+fi
+
+table=""
+hours=1000
+while IFS='|' read -r t s; do
+  [ -z "$t" ] && continue
+  passed=false; [ "$s" = "Completed without error" ] && passed=true
+  value=$([ "$t" = "Extended offline" ] && echo 2 || echo 1)
+  entry="{\"type\":{\"value\":$value,\"string\":\"$t\"},\"status\":{\"value\":0,\"string\":\"$s\",\"passed\":$passed},\"lifetime_hours\":$hours}"
+  table="${table:+$table,}$entry"
+  hours=$((hours - 1))
+done < "$log"
+
+printf '{"smartctl":{"exit_status":0},"ata_smart_data":{"self_test":{"status":%s,"polling_minutes":{"short":2,"extended":600}},"capabilities":{"self_tests_supported":true}},"ata_smart_self_test_log":{"standard":{"table":[%s]}}}\n' "$status" "$table"

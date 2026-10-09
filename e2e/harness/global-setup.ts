@@ -14,6 +14,7 @@ import {
   BASE,
   DAEMON_ARRAY,
   DAEMON_URL,
+  FAKE_SMARTCTL_DIR,
   IMAGE,
   IMAGE_CONTAINER,
   PORTS,
@@ -84,6 +85,9 @@ const startImage = async (image: string): Promise<Server> => {
     '-v', '/var/run/docker.sock:/var/run/docker.sock',
     // The test disks are directories on one filesystem
     '-e', 'SNAPRAID_EXTRA_ARGS=--test-skip-device',
+    '-v', `${FAKE_SMARTCTL_DIR}:/e2e-bin:ro`,
+    '-e', 'SMARTCTL_BIN=/e2e-bin/smartctl',
+    '-e', `FAKE_SMARTCTL_STATE=${join(ARRAYS, '.smartctl')}`,
     image,
   )
   const deadline = Date.now() + 60_000
@@ -145,6 +149,8 @@ export default async function globalSetup() {
           SNAPRAID_BASE_PATH: BASE,
           SNAPRAID_BIN: SNAPRAID,
           SNAPRAID_EXTRA_ARGS: '--test-skip-device',
+          SMARTCTL_BIN: join(FAKE_SMARTCTL_DIR, 'smartctl'),
+          FAKE_SMARTCTL_STATE: join(ARRAYS, '.smartctl'),
         },
         ready: answers(`http://127.0.0.1:${PORTS.backend}/api/config`),
       }),

@@ -74,7 +74,8 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 <td width="50%" valign="top">
 
 ### 🔔 Monitoring
-- SMART health, temperature and failure probability
+- SMART health, temperature and failure probability, attributes explained in plain words
+- SMART self-tests (short and long) started and followed in the browser
 - Notices a disk that is not mounted before a sync drops its files
 - Notifications via ntfy, e-mail or webhook, and a heartbeat for healthchecks.io or Uptime Kuma
 - Prometheus metrics for Grafana and alerts

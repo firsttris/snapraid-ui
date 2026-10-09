@@ -1,3 +1,4 @@
+import { ATTRIBUTE_INFO } from '@shared/smart-attributes'
 import {
   assessSmart,
   attributeLevel,
@@ -15,8 +16,13 @@ import {
   smartHints,
   WORN_PERCENT,
 } from '@shared/smart-health'
-import type { SmartDiskInfo, SmartHistoryPoint } from '@shared/types'
+import type {
+  DiskSelfTest,
+  SmartDiskInfo,
+  SmartHistoryPoint,
+} from '@shared/types'
 import {
+  Activity,
   AlertTriangle,
   CircleCheck,
   Moon,
@@ -26,15 +32,19 @@ import {
 import { lazy, type ReactNode, Suspense, useState } from 'react'
 import {
   useNotificationSettings,
+  useSelfTests,
   useSmart,
   useSmartHistory,
 } from '../hooks/queries'
+import { ATTRIBUTE_TEXT } from '../lib/smart-attributes'
 import { cn } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
+import { SmartSelfTest } from './SmartSelfTest'
 import { hasSmartHistory } from './smartHistory'
 import { Alert, AlertDescription, AlertTitle } from './ui/alert'
 import { Badge } from './ui/badge'
+import { Button } from './ui/button'
 import { Card } from './ui/card'
 import {
   Table,
@@ -290,12 +300,14 @@ const DiskCard = ({
   threshold,
   selected,
   onSelect,
+  selfTest,
 }: {
   disk: SmartDiskInfo
   assessment: SmartAssessment
   threshold: number
   selected: boolean
   onSelect: () => void
+  selfTest?: DiskSelfTest
 }) => {
   const style = LEVEL_STYLES[assessment.level]
   const tempLevel =
@@ -347,6 +359,17 @@ const DiskCard = ({
         </div>
         <StatusBadge disk={disk} level={assessment.level} />
       </div>
+
+      {selfTest?.running && (
+        <p className="flex items-center gap-1.5 text-xs font-medium text-sky-700 dark:text-sky-400">
+          <Activity className="size-3.5" />
+          {selfTest.running.remainingPercent !== undefined
+            ? m.selftest_card_running_percent({
+                percent: selfTest.running.remainingPercent,
+              })
+            : m.selftest_running()}
+        </p>
+      )}
 
       {disk.standby ? (
         <p className="text-sm text-muted-foreground">
@@ -488,22 +511,140 @@ const DiskCard = ({
   )
 }
 
-type DetailTab = 'attributes' | 'history' | 'raw'
+/**
+ * The attributes in plain words: what each measures and whether the value is fine; the ones
+ * that say something about the disk's health first, the rest on request
+ */
+const AttributeTable = ({ disk }: { disk: SmartDiskInfo }) => {
+  const [showAll, setShowAll] = useState(false)
+  const rows = (disk.attributes ?? []).map((attribute) => ({
+    attribute,
+    level: attributeLevel(attribute, disk),
+    info: ATTRIBUTE_INFO[attribute.id],
+  }))
+  const important = rows.filter(
+    ({ level, info }) => level !== 'ok' || info?.important,
+  )
+  const others = rows.filter((row) => !important.includes(row))
+  const shown = showAll ? [...important, ...others] : important
+
+  return (
+    <>
+      <Table className="min-w-[720px]">
+        <TableHeader>
+          <TableRow>
+            <TableHead>{m.smart_attr_col_attribute()}</TableHead>
+            <TableHead className="text-right">
+              {m.smart_monitor_value()}
+            </TableHead>
+            <TableHead className="text-right">
+              {m.smart_monitor_worst()}
+            </TableHead>
+            <TableHead className="text-right">
+              {m.smart_monitor_threshold()}
+            </TableHead>
+            <TableHead className="text-right">
+              {m.smart_monitor_raw()}
+            </TableHead>
+            <TableHead>{m.smart_attr_col_assessment()}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {shown.map(({ attribute, level, info }) => {
+            const text = info && ATTRIBUTE_TEXT[info.key]
+            return (
+              <TableRow
+                key={attribute.id}
+                className={ATTRIBUTE_ROW_STYLES[level]}
+              >
+                <TableCell className="max-w-md whitespace-normal">
+                  <div className="font-medium">
+                    {text ? text.name() : attribute.name}
+                  </div>
+                  <div className="font-mono text-xs text-muted-foreground">
+                    {attribute.id} · {attribute.name}
+                  </div>
+                  {text && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {text.description()}
+                    </p>
+                  )}
+                </TableCell>
+                <TableCell className="text-right align-top font-mono tabular-nums">
+                  {attribute.value}
+                </TableCell>
+                <TableCell className="text-right align-top font-mono tabular-nums">
+                  {attribute.worst}
+                </TableCell>
+                <TableCell className="text-right align-top font-mono tabular-nums">
+                  {attribute.threshold}
+                </TableCell>
+                <TableCell className="text-right align-top font-mono tabular-nums">
+                  {attribute.raw}
+                </TableCell>
+                <TableCell className="align-top" title={attribute.flag}>
+                  {level === 'ok' ? (
+                    <span className="text-xs text-muted-foreground">
+                      {m.smart_attr_ok()}
+                    </span>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'border-transparent bg-card',
+                        LEVEL_STYLES[level].text,
+                      )}
+                    >
+                      {LEVEL_LABEL[level]()}
+                    </Badge>
+                  )}
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3">
+        <p className="text-xs text-muted-foreground">
+          {m.smart_attr_values_hint()}
+        </p>
+        {others.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowAll((value) => !value)}
+          >
+            {showAll
+              ? m.smart_attr_show_important()
+              : m.smart_attr_show_all({ count: others.length })}
+          </Button>
+        )}
+      </div>
+    </>
+  )
+}
+
+type DetailTab = 'attributes' | 'history' | 'selftest' | 'raw'
 
 const DiskDetails = ({
   disk,
   history,
   rawOutput,
+  configPath,
+  selfTests,
 }: {
   disk: SmartDiskInfo
   history: SmartHistoryPoint[] | undefined
   rawOutput: string
+  configPath: string
+  selfTests: ReturnType<typeof useSelfTests>
 }) => {
   const [tab, setTab] = useState<DetailTab>('attributes')
   const attributes = disk.attributes ?? []
   const tabs: DetailTab[] = [
     ...(attributes.length > 0 ? (['attributes'] as const) : []),
     ...(hasSmartHistory(history) ? (['history'] as const) : []),
+    'selftest' as const,
     ...(rawOutput ? (['raw'] as const) : []),
   ]
   // Another disk may lack the tab that was open
@@ -526,11 +667,15 @@ const DiskDetails = ({
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
           <div className="min-w-0">
             <h2 className="text-base font-semibold">
-              {disk.name} · {m.smart_monitor_attributes()}
-              {attributes.length > 0 && (
-                <span className="ml-1 font-normal text-muted-foreground">
-                  ({attributes.length})
-                </span>
+              {disk.name}
+              {current === 'attributes' && (
+                <>
+                  {' · '}
+                  {m.smart_monitor_attributes()}
+                  <span className="ml-1 font-normal text-muted-foreground">
+                    ({attributes.length})
+                  </span>
+                </>
               )}
             </h2>
             {facts.length > 0 && (
@@ -553,6 +698,7 @@ const DiskDetails = ({
                   })}
                 </TabsTrigger>
               )}
+              <TabsTrigger value="selftest">{m.selftest_tab()}</TabsTrigger>
               {tabs.includes('raw') && (
                 <TabsTrigger value="raw">{m.smart_tab_raw()}</TabsTrigger>
               )}
@@ -560,7 +706,7 @@ const DiskDetails = ({
           )}
         </div>
 
-        {tabs.length === 0 && (
+        {!tabs.includes('attributes') && !tabs.includes('history') && (
           <p className="border-t px-5 py-4 text-sm text-muted-foreground">
             {disk.standby
               ? m.smart_monitor_standby_hint()
@@ -569,79 +715,24 @@ const DiskDetails = ({
         )}
 
         <TabsContent value="attributes" className="border-t">
-          <Table className="min-w-[640px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead>{m.smart_monitor_id()}</TableHead>
-                <TableHead>{m.smart_monitor_name()}</TableHead>
-                <TableHead className="text-right">
-                  {m.smart_monitor_value()}
-                </TableHead>
-                <TableHead className="text-right">
-                  {m.smart_monitor_worst()}
-                </TableHead>
-                <TableHead className="text-right">
-                  {m.smart_monitor_threshold()}
-                </TableHead>
-                <TableHead className="text-right">
-                  {m.smart_monitor_raw()}
-                </TableHead>
-                <TableHead>{m.smart_monitor_status()}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {attributes.map((attr) => {
-                const level = attributeLevel(attr, disk)
-                return (
-                  <TableRow
-                    key={attr.id}
-                    className={ATTRIBUTE_ROW_STYLES[level]}
-                  >
-                    <TableCell className="font-mono tabular-nums">
-                      {attr.id}
-                    </TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center gap-2">
-                        {attr.name}
-                        {level !== 'ok' && (
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              'border-transparent bg-card',
-                              LEVEL_STYLES[level].text,
-                            )}
-                          >
-                            {LEVEL_LABEL[level]()}
-                          </Badge>
-                        )}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {attr.value}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {attr.worst}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {attr.threshold}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {attr.raw}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {attr.flag}
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+          <AttributeTable disk={disk} />
         </TabsContent>
 
         <TabsContent value="history" className="border-t p-5">
           <Suspense fallback={null}>
             <SmartHistoryCharts points={history} />
           </Suspense>
+        </TabsContent>
+
+        <TabsContent value="selftest" className="border-t">
+          <SmartSelfTest
+            configPath={configPath}
+            test={selfTests.data?.find((test) => test.disk === disk.name)}
+            loading={selfTests.isLoading}
+            powerOnHours={disk.powerOnHours}
+            onRefresh={() => selfTests.refetch()}
+            refreshing={selfTests.isFetching}
+          />
         </TabsContent>
 
         <TabsContent value="raw" className="border-t">
@@ -666,6 +757,7 @@ export const SmartMonitor = ({ configPath }: SmartMonitorProps) => {
     configPath || undefined,
     report?.timestamp,
   )
+  const selfTests = useSelfTests(configPath || undefined)
 
   // Same threshold as the SMART notifications, so the page and the messages agree
   const { data: notificationSettings } = useNotificationSettings()
@@ -805,6 +897,9 @@ export const SmartMonitor = ({ configPath }: SmartMonitorProps) => {
                 threshold={threshold}
                 selected={selected?.disk === disk}
                 onSelect={() => setSelectedKey(diskKey(disk))}
+                selfTest={selfTests.data?.find(
+                  (test) => test.disk === disk.name,
+                )}
               />
             ))}
           </div>
@@ -814,6 +909,8 @@ export const SmartMonitor = ({ configPath }: SmartMonitorProps) => {
               disk={selected.disk}
               history={history?.[selected.disk.name]}
               rawOutput={report.rawOutput}
+              configPath={configPath}
+              selfTests={selfTests}
             />
           )}
         </>
