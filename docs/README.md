@@ -2,6 +2,7 @@
 
 Everything about SnapRAID UI in detail: how to install and configure it, what each page does, how to keep
 your array healthy with it, and how it works inside. For a quick overview, see the [README](https://github.com/firsttris/snapraid-ui/blob/master/README.md).
+Also as a website with search: **https://firsttris.github.io/snapraid-ui/**
 
 <img src="screenshot.png" alt="SnapRAID UI dashboard" width="900">
 
