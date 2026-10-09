@@ -1,6 +1,6 @@
 {
   "name": "snapraid-ui",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
