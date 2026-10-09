@@ -343,10 +343,11 @@ export const useBasePath = () => {
   })
 }
 
-export const useConfigChecks = () => {
+export const useConfigChecks = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: queryKeys.configChecks,
     queryFn: checkConfigs,
+    ...options,
   })
 }
 

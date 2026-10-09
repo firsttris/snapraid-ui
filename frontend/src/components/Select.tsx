@@ -23,6 +23,7 @@ interface SelectProps<T extends string | number> {
   disabled?: boolean
   size?: 'sm' | 'md'
   className?: string
+  'aria-label'?: string // When no <Label htmlFor> names it
 }
 
 // Radix only takes non-empty strings as item values
@@ -41,6 +42,7 @@ export const Select = <T extends string | number>({
   disabled = false,
   size = 'md',
   className,
+  'aria-label': ariaLabel,
 }: SelectProps<T>) => {
   const selected = options.find((o) => o.value === value)
 
@@ -55,6 +57,7 @@ export const Select = <T extends string | number>({
     >
       <SelectTrigger
         id={id}
+        aria-label={ariaLabel}
         size={size === 'sm' ? 'sm' : 'default'}
         className={cn('text-left', className)}
       >

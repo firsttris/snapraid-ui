@@ -613,3 +613,15 @@ export interface NotificationTestResult {
   ok: boolean;
   error?: string;
 }
+
+// A mounted filesystem the setup wizard offers as a disk of a new array
+export interface MountCandidate {
+  path: string;
+  device: string;
+  fstype: string;
+  totalBytes: number;
+  usedBytes: number;
+  freeBytes: number;
+  empty: boolean;           // Nothing on it but lost+found
+  snapraidFiles: string[];  // Parity or content files of an existing array at its top level
+}

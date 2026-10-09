@@ -85,6 +85,7 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 <td width="50%" valign="top">
 
 ### 🧰 Disk management
+- Setup wizard: pick your disks, it writes `snapraid.conf` and runs the first sync
 - Visual and text editor for `snapraid.conf`
 - Wizards to replace or remove a disk
 - Backup and restore of all settings

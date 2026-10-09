@@ -24,6 +24,26 @@ Open **Manage Configurations** from the sidebar (or from the config selection me
 
 On the very first start, before `config.json` exists, the UI creates an entry named *Default* that points to `snapraid.conf` in the data folder (`SNAPRAID_BASE_PATH`, `/app/snapraid` in the Docker image). Put your `snapraid.conf` there, or remove that entry and add your file instead.
 
+### Set up a new array
+
+The setup wizard (`/setup`, offered on the dashboard as long as there is no configuration file) turns your disks into a working array:
+
+1. **Existing or new.** *Add existing configuration* opens *Manage Configurations* for a `snapraid.conf` you already have. *Set up a new array* starts the wizard.
+2. **Disks.** Give the array a name (it becomes the file name, `Media Server` → `media-server.conf`). The wizard lists the mounted filesystems with their size and used space, without system directories, the app's own folders and bind-mounted files. Choose a role for each: *Data*, *Parity* or *Not used*. Data disks get the names `d1`, `d2`, … which you can change. A disk that already holds a parity file is preselected as parity, empty disks are marked *empty*. *Add a folder* adds a path the list does not show, e.g. a subfolder.
+3. **Check.** The wizard needs at least one data and one parity disk (up to six), unique names and separate paths. It warns when a parity disk is smaller than the data on the largest data disk (the sync would fail), smaller than the largest data disk (fine until it fills up), or not empty.
+4. **Review.** The generated `snapraid.conf` is shown before it is written to the data folder. *Run the first sync right away* (on by default) starts it as soon as the array is created; on large disks it takes hours, the UI stays usable.
+
+The configuration the wizard writes:
+
+| Line | Choice |
+|---|---|
+| `parity`, `2-parity`, … | `snapraid.parity`, `snapraid.2-parity`, … at the top of each parity disk |
+| `content` | One copy in the data folder (`<name>.content`) and one on the first data disks, one per parity level, so SnapRAID has one more copy than parity levels, on different disks |
+| `data` | Each data disk with its name and mount point |
+| `exclude` | `*.unrecoverable`, `/tmp/`, `/lost+found/`, `.Trash-*/`, `.recycle/` |
+
+Data disks keep their files, SnapRAID only reads them. In Docker the wizard can only offer disks mounted into the container, so mount every disk first, at the same path as on the host. Creating the array replaces the *Default* entry of the first start if its `snapraid.conf` never existed; an existing file is never overwritten.
+
 ### Add an existing file
 
 1. Click **Add existing file**.
