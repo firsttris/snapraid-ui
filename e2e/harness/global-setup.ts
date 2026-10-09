@@ -96,6 +96,9 @@ const startImage = async (image: string): Promise<Server> => {
     stop: async () => {
       const { stdout, stderr } = await docker('logs', IMAGE_CONTAINER).catch(() => ({ stdout: '', stderr: '' }))
       await writeFile(join(RUN_DIR, 'image.log'), stdout + stderr)
+      // The container wrote as root, give the files back so the next run can remove them
+      const owner = `${process.getuid?.() ?? 0}:${process.getgid?.() ?? 0}`
+      await docker('exec', IMAGE_CONTAINER, 'chown', '-R', owner, '/app/snapraid', ARRAYS).catch(() => {})
       await docker('rm', '-f', IMAGE_CONTAINER).catch(() => {})
     },
   }

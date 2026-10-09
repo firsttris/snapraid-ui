@@ -4,9 +4,14 @@ import { randomBytes } from 'node:crypto'
 import { mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
-import { ARRAYS, SNAPRAID } from './env'
+import { ARRAYS, IMAGE, IMAGE_CONTAINER, SNAPRAID } from './env'
 
 const run = promisify(execFile)
+
+// Against the image the container writes as root, and SnapRAID creates content and restored
+// files readable only by their owner: the checks run in the container, with its SnapRAID
+const inContainer = (command: string, args: string[]) =>
+  run('docker', ['exec', IMAGE_CONTAINER, command, ...args], { encoding: 'buffer', maxBuffer: 64 * 1024 * 1024 })
 
 export interface ArrayOptions {
   dataDisks?: string[]
@@ -91,11 +96,12 @@ export const openArray = (name: string, options: Pick<ArrayOptions, 'dataDisks' 
   const configPath = join(dir, 'snapraid.conf')
 
   const snapraid = async (...args: string[]) => {
-    const { stdout, stderr } = await run(
-      options.snapraid ?? SNAPRAID,
-      ['--test-skip-device', '-c', configPath, ...args],
-      { maxBuffer: 16 * 1024 * 1024 },
-    )
+    const snapraidArgs = ['--test-skip-device', '-c', configPath, ...args]
+    if (IMAGE && !options.snapraid) {
+      const { stdout, stderr } = await inContainer('snapraid', snapraidArgs)
+      return stdout.toString() + stderr.toString()
+    }
+    const { stdout, stderr } = await run(options.snapraid ?? SNAPRAID, snapraidArgs, { maxBuffer: 16 * 1024 * 1024 })
     return stdout + stderr
   }
   const parked = (diskName: string) => join(dir, 'unmounted', diskName)
@@ -107,7 +113,8 @@ export const openArray = (name: string, options: Pick<ArrayOptions, 'dataDisks' 
     dataDisks,
     disk,
     writeFile: (diskName, path, kib) => randomFile(join(disk(diskName), path), kib),
-    readFile: (diskName, path) => readFile(join(disk(diskName), path)),
+    readFile: async (diskName, path) =>
+      IMAGE ? (await inContainer('cat', [join(disk(diskName), path)])).stdout : readFile(join(disk(diskName), path)),
     snapraid,
     corrupt: async (diskName, path) => {
       const file = join(disk(diskName), path)
