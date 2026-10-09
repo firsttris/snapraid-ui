@@ -232,6 +232,8 @@ const sendWebhook = async (settings: NotificationSettings, notification: Notific
 export const pingHeartbeat = async (settings: NotificationSettings): Promise<void> => {
   const response = await fetch(settings.heartbeat.url, { signal: AbortSignal.timeout(SEND_TIMEOUT_MS) });
   await ensureOk(response);
+  // The answer ("OK") is not needed, an unread body would keep the connection open
+  await response.body?.cancel();
 };
 
 const SENDERS: Record<NotificationChannel, (s: NotificationSettings, n: Notification) => Promise<void>> = {
