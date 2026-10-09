@@ -32,12 +32,7 @@ import {
 import { useJob } from '../hooks/useJob'
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
 import { getFileList } from '../lib/api/snapraid'
-import {
-  diskTotals,
-  folderTrail,
-  folderView,
-  searchFiles,
-} from '../lib/protected-files'
+import { folderTrail, folderView, searchFiles } from '../lib/protected-files'
 import { cn, formatBytes } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
@@ -157,7 +152,6 @@ function FilesContent({
     () => searchFiles(files, deferredSearch, MAX_ROWS),
     [files, deferredSearch],
   )
-  const disks = useMemo(() => diskTotals(files), [files])
   const view = useMemo(() => folderView(files, folder), [files, folder])
   const number = (value: number) => value.toLocaleString(getLocale())
 
@@ -170,7 +164,6 @@ function FilesContent({
     )
   }
 
-  const largestDisk = Math.max(...disks.map((disk) => disk.bytes), 1)
   const largestFolder = Math.max(...view.folders.map((f) => f.bytes), 1)
 
   return (
@@ -207,55 +200,37 @@ function FilesContent({
             </div>
           ) : (
             <>
-              <p className="border-t bg-green-50/60 px-5 py-3 text-sm text-green-800">
-                {found.total > found.matches.length
-                  ? m.files_found_more({
-                      count: number(found.total),
-                      shown: number(found.matches.length),
-                    })
-                  : m.files_found({ count: number(found.total) })}
-              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t bg-green-50/60 px-5 py-3 text-sm text-green-800">
+                <span>
+                  {found.total > found.matches.length
+                    ? m.files_found_more({
+                        count: number(found.total),
+                        shown: number(found.matches.length),
+                      })
+                    : m.files_found({ count: number(found.total) })}
+                </span>
+                {/* Where the matches are, all of them */}
+                <span className="flex flex-wrap gap-1.5">
+                  {found.disks.map((disk) => (
+                    <Badge
+                      key={disk.disk}
+                      variant="outline"
+                      className="bg-card"
+                      title={formatBytes(disk.bytes)}
+                    >
+                      {disk.disk || '–'}
+                      <span className="text-muted-foreground tabular-nums">
+                        {number(disk.files)}
+                      </span>
+                    </Badge>
+                  ))}
+                </span>
+              </div>
               <div className="border-t">
                 <FileTable files={found.matches} showPath />
               </div>
             </>
           ))}
-      </Card>
-
-      <Card className="gap-3 px-5 py-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-semibold">{m.files_disks_title()}</h2>
-          <span className="text-sm text-muted-foreground">
-            {m.files_summary({
-              files: number(files.length),
-              size: formatBytes(totalSize),
-            })}
-          </span>
-        </div>
-        <div className="flex flex-col gap-2.5">
-          {disks.map((disk) => (
-            <div
-              key={disk.disk}
-              className="grid grid-cols-[6rem_1fr] items-center gap-3 sm:grid-cols-[8rem_1fr_14rem]"
-            >
-              <Badge variant="outline" className="justify-self-start">
-                {disk.disk || '–'}
-              </Badge>
-              <div className="h-2 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${(disk.bytes / largestDisk) * 100}%` }}
-                />
-              </div>
-              <span className="col-span-2 text-sm text-muted-foreground tabular-nums sm:col-span-1 sm:text-right">
-                {m.changes_folder_total_size({
-                  count: number(disk.files),
-                  size: formatBytes(disk.bytes),
-                })}
-              </span>
-            </div>
-          ))}
-        </div>
       </Card>
 
       <Card className="gap-0 overflow-hidden py-0">
@@ -283,6 +258,12 @@ function FilesContent({
               </button>
             </span>
           ))}
+          <span className="ml-auto text-muted-foreground">
+            {m.files_summary({
+              files: number(files.length),
+              size: formatBytes(totalSize),
+            })}
+          </span>
         </nav>
         {view.folders.map((entry) => (
           <button

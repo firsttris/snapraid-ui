@@ -56,7 +56,7 @@ test('duplicates: the chosen copy stays, a copy changed since the sync is left a
   await expect(page.getByRole('tab', { name: /Deleted\s*2/ })).toHaveAttribute('aria-selected', 'true')
 })
 
-test('protected files: search, disks and folders as of the last sync', async ({ page, app }) => {
+test('protected files: search with the disks of the matches, and folders, as of the last sync', async ({ page, app }) => {
   const array = await createArray('protected')
   // Added after the sync: not protected yet
   await array.writeFile('d1', 'photos/new.jpg', 10)
@@ -64,11 +64,16 @@ test('protected files: search, disks and folders as of the last sync', async ({ 
 
   await page.goto('/files')
   await expect(page.getByText('5 files · 1.1 MB protected')).toBeVisible()
-  await expect(page.getByText('3 files · 580.0 KB')).toBeVisible()
 
   const search = page.getByLabel('Is my file protected?')
   await search.fill('HOLIDAY')
   await expect(page.getByText('Protected: 1 files match')).toBeVisible()
+  // The disk of the matches, with their size on hover
+  await expect(page.getByTitle('300.0 KB')).toHaveText('d11')
+  await search.fill('.')
+  await expect(page.getByTitle('580.0 KB')).toHaveText('d13')
+  await expect(page.getByTitle('550.0 KB')).toHaveText('d22')
+  await search.fill('HOLIDAY')
   await expect(page.getByRole('row', { name: /photos\/holiday\.jpg d1 300\.0 KB/ })).toBeVisible()
   await search.fill('photos/new.jpg')
   await expect(page.getByText('No protected file matches.')).toBeVisible()

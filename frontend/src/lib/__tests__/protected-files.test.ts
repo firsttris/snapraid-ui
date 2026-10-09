@@ -68,13 +68,22 @@ describe('diskTotals', () => {
 })
 
 describe('searchFiles', () => {
-  it('finds paths case-insensitively, a leading slash or not, up to the limit', () => {
+  it('finds paths case-insensitively, a leading slash or not, up to the limit, with their disks', () => {
     expect(searchFiles(FILES, 'MKV', 2)).toEqual({
       matches: [FILES[0], FILES[1]],
       total: 3,
+      // Of every match, not only the ones shown
+      disks: [
+        { disk: 'd1', files: 2, bytes: 750 },
+        { disk: 'd2', files: 1, bytes: 300 },
+      ],
     })
     expect(searchFiles(FILES, '/photos/2026', 10).total).toBe(1)
-    expect(searchFiles(FILES, '  ', 10)).toEqual({ matches: [], total: 0 })
+    expect(searchFiles(FILES, '  ', 10)).toEqual({
+      matches: [],
+      total: 0,
+      disks: [],
+    })
     expect(searchFiles(FILES, 'nothing', 10).total).toBe(0)
   })
 })

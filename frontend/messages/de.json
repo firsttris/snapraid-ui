@@ -1162,7 +1162,6 @@
   "files_not_found": "Keine geschützte Datei passt. Eine seit dem letzten Sync hinzugekommene Datei ist erst nach dem nächsten Sync geschützt.",
   "files_open_new": "Neue Dateien anzeigen",
   "files_col_modified": "Geändert",
-  "files_disks_title": "Pro Platte",
   "files_browse_title": "Ordner",
   "files_top": "Alle Platten"
 }

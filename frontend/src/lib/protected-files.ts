@@ -84,23 +84,24 @@ export const diskTotals = (files: SnapRaidFileInfo[]): DiskTotal[] => {
 }
 
 /**
- * Files whose path contains the search, case-insensitive; at most `limit`, and how many match
+ * Files whose path contains the search, case-insensitive: at most `limit` of them, how many
+ * match, and on which disks they are
  */
 export const searchFiles = (
   files: SnapRaidFileInfo[],
   search: string,
   limit: number,
-): { matches: SnapRaidFileInfo[]; total: number } => {
+): { matches: SnapRaidFileInfo[]; total: number; disks: DiskTotal[] } => {
   const needle = search.trim().toLowerCase().replace(/^\/+/, '')
-  if (!needle) return { matches: [], total: 0 }
-  const matches: SnapRaidFileInfo[] = []
-  let total = 0
-  for (const file of files) {
-    if (!pathOf(file).toLowerCase().includes(needle)) continue
-    total++
-    if (matches.length < limit) matches.push(file)
+  if (!needle) return { matches: [], total: 0, disks: [] }
+  const all = files.filter((file) =>
+    pathOf(file).toLowerCase().includes(needle),
+  )
+  return {
+    matches: all.slice(0, limit),
+    total: all.length,
+    disks: diskTotals(all),
   }
-  return { matches, total }
 }
 
 /**

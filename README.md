@@ -55,7 +55,7 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 - Changes since the last sync at a glance: new files with folder sizes, deleted, changed and moved ones
 - Repair and verify bad blocks with one click
 - Recover deleted or encrypted files from parity, picked from a list, with the owner and permissions of their folder
-- "Is my file protected?": search the protected files, sizes per folder and disk
+- "Is my file protected?": search the protected files and see which disk they are on, sizes per folder
 - Duplicates: choose the copy that stays, the others are deleted safely
 - Live output while a job runs
 - Clear explanations when SnapRAID stops a run for safety

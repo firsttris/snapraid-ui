@@ -1162,7 +1162,6 @@
   "files_not_found": "Nessun file protetto corrisponde. Un file aggiunto dopo l'ultimo sync è protetto solo dopo il prossimo sync.",
   "files_open_new": "Mostra nuovi file",
   "files_col_modified": "Modificato",
-  "files_disks_title": "Per disco",
   "files_browse_title": "Cartelle",
   "files_top": "Tutti i dischi"
 }

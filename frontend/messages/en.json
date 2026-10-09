@@ -1176,7 +1176,6 @@
   "files_not_found": "No protected file matches. A file added since the last sync is protected only after the next sync.",
   "files_open_new": "Show new files",
   "files_col_modified": "Modified",
-  "files_disks_title": "Per disk",
   "files_browse_title": "Folders",
   "files_top": "All disks"
 }

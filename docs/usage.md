@@ -252,9 +252,8 @@ When a sync schedule of this configuration is enabled, a notice says when it run
 
 <img src="screenshots/protected-files.png" alt="Protected files with a search" width="900">
 
-- **Is my file protected?** Type a file name or part of the path (not case sensitive). The matching files are listed with disk, size and modification time, the first 200 of them. A file that is not found was added after the last sync, or is excluded in the config; *Show new files* opens the *New* tab of [Changes](#changes-since-the-last-sync).
-- **Per disk**: files and bytes of each data disk, as a bar.
-- **Folders**: the folders of all disks merged, as a pool would show them, the biggest first, with the disks that hold each one, its files and size. Click a folder to open it, the path above leads back.
+- **Is my file protected?** Type a file name or part of the path (not case sensitive). The matching files are listed with disk, size and modification time, the first 200 of them; above them, how many match and how many of them are on each disk (hover for their size). A file that is not found was added after the last sync, or is excluded in the config; *Show new files* opens the *New* tab of [Changes](#changes-since-the-last-sync).
+- **Folders**: the folders of all disks merged, as a pool would show them, the biggest first, with the disks that hold each one, its files and size. Click a folder to open it, the path above leads back. On the right, how many files and bytes the last sync protected in all.
 
 ### Duplicates
 
