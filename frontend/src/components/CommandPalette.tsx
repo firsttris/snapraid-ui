@@ -39,7 +39,6 @@ const PALETTE_COMMANDS: SnapRaidCommand[] = [
   'status',
   'diff',
   'check',
-  'fix',
   'touch',
   'dup',
   'list',
@@ -114,7 +113,8 @@ export const CommandPalette = () => {
           {[...NAV_ITEMS, ARRAY_NAV_ITEM].map(({ to, label, icon: Icon }) => (
             <CommandItem
               key={to}
-              value={`nav ${label()}`}
+              // Recover files is where undelete (snapraid fix) lives
+              value={`nav ${label()}${to === '/recovery' ? ' undelete fix' : ''}`}
               onSelect={() => run(() => navigate({ to }))}
             >
               <Icon />

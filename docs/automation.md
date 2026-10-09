@@ -14,7 +14,7 @@ Apps like Nextcloud, Immich, photo libraries or databases keep writing files on 
 |---|---|---|
 | *Docker socket* | `/var/run/docker.sock` | The Docker API socket, [mounted into the container](installation.md#docker-socket-optional). The line below it shows whether it can be reached and how many containers it reports. |
 | *Containers to pause* | none | The containers on that socket. SnapRAID UI's own container is listed but can't be picked: paused, it could not resume the others. A container picked earlier that no longer exists is shown as *not found*. |
-| *Pause during* | *Sync*, *Scrub* | The jobs to pause them for: *Touch*, *Sync*, *Scrub*, *Check*, *Undelete*. |
+| *Pause during* | *Sync*, *Scrub* | The jobs to pause them for: *Touch*, *Sync*, *Scrub*, *Check*, *Restore*. |
 
 How it works:
 

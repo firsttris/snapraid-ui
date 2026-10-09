@@ -74,18 +74,14 @@ export const CommandMenu = ({
               {group.commands.map((id) => (
                 <DropdownMenuItem
                   key={id}
-                  variant={id === 'fix' ? 'destructive' : 'default'}
                   onSelect={() => onSelect(id)}
                   className="flex-col items-start gap-0"
                 >
-                  <span className="font-medium">{getCommandLabel(id)}</span>
-                  <span
-                    className={
-                      id === 'fix'
-                        ? 'text-xs text-red-700/80'
-                        : 'text-xs text-muted-foreground'
-                    }
-                  >
+                  <span className="font-medium">
+                    {/* Opens the Recover files page, named like it */}
+                    {id === 'fix' ? m.nav_recovery() : getCommandLabel(id)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
                     {getCommandDescription(id)}
                   </span>
                 </DropdownMenuItem>

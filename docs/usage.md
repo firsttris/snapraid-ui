@@ -54,8 +54,8 @@ Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>⌘</kbd>+<kbd>K</kbd> on a Mac) or cli
 
 | Group | Entries |
 |---|---|
-| *SnapRAID commands* | Sync, Scrub, Status, Diff, Check, Undelete, Touch, Duplicates, File List, Devices. Picking one opens the dashboard and starts the command there, including its dialog (for example the sync preview). Disabled while a job is running. |
-| *Navigation* | The pages from the sidebar, including *Configuration* |
+| *SnapRAID commands* | Sync, Scrub, Status, Diff, Check, Touch, Duplicates, File List, Devices. Picking one opens the dashboard and starts the command there, including its dialog (for example the sync preview). Disabled while a job is running. |
+| *Navigation* | The pages from the sidebar, including *Configuration*. *Recover files* is also found with *undelete* or *fix*. |
 | *Arrays* | *Switch to "…"* for every other shown array, *Manage arrays* and *Backup* |
 | *Settings* | *Theme: Light / Dark / System* and *Animations: Off / Subtle / Strong* |
 
@@ -141,7 +141,7 @@ The buttons at the top right of the dashboard start the commands: *Status*, *Scr
 |---|---|
 | *Information* (read-only, changes nothing) | *Diff*, *File List*, *Duplicates*, *Devices* |
 | *Maintenance* | *Check*, *Touch*, *Pool* |
-| *Recovery* | *Undelete* |
+| *Recovery* | *Recover files*, opens the [Recover files](#recover-files) page |
 
 The *Sync* button turns green when a sync is due. Only one SnapRAID job can run at a time: while one is running, all command buttons are disabled, on every open browser tab.
 
@@ -154,20 +154,19 @@ The *Sync* button turns green when a sync is due. Only one SnapRAID job can run 
 | *Status* | Opens *Integrity & scrub*, see [Status](#status) | `status` |
 | *Diff* | Opens the *Diff Report*: new, modified, deleted, moved, copied and restored files since the last sync | `diff` |
 | *Check* | Opens *Verify data*, see [Check](#check) | `check`, `check -a`, `check -d …` |
-| *Undelete* | Opens *Undelete Files*, see [Undelete](#undelete) | `fix -m`, `fix -f …` |
 | *Touch* | Starts right away: gives files without a sub-second timestamp one | `touch` |
 | *Pool* | Starts right away: rebuilds the links in the pool directory. Needs a `pool` directory in the config, see [Disks & configurations](disks.md). | `pool` |
 | *Duplicates* | Lists files with identical content. Uses the hashes stored at the last sync, no file is read; files added since then are not included. | `dup` |
 | *File List* | Lists all protected files with size, date and time | `list` |
 | *Devices* | Shows which device and partition each disk maps to | `devices` |
 
-The report dialogs (*Diff*, *File List*, *Duplicates*, *Check Report*) have a *Filter by path…* field. *Status*, *Diff*, *File List*, *Duplicates* and *Devices* only read data: their result opens in a dialog and they don't write a log. Sync, scrub, check, undelete, touch and pool run as jobs with [live output](#live-output-and-progress) and a log entry.
+The report dialogs (*Diff*, *File List*, *Duplicates*, *Check Report*) have a *Filter by path…* field. *Status*, *Diff*, *File List*, *Duplicates* and *Devices* only read data: their result opens in a dialog and they don't write a log. Sync, scrub, check, restore, touch and pool run as jobs with [live output](#live-output-and-progress) and a log entry.
 
 ### Sync
 
 Before a sync, *Prepare sync* runs a diff and shows what will be written to parity: the number of new, modified, moved, copied, restored and deleted files.
 
-- If files were **deleted**, a red warning lists them (the first 20, then *… and N more*) and the start button turns red. After the sync they can no longer be restored from parity. If that was unintended (for example a disk is not mounted), cancel and bring them back with [Undelete](#undelete).
+- If files were **deleted**, a red warning lists them (the first 20, then *… and N more*) and the start button turns red. After the sync they can no longer be restored from parity. If that was unintended (for example a disk is not mounted), cancel and bring them back on [Recover files](#recover-files).
 - If a previous sync did not finish, a notice says so; the new sync continues where the old one stopped.
 - If the diff fails, the button reads *Sync anyway*.
 - **Pre-hash** (`-h`) reads new data twice and verifies it before computing parity, so faulty RAM or cabling can't slip damaged data into the parity. It takes longer. Your browser remembers the choice.
@@ -205,20 +204,6 @@ Regular scrubs are best run by a schedule, see [Scheduling](scheduling.md).
 
 The check runs as a job with progress and can be aborted. When it has finished, the result message has a *Show report* button that opens the *Check Report* with the files checked, errors and blocks to rehash.
 
-### Undelete
-
-*Undelete Files* restores deleted files from parity (`snapraid fix`). Choose a *Restore Mode*:
-
-| Mode | SnapRAID call |
-|---|---|
-| *Restore All Missing Files* | `fix -m` |
-| *Restore Missing in Directory* | `fix -m -f DIR/` |
-| *Restore Specific File/Directory* | `fix -f FILE` |
-
-For the last two, enter a path or use *Browse Files*. With several data disks, *Browse from Data Disk* picks the disk to browse. An absolute path below a data disk is converted to the path relative to that disk, which is what SnapRAID expects.
-
-Under *Advanced Options (for disk recovery)*, *Disk Filter (Optional)* limits the fix to one disk (`-d`, e.g. `d1` or `parity`). To restore a whole failed disk, use the replacement wizard instead, see [Disks & configurations](disks.md).
-
 ## Recover files
 
 Until the next sync, the parity still holds every file as it was at the last sync. *Recover files* in the sidebar lists what changed since then, from `snapraid diff`, and brings it back:
@@ -230,9 +215,11 @@ Until the next sync, the parity still holds every file as it was at the last syn
 
 Tick the files, or *Select all shown files* after narrowing the list with the search (part of the path, or the exact disk name such as `d1`), then *Restore N files*. SnapRAID runs `fix -d <disk> -f /<path>…`, one run per disk, so a file with the same path on another disk is left alone. Wildcard characters in file names (`*`, `?`, `[`) are matched literally. Up to 1000 files at once.
 
+On the *Deleted* tab, **Restore all N deleted** brings back every deleted file of every disk in one run (`fix -m`), as many as there are, e.g. after an accidental `rm -rf`. Changed files stay as they are. This is what *Undelete* did in earlier versions; the *Recover files* entry in the dashboard's *More commands* menu (and *undelete* or *fix* in the command palette) leads here.
+
 Restored files disappear from the list. A file restored in place can still show up as changed in *Diff* until the next sync: SnapRAID sometimes keeps its new modification time to avoid mixing it up with another file. Its content is the one of the last sync, and the next sync just reads it again.
 
-When a sync schedule of this configuration is enabled, a notice says when it runs next. After that sync, the files listed here can no longer be restored, so recover them first, or [skip the next run](scheduling.md#the-schedule-list). Files without a disk in the diff can't be restored by path, use [Undelete](#undelete).
+When a sync schedule of this configuration is enabled, a notice says when it runs next. After that sync, the files listed here can no longer be restored, so recover them first, or [skip the next run](scheduling.md#the-schedule-list). Files without a disk in the diff can't be restored by path, *Restore all N deleted* brings them back.
 
 > [!TIP]
 > After ransomware, do not sync. Stop the schedules (or *Skip next run*), remove the cause, then restore the *Changed* files here. The [sync guard for changed files](scheduling.md#sync-guard) keeps a scheduled sync from overwriting their parity in the meantime.

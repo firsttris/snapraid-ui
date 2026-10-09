@@ -40,7 +40,6 @@ import { OutputConsole } from '../components/OutputConsole'
 import { PageLayout } from '../components/PageLayout'
 import { ScrubDialog } from '../components/ScrubDialog'
 import { SyncPreviewDialog } from '../components/SyncPreviewDialog'
-import { UndeleteDialog } from '../components/UndeleteDialog'
 import {
   useDataDiskUsage,
   useDiskPower,
@@ -113,7 +112,6 @@ function Dashboard() {
   const { report: requestedReport } = Route.useSearch()
   const navigate = useNavigate()
   const job = useJob()
-  const [showUndeleteDialog, setShowUndeleteDialog] = useState(false)
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showSyncPreview, setShowSyncPreview] = useState(false)
   const [showScrubDialog, setShowScrubDialog] = useState(false)
@@ -304,8 +302,7 @@ function Dashboard() {
     if (!pendingCommand || !selectedConfig) return
     clearPendingCommand()
     if (job.isRunning) return
-    if (pendingCommand === 'fix') setShowUndeleteDialog(true)
-    else executeCommand(pendingCommand)
+    executeCommand(pendingCommand)
   }, [
     pendingCommand,
     selectedConfig,
@@ -313,37 +310,6 @@ function Dashboard() {
     executeCommand,
     clearPendingCommand,
   ])
-
-  const handleUndelete = useCallback(
-    (
-      mode: 'all-missing' | 'directory-missing' | 'specific',
-      path?: string,
-      diskFilter?: string,
-    ) => {
-      if (!selectedConfig || job.isRunning) return
-
-      setShowUndeleteDialog(false)
-
-      // Build arguments based on mode
-      const args: string[] = []
-
-      // Add disk filter if specified (for recovery scenarios)
-      if (diskFilter?.trim()) {
-        args.push('-d', diskFilter.trim())
-      }
-
-      if (mode === 'all-missing') {
-        args.push('-m')
-      } else if (mode === 'directory-missing' && path) {
-        args.push('-m', '-f', path)
-      } else if (mode === 'specific' && path) {
-        args.push('-f', path)
-      }
-
-      runCommand('fix', args)
-    },
-    [selectedConfig, job.isRunning, runCommand],
-  )
 
   // Repair blocks that scrub marked as bad, then `scrub -p bad` verifies them, one run in the backend.
   // The scrub shows up like a job started elsewhere once the fix is done.
@@ -385,8 +351,9 @@ function Dashboard() {
     lastSync: lastRuns?.sync,
     lastScrub: lastRuns?.scrub,
   })
+  // Undelete lives on the Recover files page, the menu leads there
   const handleExecute = (command: SnapRaidCommand) =>
-    command === 'fix' ? setShowUndeleteDialog(true) : executeCommand(command)
+    command === 'fix' ? navigate({ to: '/recovery' }) : executeCommand(command)
 
   return (
     <PageLayout
@@ -514,14 +481,6 @@ function Dashboard() {
               setShowCheckDialog(false)
               runCommand('check', args)
             }}
-          />
-        )}
-
-        {showUndeleteDialog && parsedConfig && (
-          <UndeleteDialog
-            dataDisk={parsedConfig.data}
-            onExecute={handleUndelete}
-            onClose={() => setShowUndeleteDialog(false)}
           />
         )}
 
