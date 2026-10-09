@@ -1010,5 +1010,7 @@
   "mount_suggestions_size": "{size}, {free} liberi",
   "mount_suggestions_not_empty": "Non vuoto",
   "recovery_restore_all_deleted": "Ripristina tutti i {count} eliminati",
-  "recovery_confirm_all_deleted": "SnapRAID recupera dalla parità tutti i {count} file eliminati di ogni disco, come erano all’ultimo sync (snapraid fix -m). I file modificati restano come sono. Continuare?"
+  "recovery_confirm_all_deleted": "SnapRAID recupera dalla parità tutti i {count} file eliminati di ogni disco, come erano all’ultimo sync (snapraid fix -m). I file modificati restano come sono. Continuare?",
+  "server_restore_ownership": "▸ SnapRAID UI ha dato a {files} file e {folders} cartelle ripristinati proprietario e permessi della cartella in cui si trovano.",
+  "server_restore_ownership_failed": "▸ Non è stato possibile impostare il proprietario di {count} file o cartelle ripristinati, appartengono all’utente che esegue SnapRAID."
 }

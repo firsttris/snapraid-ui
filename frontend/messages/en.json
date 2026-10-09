@@ -1038,5 +1038,7 @@
   "mount_suggestions_size": "{size}, {free} free",
   "mount_suggestions_not_empty": "Not empty",
   "recovery_restore_all_deleted": "Restore all {count} deleted",
-  "recovery_confirm_all_deleted": "SnapRAID brings back all {count} deleted files of every disk from parity, as they were at the last sync (snapraid fix -m). Changed files stay as they are. Continue?"
+  "recovery_confirm_all_deleted": "SnapRAID brings back all {count} deleted files of every disk from parity, as they were at the last sync (snapraid fix -m). Changed files stay as they are. Continue?",
+  "server_restore_ownership": "▸ SnapRAID UI gave {files} restored files and {folders} folders the owner and permissions of the folder they are in.",
+  "server_restore_ownership_failed": "▸ The owner of {count} restored files or folders could not be set, they belong to the user running SnapRAID."
 }

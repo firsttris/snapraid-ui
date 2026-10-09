@@ -27,6 +27,7 @@ import { startExternalJob } from "./routes/snapraid.ts";
 import { createSpindownMonitor } from "./spindown.ts";
 import { resumeLeftoverContainers } from "./container-pause.ts";
 import { resolveFromBase } from "./config.ts";
+import { withRestoredOwnership } from "./restore-ownership.ts";
 import { createAuth, disabledAuthRoutes, loadSessionSecret, readAuthEnv } from "./auth.ts";
 
 const app = new Hono();
@@ -114,7 +115,7 @@ const main = async (): Promise<void> => {
     next.onProgress((job, progress) =>
       broadcast({ type: "progress", command: job.command, processId: job.processId, progress })
     );
-    setEngine(next);
+    setEngine(withRestoredOwnership(next));
   };
   const engineSettings = await loadEngineSettings();
   applyEngine(buildEngine(engineSettings, cli));
