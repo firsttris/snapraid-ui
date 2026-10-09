@@ -26,7 +26,7 @@ import {
 } from './env'
 import { answers, type Server, startProcess, startProxy } from './servers'
 
-const DENO_PERMISSIONS = [
+export const DENO_PERMISSIONS = [
   '--allow-net',
   '--allow-read',
   '--allow-write',
@@ -35,7 +35,7 @@ const DENO_PERMISSIONS = [
   '--allow-sys=networkInterfaces,hostname',
 ]
 
-const findDeno = () => {
+export const findDeno = () => {
   if (process.env.DENO_BIN) return process.env.DENO_BIN
   const local = join(ROOT, 'dev', 'tools', 'deno')
   if (existsSync(local)) return local

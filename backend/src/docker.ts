@@ -1,6 +1,7 @@
 // Minimal client for the Docker Engine API over its unix socket.
 // HTTP/1.0 keeps the responses simple: no chunked encoding, the connection closes after each.
 import type { DockerContainer } from "@shared/types.ts";
+import { DEMO_MODE, demoDocker } from "./demo.ts";
 
 const TIMEOUT_MS = 15_000;
 
@@ -40,9 +41,11 @@ export const parseHttpResponse = (raw: string): DockerResponse => {
 };
 
 /**
- * Requests against the Docker socket at the given path
+ * Requests against the Docker socket at the given path; the demo has containers of its own
  */
-export const dockerSocket = (socketPath: string): DockerRequest => async (method, path) => {
+export const dockerSocket = (socketPath: string): DockerRequest => DEMO_MODE ? demoDocker : unixSocket(socketPath);
+
+const unixSocket = (socketPath: string): DockerRequest => async (method, path) => {
   const conn = await Deno.connect({ transport: "unix", path: socketPath });
   const timer = setTimeout(() => conn.close(), TIMEOUT_MS);
   try {

@@ -1,0 +1,63 @@
+name: Update screenshots
+
+# Takes the pictures in the README and the documentation from the demo sandbox
+# (e2e/screenshots/readme.spec.ts, docs/development.md) and commits the ones that changed.
+# Run it after a change to the look. docs/screenshots/daemon.png is still taken by hand.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.playwright.outputs.image }}
+    steps:
+      - id: playwright
+        uses: firsttris/workflows/actions/playwright-image@v1
+        with:
+          lockfile: e2e/package-lock.json
+
+  screenshots:
+    needs: image
+    runs-on: ubuntu-latest
+    # The browser and its fonts of the @playwright/test version the e2e tests pin
+    container:
+      image: ${{ needs.image.outputs.image }}
+      options: --ipc=host
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.x
+      # dev/setup.sh builds SnapRAID for the sandbox
+      - name: Build tools
+        run: apt-get update && apt-get install -y --no-install-recommends build-essential curl
+      - name: Cache the SnapRAID build
+        uses: actions/cache@v4
+        with:
+          path: |
+            dev/bin
+            dev/.cache
+          key: demo-snapraid-${{ hashFiles('dev/setup.sh') }}
+      - name: Install
+        run: |
+          npm ci --prefix frontend
+          npm ci --prefix e2e
+      - name: Take the screenshots
+        working-directory: e2e
+        # The container runs as root: the disks go to /mnt, as on a server
+        env:
+          DISKS_DIR: /mnt
+        run: npm run screenshots
+      - uses: firsttris/workflows/actions/commit-changes@v1
+        with:
+          paths: |
+            docs/screenshot.png
+            docs/screenshot-dark.png
+            docs/screenshots
+            docs/social-preview.png
