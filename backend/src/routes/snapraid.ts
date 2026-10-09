@@ -14,7 +14,8 @@ import { rememberStatus } from "../status-cache.ts";
 import { parseStatusOutput } from "../parsers/status-parser.ts";
 import { parseCheckOutput } from "../parsers/check-parser.ts";
 import { createDiskReplacementRoutes } from "./disk-replacement.ts";
-import { notifyManualRun } from "../notification-events.ts";
+import { notifyManualRun, notifySkipped } from "../notification-events.ts";
+import { checkSyncGuard } from "../scheduler.ts";
 import { isSuccessful } from "../run-report.ts";
 import { MAX_RESTORE_FILES, restoreFiles } from "../recovery.ts";
 import { findDiskIssues } from "../disk-check.ts";
@@ -280,6 +281,28 @@ snapraid.post("/heal", async (c) => {
     .catch((error) => console.error("Heal failed:", error));
   return c.json({ success: true }, 202);
 });
+
+// Limits of the sync guard for syncs started from outside the UI, e.g. Home Assistant's button;
+// the defaults of a new schedule. Nobody looks at a preview there.
+const EXTERNAL_SYNC_GUARD = { command: "sync" as const, maxDeletedFiles: 50, maxUpdatedFiles: 100 };
+
+/**
+ * Start sync or scrub for an outside caller. A sync goes through the sync guard first; when it
+ * stops the sync, a "skipped" notification says why. Throws when the job can't start.
+ */
+export const startExternalJob = async (configPath: string, command: "sync" | "scrub", label: string): Promise<void> => {
+  const engine = getEngine();
+  if (engine.currentJob()) throw new Error("Another job is running");
+  if (command === "sync") {
+    const skip = await checkSyncGuard(engine, EXTERNAL_SYNC_GUARD, configPath);
+    if (skip) {
+      await notifySkipped(label, configPath, skip);
+      throw new Error(`Sync skipped: ${skip.skipReason}`);
+    }
+    if (engine.currentJob()) throw new Error("Another job is running");
+  }
+  void startJob(command, configPath, []);
+};
 
 // POST /api/snapraid/execute - Execute SnapRAID command
 snapraid.post("/execute", async (c) => {

@@ -4,6 +4,7 @@ import type {
   DaemonWarning,
   DockerContainer,
   EngineSettings,
+  HomeAssistantSettings,
   MaintenanceSettings,
   SnapRaidCommand,
   SpindownDisk,
@@ -13,6 +14,7 @@ import {
   Activity,
   AlertCircle,
   Container,
+  House,
   Moon,
   Plug,
   Plus,
@@ -35,12 +37,15 @@ import {
   useConfig,
   useDockerContainers,
   useEngineSettings,
+  useHomeAssistant,
   useMaintenanceSettings,
   useSaveEngineSettings,
+  useSaveHomeAssistant,
   useSaveMaintenanceSettings,
   useSpindownStatus,
 } from '../hooks/queries'
 import { engineApi } from '../lib/api/engine'
+import { homeAssistantApi } from '../lib/api/home-assistant'
 import { getCommandLabel } from '../lib/commands'
 import { formatRelativeTime } from '../lib/utils'
 import * as m from '../paraglide/messages'
@@ -65,8 +70,10 @@ const hintClass = 'text-xs text-muted-foreground'
 function AutomationPage() {
   const maintenance = useMaintenanceSettings()
   const engine = useEngineSettings()
-  const isLoading = maintenance.isLoading || engine.isLoading
-  const error = maintenance.error ?? engine.error
+  const homeAssistant = useHomeAssistant()
+  const isLoading =
+    maintenance.isLoading || engine.isLoading || homeAssistant.isLoading
+  const error = maintenance.error ?? engine.error ?? homeAssistant.error
 
   return (
     <PageLayout
@@ -82,11 +89,13 @@ function AutomationPage() {
           <AlertDescription>{errorMessage(error)}</AlertDescription>
         </Alert>
       )}
-      {maintenance.data && engine.data && (
+      {maintenance.data && engine.data && homeAssistant.data && (
         <AutomationForm
           initial={maintenance.data}
           initialEngine={engine.data}
           daemonActive={engine.data.active === 'daemon'}
+          initialHomeAssistant={homeAssistant.data.settings}
+          homeAssistantConnected={homeAssistant.data.status.connected}
         />
       )}
     </PageLayout>
@@ -106,14 +115,24 @@ function AutomationForm({
   initial,
   initialEngine,
   daemonActive,
+  initialHomeAssistant,
+  homeAssistantConnected,
 }: {
   initial: MaintenanceSettings
   initialEngine: EngineSettings
   daemonActive: boolean
+  initialHomeAssistant: HomeAssistantSettings
+  homeAssistantConnected: boolean
 }) {
   const { toast } = useFeedback()
   const save = useSaveMaintenanceSettings()
   const saveEngine = useSaveEngineSettings()
+  const saveHomeAssistant = useSaveHomeAssistant()
+  const [homeAssistant, setHomeAssistant] = useState(initialHomeAssistant)
+  const [savedHomeAssistant, setSavedHomeAssistant] =
+    useState(initialHomeAssistant)
+  const homeAssistantDirty =
+    JSON.stringify(homeAssistant) !== JSON.stringify(savedHomeAssistant)
   const [settings, setSettings] = useState(initial)
   const [saved, setSaved] = useState(initial)
   const [engine, setEngine] = useState(engineSettingsOf(initialEngine))
@@ -122,8 +141,9 @@ function AutomationForm({
   )
   const maintenanceDirty = JSON.stringify(settings) !== JSON.stringify(saved)
   const engineDirty = JSON.stringify(engine) !== JSON.stringify(savedEngine)
-  const dirty = maintenanceDirty || engineDirty
-  const pending = save.isPending || saveEngine.isPending
+  const dirty = maintenanceDirty || engineDirty || homeAssistantDirty
+  const pending =
+    save.isPending || saveEngine.isPending || saveHomeAssistant.isPending
 
   const update = <K extends keyof MaintenanceSettings>(
     section: K,
@@ -141,6 +161,11 @@ function AutomationForm({
         const result = engineSettingsOf(await saveEngine.mutateAsync(engine))
         setEngine(result)
         setSavedEngine(result)
+      }
+      if (homeAssistantDirty) {
+        const { settings } = await saveHomeAssistant.mutateAsync(homeAssistant)
+        setHomeAssistant(settings)
+        setSavedHomeAssistant(settings)
       }
       toast.success(m.automation_saved())
     } catch (error) {
@@ -200,6 +225,30 @@ function AutomationForm({
       </SectionCard>
 
       <SectionCard
+        icon={<House />}
+        iconClass="bg-cyan-50 text-cyan-700"
+        title={m.automation_ha_title()}
+        badge={
+          savedHomeAssistant.enabled &&
+          (homeAssistantConnected ? (
+            <Badge variant="success">{m.automation_ha_connected()}</Badge>
+          ) : (
+            <Badge variant="warning">{m.automation_ha_disconnected()}</Badge>
+          ))
+        }
+        description={m.automation_ha_desc()}
+        enabled={homeAssistant.enabled}
+        onToggle={(enabled) => setHomeAssistant((s) => ({ ...s, enabled }))}
+      >
+        <HomeAssistantFields
+          settings={homeAssistant}
+          onChange={(changes) =>
+            setHomeAssistant((s) => ({ ...s, ...changes }))
+          }
+        />
+      </SectionCard>
+
+      <SectionCard
         icon={<Plug />}
         iconClass="bg-amber-50 text-amber-700"
         title={m.automation_daemon_title()}
@@ -234,6 +283,7 @@ function AutomationForm({
           onClick={() => {
             setSettings(saved)
             setEngine(savedEngine)
+            setHomeAssistant(savedHomeAssistant)
           }}
           disabled={!dirty || pending}
         >
@@ -244,6 +294,110 @@ function AutomationForm({
         </Button>
       </SaveBar>
     </div>
+  )
+}
+
+function HomeAssistantFields({
+  settings,
+  onChange,
+}: {
+  settings: HomeAssistantSettings
+  onChange: (changes: Partial<HomeAssistantSettings>) => void
+}) {
+  const [check, setCheck] = useState<{ ok: boolean; error?: string } | null>(
+    null,
+  )
+  const [testing, setTesting] = useState(false)
+
+  const handleTest = async () => {
+    setTesting(true)
+    try {
+      setCheck(await homeAssistantApi.test(settings))
+    } catch (error) {
+      setCheck({ ok: false, error: errorMessage(error) })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className={`${fieldClass} sm:col-span-2`}>
+          <Label htmlFor="ha-url">{m.automation_ha_url()}</Label>
+          <Input
+            id="ha-url"
+            value={settings.url}
+            onChange={(e) => onChange({ url: e.target.value })}
+            placeholder="mqtt://homeassistant.local:1883"
+            className="bg-background font-mono"
+          />
+        </div>
+        <div className={fieldClass}>
+          <Label htmlFor="ha-username">{m.automation_ha_username()}</Label>
+          <Input
+            id="ha-username"
+            value={settings.username}
+            onChange={(e) => onChange({ username: e.target.value })}
+            autoComplete="off"
+            className="bg-background"
+          />
+        </div>
+        <div className={fieldClass}>
+          <Label htmlFor="ha-password">{m.automation_ha_password()}</Label>
+          <Input
+            id="ha-password"
+            type="password"
+            value={settings.password}
+            onChange={(e) => onChange({ password: e.target.value })}
+            autoComplete="new-password"
+            className="bg-background"
+          />
+        </div>
+        <div className={fieldClass}>
+          <Label htmlFor="ha-prefix">{m.automation_ha_prefix()}</Label>
+          <Input
+            id="ha-prefix"
+            value={settings.discoveryPrefix}
+            onChange={(e) => onChange({ discoveryPrefix: e.target.value })}
+            className="bg-background font-mono"
+          />
+        </div>
+        <div className={fieldClass}>
+          <Label htmlFor="ha-topic">{m.automation_ha_topic()}</Label>
+          <Input
+            id="ha-topic"
+            value={settings.baseTopic}
+            onChange={(e) => onChange({ baseTopic: e.target.value })}
+            className="bg-background font-mono"
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleTest}
+            disabled={testing || !settings.url}
+          >
+            <Plug />
+            {testing ? m.automation_daemon_testing() : m.automation_ha_test()}
+          </Button>
+        </div>
+        {check?.ok && (
+          <p className="text-xs font-medium text-green-700">
+            ✓ {m.automation_ha_test_ok()}
+          </p>
+        )}
+        {check && !check.ok && (
+          <p className="text-xs font-medium text-red-700">
+            {m.automation_daemon_failed({ error: check.error ?? '' })}
+          </p>
+        )}
+      </div>
+      <p className={hintClass}>{m.automation_ha_hint()}</p>
+    </>
   )
 }
 

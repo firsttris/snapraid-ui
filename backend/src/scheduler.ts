@@ -107,9 +107,9 @@ const skipped = (skip: Omit<ScheduleOutcome, "timestamp" | "result">): ScheduleO
 // An unattended sync after a disk went missing or empty would drop its files from parity,
 // and after ransomware encrypted files in place it would overwrite theirs: check the pending
 // deletions and updates first
-const checkSyncGuard = async (
+export const checkSyncGuard = async (
   engine: SnapRaidEngine,
-  schedule: Schedule,
+  schedule: Pick<Schedule, "command" | "maxDeletedFiles" | "maxUpdatedFiles">,
   snapraidConfigPath: string
 ): Promise<ScheduleOutcome | null> => {
   const { maxDeletedFiles, maxUpdatedFiles } = schedule;

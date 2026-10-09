@@ -38,6 +38,7 @@ import {
 } from '../lib/api/config'
 import { engineApi } from '../lib/api/engine'
 import { browseFilesystem, readFile, writeFile } from '../lib/api/filesystem'
+import { homeAssistantApi } from '../lib/api/home-assistant'
 import { deleteLog, getLogContent, getLogs, rotateLogs } from '../lib/api/logs'
 import { maintenanceApi } from '../lib/api/maintenance'
 import { notificationsApi } from '../lib/api/notifications'
@@ -102,6 +103,7 @@ export const queryKeys = {
   schedules: ['schedules'] as const,
   notifications: ['notifications'] as const,
   maintenance: ['maintenance'] as const,
+  homeAssistant: ['home-assistant'] as const,
   dockerContainers: (socketPath: string) =>
     ['maintenance', 'containers', socketPath] as const,
   spindown: ['maintenance', 'spindown'] as const,
@@ -954,6 +956,31 @@ export const useSaveMaintenanceSettings = () => {
     onSuccess: (settings: MaintenanceSettings) => {
       queryClient.setQueryData(queryKeys.maintenance, settings)
       queryClient.invalidateQueries({ queryKey: queryKeys.spindown })
+    },
+  })
+}
+
+// Settings and connection; the connection is read again every few seconds
+export const useHomeAssistant = () => {
+  return useQuery({
+    queryKey: queryKeys.homeAssistant,
+    queryFn: homeAssistantApi.get,
+    refetchInterval: 10_000,
+  })
+}
+
+export const useSaveHomeAssistant = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: homeAssistantApi.save,
+    onSuccess: (state) => {
+      queryClient.setQueryData(queryKeys.homeAssistant, state)
+      // The connection comes up a moment after saving
+      setTimeout(
+        () =>
+          queryClient.invalidateQueries({ queryKey: queryKeys.homeAssistant }),
+        1500,
+      )
     },
   })
 }

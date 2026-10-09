@@ -1013,5 +1013,17 @@
   "recovery_confirm_changed": "SnapRAID rimette la versione dell’ultimo sync per {count} file. Il contenuto attuale viene sostituito e perso. Continuare?",
   "recovery_started": "Ripristino di {count} file…",
   "server_error_restore_too_many": "Al massimo {max} file alla volta",
-  "recovery_restored": "{count} file ripristinati. Un file ripristinato sul posto può comparire ancora come modificato in Diff fino al prossimo sync, il suo contenuto è quello dell’ultimo sync."
+  "recovery_restored": "{count} file ripristinati. Un file ripristinato sul posto può comparire ancora come modificato in Diff fino al prossimo sync, il suo contenuto è quello dell’ultimo sync.",
+  "automation_ha_title": "Home Assistant",
+  "automation_ha_desc": "Ogni array compare come dispositivo in Home Assistant tramite MQTT discovery: stato, ultimo sync e scrub, blocchi danneggiati, temperature e riempimento dei dischi, e pulsanti per sync e scrub.",
+  "automation_ha_connected": "Connesso",
+  "automation_ha_disconnected": "Non connesso",
+  "automation_ha_url": "Broker MQTT",
+  "automation_ha_username": "Nome utente (facoltativo)",
+  "automation_ha_password": "Password",
+  "automation_ha_prefix": "Prefisso discovery",
+  "automation_ha_topic": "Topic di SnapRAID UI",
+  "automation_ha_test": "Prova connessione",
+  "automation_ha_test_ok": "Connesso al broker",
+  "automation_ha_hint": "Usa il broker di Home Assistant, di solito l’add-on Mosquitto (mqtt://homeassistant.local:1883 con un utente di Home Assistant). Il prefisso è homeassistant se non l’hai cambiato lì. Il pulsante Sync usa la protezione dei nuovi sync pianificati (50 file eliminati, 100 modificati); se ferma il sync, ricevi la solita notifica."
 }

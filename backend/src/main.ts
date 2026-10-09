@@ -18,8 +18,12 @@ import { logsRoutes } from "./routes/logs.ts";
 import { schedulesRoutes } from "./routes/schedules.ts";
 import { notificationsRoutes } from "./routes/notifications.ts";
 import { maintenanceRoutes, setSpindownMonitor } from "./routes/maintenance.ts";
-import { metricsRoutes, setMetricsSources } from "./routes/metrics.ts";
 import { setupRoutes } from "./routes/setup.ts";
+import { metricsRoutes } from "./routes/metrics.ts";
+import { setSnapshotSources, snapshotConfigs } from "./array-snapshot.ts";
+import { homeAssistantRoutes, setHomeAssistant } from "./routes/home-assistant.ts";
+import { createHomeAssistant } from "./home-assistant-service.ts";
+import { startExternalJob } from "./routes/snapraid.ts";
 import { createSpindownMonitor } from "./spindown.ts";
 import { resumeLeftoverContainers } from "./container-pause.ts";
 import { resolveFromBase } from "./config.ts";
@@ -72,6 +76,7 @@ app.route("/api/notifications", notificationsRoutes);
 app.route("/api/maintenance", maintenanceRoutes);
 app.route("/api/metrics", metricsRoutes);
 app.route("/api/setup", setupRoutes);
+app.route("/api/home-assistant", homeAssistantRoutes);
 app.route("/api/engine", engineRoutes);
 
 // Health check
@@ -147,7 +152,18 @@ const main = async (): Promise<void> => {
   );
   
   // Set output callback for scheduled jobs
-  setMetricsSources(logManager, () => scheduler.getSchedules());
+  setSnapshotSources(logManager, () => scheduler.getSchedules());
+
+  // Home Assistant over MQTT, when enabled under Automation
+  const homeAssistant = createHomeAssistant({
+    snapshot: snapshotConfigs,
+    currentJob: () => engine.currentJob(),
+    lastJobFinishedAt: () => engine.lastJob()?.finishedAt,
+    runCommand: (configPath, command) => startExternalJob(configPath, command, `Home Assistant ${command}`),
+    version: Deno.env.get("SNAPRAID_UI_VERSION") ?? "",
+  });
+  setHomeAssistant(homeAssistant);
+  await homeAssistant.start().catch((error) => console.error("Home Assistant failed to start:", error));
   scheduler.setOutputCallback((scheduleId, chunk) => {
     broadcast({
       type: "output",

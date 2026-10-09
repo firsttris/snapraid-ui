@@ -11,7 +11,8 @@
     "hono": "jsr:@hono/hono@^4.13.9",
     "@hexagon/croner": "jsr:@hexagon/croner@^10.0.1",
     "@shared/": "../shared/",
-    "nodemailer": "npm:nodemailer@^10.0.13"
+    "nodemailer": "npm:nodemailer@^10.0.13",
+    "mqtt": "npm:mqtt@^5.14.1"
   },
   "compilerOptions": {
     "lib": ["deno.window", "deno.unstable"],

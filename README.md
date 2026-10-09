@@ -78,6 +78,7 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 - Notices a disk that is not mounted before a sync drops its files
 - Notifications via ntfy, e-mail or webhook, and a heartbeat for healthchecks.io or Uptime Kuma
 - Prometheus metrics for Grafana and alerts
+- Home Assistant: each array as a device with sensors and sync/scrub buttons (MQTT discovery)
 - Searchable logs of every run
 
 </td>

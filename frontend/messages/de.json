@@ -1027,5 +1027,17 @@
   "recovery_confirm_changed": "SnapRAID setzt {count} Dateien auf die Fassung vom letzten Sync zurück. Ihr jetziger Inhalt wird ersetzt und geht verloren. Fortfahren?",
   "recovery_started": "Stelle {count} Dateien wieder her…",
   "server_error_restore_too_many": "Höchstens {max} Dateien auf einmal",
-  "recovery_restored": "{count} Dateien wiederhergestellt. Eine an Ort und Stelle zurückgesetzte Datei kann in Diff bis zum nächsten Sync noch als geändert erscheinen, ihr Inhalt ist der vom letzten Sync."
+  "recovery_restored": "{count} Dateien wiederhergestellt. Eine an Ort und Stelle zurückgesetzte Datei kann in Diff bis zum nächsten Sync noch als geändert erscheinen, ihr Inhalt ist der vom letzten Sync.",
+  "automation_ha_title": "Home Assistant",
+  "automation_ha_desc": "Jedes Array erscheint per MQTT-Discovery als Gerät in Home Assistant: Zustand, letzter Sync und Scrub, fehlerhafte Blöcke, Temperaturen und Füllstand der Platten sowie Buttons für Sync und Scrub.",
+  "automation_ha_connected": "Verbunden",
+  "automation_ha_disconnected": "Nicht verbunden",
+  "automation_ha_url": "MQTT-Broker",
+  "automation_ha_username": "Benutzername (optional)",
+  "automation_ha_password": "Passwort",
+  "automation_ha_prefix": "Discovery-Präfix",
+  "automation_ha_topic": "Topic von SnapRAID UI",
+  "automation_ha_test": "Verbindung testen",
+  "automation_ha_test_ok": "Mit dem Broker verbunden",
+  "automation_ha_hint": "Nimm den Broker, den Home Assistant nutzt, meist das Mosquitto-Add-on (mqtt://homeassistant.local:1883 mit einem Home-Assistant-Benutzer). Das Präfix ist homeassistant, sofern du es dort nicht geändert hast. Der Sync-Button läuft mit dem Sync-Schutz neuer Zeitpläne (50 gelöschte, 100 geänderte Dateien); stoppt er den Sync, kommt die übliche Benachrichtigung."
 }

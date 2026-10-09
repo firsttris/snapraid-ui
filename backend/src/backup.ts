@@ -11,6 +11,7 @@ const STATE_FILES = [
   "notifications.json",
   "maintenance.json",
   "engine.json",
+  "home-assistant.json",
   "smart-baseline.json",
   "smart-history.json",
   "usage-history.json",

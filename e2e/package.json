@@ -12,6 +12,8 @@
   "devDependencies": {
     "@playwright/test": "1.56.1",
     "@types/node": "^22.19.0",
+    "aedes": "^0.51.3",
+    "mqtt": "^5.14.1",
     "typescript": "^5.9.3"
   }
 }

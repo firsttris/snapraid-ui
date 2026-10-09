@@ -1041,5 +1041,17 @@
   "recovery_confirm_changed": "SnapRAID puts back the version of the last sync for {count} files. Their current content is replaced and lost. Continue?",
   "recovery_started": "Restoring {count} files…",
   "server_error_restore_too_many": "At most {max} files at once",
-  "recovery_restored": "{count} files restored. A file restored in place can still show up as changed in Diff until the next sync, its content is the one of the last sync."
+  "recovery_restored": "{count} files restored. A file restored in place can still show up as changed in Diff until the next sync, its content is the one of the last sync.",
+  "automation_ha_title": "Home Assistant",
+  "automation_ha_desc": "Each array appears as a device in Home Assistant, through MQTT discovery: health, last sync and scrub, bad blocks, disk temperatures and fill levels, and buttons for sync and scrub.",
+  "automation_ha_connected": "Connected",
+  "automation_ha_disconnected": "Not connected",
+  "automation_ha_url": "MQTT broker",
+  "automation_ha_username": "Username (optional)",
+  "automation_ha_password": "Password",
+  "automation_ha_prefix": "Discovery prefix",
+  "automation_ha_topic": "Topic of SnapRAID UI",
+  "automation_ha_test": "Test connection",
+  "automation_ha_test_ok": "Connected to the broker",
+  "automation_ha_hint": "Use the broker Home Assistant uses, usually the Mosquitto add-on (mqtt://homeassistant.local:1883 with a Home Assistant user). The prefix is homeassistant unless you changed it there. The Sync button runs with the sync guard of new schedules (50 deleted, 100 changed files); when it stops the sync, you get the usual notification."
 }
