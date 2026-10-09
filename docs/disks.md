@@ -143,6 +143,7 @@ Each step runs as a normal job, with live output on the dashboard. You can close
 
 - After each step the wizard shows how many blocks were restored, how many are unrecoverable, errors and the log file.
 - If blocks could not be restored, the affected files get the extension `.unrecoverable`. If files were deleted after the last sync, restoring them may help before you run fix again. The wizard asks again before you sync in this case.
+- **Owner and permissions:** SnapRAID stores none, so the restored files would all belong to `root` with mode `600`. They take those of the same folder on another data disk of the array (`movies/2024` on `d2` for `movies/2024` on the new `d1`), and, for folders no other disk has, those of the new disk's top folder. Give that folder the owner you want (`chown tristan:tristan /mnt/disk1`) before you start the recovery. See [Recover files](usage.md#recover-files).
 - **After the sync, fix cannot be retried.** Only sync once you are satisfied with the result.
 - When the sync succeeds, click **Done**.
 - **Stop replacing** ends the wizard early. The config keeps pointing to the new disk and scheduled jobs run again. Only do this if you want to finish by hand.

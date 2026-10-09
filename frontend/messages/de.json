@@ -1024,5 +1024,7 @@
   "mount_suggestions_size": "{size}, {free} frei",
   "mount_suggestions_not_empty": "Nicht leer",
   "recovery_restore_all_deleted": "Alle {count} gelöschten wiederherstellen",
-  "recovery_confirm_all_deleted": "SnapRAID holt alle {count} gelöschten Dateien aller Platten aus der Parität zurück, so wie sie beim letzten Sync waren (snapraid fix -m). Geänderte Dateien bleiben, wie sie sind. Fortfahren?"
+  "recovery_confirm_all_deleted": "SnapRAID holt alle {count} gelöschten Dateien aller Platten aus der Parität zurück, so wie sie beim letzten Sync waren (snapraid fix -m). Geänderte Dateien bleiben, wie sie sind. Fortfahren?",
+  "server_restore_ownership": "▸ SnapRAID UI hat {files} wiederhergestellten Dateien und {folders} Ordnern Besitzer und Rechte des Ordners gegeben, in dem sie liegen.",
+  "server_restore_ownership_failed": "▸ Bei {count} wiederhergestellten Dateien oder Ordnern ließ sich der Besitzer nicht setzen, sie gehören dem Benutzer, der SnapRAID ausführt."
 }

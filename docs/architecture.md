@@ -93,6 +93,7 @@ Module map:
 | `usage-history.ts`, `parity-usage.ts` | Daily array usage history; size and free space of data and parity disks |
 | `disk-replacement.ts`, `disk-removal.ts` | Config rewriting and state for the replace-disk and remove-data-disk wizards |
 | `backup.ts` | Export and restore of settings, histories and SnapRAID configs |
+| `recovery.ts`, `restore-ownership.ts` | Restoring files from parity, one `fix` per disk; after every `fix`, files it recreated (from its log) and the folders made for them take the owner and permissions of their folder |
 | `disk-check.ts` | Disks that are missing, empty or on another filesystem than the content file recorded, from the `status` log |
 | `maintenance-settings.ts` | Docker pause and spindown settings |
 | `docker.ts`, `container-pause.ts` | Docker Engine API over the unix socket; pausing containers for the duration of jobs, resuming leftovers after a restart |
