@@ -143,6 +143,12 @@ The visual editor could not read or parse the file. Open it in the **Text Editor
 | *Content file '…' already exists* / *Pattern '…' already exists* | The line is already in the config. |
 | *Value must be a positive whole number* | `autosave` and `blocksize` take whole numbers above 0; leave the field empty to remove the option. |
 
+### `.snapraid.content` shows up in every diff
+
+Up to version 1.2.6, a data disk added in the visual editor with a slash at the end of the mount path got a content line with a double slash, e.g. `content /mnt/disk1//.snapraid.content`. SnapRAID only recognizes its content files by the path exactly as written, so it treats this one as a normal file: every sync stores it again and every diff lists it as changed. No data is at risk, the extra content file still works.
+
+Open the config in the **Text Editor**, replace `//.snapraid.content` with `/.snapraid.content` and save, then run a sync. Newer versions write the path with a single slash.
+
 ### Replacing a disk
 
 | Message | Fix |
