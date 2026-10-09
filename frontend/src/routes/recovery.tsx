@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { AlertTriangle, History, RefreshCw, Search } from 'lucide-react'
+import { AlertTriangle, History, RefreshCw, Search, Undo2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ConfigBar } from '../components/ConfigBar'
 import { errorMessage, useFeedback } from '../components/Feedback'
@@ -24,7 +24,7 @@ import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { useSchedules } from '../hooks/queries'
 import { useJob } from '../hooks/useJob'
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
-import { getDiff, restoreFiles } from '../lib/api/snapraid'
+import { executeCommand, getDiff, restoreFiles } from '../lib/api/snapraid'
 import {
   MAX_RESTORE,
   matchesSearch,
@@ -209,6 +209,25 @@ function RecoveryContent({
     }
   }
 
+  // Every deleted file at once (snapraid fix -m), also more than one run takes, e.g. after an
+  // accidental rm -rf; changed files stay as they are
+  const handleRestoreAllDeleted = async () => {
+    const count = String(files.deleted.length)
+    const confirmed = await confirm({
+      message: m.recovery_confirm_all_deleted({ count }),
+      confirmLabel: m.recovery_restore_all_deleted({ count }),
+    })
+    if (!confirmed) return
+    restoring.current = files.deleted.map((file) => file.key)
+    job.start('fix')
+    try {
+      await executeCommand('fix', configPath, ['-m'])
+      toast.success(m.recovery_started({ count }))
+    } catch (restoreError) {
+      job.fail('fix', errorMessage(restoreError))
+    }
+  }
+
   const empty = files.deleted.length === 0 && files.changed.length === 0
 
   return (
@@ -335,6 +354,19 @@ function RecoveryContent({
           )}
 
           <div className="flex flex-wrap items-center justify-end gap-3 border-t px-5 py-3">
+            {kind === 'deleted' && files.deleted.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={handleRestoreAllDeleted}
+                disabled={job.isRunning}
+                className="mr-auto"
+              >
+                <Undo2 />
+                {m.recovery_restore_all_deleted({
+                  count: String(files.deleted.length),
+                })}
+              </Button>
+            )}
             <span className="text-sm text-muted-foreground">
               {m.recovery_selected({ count: String(chosen.length) })}
             </span>

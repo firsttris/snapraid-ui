@@ -18,7 +18,7 @@ test('deleted and encrypted files are restored to their state of the last sync',
   await page.getByRole('checkbox', { name: 'movies/trailer.mkv' }).check()
   await page.getByRole('button', { name: 'Restore 1 files' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Restore 1 files' }).click()
-  await app.expectFinished('Undelete')
+  await app.expectFinished('Restore')
   expect((await array.readFile('d2', 'movies/trailer.mkv')).equals(trailer)).toBe(true)
 
   await page.getByRole('tab', { name: /Changed\s*1/ }).click()
@@ -26,7 +26,7 @@ test('deleted and encrypted files are restored to their state of the last sync',
   await page.getByRole('checkbox', { name: 'photos/holiday.jpg' }).check()
   await page.getByRole('button', { name: 'Restore 1 files' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Restore 1 files' }).click()
-  await app.expectFinished('Undelete')
+  await app.expectFinished('Restore')
   expect((await array.readFile('d1', 'photos/holiday.jpg')).equals(holiday)).toBe(true)
 
   await expect(page.getByText('2 files restored')).toBeVisible()
@@ -48,7 +48,7 @@ test('a file of the same path on another disk is left alone', async ({ page, app
   await page.getByRole('checkbox', { name: 'Select all shown files' }).check()
   await page.getByRole('button', { name: 'Restore 1 files' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Restore 1 files' }).click()
-  await app.expectFinished('Undelete')
+  await app.expectFinished('Restore')
 
   expect((await array.readFile('d1', 'shared/notes.txt')).equals(original)).toBe(true)
   expect((await array.readFile('d2', 'shared/notes.txt')).toString()).toContain('changed on d2')

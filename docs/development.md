@@ -157,7 +157,7 @@ The test adds files to the array's first data disk. In `snapraidd.conf` set `net
 
 | Test | What happens |
 |---|---|
-| `array.spec.ts` | Dashboard health and disks; sync with its preview (new and deleted files); bit rot in a file, found by a full scrub, repaired and verified by *Repair and verify*, byte for byte; *Undelete* of a deleted file; spinning disks up and down |
+| `array.spec.ts` | Dashboard health and disks; sync with its preview (new and deleted files); bit rot in a file, found by a full scrub, repaired and verified by *Repair and verify*, byte for byte; *Recover files* from the commands menu restoring all deleted files (`fix -m`); spinning disks up and down |
 | `schedules.spec.ts` | The nightly routine (touch, sync, scrub) created in the form and started with *Run now*; a scheduled sync skipped while a disk is empty (not mounted), the dashboard shows *Disk not available*; a sync skipped for mass changes, as ransomware leaves them; *Skip next run* and taking it back |
 | `setup.spec.ts` | The setup wizard after a first start: disks picked, the configuration written and synced, the placeholder entry replaced; a setup without parity or with a too small parity disk refused |
 | `recovery.spec.ts` | *Recover files*: a deleted file and an encrypted one restored byte for byte; a file of the same path on another disk left alone |

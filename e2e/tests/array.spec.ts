@@ -60,20 +60,23 @@ test('scrub finds silently corrupted data, one click repairs and verifies it', a
   expect(await array.snapraid('status')).toContain('No error detected')
 })
 
-test('undelete brings back a deleted file from parity', async ({ page, app }) => {
+test('undelete in the commands menu brings back all deleted files from parity', async ({ page, app }) => {
   const array = await createArray('undelete')
   const original = await array.readFile('d2', 'movies/trailer.mkv')
   await unlink(join(array.disk('d2'), 'movies/trailer.mkv'))
   await app.addArray(array, 'Undelete')
   await page.goto('/')
 
+  // The menu entry leads to the Recover files page
   await page.getByRole('button', { name: 'More commands' }).click()
-  await page.getByRole('menuitem', { name: /Undelete/ }).click()
-  const dialog = page.getByRole('dialog', { name: 'Undelete Files' })
-  await dialog.getByText('Restore All Missing Files').click()
-  await dialog.getByRole('button', { name: 'Execute Undelete' }).click()
+  await page.getByRole('menuitem', { name: /Recover files/ }).click()
+  await expect(page).toHaveURL(/\/recovery$/)
 
-  await app.expectFinished('Undelete')
+  await page.getByRole('button', { name: 'Restore all 1 deleted' }).click()
+  await expect(page.getByRole('alertdialog')).toContainText('snapraid fix -m')
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Restore all 1 deleted' }).click()
+
+  await app.expectFinished('Restore')
   expect((await array.readFile('d2', 'movies/trailer.mkv')).equals(original)).toBe(true)
 })
 
