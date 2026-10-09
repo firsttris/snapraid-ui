@@ -16,10 +16,12 @@ import {
   useConfig,
   useCreateSchedule,
   useDeleteSchedule,
+  useRunSchedule,
   useSchedules,
   useToggleSchedule,
   useUpdateSchedule,
 } from '../hooks/queries'
+import { useJob } from '../hooks/useJob'
 import { formatRelativeTime } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
@@ -36,6 +38,8 @@ function SchedulesPage() {
   const updateSchedule = useUpdateSchedule()
   const deleteSchedule = useDeleteSchedule()
   const toggleSchedule = useToggleSchedule()
+  const runSchedule = useRunSchedule()
+  const job = useJob()
 
   const [isCreating, setIsCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -78,6 +82,16 @@ function SchedulesPage() {
     if (!confirmed) return
     try {
       await deleteSchedule.mutateAsync(id)
+    } catch (error) {
+      toast.error(errorMessage(error))
+    }
+  }
+
+  // Runs like at its time, its output and result show as for a timed run
+  const handleRun = async (id: string, name: string) => {
+    try {
+      await runSchedule.mutateAsync(id)
+      toast.success(m.schedules_run_started({ name }))
     } catch (error) {
       toast.error(errorMessage(error))
     }
@@ -181,6 +195,8 @@ function SchedulesPage() {
                 }}
                 onDelete={() => handleDelete(schedule.id)}
                 onToggle={() => handleToggle(schedule.id)}
+                onRun={() => handleRun(schedule.id, schedule.name)}
+                runDisabled={job.isRunning || runSchedule.isPending}
               />
             ),
           )}

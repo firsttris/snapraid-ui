@@ -106,6 +106,8 @@ The header shows how many schedules are active and when the next one runs.
 
 Use the pencil to edit, the bin to delete (after a confirmation), and the switch to enable or disable a schedule. A disabled schedule stays saved but never runs.
 
+The play button (*Run now*) starts a schedule once, right away, exactly as at its time: the same steps, the [sync guard](#sync-guard), the checks for missing disks, the Docker pause and the notifications. It works for disabled schedules too, so you can try a routine before you enable it. It is greyed out while a job is running.
+
 Every command of a scheduled run writes its own log, which you find under [Logs](logs.md). While a scheduled job runs, its output is sent to the live output like any other job.
 
 ## When a schedule is skipped

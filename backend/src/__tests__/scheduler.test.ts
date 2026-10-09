@@ -1,7 +1,7 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import { join } from "@std/path";
 import type { Schedule, ScheduleConfig } from "@shared/types.ts";
-import { executeScheduledCommand } from "../scheduler.ts";
+import { createScheduler, executeScheduledCommand } from "../scheduler.ts";
 import { createFakeEngine, type FakeEngineOptions } from "./fake-engine.ts";
 
 const schedule = (changes: Partial<Schedule> = {}): Schedule => ({
@@ -81,4 +81,30 @@ Deno.test("scheduler - SnapRAID locked by another process: the disk check steps 
 Deno.test("scheduler - a scrub schedule does not run the sync guard", async () => {
   const { jobs } = await runOnce({ deletedFiles: 999 }, { command: "scrub", args: ["-p", "new"] });
   assertEquals(jobs, ["scrub -p new"]);
+});
+
+Deno.test("scheduler - run now runs the routine once, not while a job runs", async () => {
+  const dir = await Deno.makeTempDir();
+  const path = join(dir, "schedules.json");
+  try {
+    // Disabled: run now works without the cron
+    await Deno.writeTextFile(path, JSON.stringify({ schedules: [schedule({ enabled: false })] }));
+    const engine = createFakeEngine();
+    const scheduler = createScheduler(path, engine);
+
+    const { done } = await scheduler.runNow("nightly");
+    await done;
+    assertEquals(engine.jobs, ["touch", "sync", "scrub -p 8"]);
+
+    await assertRejects(() => scheduler.runNow("unknown"));
+    await engine.runJob({
+      command: "sync",
+      configPath: "/fake/snapraid.conf",
+      afterRun: async () => {
+        await assertRejects(() => scheduler.runNow("nightly"));
+      },
+    });
+  } finally {
+    await Deno.remove(dir, { recursive: true });
+  }
 });

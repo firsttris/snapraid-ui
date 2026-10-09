@@ -140,6 +140,23 @@ schedules.post("/:id/toggle", async (c) => {
   }
 });
 
+// POST /api/schedules/:id/run - Run a schedule now, with its routine and checks
+schedules.post("/:id/run", async (c) => {
+  if (!state.scheduler) {
+    return c.json({ error: "Scheduler not initialized" }, 500);
+  }
+
+  try {
+    await state.scheduler.runNow(c.req.param("id"));
+    return c.json({ success: true }, 202);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message === msg("server_error_schedule_not_found")) return c.json({ error: message }, 404);
+    if (message === msg("server_error_job_running")) return c.json({ error: message }, 409);
+    return c.json({ error: message }, 500);
+  }
+});
+
 // GET /api/schedules/next-runs - Get next run times for all schedules
 schedules.get("/next-runs", (c) => {
   if (!state.scheduler) {
