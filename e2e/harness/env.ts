@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url'
 export const E2E_DIR = join(dirname(fileURLToPath(import.meta.url)), '..')
 export const ROOT = join(E2E_DIR, '..')
 export const TOOLS = join(E2E_DIR, '.tools')
+// smartctl for SMART self-tests: a stand-in, there are no disks to test; its state lives with the arrays
+export const FAKE_SMARTCTL_DIR = join(E2E_DIR, 'harness', 'bin')
 // Recreated on each run: the backend's data, the test arrays and the server logs
 export const RUN_DIR = join(E2E_DIR, '.run')
 // SNAPRAID_BASE_PATH of the backend: config.json, schedules.json, logs

@@ -66,7 +66,7 @@ const USAGE = [
   { use: 0.53, files: 18650, fragmented: 0 },
 ];
 
-const demoDisks = async (configPath: string) => {
+export const demoDisks = async (configPath: string) => {
   const config = await parseSnapRaidConfig(configPath);
   const data = Object.keys(config.data).map((name, i) => ({ name, ...PROFILES[i % PROFILES.length] }));
   const parity = config.parity.map((p) => ({ name: p.keyword, ...PARITY_PROFILE }));

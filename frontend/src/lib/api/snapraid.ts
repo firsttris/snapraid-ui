@@ -5,6 +5,7 @@ import type {
   DevicesReport,
   DiffReport,
   DiskReplacement,
+  DiskSelfTest,
   DupReport,
   FinishedJob,
   LastRuns,
@@ -15,6 +16,7 @@ import type {
   ReplacementStep,
   RestoreFile,
   RunningJob,
+  SelfTestType,
   SmartHistoryPoint,
   SmartReport,
   SnapRaidCommand,
@@ -568,4 +570,34 @@ export const clearDiskReplacement = async (
     { method: 'DELETE' },
   )
   if (!response.ok) throw await apiError(response)
+}
+
+/**
+ * SMART self-test status and log of each disk; sleeping disks are not woken
+ */
+export const getSelfTests = async (
+  configPath: string,
+): Promise<DiskSelfTest[]> => {
+  const response = await apiFetch(
+    `${API_BASE}/snapraid/smart-selftest?path=${encodeURIComponent(configPath)}`,
+  )
+  if (!response.ok) throw await apiError(response)
+  return response.json()
+}
+
+/**
+ * Start a short or long self-test on these disks, or stop theirs; the disks that refused, with why
+ */
+export const controlSelfTests = async (
+  configPath: string,
+  disks: string[],
+  action: SelfTestType | 'abort',
+): Promise<Array<{ disk: string; error: string }>> => {
+  const response = await apiFetch(`${API_BASE}/snapraid/smart-selftest`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configPath, disks, action }),
+  })
+  if (!response.ok) throw await apiError(response)
+  return (await response.json()).failed
 }

@@ -1,6 +1,6 @@
 # SMART and disk health
 
-The **SMART** page shows the health of every disk in your array: temperature, failure probability, error counters and SSD wear, with a plain-language verdict and advice on what to do. This page also covers the usage history and the fill-up forecast on the dashboard.
+The **SMART** page shows the health of every disk in your array: temperature, failure probability, error counters and SSD wear, with a plain-language verdict and advice on what to do. It explains the SMART attributes and runs the disks' own self-tests. This page also covers the usage history and the fill-up forecast on the dashboard.
 
 <img src="screenshots/smart.png" alt="SMART page with per-disk health cards and attributes" width="900">
 
@@ -39,11 +39,23 @@ Click a card to show its details below the cards. Until you pick one, the detail
 
 ### Details
 
-The details have up to three tabs:
+The details have up to four tabs:
 
-- **SMART Attributes**: the attribute table (*ID*, *Name*, *Value*, *Worst*, *Threshold*, *Raw*, *Status*). Attributes that are or were below their threshold, and counters that matter (see below) with a raw value above 0, are highlighted and marked *Watch* or *Critical*.
+- **SMART Attributes**: the attribute table, see [Attributes](#attributes).
 - **History (N days)**: charts of the daily values, see [History](#history).
+- **Self-test**: start, follow and stop the disk's self-tests, and its log of past tests, see [Self-tests](#self-tests).
 - **Raw output**: SnapRAID's text output of the smart command.
+
+### Attributes
+
+Each attribute shows a plain name (e.g. *Reallocated sectors*), its id and name as the disk reports it (`5 · Reallocated_Sector_Ct`) and a sentence on what it measures and which values are fine. About 30 common attributes are explained this way; others show the disk's name only.
+
+*Value*, *Worst* and *Threshold* are the vendor's normalized scale, higher is better; *Raw* is the actual count. *Assessment* says *OK*, *Watch* or *Critical*: an attribute that is or was below its threshold, and counters that matter (see below) with a raw value above 0, are highlighted. The flags (e.g. `PO--CK`) are in the tooltip of the assessment.
+
+The attributes that say something about the disk's health come first: sectors and errors, temperature, power-on hours, SSD wear, and every attribute that is not *OK*. The others (counters such as power cycles or head load cycles) wait behind **Show all attributes**.
+
+> [!NOTE]
+> Seagate disks report the *Read error rate* (1), *Seek error rate* (7) and *ECC corrections* (195) with huge raw values that pack a count of operations into them. That is normal; the normalized value against the threshold is what counts.
 
 The heading also shows the model family, serial number and power-on hours.
 
@@ -98,6 +110,21 @@ The baseline is updated on every SMART read, from the page or a scheduled `smart
 ### Error log entries
 
 *Error log entries* are shown on the card but don't cause a warning on their own; they are harmless in most cases. The `LOGERR` status that SnapRAID derives from the error log does count as *Watch*.
+
+## Self-tests
+
+A SMART self-test is run by the disk's own firmware. The **short** test checks the electronics, the heads and a part of the surface in about two minutes; the **long** (extended) test reads the whole surface and takes hours, on large HDDs a day. The disk tells how long it expects, the buttons show it.
+
+- **Start short test** and **Start long test** in the *Self-test* tab of a disk; the long one asks first.
+- **Self-test** at the top of the page starts a short or long test on all disks that support it at once.
+- While a test runs, the tab shows its progress (*Self-test running, 60 % left*) and **Stop test**, the disk card shows *Self-test running*. The page checks every 15 seconds.
+- **Last tests (from the disk)** is the disk's own log: short or long, *Passed*, *Failed* (with the disk's reason, e.g. *Completed: read failure*) or *Stopped*, and when, in power-on hours and as *N days ago*.
+
+The array stays usable during a test; reads and writes just run slower, and a sync or scrub takes longer. Tests can't be started while a job runs. The spindown leaves a disk with a running test awake: sending it to sleep would stop the test. A disk in standby is not woken to read its self-test status; starting a test wakes it.
+
+A failed self-test shows up in the disk's SMART status as `SELFERR`, rated *Watch* and reported by [SMART notifications](notifications.md#smart-warnings).
+
+Self-tests use `smartctl -t short|long`, `smartctl -X` and `smartctl -c -l selftest` with JSON output (smartmontools 7 or newer, included in the Docker image), on the device SnapRAID maps the disk to. Inside Docker the container needs `--privileged`, as for all of SMART. NVMe drives run self-tests when both the drive and the installed smartmontools support it; otherwise the tab says the disk reports no self-tests. With [snapraid-daemon](automation.md#snapraid-daemon-experimental), self-tests still run through SnapRAID UI's own `smartctl`, so the disks must be visible to its container.
 
 ## Disks in standby
 

@@ -3,6 +3,7 @@ import type {
   AuthSession,
   DataDiskUsage,
   DiskReplacement,
+  DiskSelfTest,
   LastRuns,
   LogFile,
   MaintenanceSettings,
@@ -13,6 +14,7 @@ import type {
   ReplacementStep,
   RunningJob,
   Schedule,
+  SelfTestType,
   SmartReport,
   SnapRaidCommand,
   SnapRaidStatus,
@@ -49,12 +51,14 @@ import {
   addExclude,
   addParityDisk,
   clearDiskReplacement,
+  controlSelfTests,
   executeCommand,
   getCurrentJob,
   getDataDiskUsage,
   getDiskReplacement,
   getLastRuns,
   getParityUsage,
+  getSelfTests,
   getSmart,
   getSmartHistory,
   getStatus,
@@ -92,6 +96,7 @@ export const queryKeys = {
     ['usage-history', path, readAt] as const,
   probe: (path: string) => ['probe', path] as const,
   smart: (path: string) => ['smart', path] as const,
+  selfTests: (path: string) => ['smart-selftest', path] as const,
   smartHistory: (path: string, readAt: string) =>
     ['smart-history', path, readAt] as const,
   logs: ['logs'] as const,
@@ -263,6 +268,35 @@ export const useSmart = (configPath: string | undefined) => {
     queryKey: queryKeys.smart(configPath ?? ''),
     queryFn: configPath ? () => getSmart(configPath) : skipToken,
     staleTime: SMART_STALE_MS,
+  })
+}
+
+// A running self-test is followed every 15 seconds, otherwise the status is read on demand
+export const useSelfTests = (configPath: string | undefined) =>
+  useQuery<DiskSelfTest[]>({
+    queryKey: queryKeys.selfTests(configPath ?? ''),
+    queryFn: configPath ? () => getSelfTests(configPath) : skipToken,
+    staleTime: SMART_STALE_MS,
+    refetchInterval: (query) =>
+      query.state.data?.some((test) => test.running) ? 15_000 : false,
+  })
+
+export const useControlSelfTests = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      configPath,
+      disks,
+      action,
+    }: {
+      configPath: string
+      disks: string[]
+      action: SelfTestType | 'abort'
+    }) => controlSelfTests(configPath, disks, action),
+    onSettled: (_data, _error, { configPath }) =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.selfTests(configPath),
+      }),
   })
 }
 

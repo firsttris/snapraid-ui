@@ -9,6 +9,7 @@ import { executeSnapraidCommand } from "./executors/command-executor.ts";
 import { parseDevicesOutput } from "./parsers/devices-parser.ts";
 import { loadMaintenanceSettings } from "./maintenance-settings.ts";
 import { DEMO_MODE, demoDevices, demoDiskstats } from "./demo.ts";
+import { selfTestRunning } from "./smart-selftest.ts";
 
 const TICK_MS = 60_000;
 // Disks rarely move between devices; read the mapping again now and then and after a failed spindown
@@ -147,7 +148,9 @@ export const createSpindownMonitor = (isBusy: () => boolean) => {
       const result = updateWatchedDisks(watched, watchedDevices, stats, now, spindown.idleMinutes * 60_000);
       watched = result.disks;
       error = undefined;
-      if (result.idle.length > 0 && !isBusy()) await spinDown(result.idle, now);
+      // Sleep would abort a SMART self-test, which doesn't count as I/O
+      const idle = result.idle.filter((disk) => !selfTestRunning(disk.device, now.getTime()));
+      if (idle.length > 0 && !isBusy()) await spinDown(idle, now);
     } catch (tickError) {
       error = tickError instanceof Error ? tickError.message : String(tickError);
       console.error("Spindown check failed:", tickError);

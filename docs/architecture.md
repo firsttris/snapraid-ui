@@ -93,6 +93,7 @@ Module map:
 | `usage-history.ts`, `parity-usage.ts` | Daily array usage history; size and free space of data and parity disks |
 | `disk-replacement.ts`, `disk-removal.ts` | Config rewriting and state for the replace-disk and remove-data-disk wizards |
 | `backup.ts` | Export and restore of settings, histories and SnapRAID configs |
+| `smart-selftest.ts` | SMART self-tests through `smartctl -j` (ATA and NVMe): start, stop, status and log per disk; keeps the spindown away from disks with a running test |
 | `recovery.ts`, `restore-ownership.ts` | Restoring files from parity, one `fix` per disk; after every `fix`, files it recreated (from its log) and the folders made for them take the owner and permissions of their folder |
 | `disk-check.ts` | Disks that are missing, empty or on another filesystem than the content file recorded, from the `status` log |
 | `maintenance-settings.ts` | Docker pause and spindown settings |
@@ -336,6 +337,8 @@ Most endpoints that work on a SnapRAID config take its path: as the `path` query
 |---|---|---|---|
 | GET | `/api/snapraid/smart` | Run `snapraid smart`; applies the CRC baseline and records the daily SMART history | Query `path`. Returns `SmartReport`: `{disks, arrayFailureProbability, timestamp, rawOutput}` |
 | GET | `/api/snapraid/smart-history` | Daily SMART values per disk | Query `path` |
+| GET | `/api/snapraid/smart-selftest` | Self-test status and log per disk; disks in standby are not woken | Query `path`. Returns `DiskSelfTest[]` |
+| POST | `/api/snapraid/smart-selftest` | Start or stop self-tests | Body `{configPath, disks, action}` with `action` `short`, `long` or `abort`. `409` while a job runs (not for `abort`). Returns `{failed: [{disk, error}]}` |
 | GET | `/api/snapraid/probe` | Power state of the disks (`snapraid probe`) | Query `path`. Returns `ProbeReport`. `400` with `unsupported: true` if probing is not supported |
 | POST | `/api/snapraid/power` | Spin disks up or down (`snapraid up` / `down`, always through the CLI) | Body `{configPath, action: "up" \| "down", disks?}`, no disks for the whole array. `409` while a job runs; `500` with SnapRAID's last line when it failed |
 
