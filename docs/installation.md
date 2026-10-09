@@ -156,10 +156,12 @@ With Podman, mount the Podman socket instead, e.g. `/run/podman/podman.sock:/var
 
 ## First start
 
-On the first start, the backend creates `config.json` in the data directory with one configuration named *Default* that points to `snapraid.conf` in the same directory. You now have two options:
+On the first start, the backend creates `config.json` in the data directory with one configuration named *Default* that points to `snapraid.conf` in the same directory. As long as that file does not exist, the dashboard welcomes you with two options:
 
-- **Use an existing config.** Copy your `snapraid.conf` into the data directory (`./snapraid/snapraid.conf` in the examples above) and reload the page. Or open *Manage Configurations* and use *Add existing file* with an absolute path, as long as the file is reachable inside the container (mount it, for example `-v /etc/snapraid.conf:/etc/snapraid.conf`).
-- **Start from scratch.** In *Manage Configurations*, choose *Create new config*. The file is created in the data directory from a template, and you add disks in the visual editor. See [Managing disks](disks.md).
+- **Add existing configuration.** Copy your `snapraid.conf` into the data directory (`./snapraid/snapraid.conf` in the examples above) and reload the page, nothing else to do. Or add it where it is, under *Manage Configurations* → *Add existing file* with an absolute path, as long as the file is reachable inside the container (mount it, for example `-v /etc/snapraid.conf:/etc/snapraid.conf`).
+- **Set up a new array.** The [setup wizard](disks.md#set-up-a-new-array) lists the disks mounted into the container, you pick data and parity disks, and it writes the configuration and starts the first sync. Mount the disks first, at the same paths as on the host (see [Disks and paths](#disks-and-paths)).
+
+You can also start from an empty template under *Manage Configurations* → *Create new config* and add the disks in the visual editor, see [Managing disks](disks.md).
 
 If your existing config refers to content files outside the mounted paths, mount those directories too, or move the content files as described in [Disks and paths](#disks-and-paths).
 

@@ -19,6 +19,7 @@ import { schedulesRoutes } from "./routes/schedules.ts";
 import { notificationsRoutes } from "./routes/notifications.ts";
 import { maintenanceRoutes, setSpindownMonitor } from "./routes/maintenance.ts";
 import { metricsRoutes, setMetricsSources } from "./routes/metrics.ts";
+import { setupRoutes } from "./routes/setup.ts";
 import { createSpindownMonitor } from "./spindown.ts";
 import { resumeLeftoverContainers } from "./container-pause.ts";
 import { resolveFromBase } from "./config.ts";
@@ -70,6 +71,7 @@ app.route("/api/schedules", schedulesRoutes);
 app.route("/api/notifications", notificationsRoutes);
 app.route("/api/maintenance", maintenanceRoutes);
 app.route("/api/metrics", metricsRoutes);
+app.route("/api/setup", setupRoutes);
 app.route("/api/engine", engineRoutes);
 
 // Health check

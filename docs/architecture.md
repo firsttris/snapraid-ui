@@ -406,6 +406,8 @@ All of these take `configPath` in the body, edit the `snapraid.conf` line by lin
 | PUT | `/api/maintenance` | Save settings | Body: `MaintenanceSettings`. `400` if invalid |
 | GET | `/api/maintenance/containers` | Containers on the Docker socket | Query `socket` (default: the saved one). Returns `DockerContainersReport`, `available: false` with the error when the socket can't be reached |
 | GET | `/api/maintenance/spindown` | Disks the spindown watches, their last activity and when they were spun down | `SpindownStatus` |
+| GET | `/api/setup/mounts` | Mounted filesystems the setup wizard offers as disks | `MountCandidate[]`: `{path, device, fstype, totalBytes, usedBytes, freeBytes, empty, snapraidFiles}`, from `df`, without virtual filesystems, system directories and files |
+| POST | `/api/setup/create` | Write the `snapraid.conf` of a new array into the data folder and add it | Body `{name, fileName, setup: {dataDisks: [{name, path}], parityPaths}}`. `400` with `problems` if the setup is incomplete or a path is no directory, `409` if the file exists. Returns `201` with `{path}` |
 | GET | `/api/metrics` | Prometheus metrics, see [Automation](automation.md#prometheus-metrics) | Text exposition format. Not behind the login; `Authorization: Bearer <token>` when a token is set (`401` otherwise), `404` while switched off |
 
 See [Notifications](notifications.md) for the settings and the webhook payload.
