@@ -8,6 +8,7 @@ Common problems and how to fix them. If your problem is not listed, check the co
 - [Safety stops](#safety-stops)
 - [Scheduled jobs were skipped](#scheduled-jobs-were-skipped)
 - [SMART and disk power state](#smart-and-disk-power-state)
+- [Recover files](#recover-files)
 - [Config editor and disk wizards](#config-editor-and-disk-wizards)
 - [Login](#login)
 - [Other](#other)
@@ -22,7 +23,7 @@ The UI looks for the file **inside the container**. On the first start it create
 - Copy your `snapraid.conf` into that folder, **or**
 - mount the file into the container (e.g. `-v /etc/snapraid.conf:/etc/snapraid.conf`) and add it in *Manage arrays* with **Add existing file**. You can remove the *Default* entry afterwards.
 
-See [Configurations and disks](disks.md#managing-configurations).
+See [Configurations and disks](disks.md#managing-arrays).
 
 ### Validation fails or a sync complains about missing disks
 
@@ -118,11 +119,27 @@ SnapRAID cannot read the power state of the disks. This is common with NVMe driv
 
 The disk is asleep. SMART data is not read, so it is not woken up. It is read again once the disk is awake. See [SMART monitoring](smart.md).
 
+## Recover files
+
+### Recovered files belong to root
+
+SnapRAID stores no owner or permissions, so a file it recreates belongs to whoever runs it, `root` in the Docker image, with mode `600`. SnapRAID UI gives recovered files, and the folders made for them, the owner and permissions of the folder they are restored into (see [Recover files](usage.md#recover-files)). They can still end up with `root` when:
+
+- the folder they are restored into belongs to `root` itself,
+- they were recovered with version 1.2.7 or older, or outside the UI (`snapraid fix` on the command line),
+- the jobs run on a [snapraid-daemon](automation.md) on another machine, where SnapRAID UI can't reach the disks.
+
+Fix them by hand, e.g. `chown -R tristan:tristan /mnt/disk1/photos` and `chmod 644` for the files. Before replacing a disk, give the new disk's top folder the owner you want.
+
+### A recovered file is still listed as changed
+
+SnapRAID sometimes keeps the new modification time of a file it restored in place, to not mix it up with another file. Its content is the one of the last sync; *Recover files* hides it, and the next sync reads it again.
+
 ## Config editor and disk wizards
 
 ### Unsaved text was lost
 
-The **Visual Editor** writes every change to the file immediately, while the **Text Editor** only writes on **Save Changes**. Switching from text to visual mode discards unsaved text; the editor asks before it does.
+The **Visual Editor** writes every change to the file immediately, while the **Text Editor** only writes on **Save Changes**. Switching from text to visual mode, leaving the *Configuration* page or closing the tab discards unsaved text; the page asks before it does.
 
 ### "Failed to load disk configuration"
 
