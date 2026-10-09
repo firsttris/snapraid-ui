@@ -1,13 +1,14 @@
-name: snapraid-daemon Release Check
+name: Upstream Release Check
 
-# Jobs, status, diff, SMART and the power state go through the SnapRAID engine
-# (backend/src/engine/engine.ts), so they could also run on snapraid-daemon's REST API.
-# Its API was last compared with backend/src/engine/REVIEWED_DAEMON_VERSION. This opens an
-# issue when a newer tag is out, so a new endpoint is not missed.
+# Opens an issue when a project SnapRAID UI builds on has a newer version, so it is looked at on purpose:
+# - snapraid: the image pins a SnapRAID release (SNAPRAID_VERSION in docker/Dockerfile)
+# - snapraid-daemon: jobs, status, diff, SMART and the power state go through the SnapRAID engine
+#   (backend/src/engine/engine.ts), so they could also run on snapraid-daemon's REST API. Its API was
+#   last compared with backend/src/engine/REVIEWED_DAEMON_VERSION.
 
 on:
   schedule:
-    - cron: "15 6 * * 1"
+    - cron: "0 6 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -15,7 +16,42 @@ permissions:
   issues: write
 
 jobs:
-  check:
+  snapraid:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compare pinned and latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pinned=$(sed -n 's/^ARG SNAPRAID_VERSION=//p' docker/Dockerfile)
+          # releases/latest skips pre-releases such as release candidates
+          latest=$(gh api repos/amadvance/snapraid/releases/latest --jq '.tag_name' | sed 's/^v//')
+          echo "Pinned: $pinned, latest: $latest"
+          if [ "$pinned" = "$latest" ]; then
+            exit 0
+          fi
+
+          title="SnapRAID $latest is available (pinned: $pinned)"
+          if gh issue list --state open --search "in:title \"SnapRAID $latest is available\"" --json number --jq 'length' | grep -qv '^0$'; then
+            echo "Issue already open"
+            exit 0
+          fi
+
+          gh issue create --title "$title" --body "$(cat <<BODY
+          SnapRAID [$latest](https://github.com/amadvance/snapraid/releases/tag/v$latest) is out, the image ships $pinned.
+
+          Before bumping \`SNAPRAID_VERSION\` in \`docker/Dockerfile\` and \`dev/setup.sh\`:
+
+          - [ ] Read the [HISTORY](https://github.com/amadvance/snapraid/blob/v$latest/HISTORY) for changes to the structured log (\`--log\`)
+          - [ ] \`SNAPRAID_VERSION=$latest dev/setup.sh --reset\`, then run status, diff, sync, scrub, check, list, dup, touch and smart in the UI
+          - [ ] A major version: compare the log tags with the parser fixtures in \`backend/src/parsers/__tests__/fixtures\`
+          BODY
+          )"
+
+  snapraid-daemon:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

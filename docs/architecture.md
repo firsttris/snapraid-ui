@@ -139,7 +139,7 @@ Open points for a daemon engine:
 
 ### Keeping the engine in line with snapraid-daemon
 
-The API was last compared with snapraid-daemon **`v2.0rc2`**; the version is in `backend/src/engine/REVIEWED_DAEMON_VERSION`. A weekly workflow (`snapraid-daemon-release.yml`) opens an issue when a newer tag is out. For each new version:
+The API was last compared with snapraid-daemon **`v2.0rc2`**; the version is in `backend/src/engine/REVIEWED_DAEMON_VERSION`. A weekly workflow (job `snapraid-daemon` in `upstream-release.yml`) opens an issue when a newer tag is out. For each new version:
 
 1. Compare `snapraidd.yaml` (the OpenAPI spec) between the reviewed and the new tag.
 2. If the daemon gained an endpoint for something in the "stays with the UI" list (for example `dup` or `list`), add a method to `SnapRaidEngine`, implement it in the CLI engine, move the callers to it and add a step to the contract tests.
