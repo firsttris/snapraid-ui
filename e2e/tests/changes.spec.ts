@@ -33,7 +33,11 @@ test('deleted and encrypted files are restored to their state of the last sync',
   expect((await array.readFile('d1', 'photos/holiday.jpg')).equals(holiday)).toBe(true)
 
   await expect(page.getByText('2 files restored')).toBeVisible()
-  await expect(page.getByText('No changes: every file is as it was at the last sync.')).toBeVisible()
+  // Nothing left to restore; SnapRAID may still list a restored file under Moved/copied
+  await expect(
+    page.getByText('No changes: every file is as it was at the last sync.').or(page.getByRole('tab', { name: /Deleted\s*0/ })),
+  ).toBeVisible()
+  await expect(page.getByRole('tab', { name: /^(Deleted|Changed)\s*[1-9]/ })).toHaveCount(0)
 })
 
 test('a file of the same path on another disk is left alone', async ({ page, app }) => {
