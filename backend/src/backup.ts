@@ -9,6 +9,7 @@ const STATE_FILES = [
   "config.json",
   "schedules.json",
   "notifications.json",
+  "maintenance.json",
   "smart-baseline.json",
   "smart-history.json",
   "usage-history.json",

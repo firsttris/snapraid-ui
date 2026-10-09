@@ -14,6 +14,9 @@ import { snapraidRoutes } from "./routes/snapraid.ts";
 import { logsRoutes } from "./routes/logs.ts";
 import { schedulesRoutes } from "./routes/schedules.ts";
 import { notificationsRoutes } from "./routes/notifications.ts";
+import { maintenanceRoutes, setSpindownMonitor } from "./routes/maintenance.ts";
+import { createSpindownMonitor } from "./spindown.ts";
+import { resumeLeftoverContainers } from "./container-pause.ts";
 import { resolveFromBase } from "./config.ts";
 import { createAuth, disabledAuthRoutes, loadSessionSecret, readAuthEnv } from "./auth.ts";
 
@@ -61,6 +64,7 @@ app.route("/api/snapraid", snapraidRoutes);
 app.route("/api/logs", logsRoutes);
 app.route("/api/schedules", schedulesRoutes);
 app.route("/api/notifications", notificationsRoutes);
+app.route("/api/maintenance", maintenanceRoutes);
 
 // Health check
 app.get("/", (c) => {
@@ -142,6 +146,21 @@ const main = async (): Promise<void> => {
 
   // Inject scheduler into routes
   setScheduler(scheduler);
+
+  // Containers paused for a job that was cut off by a restart
+  await resumeLeftoverContainers();
+
+  // Spins idle disks down when enabled in the settings. `snapraid down` takes SnapRAID's lock,
+  // so it waits while a job runs and shortly before a scheduled one would start
+  const SPINDOWN_SCHEDULE_MARGIN_MS = 2 * 60_000;
+  const spindown = createSpindownMonitor(() =>
+    !!runner.getCurrentJob() ||
+    [...scheduler.getNextRuns().values()].some((next) =>
+      next !== null && next.getTime() - Date.now() < SPINDOWN_SCHEDULE_MARGIN_MS
+    )
+  );
+  setSpindownMonitor(spindown);
+  spindown.start();
 
   // Perform initial log rotation
   await logManager.rotateLogs(

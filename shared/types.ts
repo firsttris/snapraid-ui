@@ -96,7 +96,20 @@ export interface SnapRaidStatus {
   disks?: DiskStatusInfo[]; // Individual disk stats
   scrubHistory?: ScrubHistoryPoint[]; // Scrub history chart data
   zeroSubsecondFiles?: number; // Files with a zero sub-second timestamp, fixed by `touch`
+  diskIssues?: DiskIssue[]; // Disks that do not look like the ones in the content file
   rawOutput: string;
+}
+
+// A disk that does not look like the one SnapRAID recorded in the content file.
+// missing and empty usually mean it is not mounted, a sync would then drop its files from parity
+export type DiskIssueKind = 'missing' | 'empty' | 'uuid_changed';
+
+export interface DiskIssue {
+  disk: string;            // Data disk name or parity keyword, e.g. "d1" or "2-parity"
+  type: 'data' | 'parity';
+  kind: DiskIssueKind;
+  path: string;            // Directory of a data disk, file of a parity
+  files?: number;          // empty: files the content file lists for the disk
 }
 
 export interface CommandOutput {
@@ -310,7 +323,12 @@ export interface Schedule {
   updatedAt: string; // ISO string
 }
 
-export type ScheduleSkipReason = 'job_running' | 'too_many_deleted' | 'diff_failed' | 'recovery_in_progress';
+export type ScheduleSkipReason =
+  | 'job_running'
+  | 'too_many_deleted'
+  | 'diff_failed'
+  | 'recovery_in_progress'
+  | 'disk_missing';
 
 // One command of a scheduled run, e.g. touch, sync and scrub of a nightly sync
 export interface ScheduleStepOutcome {
@@ -324,6 +342,7 @@ export interface ScheduleOutcome {
   result: RunResult | 'skipped';
   skipReason?: ScheduleSkipReason;
   deletedFiles?: number; // Deleted files diff reported, for too_many_deleted
+  disks?: string[]; // Missing or empty disks, for disk_missing
   error?: string;
   steps?: ScheduleStepOutcome[]; // Only for schedules that run more than one command
 }
@@ -460,6 +479,51 @@ export interface DiskReplacement {
   startedAt: string;       // ISO string
   completedAt?: string;    // Set by a successful sync, scheduled jobs are paused until then
   steps: Partial<Record<ReplacementStep, ReplacementStepResult>>;
+}
+
+// Automation around jobs, stored in maintenance.json
+export interface MaintenanceSettings {
+  dockerPause: {
+    enabled: boolean;
+    socketPath: string;          // Docker API socket, mounted into the container
+    containers: string[];        // Names of the containers to pause
+    commands: SnapRaidCommand[]; // Jobs during which they are paused
+  };
+  spindown: {
+    enabled: boolean;
+    idleMinutes: number;         // Spin a disk down after this long without reads or writes
+  };
+}
+
+export interface DockerContainer {
+  id: string;
+  name: string;
+  image: string;
+  state: string;                 // Docker's state: running, paused, exited, ...
+  self?: boolean;                // SnapRAID UI's own container, pausing it would freeze the backend
+}
+
+// Containers the socket reports; available is false when the socket cannot be reached
+export interface DockerContainersReport {
+  available: boolean;
+  error?: string;
+  containers: DockerContainer[];
+}
+
+// A disk the spindown watches
+export interface SpindownDisk {
+  configPath: string;
+  disk: string;                  // Data disk name or parity keyword
+  device: string;                // e.g. /dev/sda
+  lastActivity: string;          // ISO, last change of its read and write counters seen
+  spunDownAt?: string;           // ISO, set while it sleeps after being spun down here
+}
+
+export interface SpindownStatus {
+  enabled: boolean;
+  idleMinutes: number;
+  disks: SpindownDisk[];
+  error?: string;                // Why disks could not be watched, e.g. no /proc/diskstats
 }
 
 // Notifications

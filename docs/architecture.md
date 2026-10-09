@@ -92,7 +92,11 @@ Module map:
 | `usage-history.ts`, `parity-usage.ts` | Daily array usage history; size and free space of data and parity disks |
 | `disk-replacement.ts`, `disk-removal.ts` | Config rewriting and state for the replace-disk and remove-data-disk wizards |
 | `backup.ts` | Export and restore of settings, histories and SnapRAID configs |
-| `demo.ts` | Fake `smart` and `probe` output for the demo sandbox (`SNAPRAID_DEMO=1`) |
+| `disk-check.ts` | Disks that are missing, empty or on another filesystem than the content file recorded, from the `status` log |
+| `maintenance-settings.ts` | Docker pause and spindown settings |
+| `docker.ts`, `container-pause.ts` | Docker Engine API over the unix socket; pausing containers for the duration of jobs, resuming leftovers after a restart |
+| `spindown.ts` | Watches `/proc/diskstats` and spins idle disks down with `snapraid down` |
+| `demo.ts` | Fake `smart`, `probe` and device output for the demo sandbox (`SNAPRAID_DEMO=1`) |
 | `routes/*` | HTTP routes, see the [API reference](#api-reference) |
 
 ## Running SnapRAID
@@ -167,6 +171,8 @@ Everything lives in the data directory, `SNAPRAID_BASE_PATH`. In the image that 
 | `schedules.json` | Schedules and their last outcome |
 | `notifications.json` | Notification settings |
 | `notifications-state.json` | Which SMART problems were already reported |
+| `maintenance.json` | Docker pause and spindown settings |
+| `paused-containers.json` | Containers paused for the running job, resumed on the next start after a crash |
 | `smart-baseline.json`, `smart-history.json` | CRC baseline and daily SMART values (up to 365 points per disk) |
 | `usage-history.json` | Daily array usage (up to 730 points per config) |
 | `replacements.json` | Disk replacements in progress |
@@ -334,6 +340,15 @@ All of these take `configPath` in the body, edit the `snapraid.conf` line by lin
 | GET | `/api/notifications` | Notification settings with the SMTP password and ntfy token masked | `NotificationSettings` |
 | PUT | `/api/notifications` | Save settings; a masked secret keeps the stored value | Body: `NotificationSettings`. `400` if invalid |
 | POST | `/api/notifications/test` | Send a test message with the given, possibly unsaved settings | Body `{settings, channel?}` with `channel` = `email`, `ntfy` or `webhook` (default: all enabled channels). Returns `NotificationTestResult[]` |
+
+### Automation
+
+| Method | Path | Description | Notes |
+|---|---|---|---|
+| GET | `/api/maintenance` | Docker pause and spindown settings | `MaintenanceSettings` |
+| PUT | `/api/maintenance` | Save settings | Body: `MaintenanceSettings`. `400` if invalid |
+| GET | `/api/maintenance/containers` | Containers on the Docker socket | Query `socket` (default: the saved one). Returns `DockerContainersReport`, `available: false` with the error when the socket can't be reached |
+| GET | `/api/maintenance/spindown` | Disks the spindown watches, their last activity and when they were spun down | `SpindownStatus` |
 
 See [Notifications](notifications.md) for the settings and the webhook payload.
 

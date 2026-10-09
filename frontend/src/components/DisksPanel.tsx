@@ -1,5 +1,6 @@
 import type {
   DataDiskUsage,
+  DiskIssue,
   DiskPowerStatus,
   DiskStatusInfo,
   ParityLevelUsage,
@@ -46,6 +47,7 @@ interface DisksPanelProps {
   dataDiskUsage: DataDiskUsage[] | undefined
   usageHistory: UsagePoint[] | undefined
   powerStates: DiskPowerStatus[] | undefined
+  smartCritical: string[] // Disks SMART rates critical
   // status and parity usage come from slower SnapRAID and df calls than the config
   isConfigLoading: boolean
   isStatusLoading: boolean
@@ -75,6 +77,35 @@ const usageWarning = (percent: number): Warning | null => {
 }
 
 const formatCount = (count: number) => count.toLocaleString(getLocale())
+
+const ISSUE_LABEL: Record<DiskIssue['kind'], () => string> = {
+  missing: m.disks_issue_missing,
+  empty: m.disks_issue_empty,
+  uuid_changed: m.disks_issue_uuid_changed,
+}
+
+// Problems of the disk itself, ahead of the usage notes
+const DiskAlerts = ({
+  issue,
+  smartCritical,
+}: {
+  issue: DiskIssue | undefined
+  smartCritical: boolean
+}) => (
+  <>
+    {issue && (
+      <Badge
+        variant={issue.kind === 'uuid_changed' ? 'warning' : 'destructive'}
+        title={issue.path}
+      >
+        {ISSUE_LABEL[issue.kind]()}
+      </Badge>
+    )}
+    {smartCritical && (
+      <Badge variant="destructive">{m.disks_smart_critical()}</Badge>
+    )}
+  </>
+)
 
 const PowerDot = ({
   state,
@@ -364,6 +395,7 @@ export const DisksPanel = ({
   dataDiskUsage,
   usageHistory,
   powerStates,
+  smartCritical,
   isConfigLoading,
   isStatusLoading,
   isParityLoading,
@@ -381,6 +413,15 @@ export const DisksPanel = ({
   const sizeByName = new Map(dataDiskUsage?.map((disk) => [disk.name, disk]))
   const powerByName = new Map(
     powerStates?.map((disk) => [disk.name, disk.status]),
+  )
+  const issueByDisk = new Map(
+    status?.diskIssues?.map((issue) => [`${issue.type}:${issue.disk}`, issue]),
+  )
+  const alertsOf = (type: DiskIssue['type'], name: string) => (
+    <DiskAlerts
+      issue={issueByDisk.get(`${type}:${name}`)}
+      smartCritical={smartCritical.includes(name)}
+    />
   )
   const fullest = status?.disks?.reduce<DiskStatusInfo | undefined>(
     (max, disk) => (!max || disk.usedGB > max.usedGB ? disk : max),
@@ -427,17 +468,22 @@ export const DisksPanel = ({
               free={free}
               total={total}
               notes={
-                <DataNotes
-                  stats={stats}
-                  warning={percent !== undefined ? usageWarning(percent) : null}
-                  power={power}
-                  daysUntilFull={
-                    usageHistory
-                      ? forecastFill(diskFreeSeries(usageHistory, name))
-                          ?.daysUntilFull
-                      : undefined
-                  }
-                />
+                <>
+                  {alertsOf('data', name)}
+                  <DataNotes
+                    stats={stats}
+                    warning={
+                      percent !== undefined ? usageWarning(percent) : null
+                    }
+                    power={power}
+                    daysUntilFull={
+                      usageHistory
+                        ? forecastFill(diskFreeSeries(usageHistory, name))
+                            ?.daysUntilFull
+                        : undefined
+                    }
+                  />
+                </>
               }
               loading={statusPending}
             />
@@ -485,6 +531,7 @@ export const DisksPanel = ({
               loading={parityPending}
               notes={
                 <>
+                  {alertsOf('parity', parity.keyword)}
                   {fileSize === null && (
                     <span>{m.disks_parity_not_created()}</span>
                   )}

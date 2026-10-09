@@ -17,6 +17,8 @@ import { recordSmartHistory } from "./smart-history.ts";
 import { notifyRun, notifySkipped, notifySmart } from "./notification-events.ts";
 import { parseSmartOutput } from "./parsers/smart-parser.ts";
 import { msg } from "@shared/i18n.ts";
+import { blockingIssues } from "./disk-check.ts";
+import { holdContainers } from "./container-pause.ts";
 
 // Module-level storage for active jobs
 const activeJobs = new Map<string, Cron>();
@@ -125,6 +127,30 @@ const checkSyncGuard = async (
   }
 };
 
+// Commands that work on the files of the disks; on an empty mount point sync drops them from parity,
+// the others report every file as an error
+const DISK_COMMANDS: SnapRaidCommand[] = ["sync", "scrub", "touch", "check", "fix"];
+
+// A missing or unmounted disk stops the run, someone has to look at it first
+const checkDisksGuard = async (
+  runner: SnapRaidRunner,
+  schedule: Schedule,
+  snapraidConfigPath: string
+): Promise<ScheduleOutcome | null> => {
+  if (!scheduleSteps(schedule).some((step) => DISK_COMMANDS.includes(step.command))) return null;
+
+  try {
+    const missing = blockingIssues(await runner.checkDisks(snapraidConfigPath));
+    return missing.length > 0
+      ? skipped({ skipReason: "disk_missing", disks: missing.map((issue) => issue.disk) })
+      : null;
+  } catch (error) {
+    // The run itself reports what is wrong, the check is only a safety net
+    console.error(`Disk check before ${schedule.name} failed:`, error);
+    return null;
+  }
+};
+
 interface ScheduleStep {
   command: SnapRaidCommand;
   args: string[];
@@ -165,7 +191,8 @@ const executeScheduledCommand = async (
     ? skipped({ skipReason: "job_running" })
     : await isReplacementInProgress(schedule.configPath)
     ? skipped({ skipReason: "recovery_in_progress" })
-    : await checkSyncGuard(runner, schedule, snapraidConfigPath);
+    : await checkDisksGuard(runner, schedule, snapraidConfigPath) ??
+      await checkSyncGuard(runner, schedule, snapraidConfigPath);
   if (skip) {
     console.warn(`Scheduled job skipped: ${schedule.name} (${skip.skipReason})`);
     await updateStoredSchedule(configPath, scheduleId, { nextRun, lastOutcome: skip });
@@ -181,32 +208,41 @@ const executeScheduledCommand = async (
   const steps = scheduleSteps(schedule);
   const reports: RunReport[] = [];
 
-  for (const step of steps) {
-    // A manual job may have started between two steps, SnapRAID would refuse to run next to it
-    if (reports.length > 0 && runner.getCurrentJob()) {
-      reports.push(failedReport(step.command, "Another job started before this step"));
-      break;
-    }
-    try {
-      const output = await runner.executeCommand(
-        step.command,
-        snapraidConfigPath,
-        (chunk) => onOutput?.(scheduleId, chunk),
-        step.args,
-      );
-      const report = await readRunReport(step.command, output);
-      reports.push(report);
-      if (step.command === "smart") {
-        const disks = await withCrcBaseline(snapraidConfigPath, parseSmartOutput(report.log));
-        await recordSmartHistory(snapraidConfigPath, disks);
-        await notifySmart(snapraidConfigPath, disks);
+  // Paused once for all steps, not resumed between touch, sync and scrub
+  const releaseContainers = await holdContainers(
+    steps.map((step) => step.command),
+    (line) => onOutput?.(scheduleId, `${line}\n`),
+  );
+  try {
+    for (const step of steps) {
+      // A manual job may have started between two steps, SnapRAID would refuse to run next to it
+      if (reports.length > 0 && runner.getCurrentJob()) {
+        reports.push(failedReport(step.command, "Another job started before this step"));
+        break;
       }
-      if (!isSuccessful(report.result)) break;
-    } catch (error) {
-      console.error(`Scheduled job failed: ${schedule.name}:`, error);
-      reports.push(failedReport(step.command, String(error)));
-      break;
+      try {
+        const output = await runner.executeCommand(
+          step.command,
+          snapraidConfigPath,
+          (chunk) => onOutput?.(scheduleId, chunk),
+          step.args,
+        );
+        const report = await readRunReport(step.command, output);
+        reports.push(report);
+        if (step.command === "smart") {
+          const disks = await withCrcBaseline(snapraidConfigPath, parseSmartOutput(report.log));
+          await recordSmartHistory(snapraidConfigPath, disks);
+          await notifySmart(snapraidConfigPath, disks);
+        }
+        if (!isSuccessful(report.result)) break;
+      } catch (error) {
+        console.error(`Scheduled job failed: ${schedule.name}:`, error);
+        reports.push(failedReport(step.command, String(error)));
+        break;
+      }
     }
+  } finally {
+    await releaseContainers();
   }
 
   const error = reports.find((report) => report.error)?.error;

@@ -1,4 +1,4 @@
-import type { SnapRaidCommand, CommandOutput, RunningJob, FinishedJob, DevicesReport, ListReport, DiffReport, DupReport } from "@shared/types.ts";
+import type { SnapRaidCommand, CommandOutput, RunningJob, FinishedJob, DevicesReport, ListReport, DiffReport, DupReport, DiskIssue } from "@shared/types.ts";
 import type { LogManager } from "./log-manager.ts";
 import { executeCommand, abortCommand, getCurrentJob, getLastJob, executeSnapraidCommand, setLogManager } from "./executors/command-executor.ts";
 import { parseDevicesOutput } from "./parsers/devices-parser.ts";
@@ -7,6 +7,7 @@ import { parseDupOutput } from "./parsers/dup-parser.ts";
 import { parseDiffOutput } from "./parsers/diff-parser.ts";
 import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "./parsers/structured-log.ts";
 import { LIST_ARGS } from "./parsers/list-parser.ts";
+import { findDiskIssues } from "./disk-check.ts";
 
 /**
  * Run a SnapRAID command with the structured log on stderr.
@@ -110,6 +111,15 @@ export const createSnapRaidRunner = () => {
         timestamp: new Date().toISOString(),
         rawOutput: text,
       };
+    },
+
+    /**
+     * Disks that are missing, empty or on another filesystem than the content file recorded.
+     * status only reads the content file, so it does not touch the array.
+     */
+    checkDisks: async (configPath: string): Promise<DiskIssue[]> => {
+      const { log } = await runStructured(["status", "-c", configPath]);
+      return findDiskIssues(log);
     },
 
     /**

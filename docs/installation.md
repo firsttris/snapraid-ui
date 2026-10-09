@@ -143,6 +143,17 @@ Without it, syncing, scrubbing and all other commands still work. Only the [SMAR
 > [!NOTE]
 > A privileged container has broad access to the host. Read [Security](security.md) before exposing the UI beyond your home network.
 
+## Docker socket (optional)
+
+To [pause other containers](automation.md#pause-docker-containers) while SnapRAID syncs or scrubs, SnapRAID UI needs the Docker socket:
+
+```yaml
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+```
+
+With Podman, mount the Podman socket instead, e.g. `/run/podman/podman.sock:/var/run/docker.sock`.
+
 ## First start
 
 On the first start, the backend creates `config.json` in the data directory with one configuration named *Default* that points to `snapraid.conf` in the same directory. You now have two options:

@@ -16,6 +16,7 @@ import { isLockedOutput, STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../p
 import { createDiskReplacementRoutes } from "./disk-replacement.ts";
 import { readRunReport } from "../run-report.ts";
 import { notifyManualRun } from "../notification-events.ts";
+import { findDiskIssues } from "../disk-check.ts";
 import { msg } from "@shared/i18n.ts";
 
 const snapraid = new Hono();
@@ -214,7 +215,8 @@ const startJob = (
 
       // Parse status if it was a status or diff command
       if (command === "status" || command === "diff") {
-        const status = parseStatusOutput(await readStructuredLog(result), result.output);
+        const log = await readStructuredLog(result);
+        const status = { ...parseStatusOutput(log, result.output), diskIssues: await findDiskIssues(log) };
         state.broadcastFn({
           type: "status",
           status,
@@ -325,7 +327,10 @@ snapraid.get("/status", async (c) => {
     if (isLockedOutput(log)) {
       return c.json({ error: msg("server_error_snapraid_in_use"), busy: true }, 409);
     }
-    const parsedStatus = parseStatusOutput(log, code === 0 ? new TextDecoder().decode(stdout) : text);
+    const parsedStatus = {
+      ...parseStatusOutput(log, code === 0 ? new TextDecoder().decode(stdout) : text),
+      diskIssues: await findDiskIssues(log),
+    };
     if (code === 0) await recordUsage(configPath, parsedStatus);
 
     return c.json({

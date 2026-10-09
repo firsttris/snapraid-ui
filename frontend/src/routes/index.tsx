@@ -1,4 +1,8 @@
 import type { ForceOption } from '@shared/force-option'
+import {
+  assessSmart,
+  DEFAULT_SMART_FAILURE_THRESHOLD,
+} from '@shared/smart-health'
 import type {
   CheckReport,
   DevicesReport,
@@ -41,9 +45,11 @@ import {
   useDataDiskUsage,
   useExecuteCommand,
   useLastRuns,
+  useNotificationSettings,
   useParityUsage,
   useProbe,
   useSchedules,
+  useSmart,
   useSnapRaidConfig,
   useStatus,
   useUsageHistory,
@@ -141,6 +147,18 @@ function Dashboard() {
     refetchInterval: PROBE_INTERVAL_MS,
     retry: false,
   })
+
+  // smartctl leaves sleeping disks alone, the health tile flags disks about to fail
+  const { data: smartReport } = useSmart(selectedConfig || undefined)
+  const { data: notificationSettings } = useNotificationSettings()
+  const smartCritical = useMemo(() => {
+    const threshold =
+      notificationSettings?.smartFailureThreshold ??
+      DEFAULT_SMART_FAILURE_THRESHOLD
+    return (smartReport?.disks ?? [])
+      .filter((disk) => assessSmart(disk, threshold).level === 'critical')
+      .map((disk) => disk.name)
+  }, [smartReport, notificationSettings])
 
   const configFile = selectedConfig.replace(/^.*[/\\]/, '')
   const nextSchedule = useMemo(
@@ -383,6 +401,7 @@ function Dashboard() {
           onScrubBad={() => runCommand('scrub', ['-p', 'bad'])}
           onTouch={() => runCommand('touch')}
           actionsDisabled={actionsDisabled}
+          smartCritical={smartCritical}
         />
 
         {!job.isRunning && forceStop && (
@@ -415,6 +434,7 @@ function Dashboard() {
           dataDiskUsage={dataDiskUsage}
           usageHistory={usageHistory}
           powerStates={probeReport?.disks}
+          smartCritical={smartCritical}
           isConfigLoading={isConfigLoading}
           isStatusLoading={isStatusFetching}
           isParityLoading={isParityLoading}

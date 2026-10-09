@@ -106,6 +106,17 @@ Deno.test("buildSkipNotification - explains the sync guard", () => {
   assertStringIncludes(notification.message, "812 deleted files, more than the limit of 50");
 });
 
+Deno.test("buildSkipNotification - names the missing disks", () => {
+  const notification = buildSkipNotification("de", "Nightly", "/cfg/snapraid.conf", {
+    timestamp: "",
+    result: "skipped",
+    skipReason: "disk_missing",
+    disks: ["d2", "2-parity"],
+  });
+
+  assertStringIncludes(notification.message, "Platte d2, 2-parity fehlt oder ist leer");
+});
+
 const disk = (overrides: Partial<SmartDiskInfo>): SmartDiskInfo => ({
   name: "d1",
   device: "/dev/sda",

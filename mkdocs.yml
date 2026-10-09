@@ -28,6 +28,7 @@ nav:
       - Using SnapRAID UI: usage.md
       - Scheduling: scheduling.md
       - Notifications: notifications.md
+      - Automation: automation.md
       - SMART & disk health: smart.md
       - Logs: logs.md
       - Managing disks: disks.md
