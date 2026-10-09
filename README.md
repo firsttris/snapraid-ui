@@ -53,6 +53,7 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 ### ⚡ Commands
 - Sync with preview, scrub plans, status, diff, check, fix
 - Repair and verify bad blocks with one click
+- Recover deleted or encrypted files from parity, picked from a list
 - Live output while a job runs
 - Clear explanations when SnapRAID stops a run for safety
 

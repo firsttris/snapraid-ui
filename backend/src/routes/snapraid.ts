@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { createSnapRaidRunner } from "../snapraid-runner.ts";
 import type { LogManager } from "../log-manager.ts";
-import type { SnapRaidCommand } from "@shared/types.ts";
+import type { RestoreFile, SnapRaidCommand } from "@shared/types.ts";
 import { snapraidCommand, resolveFromBase } from "../config.ts";
 import {diskManagementRoutes} from "./disk-management.ts";
 import { DiskRemovalError, ensureEmptyDir, finalizeDataDiskRemoval, prepareDataDiskRemoval } from "../disk-removal.ts";
@@ -16,6 +16,7 @@ import { parseCheckOutput } from "../parsers/check-parser.ts";
 import { createDiskReplacementRoutes } from "./disk-replacement.ts";
 import { notifyManualRun } from "../notification-events.ts";
 import { isSuccessful } from "../run-report.ts";
+import { MAX_RESTORE_FILES, restoreFiles } from "../recovery.ts";
 import { findDiskIssues } from "../disk-check.ts";
 import { msg } from "@shared/i18n.ts";
 import { EngineBusyError, getEngine, type JobOutcome } from "../engine/engine.ts";
@@ -240,6 +241,29 @@ export const heal = async (
   await run("scrub", ["-p", "bad"]);
   return ["fix", "scrub"];
 };
+
+// POST /api/snapraid/restore - Bring files back as they were at the last sync: { configPath, files }
+// with files as [{disk, path}] from the diff; one fix per disk, one after the other
+snapraid.post("/restore", async (c) => {
+  const { configPath: relativePath, files } = await c.req.json<{ configPath?: string; files?: RestoreFile[] }>();
+  if (!relativePath || !Array.isArray(files) || files.length === 0) {
+    return c.json({ error: "Missing configPath or files" }, 400);
+  }
+  if (files.some((file) => typeof file?.disk !== "string" || typeof file?.path !== "string" || !file.disk || !file.path)) {
+    return c.json({ error: "Each file needs a disk and a path" }, 400);
+  }
+  if (files.length > MAX_RESTORE_FILES) {
+    return c.json({ error: msg("server_error_restore_too_many", { max: MAX_RESTORE_FILES }) }, 400);
+  }
+  if (getEngine().currentJob()) {
+    return c.json({ error: msg("server_error_job_running") }, 409);
+  }
+
+  const configPath = resolveFromBase(relativePath);
+  restoreFiles(files, (command, args) => startJob(command, configPath, args), () => !!getEngine().currentJob())
+    .catch((error) => console.error("Restore failed:", error));
+  return c.json({ success: true }, 202);
+});
 
 // POST /api/snapraid/heal - fix -e, then scrub -p bad, one after the other
 snapraid.post("/heal", async (c) => {

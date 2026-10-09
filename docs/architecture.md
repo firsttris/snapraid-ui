@@ -310,6 +310,7 @@ Most endpoints that work on a SnapRAID config take its path: as the `path` query
 | GET | `/api/snapraid/current-job` | The running job, or `null` | `RunningJob`: `{command, configPath, startTime, processId, aborting?, logFile?, progress?}` |
 | GET | `/api/snapraid/last-job` | Outcome of the last finished job, or `null` | `FinishedJob`: `{command, processId, exitCode, aborted, error?, forceOption?, finishedAt}` |
 | POST | `/api/snapraid/abort` | Abort the running job (SIGINT) | `404` if no job runs. Returns `{success}` |
+| POST | `/api/snapraid/restore` | Bring files back as they were at the last sync (`fix -d <disk> -f /<path>`), one job per disk | Body `{configPath, files: [{disk, path}]}` with the paths from `diff`, at most 1000. `202`; `409` if a job is running. Stops after a failed fix |
 | POST | `/api/snapraid/heal` | Repair the bad blocks (`fix -e`), then check them again (`scrub -p bad`), two jobs one after the other | Body `{configPath}`. `202`; `409` if a job is running. The scrub only follows a successful fix and only when no other job started in between |
 | GET | `/api/snapraid/history` | Results of the last 50 jobs started through `/execute` or the wizards since the backend started (in memory) | `CommandOutput[]` |
 

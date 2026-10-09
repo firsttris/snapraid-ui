@@ -3,6 +3,7 @@ import {
   Bell,
   Calendar,
   FileText,
+  History,
   LayoutDashboard,
   type LucideIcon,
   Workflow,
@@ -10,13 +11,21 @@ import {
 import * as m from '../paraglide/messages'
 
 export interface NavItem {
-  to: '/' | '/smart' | '/schedules' | '/logs' | '/notifications' | '/automation'
+  to:
+    | '/'
+    | '/recovery'
+    | '/smart'
+    | '/schedules'
+    | '/logs'
+    | '/notifications'
+    | '/automation'
   label: () => string
   icon: LucideIcon
 }
 
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: m.nav_dashboard, icon: LayoutDashboard },
+  { to: '/recovery', label: m.nav_recovery, icon: History },
   { to: '/smart', label: m.nav_smart, icon: Activity },
   { to: '/schedules', label: m.schedules, icon: Calendar },
   { to: '/logs', label: m.logs, icon: FileText },

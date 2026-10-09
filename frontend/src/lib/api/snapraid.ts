@@ -13,6 +13,7 @@ import type {
   ParsedSnapRaidConfig,
   ProbeReport,
   ReplacementStep,
+  RestoreFile,
   RunningJob,
   SmartHistoryPoint,
   SmartReport,
@@ -477,6 +478,21 @@ export const getDup = async (configPath: string): Promise<DupReport> => {
     throw await apiError(response)
   }
   return response.json()
+}
+
+/**
+ * Bring files back from parity as they were at the last sync
+ */
+export const restoreFiles = async (
+  configPath: string,
+  files: RestoreFile[],
+): Promise<void> => {
+  const response = await apiFetch(`${API_BASE}/snapraid/restore`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configPath, files }),
+  })
+  if (!response.ok) throw await apiError(response)
 }
 
 /**
