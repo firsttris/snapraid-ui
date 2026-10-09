@@ -5,6 +5,7 @@ import { basename } from "@std/path";
 import { snapraidCommand } from "../config.ts";
 import { parseRunPos } from "../parsers/progress-parser.ts";
 import { createLogTail } from "./log-tail.ts";
+import { holdContainers } from "../container-pause.ts";
 
 /**
  * Global state for command executor
@@ -172,19 +173,27 @@ export const executeCommand = async (
     };
     state.currentOutput = "";
 
-    const cmd = snapraidCommand(args);
-
-    const process = cmd.spawn();
-    state.processes.set(processId, process);
-    const stopWatching = logPath && PROGRESS_COMMANDS.includes(command)
-      ? watchProgress(processId, logPath)
-      : async () => {};
-
-    const fullOutput = await readProcessStreams(process, (chunk) => {
+    const emit = (chunk: string) => {
       bufferOutput(chunk);
       onOutput(chunk);
-    }).finally(stopWatching);
-    const status = await process.status;
+    };
+    // Containers that write to the array are paused while SnapRAID reads it, if set up
+    const releaseContainers = await holdContainers([command], (line) => emit(`${line}\n`));
+
+    const { fullOutput, status } = await (async () => {
+      try {
+        const process = snapraidCommand(args).spawn();
+        state.processes.set(processId, process);
+        const stopWatching = logPath && PROGRESS_COMMANDS.includes(command)
+          ? watchProgress(processId, logPath)
+          : async () => {};
+
+        const fullOutput = await readProcessStreams(process, emit).finally(stopWatching);
+        return { fullOutput, status: await process.status };
+      } finally {
+        await releaseContainers();
+      }
+    })();
     const aborted = state.abortRequested.has(processId);
     const result = {
       command: `snapraid ${args.join(" ")}`,

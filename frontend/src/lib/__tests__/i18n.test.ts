@@ -73,6 +73,16 @@ describe('messages/*.json', () => {
     expect(keys.filter((k) => !used.has(k))).toEqual([])
     expect(called.filter((k) => !(k in messages.en))).toEqual([])
   })
+
+  it('backend messages are server_ keys, the only ones the UI can render', () => {
+    const backend = files('../backend/src')
+      .map((f) => readFileSync(f, 'utf8'))
+      .join('\n')
+    const keys = [...backend.matchAll(/\bmsg\(\s*["'](\w+)["']/g)].map(
+      (m) => m[1],
+    )
+    expect(keys.filter((k) => !k.startsWith('server_'))).toEqual([])
+  })
 })
 
 describe('localizeServer', () => {

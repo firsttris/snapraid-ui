@@ -19,6 +19,8 @@ services:
       # - /mnt/parity:/mnt/parity
       # Optional: use the host's snapraid binary instead of the bundled one
       # - /usr/bin/snapraid:/usr/bin/snapraid:ro
+      # Optional: pause other containers during sync and scrub (Automation page)
+      # - /var/run/docker.sock:/var/run/docker.sock
     environment:
       # Login, remove both lines to leave the UI open (e.g. behind your own auth proxy)
       - SNAPRAID_UI_USERNAME=admin

@@ -1,6 +1,7 @@
 // Stand-ins for `snapraid smart` and `probe` in the demo sandbox (./start.sh --demo).
 // Its disks are directories, so SnapRAID finds no device to query. The output below has
 // the structured log format of the real commands and goes through the same parsers.
+import type { DeviceInfo } from "@shared/types.ts";
 import { parseSnapRaidConfig } from "./config-parser.ts";
 
 export const DEMO_MODE = Deno.env.get("SNAPRAID_DEMO") === "1";
@@ -106,3 +107,25 @@ export const demoSmartLog = async (configPath: string): Promise<string> => {
 export const demoProbeLog = async (configPath: string): Promise<string> =>
   ["command:probe", ...(await demoDisks(configPath)).map((d) => `probe:${d.device}:${d.name}:${d.standby ? 0 : 1}`)]
     .join("\n");
+
+/**
+ * Devices of the demo disks for the spindown, as `snapraid devices` lists them
+ */
+export const demoDevices = async (configPath: string): Promise<DeviceInfo[]> =>
+  (await demoDisks(configPath)).map((d, i) => ({
+    majorMinor: `8:${i * 16}`,
+    device: d.device,
+    partMajorMinor: `8:${i * 16 + 1}`,
+    partition: `${d.device}1`,
+    diskName: d.name,
+  }));
+
+/**
+ * /proc/diskstats for the demo devices: the first disk is busy, the others are quiet
+ */
+export const demoDiskstats = (devices: DeviceInfo[]): string =>
+  devices.map((device, i) => {
+    const [major, minor] = device.partMajorMinor.split(":");
+    const reads = i === 0 ? Math.floor(Date.now() / 60_000) : 1000 + i;
+    return `${major} ${minor} ${device.partition.replace("/dev/", "")} ${reads} 0 0 0 500 0 0 0 0 0 0`;
+  }).join("\n");

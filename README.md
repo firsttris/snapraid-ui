@@ -64,12 +64,15 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 - Cron schedules without editing a crontab
 - Nightly routine: touch, sync, then scrub
 - Sync guard that skips a sync after mass deletions
+- Pauses Docker containers during sync and scrub
+- Spins idle disks down
 
 </td>
 <td width="50%" valign="top">
 
 ### 🔔 Monitoring
 - SMART health, temperature and failure probability
+- Notices a disk that is not mounted before a sync drops its files
 - Notifications via ntfy, e-mail or webhook
 - Searchable logs of every run
 

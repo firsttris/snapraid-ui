@@ -5,6 +5,7 @@ import type {
   DiskReplacement,
   LastRuns,
   LogFile,
+  MaintenanceSettings,
   NotificationSettings,
   ParityLevelUsage,
   ParsedSnapRaidConfig,
@@ -37,6 +38,7 @@ import {
 } from '../lib/api/config'
 import { browseFilesystem, readFile, writeFile } from '../lib/api/filesystem'
 import { deleteLog, getLogContent, getLogs, rotateLogs } from '../lib/api/logs'
+import { maintenanceApi } from '../lib/api/maintenance'
 import { notificationsApi } from '../lib/api/notifications'
 import { schedulesApi } from '../lib/api/schedules'
 import {
@@ -96,6 +98,10 @@ export const queryKeys = {
   fileContent: (path: string) => ['file-content', path] as const,
   schedules: ['schedules'] as const,
   notifications: ['notifications'] as const,
+  maintenance: ['maintenance'] as const,
+  dockerContainers: (socketPath: string) =>
+    ['maintenance', 'containers', socketPath] as const,
+  spindown: ['maintenance', 'spindown'] as const,
   diskReplacement: (path: string) => ['disk-replacement', path] as const,
   schedule: (id: string) => ['schedule', id] as const,
 }
@@ -889,5 +895,47 @@ export const useSaveNotificationSettings = () => {
     onSuccess: (settings: NotificationSettings) => {
       queryClient.setQueryData(queryKeys.notifications, settings)
     },
+  })
+}
+
+// ====================
+// Automation: Docker pause and spindown
+// ====================
+
+export const useMaintenanceSettings = () => {
+  return useQuery({
+    queryKey: queryKeys.maintenance,
+    queryFn: maintenanceApi.get,
+  })
+}
+
+export const useSaveMaintenanceSettings = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: maintenanceApi.save,
+    onSuccess: (settings: MaintenanceSettings) => {
+      queryClient.setQueryData(queryKeys.maintenance, settings)
+      queryClient.invalidateQueries({ queryKey: queryKeys.spindown })
+    },
+  })
+}
+
+export const useDockerContainers = (socketPath: string, enabled: boolean) => {
+  return useQuery({
+    queryKey: queryKeys.dockerContainers(socketPath),
+    queryFn: () => maintenanceApi.containers(socketPath),
+    enabled: enabled && socketPath.startsWith('/'),
+  })
+}
+
+// The monitor checks the disks once a minute
+const SPINDOWN_REFRESH_MS = 30_000
+
+export const useSpindownStatus = (enabled: boolean) => {
+  return useQuery({
+    queryKey: queryKeys.spindown,
+    queryFn: maintenanceApi.spindown,
+    enabled,
+    refetchInterval: SPINDOWN_REFRESH_MS,
   })
 }

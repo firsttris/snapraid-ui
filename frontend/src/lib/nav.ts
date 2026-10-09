@@ -5,11 +5,12 @@ import {
   FileText,
   LayoutDashboard,
   type LucideIcon,
+  Workflow,
 } from 'lucide-react'
 import * as m from '../paraglide/messages'
 
 export interface NavItem {
-  to: '/' | '/smart' | '/schedules' | '/logs' | '/notifications'
+  to: '/' | '/smart' | '/schedules' | '/logs' | '/notifications' | '/automation'
   label: () => string
   icon: LucideIcon
 }
@@ -20,6 +21,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/schedules', label: m.schedules, icon: Calendar },
   { to: '/logs', label: m.logs, icon: FileText },
   { to: '/notifications', label: m.nav_notifications, icon: Bell },
+  { to: '/automation', label: m.nav_automation, icon: Workflow },
 ]
 
 /**

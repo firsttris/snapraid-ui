@@ -481,6 +481,51 @@ export interface DiskReplacement {
   steps: Partial<Record<ReplacementStep, ReplacementStepResult>>;
 }
 
+// Automation around jobs, stored in maintenance.json
+export interface MaintenanceSettings {
+  dockerPause: {
+    enabled: boolean;
+    socketPath: string;          // Docker API socket, mounted into the container
+    containers: string[];        // Names of the containers to pause
+    commands: SnapRaidCommand[]; // Jobs during which they are paused
+  };
+  spindown: {
+    enabled: boolean;
+    idleMinutes: number;         // Spin a disk down after this long without reads or writes
+  };
+}
+
+export interface DockerContainer {
+  id: string;
+  name: string;
+  image: string;
+  state: string;                 // Docker's state: running, paused, exited, ...
+  self?: boolean;                // SnapRAID UI's own container, pausing it would freeze the backend
+}
+
+// Containers the socket reports; available is false when the socket cannot be reached
+export interface DockerContainersReport {
+  available: boolean;
+  error?: string;
+  containers: DockerContainer[];
+}
+
+// A disk the spindown watches
+export interface SpindownDisk {
+  configPath: string;
+  disk: string;                  // Data disk name or parity keyword
+  device: string;                // e.g. /dev/sda
+  lastActivity: string;          // ISO, last change of its read and write counters seen
+  spunDownAt?: string;           // ISO, set while it sleeps after being spun down here
+}
+
+export interface SpindownStatus {
+  enabled: boolean;
+  idleMinutes: number;
+  disks: SpindownDisk[];
+  error?: string;                // Why disks could not be watched, e.g. no /proc/diskstats
+}
+
 // Notifications
 export type NotificationEvent = 'job_failed' | 'data_errors' | 'schedule_skipped' | 'smart_warning' | 'job_succeeded';
 export type NotificationChannel = 'email' | 'ntfy' | 'webhook';

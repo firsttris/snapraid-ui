@@ -170,7 +170,8 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
         setState((prev) => ({
           ...prev,
           isRunning: true,
-          output: prev.output + chunk,
+          // Notes of the UI itself, e.g. paused containers, come as messages to localize
+          output: prev.output + localizeServer(chunk),
           // Scheduled jobs only report "scheduled", the polled job knows the real command
           currentCommand:
             command === 'scheduled' ? prev.currentCommand : command,
@@ -182,7 +183,7 @@ export const JobProvider = ({ children }: { children: ReactNode }) => {
           ...prev,
           isRunning: true,
           currentCommand: command,
-          output,
+          output: localizeServer(output),
         }))
       },
       onComplete: (command, exitCode, aborted, processId, forceOption) =>

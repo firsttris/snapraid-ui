@@ -116,7 +116,10 @@ A scheduled run does not start, and is recorded as *Skipped*, in these cases (ch
 |---|---|
 | Another job (manual or scheduled) is already running | *Another job was running.* |
 | A disk of this configuration is being replaced with the [replacement wizard](disks.md) | *A disk is being replaced, scheduled jobs are paused.* |
+| A data disk is missing or empty, or a parity file is gone (`sync`, `scrub`, `touch`, `check` and `fix` only) | "d3 missing or empty, probably not mounted. …" |
 | The [sync guard](#sync-guard) stopped a sync | "… deleted files, more than allowed …" or "Diff before sync failed: …" |
+
+The disk check reads `snapraid status`, which only reads the content file and does not touch the disks. A disk counts as missing when its directory does not exist, or is empty (apart from `lost+found`) while the content file lists files on it. A disk on another filesystem than at the last sync is only flagged on the dashboard, it does not stop the schedule: that is expected after replacing a disk, and the next sync records the new filesystem.
 
 Skipped runs are not queued or retried. The schedule simply runs again at its next time. Each skip sends a *A scheduled job was skipped* notification, if that event is enabled under [Notifications](notifications.md#events).
 

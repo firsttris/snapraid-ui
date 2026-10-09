@@ -77,12 +77,15 @@ The dashboard shows the state of the active configuration. Under the page title,
 
 The last sync and scrub are read from the [logs](logs.md). If no log is left (for example after cleaning up old logs), the card shows *No log* instead of a date.
 
-The *Array health* card can show these states:
+The *Array health* card can show these states, the most urgent one wins:
 
 | State | Meaning |
 |---|---|
 | *All good* | Parity complete, no bad blocks, sync and scrub recent enough |
 | *Sync overdue*, *Scrub overdue*, *Sync and scrub overdue* | The last sync is more than 7 days old, the last scrub more than 30 days, or some blocks were last verified more than 120 days ago. Old blocks are not flagged while recent scrubs (successful, at most 30 days old) are working through them; the scrub card then says *Catching up: each scrub verifies the oldest blocks first.* |
+| *Disk not available* | A data disk's directory is missing or empty although SnapRAID knows files on it, or a parity file is gone. The disk is most likely not mounted. [Scheduled jobs are skipped](scheduling.md#when-a-schedule-is-skipped) until it is back, so no sync removes its files from parity |
+| *Disk failing* | SMART rates a disk as critical, for example a failing pre-failure attribute or a high failure probability. See [SMART & disk health](smart.md) |
+| *Disk changed* | A disk is on another filesystem than at the last sync (its UUID changed). Expected after replacing a disk, the next sync records the new one; otherwise check that the right disk is mounted |
 | *Sync incomplete* | Blocks without parity (an interrupted sync), or the last sync did not succeed |
 | *Errors found* | SnapRAID reports bad blocks or another error |
 | *Job running* | SnapRAID is busy; the status is updated when the job has finished |
@@ -92,6 +95,8 @@ The *Array health* card can show these states:
 
 When there is something to do, a notice above the cards offers the matching action:
 
+- **Disk not available** or **Disk changed**: one line per affected disk, e.g. *d3: /mnt/disk3/ is empty, but SnapRAID knows 1,204 files on it. The disk is probably not mounted.*
+- **Disk failing**: the disks SMART rates as critical, with a link to the *SMART details*.
 - **Overdue sync or scrub**: *Start sync* / *Start scrub*, and *Set up a schedule* if no enabled schedule scrubs this configuration.
 - **Sync incomplete**: *Run sync again* and a link to the log of the failed sync.
 - **Bad blocks**: the two recommended steps *1. Repair (fix -e)*, which restores the bad blocks from parity after a confirmation, and *2. Verify (scrub -p bad)*, which checks that the repair worked.
@@ -108,7 +113,7 @@ The *Disks* card lists every data and parity disk of the configuration. The head
 | *Usage* | Fill level of the filesystem. Yellow from 85 % (*Filling up*), red from 95 % (*Almost full*). Parity disks use a purple bar, because a parity file fills its disk by design. |
 | *Files* | Number of files on a data disk; size of the parity file on a parity disk. Left out when the card is narrow (tablets), so *Status* stays in view |
 | *Free* | Free space; hover for the total size |
-| *Status* | Notes such as fragmented files, wasted space, the estimated fill-up date (*full in about N days*) and standby |
+| *Status* | Notes such as fragmented files, wasted space, the estimated fill-up date (*full in about N days*) and standby. A disk that is not available is marked *Missing* or *Not mounted?*, one on another filesystem *Other filesystem*, and one SMART rates as critical *SMART critical* |
 
 The power state is checked once a minute in a way that does not wake sleeping disks, and not at all while a job is running. Some controllers can't report it; the dot is then left out.
 
