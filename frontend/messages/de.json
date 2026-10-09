@@ -842,5 +842,20 @@
   "filelist_files": "Dateien",
   "filelist_links": "Links",
   "sidebar_version": "SnapRAID UI v{version}",
-  "sidebar_release_notes": "Was ist neu in dieser Version"
+  "sidebar_release_notes": "Was ist neu in dieser Version",
+  "health_degraded": "Platte nicht verfügbar",
+  "health_degraded_msg": "Geplante Jobs pausieren, bis die Platte wieder da ist, damit kein Sync ihre Dateien aus der Parität entfernt.",
+  "health_disk_changed": "Platte gewechselt",
+  "health_disk_changed_msg": "Nach dem Austausch einer Platte ist das normal: Der nächste Sync übernimmt das neue Dateisystem. Andernfalls prüfe, ob die richtige Platte eingehängt ist.",
+  "health_disk_missing": "{disk}: {path} existiert nicht. Ist die Platte eingehängt?",
+  "health_disk_empty": "{disk}: {path} ist leer, SnapRAID kennt dort aber {count} Dateien. Die Platte ist vermutlich nicht eingehängt.",
+  "health_disk_uuid_changed": "{disk}: {path} liegt auf einem anderen Dateisystem als beim letzten Sync.",
+  "health_failing": "Platte fällt aus",
+  "health_failing_msg": "SMART meldet {disks} als kritisch. Ersetze die Platte bald, solange die Parität ihre Daten noch wiederherstellen kann.",
+  "health_smart_details": "SMART-Details",
+  "disks_issue_missing": "Fehlt",
+  "disks_issue_empty": "Nicht eingehängt?",
+  "disks_issue_uuid_changed": "Anderes Dateisystem",
+  "disks_smart_critical": "SMART kritisch",
+  "schedules_skip_disk_missing": "{disks} fehlt oder ist leer, vermutlich nicht eingehängt. Pausiert, damit kein Sync die Dateien aus der Parität entfernt."
 }

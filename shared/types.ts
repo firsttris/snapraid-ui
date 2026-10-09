@@ -96,7 +96,20 @@ export interface SnapRaidStatus {
   disks?: DiskStatusInfo[]; // Individual disk stats
   scrubHistory?: ScrubHistoryPoint[]; // Scrub history chart data
   zeroSubsecondFiles?: number; // Files with a zero sub-second timestamp, fixed by `touch`
+  diskIssues?: DiskIssue[]; // Disks that do not look like the ones in the content file
   rawOutput: string;
+}
+
+// A disk that does not look like the one SnapRAID recorded in the content file.
+// missing and empty usually mean it is not mounted, a sync would then drop its files from parity
+export type DiskIssueKind = 'missing' | 'empty' | 'uuid_changed';
+
+export interface DiskIssue {
+  disk: string;            // Data disk name or parity keyword, e.g. "d1" or "2-parity"
+  type: 'data' | 'parity';
+  kind: DiskIssueKind;
+  path: string;            // Directory of a data disk, file of a parity
+  files?: number;          // empty: files the content file lists for the disk
 }
 
 export interface CommandOutput {
@@ -310,7 +323,12 @@ export interface Schedule {
   updatedAt: string; // ISO string
 }
 
-export type ScheduleSkipReason = 'job_running' | 'too_many_deleted' | 'diff_failed' | 'recovery_in_progress';
+export type ScheduleSkipReason =
+  | 'job_running'
+  | 'too_many_deleted'
+  | 'diff_failed'
+  | 'recovery_in_progress'
+  | 'disk_missing';
 
 // One command of a scheduled run, e.g. touch, sync and scrub of a nightly sync
 export interface ScheduleStepOutcome {
@@ -324,6 +342,7 @@ export interface ScheduleOutcome {
   result: RunResult | 'skipped';
   skipReason?: ScheduleSkipReason;
   deletedFiles?: number; // Deleted files diff reported, for too_many_deleted
+  disks?: string[]; // Missing or empty disks, for disk_missing
   error?: string;
   steps?: ScheduleStepOutcome[]; // Only for schedules that run more than one command
 }

@@ -17,6 +17,7 @@ import { recordSmartHistory } from "./smart-history.ts";
 import { notifyRun, notifySkipped, notifySmart } from "./notification-events.ts";
 import { parseSmartOutput } from "./parsers/smart-parser.ts";
 import { msg } from "@shared/i18n.ts";
+import { blockingIssues } from "./disk-check.ts";
 
 // Module-level storage for active jobs
 const activeJobs = new Map<string, Cron>();
@@ -125,6 +126,30 @@ const checkSyncGuard = async (
   }
 };
 
+// Commands that work on the files of the disks; on an empty mount point sync drops them from parity,
+// the others report every file as an error
+const DISK_COMMANDS: SnapRaidCommand[] = ["sync", "scrub", "touch", "check", "fix"];
+
+// A missing or unmounted disk stops the run, someone has to look at it first
+const checkDisksGuard = async (
+  runner: SnapRaidRunner,
+  schedule: Schedule,
+  snapraidConfigPath: string
+): Promise<ScheduleOutcome | null> => {
+  if (!scheduleSteps(schedule).some((step) => DISK_COMMANDS.includes(step.command))) return null;
+
+  try {
+    const missing = blockingIssues(await runner.checkDisks(snapraidConfigPath));
+    return missing.length > 0
+      ? skipped({ skipReason: "disk_missing", disks: missing.map((issue) => issue.disk) })
+      : null;
+  } catch (error) {
+    // The run itself reports what is wrong, the check is only a safety net
+    console.error(`Disk check before ${schedule.name} failed:`, error);
+    return null;
+  }
+};
+
 interface ScheduleStep {
   command: SnapRaidCommand;
   args: string[];
@@ -165,7 +190,8 @@ const executeScheduledCommand = async (
     ? skipped({ skipReason: "job_running" })
     : await isReplacementInProgress(schedule.configPath)
     ? skipped({ skipReason: "recovery_in_progress" })
-    : await checkSyncGuard(runner, schedule, snapraidConfigPath);
+    : await checkDisksGuard(runner, schedule, snapraidConfigPath) ??
+      await checkSyncGuard(runner, schedule, snapraidConfigPath);
   if (skip) {
     console.warn(`Scheduled job skipped: ${schedule.name} (${skip.skipReason})`);
     await updateStoredSchedule(configPath, scheduleId, { nextRun, lastOutcome: skip });

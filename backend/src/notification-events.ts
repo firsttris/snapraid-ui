@@ -37,6 +37,8 @@ const TEXT = {
         `diff reports ${count} deleted files, more than the limit of ${max}. Check that no disk is missing, then start the sync manually.`,
       diff_failed: (error: string) => `diff failed: ${error}`,
       recovery_in_progress: "A disk is being replaced; scheduled jobs are paused until its sync is done.",
+      disk_missing: (disks: string) =>
+        `Disk ${disks} is missing or empty, it is probably not mounted. A sync would remove its files from parity. Mount the disk, then the next run continues as usual.`,
     },
     smartReason: (reason: SmartReason) => {
       switch (reason.kind) {
@@ -103,6 +105,8 @@ const TEXT = {
         `diff meldet ${count} gelöschte Dateien, mehr als die Grenze von ${max}. Prüfe, ob eine Platte fehlt, und starte den Sync dann manuell.`,
       diff_failed: (error: string) => `diff ist fehlgeschlagen: ${error}`,
       recovery_in_progress: "Eine Platte wird gerade ersetzt, geplante Jobs pausieren bis zu ihrem Sync.",
+      disk_missing: (disks: string) =>
+        `Platte ${disks} fehlt oder ist leer, vermutlich ist sie nicht eingehängt. Ein Sync würde ihre Dateien aus der Parität entfernen. Hänge die Platte ein, dann läuft der nächste Job wie gewohnt.`,
     },
     smartReason: (reason: SmartReason) => {
       switch (reason.kind) {
@@ -171,6 +175,8 @@ const TEXT = {
         `diff segnala ${count} file eliminati, più del limite di ${max}. Verifica che non manchi un disco, poi avvia il sync manualmente.`,
       diff_failed: (error: string) => `diff non riuscito: ${error}`,
       recovery_in_progress: "Un disco è in sostituzione; i job pianificati sono in pausa fino al suo sync.",
+      disk_missing: (disks: string) =>
+        `Il disco ${disks} manca o è vuoto, probabilmente non è montato. Un sync rimuoverebbe i suoi file dalla parità. Monta il disco, poi il prossimo job riprende normalmente.`,
     },
     smartReason: (reason: SmartReason) => {
       switch (reason.kind) {
@@ -302,6 +308,8 @@ export const buildSkipNotification = (
         return t.skip.diff_failed(outcome.error ?? "");
       case "recovery_in_progress":
         return t.skip.recovery_in_progress;
+      case "disk_missing":
+        return t.skip.disk_missing((outcome.disks ?? []).join(", "));
       default:
         return t.skip.job_running;
     }

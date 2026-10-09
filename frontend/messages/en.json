@@ -856,5 +856,20 @@
   "filelist_files": "Files",
   "filelist_links": "Links",
   "sidebar_version": "SnapRAID UI v{version}",
-  "sidebar_release_notes": "What's new in this version"
+  "sidebar_release_notes": "What's new in this version",
+  "health_degraded": "Disk not available",
+  "health_degraded_msg": "Scheduled jobs are paused until the disk is back, so no sync removes its files from parity.",
+  "health_disk_changed": "Disk changed",
+  "health_disk_changed_msg": "After replacing a disk this is expected: the next sync records the new filesystem. Otherwise check that the right disk is mounted.",
+  "health_disk_missing": "{disk}: {path} does not exist. Is the disk mounted?",
+  "health_disk_empty": "{disk}: {path} is empty, but SnapRAID knows {count} files on it. The disk is probably not mounted.",
+  "health_disk_uuid_changed": "{disk}: {path} is on another filesystem than at the last sync.",
+  "health_failing": "Disk failing",
+  "health_failing_msg": "SMART reports {disks} as critical. Replace the disk soon, while parity can still restore its data.",
+  "health_smart_details": "SMART details",
+  "disks_issue_missing": "Missing",
+  "disks_issue_empty": "Not mounted?",
+  "disks_issue_uuid_changed": "Other filesystem",
+  "disks_smart_critical": "SMART critical",
+  "schedules_skip_disk_missing": "{disks} missing or empty, probably not mounted. Paused so no sync removes its files from parity."
 }

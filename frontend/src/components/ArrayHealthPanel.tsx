@@ -1,4 +1,5 @@
 import type {
+  DiskIssue,
   JobProgress,
   LastRun,
   Schedule,
@@ -15,10 +16,12 @@ import {
   Info,
   Loader2,
   type LucideIcon,
+  OctagonAlert,
   RefreshCw,
   ScanSearch,
   ShieldAlert,
   ShieldCheck,
+  Unplug,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { getCommandDescription, getCommandLabel } from '../lib/commands'
@@ -61,6 +64,7 @@ interface ArrayHealthPanelProps {
   hasScrubSchedule: boolean // An enabled schedule scrubs this config, also as part of a sync
   isSchedulesLoading: boolean
   runningJob: RunningJobInfo | undefined // Job of this config that is running right now
+  smartCritical: string[] // Disks SMART rates critical, empty until SMART was read
   onExecute: (command: SnapRaidCommand) => void
   onAbort: () => void
   onFixErrors: () => void
@@ -73,7 +77,10 @@ type Health =
   | 'healthy'
   | 'attention'
   | 'sync_incomplete'
+  | 'disk_changed'
   | 'errors'
+  | 'failing'
+  | 'degraded'
   | 'busy'
   | 'unknown'
 
@@ -108,12 +115,33 @@ const HEALTH_STYLES: Record<
     alert: 'warning',
     icon: AlertTriangle,
   },
+  disk_changed: {
+    tile: 'bg-yellow-50 text-yellow-800',
+    ping: 'bg-yellow-500',
+    value: 'text-yellow-800',
+    alert: 'warning',
+    icon: AlertTriangle,
+  },
   errors: {
     tile: 'bg-red-50 text-red-700',
     ping: 'bg-red-500',
     value: 'text-red-700',
     alert: 'destructive',
     icon: ShieldAlert,
+  },
+  failing: {
+    tile: 'bg-red-50 text-red-700',
+    ping: 'bg-red-500',
+    value: 'text-red-700',
+    alert: 'destructive',
+    icon: OctagonAlert,
+  },
+  degraded: {
+    tile: 'bg-red-50 text-red-700',
+    ping: 'bg-red-500',
+    value: 'text-red-700',
+    alert: 'destructive',
+    icon: Unplug,
   },
   busy: {
     tile: 'bg-blue-50 text-blue-700',
@@ -134,7 +162,11 @@ const HEALTH_STYLES: Record<
 // Tinted icon; a calm ring pulses while all is well, errors pulse to draw the eye
 const HealthBadge = ({ health }: { health: Health }) => {
   const { tile, ping, icon: Icon } = HEALTH_STYLES[health]
-  const pulses = health === 'healthy' || health === 'errors'
+  const pulses =
+    health === 'healthy' ||
+    health === 'errors' ||
+    health === 'failing' ||
+    health === 'degraded'
   return (
     <span className="relative flex size-8 shrink-0 items-center justify-center">
       {pulses && (
@@ -165,8 +197,14 @@ const getHealthTitle = (
           : m.health_attention_scrub()
     case 'sync_incomplete':
       return m.health_sync_incomplete()
+    case 'disk_changed':
+      return m.health_disk_changed()
     case 'errors':
       return m.health_errors()
+    case 'failing':
+      return m.health_failing()
+    case 'degraded':
+      return m.health_degraded()
     case 'busy':
       return m.health_busy()
     case 'unknown':
@@ -177,6 +215,7 @@ const getHealthTitle = (
 const getHealthMessage = (
   health: Health,
   status: SnapRaidStatus | undefined,
+  smartCritical: string[],
 ): string => {
   switch (health) {
     case 'healthy':
@@ -189,8 +228,14 @@ const getHealthMessage = (
       return status?.unsyncedBlocks
         ? m.health_sync_incomplete_blocks({ count: status.unsyncedBlocks })
         : m.health_sync_incomplete_msg()
+    case 'disk_changed':
+      return m.health_disk_changed_msg()
     case 'errors':
       return m.health_errors_msg()
+    case 'failing':
+      return m.health_failing_msg({ disks: smartCritical.join(', ') })
+    case 'degraded':
+      return m.health_degraded_msg()
     case 'busy':
       return m.health_busy_msg()
     case 'unknown':
@@ -218,7 +263,11 @@ interface HealthInput {
   isBusy: boolean
   lastSync: LastRun | null | undefined
   lastScrub: LastRun | null | undefined
+  smartCritical?: string[]
 }
+
+// A missing or empty disk is not there, a changed filesystem is expected after replacing one
+const isUnavailable = (issue: DiskIssue) => issue.kind !== 'uuid_changed'
 
 /**
  * Overall state of the array from the status and the last runs, shared by the
@@ -230,7 +279,9 @@ export const getArrayHealth = ({
   isBusy,
   lastSync,
   lastScrub,
+  smartCritical = [],
 }: HealthInput) => {
+  const diskIssues = status?.diskIssues ?? []
   // status only reads the content file, so it still looks healthy when the last
   // sync failed before recording new files
   const lastSyncFailed =
@@ -246,21 +297,28 @@ export const getArrayHealth = ({
       : 'unknown'
     : isStatusError && !isBusy
       ? 'unknown'
-      : status.hasErrors
-        ? 'errors'
-        : status.syncIncomplete || lastSyncFailed
-          ? 'sync_incomplete'
-          : syncOverdue !== undefined ||
-              scrubOverdue !== undefined ||
-              oldestOverdue !== undefined
-            ? 'attention'
-            : 'healthy'
+      : diskIssues.some(isUnavailable)
+        ? 'degraded'
+        : smartCritical.length > 0
+          ? 'failing'
+          : status.hasErrors
+            ? 'errors'
+            : status.syncIncomplete || lastSyncFailed
+              ? 'sync_incomplete'
+              : diskIssues.length > 0
+                ? 'disk_changed'
+                : syncOverdue !== undefined ||
+                    scrubOverdue !== undefined ||
+                    oldestOverdue !== undefined
+                  ? 'attention'
+                  : 'healthy'
   // Sync is the fix for most problems, it only stands out when it is due
   const syncDue =
     health === 'sync_incomplete' ||
     (health === 'attention' && syncOverdue !== undefined)
   return {
     health,
+    diskIssues,
     lastSyncFailed,
     syncOverdue,
     scrubOverdue,
@@ -351,6 +409,22 @@ export const StatusAge = ({
     </Tooltip>
   </span>
 )
+
+const describeDiskIssue = (issue: DiskIssue) => {
+  const { disk, path } = issue
+  switch (issue.kind) {
+    case 'missing':
+      return m.health_disk_missing({ disk, path })
+    case 'empty':
+      return m.health_disk_empty({
+        disk,
+        path,
+        count: (issue.files ?? 0).toLocaleString(getLocale()),
+      })
+    case 'uuid_changed':
+      return m.health_disk_uuid_changed({ disk, path })
+  }
+}
 
 const LogLink = ({ logFile }: { logFile: string }) => (
   <Link
@@ -608,15 +682,24 @@ export const ArrayHealthPanel = ({
   onScrubBad,
   onTouch,
   actionsDisabled,
+  smartCritical,
 }: ArrayHealthPanelProps) => {
   const {
     health,
+    diskIssues,
     lastSyncFailed,
     syncOverdue,
     scrubOverdue,
     oldestOverdue,
     keepingUp,
-  } = getArrayHealth({ status, isStatusError, isBusy, lastSync, lastScrub })
+  } = getArrayHealth({
+    status,
+    isStatusError,
+    isBusy,
+    lastSync,
+    lastScrub,
+    smartCritical,
+  })
   const badBlocks = health === 'errors' ? (status?.badBlocks ?? 0) : 0
 
   // Overdue runs are the reason for 'attention', so they go into its notice
@@ -654,12 +737,17 @@ export const ArrayHealthPanel = ({
   }
 
   const isLoading = isStatusLoading && !status
-  const message = getHealthMessage(health, status)
+  const message = getHealthMessage(health, status, smartCritical)
   // Problems with something to do get a notice below the job, the tile keeps the headline
   const hasNotice =
     !runningJob &&
     !isLoading &&
-    (overdue.length > 0 || health === 'sync_incomplete' || badBlocks > 0)
+    (overdue.length > 0 ||
+      health === 'sync_incomplete' ||
+      health === 'degraded' ||
+      health === 'disk_changed' ||
+      health === 'failing' ||
+      badBlocks > 0)
   const HealthIcon = HEALTH_STYLES[health].icon
 
   return (
@@ -689,7 +777,24 @@ export const ArrayHealthPanel = ({
             )}
           </AlertTitle>
           <AlertDescription className="text-inherit">
+            {(health === 'degraded' || health === 'disk_changed') && (
+              <ul className="space-y-0.5 font-medium">
+                {diskIssues.map((issue) => (
+                  <li key={`${issue.type}:${issue.disk}`}>
+                    {describeDiskIssue(issue)}
+                  </li>
+                ))}
+              </ul>
+            )}
             {message && <p>{message}</p>}
+            {health === 'failing' && (
+              <Link
+                to="/smart"
+                className="mt-1 inline-block font-medium underline-offset-4 hover:underline"
+              >
+                {m.health_smart_details()} →
+              </Link>
+            )}
             {overdue.map((hint) => (
               <p key={hint.key}>{hint.text}</p>
             ))}

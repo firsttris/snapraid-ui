@@ -828,5 +828,20 @@
   "filelist_files": "File",
   "filelist_links": "Link",
   "sidebar_version": "SnapRAID UI v{version}",
-  "sidebar_release_notes": "Novità di questa versione"
+  "sidebar_release_notes": "Novità di questa versione",
+  "health_degraded": "Disco non disponibile",
+  "health_degraded_msg": "I job pianificati sono in pausa finché il disco non torna, così nessun sync rimuove i suoi file dalla parità.",
+  "health_disk_changed": "Disco cambiato",
+  "health_disk_changed_msg": "Dopo aver sostituito un disco è normale: il prossimo sync registra il nuovo filesystem. Altrimenti verifica che sia montato il disco giusto.",
+  "health_disk_missing": "{disk}: {path} non esiste. Il disco è montato?",
+  "health_disk_empty": "{disk}: {path} è vuoto, ma SnapRAID vi conosce {count} file. Probabilmente il disco non è montato.",
+  "health_disk_uuid_changed": "{disk}: {path} si trova su un filesystem diverso da quello dell'ultimo sync.",
+  "health_failing": "Disco in avaria",
+  "health_failing_msg": "SMART segnala {disks} come critico. Sostituisci presto il disco, finché la parità può ancora ripristinarne i dati.",
+  "health_smart_details": "Dettagli SMART",
+  "disks_issue_missing": "Mancante",
+  "disks_issue_empty": "Non montato?",
+  "disks_issue_uuid_changed": "Altro filesystem",
+  "disks_smart_critical": "SMART critico",
+  "schedules_skip_disk_missing": "{disks} mancante o vuoto, probabilmente non montato. In pausa, così nessun sync rimuove i file dalla parità."
 }

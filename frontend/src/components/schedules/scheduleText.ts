@@ -49,6 +49,10 @@ export const getOutcomeDetail = (
       })
     case 'recovery_in_progress':
       return m.schedules_skip_recovery()
+    case 'disk_missing':
+      return m.schedules_skip_disk_missing({
+        disks: (outcome.disks ?? []).join(', '),
+      })
     default:
       return outcome.error && localizeServer(outcome.error)
   }
