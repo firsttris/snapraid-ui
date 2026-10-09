@@ -6,6 +6,7 @@ import type {
   ParsedSnapRaidConfig,
 } from "@shared/types.ts";
 import { type FsUsage, parseDfOutput } from "./parsers/df-parser.ts";
+import { DEMO_MODE, demoDataDiskUsage, demoParityUsage } from "./demo.ts";
 
 const toGB = (bytes: number): number => Math.round(bytes / 1e9 * 10) / 10;
 
@@ -41,7 +42,7 @@ const getFileUsage = async (path: string) => {
  * filesystem, so its free space is counted once per level.
  */
 export const getParityUsage = (config: ParsedSnapRaidConfig): Promise<ParityLevelUsage[]> =>
-  Promise.all(config.parity.map(async ({ level, keyword, paths }) => {
+  DEMO_MODE ? Promise.resolve(demoParityUsage(config)) : Promise.all(config.parity.map(async ({ level, keyword, paths }) => {
     const usages = await Promise.all(paths.map(getFileUsage));
 
     const files: ParityFileUsage[] = usages.map(({ size, fs }, index) => ({
@@ -66,7 +67,7 @@ export const getParityUsage = (config: ParsedSnapRaidConfig): Promise<ParityLeve
  * Size and free space of the filesystem behind each data disk
  */
 export const getDataDiskUsage = (config: ParsedSnapRaidConfig): Promise<DataDiskUsage[]> =>
-  Promise.all(Object.entries(config.data).map(async ([name, path]) => {
+  DEMO_MODE ? Promise.resolve(demoDataDiskUsage(config)) : Promise.all(Object.entries(config.data).map(async ([name, path]) => {
     const fs = await getFsUsage(path);
     return {
       name,

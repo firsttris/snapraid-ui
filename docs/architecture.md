@@ -97,7 +97,7 @@ Module map:
 | `maintenance-settings.ts` | Docker pause and spindown settings |
 | `docker.ts`, `container-pause.ts` | Docker Engine API over the unix socket; pausing containers for the duration of jobs, resuming leftovers after a restart |
 | `spindown.ts` | Watches `/proc/diskstats` and spins idle disks down with `snapraid down` |
-| `demo.ts` | Fake `smart`, `probe` and device output for the demo sandbox (`SNAPRAID_DEMO=1`) |
+| `demo.ts` | The demo sandbox (`SNAPRAID_DEMO=1`): fake `smart`, `probe` and device output, demo disk sizes in `status` and the disk usage, a Docker API with demo containers |
 | `routes/*` | HTTP routes, see the [API reference](#api-reference) |
 
 ## Running SnapRAID
@@ -337,7 +337,7 @@ Most endpoints that work on a SnapRAID config take its path: as the `path` query
 | GET | `/api/snapraid/probe` | Power state of the disks (`snapraid probe`) | Query `path`. Returns `ProbeReport`. `400` with `unsupported: true` if probing is not supported |
 | POST | `/api/snapraid/power` | Spin disks up or down (`snapraid up` / `down`, always through the CLI) | Body `{configPath, action: "up" \| "down", disks?}`, no disks for the whole array. `409` while a job runs; `500` with SnapRAID's last line when it failed |
 
-In demo mode (`SNAPRAID_DEMO=1`), `smart` and `probe` return generated values instead of running SnapRAID.
+In demo mode (`SNAPRAID_DEMO=1`), `smart` and `probe` return generated values instead of running SnapRAID, and `status` gets the sizes and scrub state of the demo disks.
 
 ### SnapRAID config editing
 

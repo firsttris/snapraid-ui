@@ -6,7 +6,8 @@
     "setup": "bash scripts/setup-tools.sh",
     "test": "playwright test",
     "test:image": "bash scripts/image-test.sh",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "screenshots": "playwright test -c playwright.screenshots.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",

@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["harness", "tests", "playwright.config.ts"]
+  "include": ["harness", "tests", "screenshots", "playwright.config.ts", "playwright.screenshots.config.ts"]
 }

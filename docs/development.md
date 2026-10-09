@@ -53,13 +53,20 @@ pkill -f "vite dev"
 
 - builds SnapRAID (`SNAPRAID_VERSION`, default 14.10) from the official release tarball into `dev/bin/snapraid`, cached in `dev/.cache/`;
 - downloads Deno (`DENO_VERSION`, default 2.9.7) into `dev/tools/` if `deno` is not installed;
-- creates `dev/sandbox/` with three data "disks" (`disks/d1`–`d3`), a parity directory, a `snapraid.conf`, `config.json` and an empty `schedules.json`, filled with random files;
-- runs an initial sync, then adds, changes and deletes a file so that `diff`, `status` and `sync` have something to show.
+- creates `dev/sandbox/` with the array "Media Array": four data "disks" (`disks/disk1`–`disk4`) and a parity disk (`disks/parity1`) filled with random files, a `snapraid.conf` and `config.json`;
+- runs sync, scrub, touch and sync again with their logs, then adds, changes and deletes a file and runs `diff` and `status`, so that every page has something to show;
+- gives the sandbox a past with `dev/seed-demo.ts`: the job logs move back in time (last sync 10 hours ago, scrub yesterday), `usage-history.json` gets two months of disk usage with one disk filling up, `schedules.json` a nightly sync with touch and scrub, a weekly scrub and a SMART check, and `maintenance.json` Docker pause and spindown.
 
-All sandbox disks are directories on one filesystem, which SnapRAID only accepts with `--test-skip-device`. Since they have no SMART data or power state, `SNAPRAID_DEMO=1` makes the backend return generated `smart` and `probe` results in the real structured log format (`backend/src/demo.ts`): a healthy HDD, an SSD, an HDD with growing reallocated sectors and a sleeping parity disk.
+All sandbox disks are directories on one filesystem, which SnapRAID only accepts with `--test-skip-device`. They hold a few KiB and have no SMART data, power state or Docker next to them, so `SNAPRAID_DEMO=1` makes the backend answer like a real home server (`backend/src/demo.ts`):
+
+- `smart` and `probe`: generated results in the real structured log format: a healthy HDD, an SSD, an HDD with growing reallocated sectors, a sleeping 16 TB disk and an 18 TB parity disk;
+- `status`: the real log of the sandbox, with the sizes, file counts and fragmentation of those disks and a scrub that keeps up (64 % verified, the oldest block 17 days old) instead of the sandbox's figures;
+- disk usage (`df`) and the parity file's size: the same disks instead of the host's filesystem;
+- Docker: three containers (immich, jellyfin, nextcloud) that can be paused and resumed.
 
 ```bash
 dev/setup.sh --reset                         # recreate the sandbox from scratch
+DISKS_DIR=/mnt dev/setup.sh --reset          # the disks at /mnt/disk1 … /mnt/parity1, as the screenshots show them
 SNAPRAID_VERSION=14.10 dev/setup.sh --reset  # build another SnapRAID release
 ```
 
@@ -268,11 +275,29 @@ Actions tab, or from `frontend/`:
 npm run release minor    # patch (default), minor, major or x.y.z: raises package.json, commits, tags vX.Y.Z and pushes
 ```
 
+## Screenshots
+
+The pictures in the README and the documentation (`docs/screenshot*.png`, `docs/screenshots/`) come
+from the demo sandbox: `e2e/screenshots/readme.spec.ts` with `e2e/playwright.screenshots.config.ts`
+recreates the sandbox (`dev/setup.sh --reset`), builds the frontend, starts the backend in demo mode
+behind the proxy of the end-to-end tests and takes them, in English at 1280 × 900 with a device scale
+factor of 2. Run it as root with the disks at `/mnt`, or without `DISKS_DIR` with sandbox paths:
+
+```bash
+cd e2e
+DISKS_DIR=/mnt npm run screenshots
+```
+
+After a change to the look, run **Update screenshots** (Actions → Run workflow,
+`.github/workflows/screenshots.yml`) on the branch: it takes the pictures in the official Playwright
+image and commits the ones that changed. `docs/screenshots/daemon.png` (two snapraid-daemon
+instances) is still taken by hand.
+
 ## Social preview image
 
 The image GitHub shows when the repository is shared (*Settings → General → Social preview*) is
 `docs/social-preview.png`, 1280 × 640. It is rendered from `scripts/social-preview/social-preview.html`
-with headless Chromium. After changing the template or the dashboard screenshot, render it again and
+with the dark dashboard screenshot; the screenshots above render it too. To render it alone, then
 upload it in the settings:
 
 ```bash

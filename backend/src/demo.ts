@@ -1,8 +1,11 @@
 // Stand-ins for `snapraid smart` and `probe` in the demo sandbox (./start.sh --demo).
 // Its disks are directories, so SnapRAID finds no device to query. The output below has
 // the structured log format of the real commands and goes through the same parsers.
-import type { DeviceInfo } from "@shared/types.ts";
+// The sandbox disks also hold only a few KiB on the host's filesystem: `status` and the
+// disk usage get the sizes of the demo disks, so the dashboard looks like a real array.
+import type { DataDiskUsage, DeviceInfo, ParityLevelUsage, ParsedSnapRaidConfig } from "@shared/types.ts";
 import { parseSnapRaidConfig } from "./config-parser.ts";
+import type { DockerRequest } from "./docker.ts";
 
 export const DEMO_MODE = Deno.env.get("SNAPRAID_DEMO") === "1";
 
@@ -23,8 +26,8 @@ interface DemoDisk {
   standby?: boolean;
 }
 
-// One profile per disk in config order, repeated for larger sandboxes:
-// a healthy HDD, an SSD, an HDD growing reallocated sectors and a parity disk asleep
+// One profile per data disk in config order, repeated for larger sandboxes:
+// a healthy HDD, an SSD, an HDD growing reallocated sectors and a big disk asleep
 const PROFILES: DemoDisk[] = [
   {
     serial: "WD-WCC7K4DEMO01", family: "Western Digital Red", model: "WDC WD40EFRX-68N32N0",
@@ -48,11 +51,115 @@ const PROFILES: DemoDisk[] = [
   },
 ];
 
+// Parity is at least as large as the largest data disk
+const PARITY_PROFILE: DemoDisk = {
+  serial: "ZL2DEMO05", family: "Seagate Exos X18", model: "ST18000NM000J-2TV103",
+  interface: "SATA", size: 18000207937536, rotationRate: 7200, temperature: 38,
+  powerOnHours: 12034, afr: 0.0151, probability: 0.015, flags: 0,
+};
+
+// How full each data disk is, by config order like PROFILES
+const USAGE = [
+  { use: 0.69, files: 48213, fragmented: 12 },
+  { use: 0.62, files: 61877, fragmented: 3 },
+  { use: 0.87, files: 39402, fragmented: 41 },
+  { use: 0.53, files: 18650, fragmented: 0 },
+];
+
 const demoDisks = async (configPath: string) => {
   const config = await parseSnapRaidConfig(configPath);
-  const names = [...Object.keys(config.data), ...config.parity.map((p) => p.keyword)];
-  return names.map((name, i) => ({ name, device: `/dev/sd${String.fromCharCode(97 + i)}`, ...PROFILES[i % PROFILES.length] }));
+  const data = Object.keys(config.data).map((name, i) => ({ name, ...PROFILES[i % PROFILES.length] }));
+  const parity = config.parity.map((p) => ({ name: p.keyword, ...PARITY_PROFILE }));
+  return [...data, ...parity].map((d, i) => ({ ...d, device: `/dev/sd${String.fromCharCode(97 + i)}` }));
 };
+
+/**
+ * Size, used and free bytes of the demo data disks, by name
+ */
+const demoDataUsage = (config: ParsedSnapRaidConfig) =>
+  Object.keys(config.data).map((name, i) => {
+    const { size } = PROFILES[i % PROFILES.length];
+    const { use, files, fragmented } = USAGE[i % USAGE.length];
+    const used = Math.round(size * use);
+    return { name, size, used, free: size - used, files, fragmented };
+  });
+
+// Scrubbed 64 %, the oldest block 17 days ago: a scrub plan that keeps up
+const BLOCKS = 120_000_000;
+const UNSCRUBBED = 43_200_000;
+
+/**
+ * The structured log of a real `snapraid status` on the sandbox, with the sizes, file counts
+ * and scrub state of the demo disks instead of the sandbox's few KiB. Everything else, the
+ * disks' paths and the content files, stays as SnapRAID reported it.
+ */
+export const demoStatusLog = (log: string, config: ParsedSnapRaidConfig): string => {
+  const replaced = /^(summary:(disk_|total_|file_count|fragmented_file_count|excess_fragment_count|scrub_)|content_info:block|scrub_graph_)/;
+  const kept = log.split("\n").filter((line) => !replaced.test(line));
+  const disks = demoDataUsage(config);
+  const sum = (key: "used" | "free" | "files" | "fragmented") => disks.reduce((total, d) => total + d[key], 0);
+  // Blocks by the day they were last scrubbed (or synced, the "new" ones), oldest first
+  const bars = [[17, 9], [14, 10], [11, 9], [8, 10], [5, 9], [3, 9], [1, 8], [0, 0, 36]];
+  const lines = [
+    `content_info:block:${BLOCKS}`,
+    "content_info:block_bad:0",
+    "content_info:block_unsynced:0",
+    `content_info:block_unscrubbed:${UNSCRUBBED}`,
+    ...disks.flatMap((d) => [
+      `summary:disk_file_count:${d.name}:${d.files}`,
+      `summary:disk_fragmented_file_count:${d.name}:${d.fragmented}`,
+      `summary:disk_excess_fragment_count:${d.name}:${d.fragmented * 3}`,
+      `summary:disk_space_wasted:${d.name}:0`,
+      `summary:disk_used:${d.name}:${d.used}`,
+      `summary:disk_free:${d.name}:${d.free}`,
+      `summary:disk_use_percent:${d.name}:${Math.round(d.used / d.size * 100)}`,
+    ]),
+    `summary:file_count:${sum("files")}`,
+    `summary:fragmented_file_count:${sum("fragmented")}`,
+    `summary:excess_fragment_count:${sum("fragmented") * 3}`,
+    "summary:total_wasted:0",
+    `summary:total_used:${sum("used")}`,
+    `summary:total_free:${sum("free")}`,
+    `summary:total_use_percent:${Math.round(sum("used") / (sum("used") + sum("free")) * 100)}`,
+    "summary:scrub_oldest_days:17",
+    "summary:scrub_median_days:8",
+    "summary:scrub_newest_days:0",
+    ...bars.map(([daysAgo, scrubbed, fresh = 0], i) =>
+      `scrub_graph_bar:${i}:${daysAgo}:${BLOCKS / 100 * scrubbed}:${BLOCKS / 100 * fresh}`
+    ),
+  ];
+  const exit = kept.findIndex((line) => line.startsWith("summary:exit:"));
+  if (exit === -1) return [...kept, ...lines].join("\n");
+  return [...kept.slice(0, exit), ...lines, ...kept.slice(exit)].join("\n");
+};
+
+/**
+ * Size and free space of the demo data disks, instead of the host's filesystem
+ */
+export const demoDataDiskUsage = (config: ParsedSnapRaidConfig): DataDiskUsage[] =>
+  demoDataUsage(config).map((d) => ({ name: d.name, totalGB: toGB(d.size), freeGB: toGB(d.free) }));
+
+/**
+ * Parity files as large as the fullest data disk, on demo parity disks
+ */
+export const demoParityUsage = (config: ParsedSnapRaidConfig): ParityLevelUsage[] => {
+  const fullest = Math.max(0, ...demoDataUsage(config).map((d) => d.used));
+  return config.parity.map(({ level, keyword, paths }) => ({
+    level,
+    keyword,
+    files: paths.map((path, i) => ({
+      path,
+      // Split parity: the first file holds it all, like a disk the others only extend
+      fileSizeGB: toGB(i === 0 ? fullest : 0),
+      mount: path.slice(0, path.lastIndexOf("/")) || "/",
+      diskTotalGB: toGB(PARITY_PROFILE.size),
+      diskFreeGB: toGB(i === 0 ? PARITY_PROFILE.size - fullest : PARITY_PROFILE.size),
+    })),
+    capacityGB: toGB(PARITY_PROFILE.size * paths.length),
+  }));
+};
+
+const toGB = (bytes: number): number => Math.round(bytes / 1e9 * 10) / 10;
 
 const smartLines = (d: DemoDisk & { name: string; device: string }): string[] => {
   const tag = `${d.device}:${d.name}`;
@@ -129,3 +236,24 @@ export const demoDiskstats = (devices: DeviceInfo[]): string =>
     const reads = i === 0 ? Math.floor(Date.now() / 60_000) : 1000 + i;
     return `${major} ${minor} ${device.partition.replace("/dev/", "")} ${reads} 0 0 0 500 0 0 0 0 0 0`;
   }).join("\n");
+
+// Containers of a typical home server, for the pause during jobs
+const containers = [
+  { Id: "a3f1c9e2d4b5".padEnd(64, "0"), Names: ["/immich"], Image: "ghcr.io/immich-app/immich-server:release", State: "running" },
+  { Id: "b7e2d1f0c9a8".padEnd(64, "0"), Names: ["/jellyfin"], Image: "jellyfin/jellyfin:10.10", State: "running" },
+  { Id: "c4d9a7b3e1f2".padEnd(64, "0"), Names: ["/nextcloud"], Image: "nextcloud:31-apache", State: "running" },
+];
+
+/**
+ * The Docker Engine API for the demo: lists its containers, pauses and resumes them
+ */
+export const demoDocker: DockerRequest = (method, path) => {
+  const json = (body: unknown) => Promise.resolve({ status: 200, body: JSON.stringify(body) });
+  if (method === "GET" && path.startsWith("/containers/json")) return json(containers);
+  const [, name, action] = path.match(/^\/containers\/([^/]+)\/(json|pause|unpause)$/) ?? [];
+  const container = containers.find((c) => c.Names[0] === `/${decodeURIComponent(name ?? "")}`);
+  if (!container) return Promise.resolve({ status: 404, body: JSON.stringify({ message: `No such container: ${name}` }) });
+  if (action === "json") return json({ Id: container.Id, State: { Status: container.State } });
+  container.State = action === "pause" ? "paused" : "running";
+  return Promise.resolve({ status: 204, body: "" });
+};

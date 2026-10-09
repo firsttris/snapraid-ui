@@ -14,7 +14,8 @@ import {
 import type { LogManager } from "../log-manager.ts";
 import { readRunReport } from "../run-report.ts";
 import { findDiskIssues } from "../disk-check.ts";
-import { DEMO_MODE, demoProbeLog, demoSmartLog } from "../demo.ts";
+import { DEMO_MODE, demoProbeLog, demoSmartLog, demoStatusLog } from "../demo.ts";
+import { parseSnapRaidConfig } from "../config-parser.ts";
 import { parseDiffOutput } from "../parsers/diff-parser.ts";
 import { parseProbeOutput } from "../parsers/probe-parser.ts";
 import { parseSmartArrayFailure, parseSmartOutput } from "../parsers/smart-parser.ts";
@@ -75,8 +76,9 @@ export const createCliEngine = (logManager: LogManager | null): SnapRaidEngine =
     readStatus: async (configPath) => {
       // A running job holds SnapRAID's lock, status would only fail with a fatal error
       if (getCurrentJob()) throw new EngineBusyError("job");
-      const { code, log, stdout, text } = await runStructured(["-c", configPath, "status"]);
-      if (isLockedOutput(log)) throw new EngineBusyError("locked");
+      const { code, log: realLog, stdout, text } = await runStructured(["-c", configPath, "status"]);
+      if (isLockedOutput(realLog)) throw new EngineBusyError("locked");
+      const log = DEMO_MODE ? demoStatusLog(realLog, await parseSnapRaidConfig(configPath)) : realLog;
       return {
         status: {
           ...parseStatusOutput(log, code === 0 ? stdout : text),

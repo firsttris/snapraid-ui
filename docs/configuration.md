@@ -24,7 +24,7 @@ The login is described in [Security](security.md).
 >       - TZ=Europe/Berlin
 > ```
 
-`SNAPRAID_DEMO=1` exists for the development sandbox only; it replaces SMART data with made-up values. Don't set it on a real system. See [Development](development.md).
+`SNAPRAID_DEMO=1` exists for the development sandbox only; it replaces SMART data, disk sizes, the scrub state and Docker with made-up values. Don't set it on a real system. See [Development](development.md).
 
 The container's ports are fixed: Nginx listens on port 80 inside the container. Change the port on the host side of the mapping instead, e.g. `-p 8090:80`.
 
