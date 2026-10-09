@@ -21,3 +21,6 @@ snapraid/
 dev/
 frontend/.output
 frontend/.vinxi
+
+# End-to-end tests: built tools, test data
+e2e/

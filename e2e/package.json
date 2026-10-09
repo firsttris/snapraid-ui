@@ -1,0 +1,16 @@
+{
+  "name": "snapraid-ui-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "bash scripts/setup-tools.sh",
+    "test": "playwright test",
+    "test:image": "bash scripts/image-test.sh",
+    "typecheck": "tsc -p ."
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@types/node": "^22.19.0",
+    "typescript": "^5.9.3"
+  }
+}

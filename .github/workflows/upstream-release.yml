@@ -43,7 +43,7 @@ jobs:
           gh issue create --title "$title" --body "$(cat <<BODY
           SnapRAID [$latest](https://github.com/amadvance/snapraid/releases/tag/v$latest) is out, the image ships $pinned.
 
-          Before bumping \`SNAPRAID_VERSION\` in \`docker/Dockerfile\` and \`dev/setup.sh\`:
+          Before bumping \`SNAPRAID_VERSION\` in \`docker/Dockerfile\`, \`dev/setup.sh\` and \`e2e/scripts/setup-tools.sh\`:
 
           - [ ] Read the [HISTORY](https://github.com/amadvance/snapraid/blob/v$latest/HISTORY) for changes to the structured log (\`--log\`)
           - [ ] \`SNAPRAID_VERSION=$latest dev/setup.sh --reset\`, then run status, diff, sync, scrub, check, list, dup, touch and smart in the UI
@@ -86,5 +86,6 @@ jobs:
           - [ ] An endpoint for something CLI-only today (\`dup\`, \`list\`, \`devices\`, config, ...)? Add a method to \`SnapRaidEngine\` in \`backend/src/engine/engine.ts\`, implement it in \`cli-engine.ts\`, move the callers and extend \`backend/src/__tests__/engine-contract.ts\`
           - [ ] Update the tables in [docs/architecture.md](https://github.com/${{ github.repository }}/blob/master/docs/architecture.md#snapraid-engine)
           - [ ] Put $newest into \`backend/src/engine/REVIEWED_DAEMON_VERSION\`
+          - [ ] The end-to-end tests build and run against that version; if it needs a newer SnapRAID, raise \`SNAPRAID15_REF\` in \`e2e/scripts/setup-tools.sh\`
           BODY
           )"
