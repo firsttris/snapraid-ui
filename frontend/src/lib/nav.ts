@@ -2,6 +2,7 @@ import {
   Activity,
   Bell,
   Calendar,
+  FileCog,
   FileText,
   History,
   LayoutDashboard,
@@ -19,6 +20,7 @@ export interface NavItem {
     | '/logs'
     | '/notifications'
     | '/automation'
+    | '/array'
   label: () => string
   icon: LucideIcon
 }
@@ -33,10 +35,17 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/automation', label: m.nav_automation, icon: Workflow },
 ]
 
+// The selected array's snapraid.conf, in the sidebar's Array group
+export const ARRAY_NAV_ITEM: NavItem = {
+  to: '/array',
+  label: m.nav_array,
+  icon: FileCog,
+}
+
 /**
  * Navigation entry of a path, for the page title in the header
  */
 export const navItemOf = (pathname: string): NavItem | undefined =>
-  NAV_ITEMS.find((item) =>
+  [...NAV_ITEMS, ARRAY_NAV_ITEM].find((item) =>
     item.to === '/' ? pathname === '/' : pathname.startsWith(item.to),
   )

@@ -1,9 +1,8 @@
-import { SlidersHorizontal } from 'lucide-react'
+import { Check, Loader2, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSetConfigOption } from '../hooks/queries'
 import * as m from '../paraglide/messages'
 import { errorMessage } from './Feedback'
-import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 
@@ -21,20 +20,14 @@ interface OptionFieldProps {
   label: string
   help: string
   value?: number
-  saving: boolean
   onSave: (value: number | null) => Promise<void>
 }
 
-const OptionField = ({
-  id,
-  label,
-  help,
-  value,
-  saving,
-  onSave,
-}: OptionFieldProps) => {
+const OptionField = ({ id, label, help, value, onSave }: OptionFieldProps) => {
   const [draft, setDraft] = useState(value?.toString() ?? '')
   const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   // Follow the file after it was reloaded
   useEffect(() => {
@@ -44,40 +37,64 @@ const OptionField = ({
   const trimmed = draft.trim()
   const changed = trimmed !== (value?.toString() ?? '')
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
+  // Saved when the field is left or Enter is pressed, like every other change in the visual editor
+  const commit = async () => {
+    if (!changed || saving) return
     const parsed = trimmed === '' ? null : Number(trimmed)
     if (parsed !== null && (!Number.isInteger(parsed) || parsed <= 0)) {
       setError(m.options_value_invalid())
       return
     }
     setError('')
+    setSaved(false)
+    setSaving(true)
     try {
       await onSave(parsed)
+      setSaved(true)
     } catch (err) {
       setError(errorMessage(err))
+    } finally {
+      setSaving(false)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <div className="flex gap-2">
-        <Input
-          id={id}
-          type="number"
-          min={1}
-          step={1}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder={m.options_not_set()}
-          aria-invalid={error ? true : undefined}
-          className="tabular-nums"
-        />
-        <Button type="submit" variant="outline" disabled={!changed || saving}>
-          {m.common_save()}
-        </Button>
-      </div>
+    <form
+      onSubmit={(event) => {
+        event.preventDefault()
+        commit()
+      }}
+      className="flex flex-col gap-1.5"
+    >
+      <Label htmlFor={id} className="justify-between">
+        {label}
+        {saving ? (
+          <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+        ) : (
+          saved &&
+          !changed && (
+            <span className="flex items-center gap-1 text-xs font-normal text-emerald-700 dark:text-emerald-400">
+              <Check className="size-3.5" />
+              {m.options_saved()}
+            </span>
+          )
+        )}
+      </Label>
+      <Input
+        id={id}
+        type="number"
+        min={1}
+        step={1}
+        value={draft}
+        onChange={(e) => {
+          setDraft(e.target.value)
+          setSaved(false)
+        }}
+        onBlur={commit}
+        placeholder={m.options_not_set()}
+        aria-invalid={error ? true : undefined}
+        className="tabular-nums"
+      />
       <p className="text-xs text-muted-foreground">{help}</p>
       {error && <p className="text-xs text-red-700">{error}</p>}
     </form>
@@ -111,7 +128,6 @@ export const OptionsSection = ({
           label={m.options_autosave_label()}
           help={m.options_autosave_help()}
           value={autosave}
-          saving={setOptionMutation.isPending}
           onSave={save('autosave')}
         />
         <OptionField
@@ -119,7 +135,6 @@ export const OptionsSection = ({
           label={m.options_blocksize_label()}
           help={m.options_blocksize_help()}
           value={blocksize}
-          saving={setOptionMutation.isPending}
           onSave={save('blocksize')}
         />
       </div>

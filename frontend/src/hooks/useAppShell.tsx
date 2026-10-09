@@ -8,10 +8,9 @@ import {
   useMemo,
   useState,
 } from 'react'
-import { ConfigEditor } from '../components/ConfigEditor'
+import { BackupDialog } from '../components/BackupDialog'
 import { ConfigManager } from '../components/ConfigManager'
 import { useConfig } from './queries'
-import { useSelectedConfig } from './useSelectedConfig'
 
 const SIDEBAR_KEY = 'snapraid-ui-sidebar'
 
@@ -22,7 +21,7 @@ interface AppShellContextValue {
   setMobileNavOpen: (open: boolean) => void
   paletteOpen: boolean
   setPaletteOpen: (open: boolean) => void
-  openConfigDialog: (dialog: 'manager' | 'editor') => void
+  openConfigDialog: (dialog: 'manager' | 'backup') => void
   // A command picked in the palette, run by the dashboard once it is mounted
   pendingCommand: SnapRaidCommand | null
   requestCommand: (command: SnapRaidCommand) => void
@@ -40,16 +39,15 @@ export const isSidebarDocked = () =>
   window.matchMedia('(min-width: 1024px)').matches
 
 /**
- * State of the app frame: sidebar, command palette and the config dialogs,
+ * State of the app frame: sidebar, command palette and the dialogs for arrays and backup,
  * which the sidebar and the pages open alike
  */
 export const AppShellProvider = ({ children }: { children: ReactNode }) => {
   const { data: config } = useConfig()
-  const { selectedConfig } = useSelectedConfig()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const [configDialog, setConfigDialog] = useState<'manager' | 'editor' | null>(
+  const [configDialog, setConfigDialog] = useState<'manager' | 'backup' | null>(
     null,
   )
   const [pendingCommand, setPendingCommand] = useState<SnapRaidCommand | null>(
@@ -93,10 +91,6 @@ export const AppShellProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [toggleSidebar])
 
-  const selectedEntry = config?.snapraidConfigs.find(
-    (c) => c.enabled && c.path === selectedConfig,
-  )
-
   const value = useMemo<AppShellContextValue>(
     () => ({
       sidebarOpen,
@@ -122,12 +116,8 @@ export const AppShellProvider = ({ children }: { children: ReactNode }) => {
           onClose={() => setConfigDialog(null)}
         />
       )}
-      {configDialog === 'editor' && selectedEntry && (
-        <ConfigEditor
-          configPath={selectedEntry.path}
-          configName={selectedEntry.name}
-          onClose={() => setConfigDialog(null)}
-        />
+      {configDialog === 'backup' && (
+        <BackupDialog onClose={() => setConfigDialog(null)} />
       )}
     </AppShellContext.Provider>
   )

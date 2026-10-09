@@ -56,22 +56,6 @@ export const removeConfig = async (path: string): Promise<AppConfig> => {
 }
 
 /**
- * Create a new SnapRAID config file from a template and add it
- */
-export const createConfig = async (
-  name: string,
-  fileName: string,
-): Promise<{ config: AppConfig; path: string }> => {
-  const response = await apiFetch(`${API_BASE}/config/create`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, fileName }),
-  })
-  if (!response.ok) throw await apiError(response)
-  return response.json()
-}
-
-/**
  * Rename or enable/disable a SnapRAID config
  */
 export const updateConfig = async (

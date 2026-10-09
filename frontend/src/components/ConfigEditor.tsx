@@ -1,36 +1,26 @@
-import { Info, Loader2 } from 'lucide-react'
+import { useBlocker } from '@tanstack/react-router'
+import { CircleCheck, Info, Loader2, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useFileContent, useWriteFile } from '../hooks/queries'
 import { validateConfig } from '../lib/api/snapraid'
 import * as m from '../paraglide/messages'
-import { ConfigEditorFooter } from './ConfigEditorFooter'
 import { ConfigTextEditor } from './ConfigTextEditor'
 import { DiskManager } from './DiskManager'
 import { ErrorAlert } from './ErrorAlert'
 import { useFeedback } from './Feedback'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog'
+import { SaveBar } from './SaveBar'
+import { Button } from './ui/button'
 import { ValidationResultAlert } from './ValidationResultAlert'
 import { ViewModeToggle } from './ViewModeToggle'
 
 interface ConfigEditorProps {
   configPath: string
-  configName: string
-  onClose: () => void
-  onSaved?: () => void
 }
 
-export const ConfigEditor = ({
-  configPath,
-  configName,
-  onClose,
-  onSaved,
-}: ConfigEditorProps) => {
+/**
+ * The array's snapraid.conf: disks and settings in the visual editor, or the file as text
+ */
+export const ConfigEditor = ({ configPath }: ConfigEditorProps) => {
   const { confirm } = useFeedback()
   const [content, setContent] = useState<string>('')
   const [originalContent, setOriginalContent] = useState<string>('')
@@ -40,10 +30,8 @@ export const ConfigEditor = ({
     valid: boolean
     output: string
   } | null>(null)
-  const [hasChanges, setHasChanges] = useState(false)
   const [viewMode, setViewMode] = useState<'text' | 'visual'>('visual')
 
-  // TanStack Query hooks
   const {
     data: fileContent,
     isLoading: loading,
@@ -59,9 +47,21 @@ export const ConfigEditor = ({
     }
   }, [fileContent])
 
-  useEffect(() => {
-    setHasChanges(content !== originalContent)
-  }, [content, originalContent])
+  const hasChanges = content !== originalContent
+
+  // Unsaved text is not lost by leaving the page
+  useBlocker({
+    shouldBlockFn: async () => {
+      if (!hasChanges) return false
+      const leave = await confirm({
+        message: m.config_editor_unsaved_confirm(),
+        confirmLabel: m.confirm_discard(),
+        danger: true,
+      })
+      return !leave
+    },
+    enableBeforeUnload: () => hasChanges,
+  })
 
   // The visual editor writes the file itself, unsaved text would be overwritten on the next reload
   const changeViewMode = async (mode: 'text' | 'visual') => {
@@ -78,29 +78,6 @@ export const ConfigEditor = ({
     setViewMode(mode)
   }
 
-  const handleDiskUpdate = () => {
-    // Reload the file content when disks are updated
-    refetchFile()
-  }
-
-  const handleSave = async () => {
-    setError('')
-    writeFileMutation.mutate(
-      { path: configPath, content },
-      {
-        onSuccess: () => {
-          setOriginalContent(content)
-          onSaved?.()
-          // Auto-validate after save
-          handleValidate()
-        },
-        onError: (err) => {
-          setError(String(err))
-        },
-      },
-    )
-  }
-
   const handleValidate = async () => {
     setValidating(true)
     setError('')
@@ -113,6 +90,23 @@ export const ConfigEditor = ({
     } finally {
       setValidating(false)
     }
+  }
+
+  const handleSave = () => {
+    setError('')
+    writeFileMutation.mutate(
+      { path: configPath, content },
+      {
+        onSuccess: () => {
+          setOriginalContent(content)
+          // Auto-validate after save
+          handleValidate()
+        },
+        onError: (err) => {
+          setError(String(err))
+        },
+      },
+    )
   }
 
   // Ctrl+S / Cmd+S saves the text
@@ -128,81 +122,73 @@ export const ConfigEditor = ({
     return () => window.removeEventListener('keydown', onKeyDown)
   })
 
-  const handleClose = async () => {
-    if (hasChanges) {
-      const confirmed = await confirm({
-        message: m.config_editor_unsaved_confirm(),
-        confirmLabel: m.confirm_discard(),
-        danger: true,
-      })
-      if (!confirmed) return
-    }
-    onClose()
-  }
-
   return (
-    <Dialog
-      open
-      onOpenChange={(open) => {
-        if (!open) handleClose()
-      }}
-    >
-      <DialogContent className="flex h-[90dvh] max-h-[90dvh] flex-col gap-0 p-0 sm:max-w-5xl">
-        <DialogHeader className="gap-3 border-b px-4 py-4 pr-12 text-left sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="min-w-0 flex-1">
-            <DialogTitle className="truncate">{configName}</DialogTitle>
-            <DialogDescription className="mt-1.5 truncate font-mono text-xs">
-              {configPath}
-            </DialogDescription>
-          </div>
-          <ViewModeToggle
-            viewMode={viewMode}
-            onViewModeChange={changeViewMode}
-          />
-        </DialogHeader>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <ViewModeToggle viewMode={viewMode} onViewModeChange={changeViewMode} />
+        <Button
+          variant="outline"
+          onClick={handleValidate}
+          disabled={validating || loading}
+        >
+          {validating ? <Loader2 className="animate-spin" /> : <CircleCheck />}
+          {validating
+            ? m.config_editor_validating()
+            : m.config_editor_validate()}
+        </Button>
+      </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 sm:px-6">
-          {error && <ErrorAlert error={error} />}
+      {error && <ErrorAlert error={error} />}
 
-          {validationResult && (
-            <ValidationResultAlert validationResult={validationResult} />
-          )}
+      {validationResult && (
+        <ValidationResultAlert validationResult={validationResult} />
+      )}
 
-          {loading ? (
-            <div className="flex flex-1 items-center justify-center text-muted-foreground">
-              <Loader2 className="size-8 animate-spin" />
-            </div>
-          ) : viewMode === 'visual' ? (
-            <>
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Info className="size-4 shrink-0" />
-                {m.config_editor_visual_saves_immediately()}
-              </p>
-              <DiskManager
-                configPath={configPath}
-                onUpdate={handleDiskUpdate}
-              />
-            </>
-          ) : (
+      {loading ? (
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
+          <Loader2 className="size-8 animate-spin" />
+        </div>
+      ) : viewMode === 'visual' ? (
+        <>
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Info className="size-4 shrink-0" />
+            {m.config_editor_visual_saves_immediately()}
+          </p>
+          <DiskManager configPath={configPath} onUpdate={() => refetchFile()} />
+        </>
+      ) : (
+        <>
+          <div className="flex h-[65vh] flex-col">
             <ConfigTextEditor
               content={content}
               hasChanges={hasChanges}
               onContentChange={setContent}
             />
-          )}
-        </div>
-
-        <ConfigEditorFooter
-          viewMode={viewMode}
-          hasChanges={hasChanges}
-          validating={validating}
-          saving={writeFileMutation.isPending}
-          loading={loading}
-          onValidate={handleValidate}
-          onSave={handleSave}
-          onClose={handleClose}
-        />
-      </DialogContent>
-    </Dialog>
+          </div>
+          <SaveBar>
+            <Button
+              variant="outline"
+              onClick={() => setContent(originalContent)}
+              disabled={!hasChanges || writeFileMutation.isPending}
+            >
+              {m.common_cancel()}
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={!hasChanges || writeFileMutation.isPending}
+            >
+              {writeFileMutation.isPending ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <Save />
+              )}
+              {writeFileMutation.isPending
+                ? m.config_editor_saving()
+                : m.config_editor_save_config()}
+            </Button>
+          </SaveBar>
+        </>
+      )}
+    </div>
   )
 }

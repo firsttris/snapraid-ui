@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ArrayRouteImport } from './routes/array'
 import { Route as AutomationRouteImport } from './routes/automation'
 import { Route as LogsRouteImport } from './routes/logs'
 import { Route as NotificationsRouteImport } from './routes/notifications'
@@ -21,6 +22,11 @@ import { Route as SmartRouteImport } from './routes/smart'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArrayRoute = ArrayRouteImport.update({
+  id: '/array',
+  path: '/array',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AutomationRoute = AutomationRouteImport.update({
@@ -61,6 +67,7 @@ const SmartRoute = SmartRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/array': typeof ArrayRoute
   '/automation': typeof AutomationRoute
   '/logs': typeof LogsRoute
   '/notifications': typeof NotificationsRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/array': typeof ArrayRoute
   '/automation': typeof AutomationRoute
   '/logs': typeof LogsRoute
   '/notifications': typeof NotificationsRoute
@@ -82,6 +90,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/array': typeof ArrayRoute
   '/automation': typeof AutomationRoute
   '/logs': typeof LogsRoute
   '/notifications': typeof NotificationsRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/array'
     | '/automation'
     | '/logs'
     | '/notifications'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/array'
     | '/automation'
     | '/logs'
     | '/notifications'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/array'
     | '/automation'
     | '/logs'
     | '/notifications'
@@ -125,6 +137,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ArrayRoute: typeof ArrayRoute
   AutomationRoute: typeof AutomationRoute
   LogsRoute: typeof LogsRoute
   NotificationsRoute: typeof NotificationsRoute
@@ -141,6 +154,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/array': {
+      id: '/array'
+      path: '/array'
+      fullPath: '/array'
+      preLoaderRoute: typeof ArrayRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/automation': {
@@ -197,6 +217,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ArrayRoute: ArrayRoute,
   AutomationRoute: AutomationRoute,
   LogsRoute: LogsRoute,
   NotificationsRoute: NotificationsRoute,

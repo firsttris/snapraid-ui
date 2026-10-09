@@ -1,18 +1,18 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import {
+  ArchiveRestore,
   Check,
   ChevronsUpDown,
   HardDrive,
+  Layers,
   LogOut,
-  Pencil,
-  Settings2,
   Sparkles,
 } from 'lucide-react'
 import { useConfig, useLogout, useSession } from '../hooks/queries'
 import { useAppShell } from '../hooks/useAppShell'
 import { useJob } from '../hooks/useJob'
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
-import { NAV_ITEMS } from '../lib/nav'
+import { ARRAY_NAV_ITEM, NAV_ITEMS } from '../lib/nav'
 import { type MotionPreference, useMotion } from '../lib/theme'
 import { cn } from '../lib/utils'
 import { APP_VERSION, releaseUrl } from '../lib/version'
@@ -54,6 +54,7 @@ const ConfigSwitcher = ({ onNavigate }: { onNavigate: () => void }) => {
   const { data: config } = useConfig()
   const { selectedConfig, setSelectedConfig } = useSelectedConfig()
   const { openConfigDialog } = useAppShell()
+  const navigate = useNavigate()
   const job = useJob()
   const enabledConfigs = config?.snapraidConfigs.filter((c) => c.enabled) ?? []
   const selected = enabledConfigs.find((c) => c.path === selectedConfig)
@@ -107,11 +108,11 @@ const ConfigSwitcher = ({ onNavigate }: { onNavigate: () => void }) => {
           disabled={!selected}
           onSelect={() => {
             onNavigate()
-            openConfigDialog('editor')
+            navigate({ to: '/array' })
           }}
         >
-          <Pencil />
-          {m.sidebar_edit_config()}
+          <ARRAY_NAV_ITEM.icon />
+          {ARRAY_NAV_ITEM.label()}
         </DropdownMenuItem>
         <DropdownMenuItem
           onSelect={() => {
@@ -119,7 +120,7 @@ const ConfigSwitcher = ({ onNavigate }: { onNavigate: () => void }) => {
             openConfigDialog('manager')
           }}
         >
-          <Settings2 />
+          <Layers />
           {m.config_manager_title()}
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -214,7 +215,6 @@ const VersionLink = () => (
 
 const SidebarBody = ({ onNavigate }: { onNavigate: () => void }) => {
   const { openConfigDialog } = useAppShell()
-  const { selectedConfig } = useSelectedConfig()
 
   return (
     <div className="flex h-full flex-col gap-5 overflow-y-auto p-3">
@@ -250,19 +250,15 @@ const SidebarBody = ({ onNavigate }: { onNavigate: () => void }) => {
 
       <div className="flex flex-col gap-0.5">
         <GroupLabel>{m.sidebar_group_array()}</GroupLabel>
-        <button
-          type="button"
+        <Link
+          to={ARRAY_NAV_ITEM.to}
+          onClick={onNavigate}
           data-slot="nav-link"
-          className={cn(navLinkClass, 'text-left')}
-          disabled={!selectedConfig}
-          onClick={() => {
-            onNavigate()
-            openConfigDialog('editor')
-          }}
+          className={navLinkClass}
         >
-          <Pencil />
-          {m.sidebar_edit_config()}
-        </button>
+          <ARRAY_NAV_ITEM.icon />
+          {ARRAY_NAV_ITEM.label()}
+        </Link>
         <button
           type="button"
           data-slot="nav-link"
@@ -272,12 +268,24 @@ const SidebarBody = ({ onNavigate }: { onNavigate: () => void }) => {
             openConfigDialog('manager')
           }}
         >
-          <Settings2 />
+          <Layers />
           {m.config_manager_title()}
         </button>
       </div>
 
       <div className="mt-auto flex flex-col gap-4">
+        <button
+          type="button"
+          data-slot="nav-link"
+          className={cn(navLinkClass, 'text-left')}
+          onClick={() => {
+            onNavigate()
+            openConfigDialog('backup')
+          }}
+        >
+          <ArchiveRestore />
+          {m.backup_title()}
+        </button>
         <MotionSetting />
         <UserBox />
         <VersionLink />

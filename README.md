@@ -139,7 +139,7 @@ docker run -d --name snapraid-ui \
   tristanteu/snapraid-ui:latest
 ```
 
-Put your `snapraid.conf` into `./snapraid/` (or add or create one under *Manage Configurations*) and open
+Put your `snapraid.conf` into `./snapraid/` (or add one or set up a new array under *Manage arrays*) and open
 **http://localhost:3000**.
 
 - Mount your disks **at the same paths as on the host**, so the paths in `snapraid.conf` stay valid.

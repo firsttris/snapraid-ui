@@ -2,19 +2,26 @@ import type { ConfigFileCheck, SnapRaidConfig } from '@shared/types'
 import {
   AlertTriangle,
   Check,
+  MoreHorizontal,
   Pencil,
-  Settings2,
+  TextCursorInput,
   Trash2,
   X,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import * as m from '../paraglide/messages'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu'
 import { Input } from './ui/input'
 import { Switch } from './ui/switch'
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 interface ConfigListItemProps {
   config: SnapRaidConfig
@@ -63,32 +70,6 @@ const CheckSummary = ({ check }: { check?: ConfigFileCheck }) => {
   )
 }
 
-const IconAction = ({
-  label,
-  onClick,
-  destructive = false,
-  children,
-}: {
-  label: string
-  onClick: () => void
-  destructive?: boolean
-  children: React.ReactNode
-}) => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button
-        variant={destructive ? 'ghostDestructive' : 'ghost'}
-        size="icon-sm"
-        onClick={onClick}
-        aria-label={label}
-      >
-        {children}
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent>{label}</TooltipContent>
-  </Tooltip>
-)
-
 export const ConfigListItem = ({
   config,
   check,
@@ -99,6 +80,9 @@ export const ConfigListItem = ({
 }: ConfigListItemProps) => {
   const [renaming, setRenaming] = useState(false)
   const [name, setName] = useState(config.name)
+  // The rename field keeps the focus the closing menu would hand back to its button
+  const focusRename = useRef(false)
+  const switchId = useId()
 
   const fileMissing = check !== undefined && !check.exists
 
@@ -120,16 +104,23 @@ export const ConfigListItem = ({
         config.enabled ? 'bg-card hover:bg-accent/40' : 'bg-muted/40',
       )}
     >
-      <Switch
-        checked={config.enabled}
-        onCheckedChange={onToggle}
-        aria-label={m.config_manager_toggle_label({ name: config.name })}
-        title={
-          config.enabled
-            ? m.config_manager_enabled()
-            : m.config_manager_disabled()
-        }
-      />
+      {/* Hidden arrays leave the switcher, their schedules keep running */}
+      <div className="flex w-28 shrink-0 items-center gap-2">
+        <Switch
+          id={switchId}
+          checked={config.enabled}
+          onCheckedChange={onToggle}
+          aria-label={m.config_manager_toggle_label({ name: config.name })}
+        />
+        <label
+          htmlFor={switchId}
+          className="cursor-pointer text-xs text-muted-foreground"
+        >
+          {config.enabled
+            ? m.config_manager_shown()
+            : m.config_manager_hidden()}
+        </label>
+      </div>
 
       <div className="min-w-0 flex-1 basis-48">
         {renaming ? (
@@ -202,25 +193,43 @@ export const ConfigListItem = ({
           onClick={onEdit}
           disabled={fileMissing}
         >
-          <Settings2 />
+          <Pencil />
           {m.config_manager_edit()}
         </Button>
-        <IconAction
-          label={m.config_manager_rename()}
-          onClick={() => {
-            setName(config.name)
-            setRenaming(true)
-          }}
-        >
-          <Pencil />
-        </IconAction>
-        <IconAction
-          label={m.config_manager_delete()}
-          onClick={onDelete}
-          destructive
-        >
-          <Trash2 />
-        </IconAction>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={m.config_manager_more({ name: config.name })}
+            >
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            onCloseAutoFocus={(event) => {
+              if (focusRename.current) event.preventDefault()
+              focusRename.current = false
+            }}
+          >
+            <DropdownMenuItem
+              onSelect={() => {
+                focusRename.current = true
+                setName(config.name)
+                setRenaming(true)
+              }}
+            >
+              <TextCursorInput />
+              {m.config_manager_rename()}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+              <Trash2 />
+              {m.config_manager_delete()}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )

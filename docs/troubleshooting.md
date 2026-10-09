@@ -20,7 +20,7 @@ Common problems and how to fix them. If your problem is not listed, check the co
 The UI looks for the file **inside the container**. On the first start it creates an entry *Default* that points to `snapraid.conf` in the data folder (`/app/snapraid` in the Docker image, i.e. the folder you mounted there).
 
 - Copy your `snapraid.conf` into that folder, **or**
-- mount the file into the container (e.g. `-v /etc/snapraid.conf:/etc/snapraid.conf`) and add it in *Manage Configurations* with **Add existing file**. You can remove the *Default* entry afterwards.
+- mount the file into the container (e.g. `-v /etc/snapraid.conf:/etc/snapraid.conf`) and add it in *Manage arrays* with **Add existing file**. You can remove the *Default* entry afterwards.
 
 See [Configurations and disks](disks.md#managing-configurations).
 
@@ -44,10 +44,6 @@ If a disk is mounted on the host only after the container started, the container
 ### "Config file not found: …" when adding a file
 
 The path does not exist in the container, or is not a regular file. Relative paths are resolved against the data folder, absolute paths are taken as they are. Use **Browse...** to see what the container sees.
-
-### "File name may only contain letters, digits, '.', '-' and '_'"
-
-**Create new config** only accepts a plain file name (no directories, no spaces). The file is always created in the data folder.
 
 ## Status, reports and SnapRAID version
 
