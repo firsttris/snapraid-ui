@@ -464,7 +464,9 @@ export const DisksPanel = ({
               power={power}
               percent={percent}
               barClass={usageBarColor(percent ?? 0)}
-              files={stats ? formatCount(stats.files) : '–'}
+              files={
+                stats?.files !== undefined ? formatCount(stats.files) : '–'
+              }
               free={free}
               total={total}
               notes={

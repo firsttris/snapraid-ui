@@ -131,6 +131,15 @@ cd frontend && npm test
 cd backend && SNAPRAID_BIN=../dev/bin/snapraid SNAPRAID_EXTRA_ARGS=--test-skip-device deno test --allow-all
 ```
 
+To run the engine contract against snapraid-daemon too, build it (`./autogen.sh && ./configure && make` in a checkout of [snapraid-daemon](https://github.com/amadvance/snapraid-daemon), and SnapRAID 15 the same way) and start it in the foreground for a throwaway array:
+
+```bash
+snapraidd -f -c snapraidd.conf -C snapraid.conf -p snapraidd.pid
+cd backend && SNAPRAID_TEST_DAEMON_URL=http://127.0.0.1:7627 SNAPRAID_TEST_DAEMON_CONF=/path/to/snapraid.conf deno test --allow-all
+```
+
+The test adds files to the array's first data disk. In `snapraidd.conf` set `net_port = 127.0.0.1:7627` and leave `maintenance_schedule` empty. The daemon only runs a real binary as `sys_engine`, no script; for disks that share one filesystem, point it at a small compiled wrapper that adds `--test-skip-device`.
+
 - **Backend** tests use `Deno.test` with `@std/assert`. Parser tests in `backend/src/parsers/__tests__/` run against real SnapRAID logs in `fixtures/`; when SnapRAID's log format changes, add or update a fixture from a real run. The [engine contract](architecture.md#snapraid-engine) runs against the fake engine always and against the CLI engine when `SNAPRAID_BIN` and `--test-skip-device` are set (otherwise it shows as *ignored*); the scheduler is tested against the fake engine. Other tests cover auth, backup/restore, config paths, the disk wizards, `--force-*` detection, the log manager, notifications, the SMART baseline and history, and the usage history.
 - **Frontend** tests use Vitest and live in `frontend/src/lib/__tests__/`: log parsing, progress, the job tracker and the i18n checks described [below](#translations). Run them from `frontend/`, they read `messages/` and `../backend/src` by relative path.
 

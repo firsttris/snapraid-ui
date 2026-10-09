@@ -1,15 +1,20 @@
 import type {
+  DaemonCheck,
+  DaemonTarget,
+  DaemonWarning,
   DockerContainer,
+  EngineSettings,
   MaintenanceSettings,
   SnapRaidCommand,
   SpindownDisk,
 } from '@shared/types'
 import { createFileRoute } from '@tanstack/react-router'
-import { AlertCircle, Container, Moon } from 'lucide-react'
+import { AlertCircle, Container, Moon, Plug, Plus, Trash2 } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { PageLayout } from '../components/PageLayout'
 import { SaveBar } from '../components/SaveBar'
+import { Select } from '../components/Select'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -19,11 +24,15 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Switch } from '../components/ui/switch'
 import {
+  useConfig,
   useDockerContainers,
+  useEngineSettings,
   useMaintenanceSettings,
+  useSaveEngineSettings,
   useSaveMaintenanceSettings,
   useSpindownStatus,
 } from '../hooks/queries'
+import { engineApi } from '../lib/api/engine'
 import { getCommandLabel } from '../lib/commands'
 import { formatRelativeTime } from '../lib/utils'
 import * as m from '../paraglide/messages'
@@ -46,7 +55,10 @@ const fieldClass = 'flex flex-col gap-2'
 const hintClass = 'text-xs text-muted-foreground'
 
 function AutomationPage() {
-  const { data, isLoading, error } = useMaintenanceSettings()
+  const maintenance = useMaintenanceSettings()
+  const engine = useEngineSettings()
+  const isLoading = maintenance.isLoading || engine.isLoading
+  const error = maintenance.error ?? engine.error
 
   return (
     <PageLayout
@@ -62,17 +74,48 @@ function AutomationPage() {
           <AlertDescription>{errorMessage(error)}</AlertDescription>
         </Alert>
       )}
-      {data && <AutomationForm initial={data} />}
+      {maintenance.data && engine.data && (
+        <AutomationForm
+          initial={maintenance.data}
+          initialEngine={engine.data}
+          daemonActive={engine.data.active === 'daemon'}
+        />
+      )}
     </PageLayout>
   )
 }
 
-function AutomationForm({ initial }: { initial: MaintenanceSettings }) {
+// The engine settings without the server's note which engine runs
+const engineSettingsOf = ({
+  mode,
+  daemons,
+}: EngineSettings): EngineSettings => ({
+  mode,
+  daemons,
+})
+
+function AutomationForm({
+  initial,
+  initialEngine,
+  daemonActive,
+}: {
+  initial: MaintenanceSettings
+  initialEngine: EngineSettings
+  daemonActive: boolean
+}) {
   const { toast } = useFeedback()
   const save = useSaveMaintenanceSettings()
+  const saveEngine = useSaveEngineSettings()
   const [settings, setSettings] = useState(initial)
   const [saved, setSaved] = useState(initial)
-  const dirty = JSON.stringify(settings) !== JSON.stringify(saved)
+  const [engine, setEngine] = useState(engineSettingsOf(initialEngine))
+  const [savedEngine, setSavedEngine] = useState(
+    engineSettingsOf(initialEngine),
+  )
+  const maintenanceDirty = JSON.stringify(settings) !== JSON.stringify(saved)
+  const engineDirty = JSON.stringify(engine) !== JSON.stringify(savedEngine)
+  const dirty = maintenanceDirty || engineDirty
+  const pending = save.isPending || saveEngine.isPending
 
   const update = <K extends keyof MaintenanceSettings>(
     section: K,
@@ -81,9 +124,16 @@ function AutomationForm({ initial }: { initial: MaintenanceSettings }) {
 
   const handleSave = async () => {
     try {
-      const result = await save.mutateAsync(settings)
-      setSettings(result)
-      setSaved(result)
+      if (maintenanceDirty) {
+        const result = await save.mutateAsync(settings)
+        setSettings(result)
+        setSaved(result)
+      }
+      if (engineDirty) {
+        const result = engineSettingsOf(await saveEngine.mutateAsync(engine))
+        setEngine(result)
+        setSavedEngine(result)
+      }
       toast.success(m.automation_saved())
     } catch (error) {
       toast.error(errorMessage(error))
@@ -121,15 +171,47 @@ function AutomationForm({ initial }: { initial: MaintenanceSettings }) {
         />
       </SectionCard>
 
+      <SectionCard
+        icon={<Plug />}
+        iconClass="bg-amber-50 text-amber-700"
+        title={m.automation_daemon_title()}
+        badge={
+          <>
+            <Badge variant="warning">{m.automation_daemon_badge()}</Badge>
+            {daemonActive && (
+              <Badge variant="success">{m.automation_daemon_active()}</Badge>
+            )}
+          </>
+        }
+        description={m.automation_daemon_desc()}
+        enabled={engine.mode === 'daemon'}
+        onToggle={(enabled) =>
+          setEngine((s) => ({
+            mode: enabled ? 'daemon' : 'cli',
+            // Most hosts run one daemon, its form is there right away
+            daemons:
+              enabled && s.daemons.length === 0 ? [newTarget(7627)] : s.daemons,
+          }))
+        }
+      >
+        <DaemonList
+          daemons={engine.daemons}
+          onChange={(daemons) => setEngine((s) => ({ ...s, daemons }))}
+        />
+      </SectionCard>
+
       <SaveBar hint={dirty && m.automation_unsaved()}>
         <Button
           variant="outline"
-          onClick={() => setSettings(saved)}
-          disabled={!dirty || save.isPending}
+          onClick={() => {
+            setSettings(saved)
+            setEngine(savedEngine)
+          }}
+          disabled={!dirty || pending}
         >
           {m.common_cancel()}
         </Button>
-        <Button onClick={handleSave} disabled={!dirty || save.isPending}>
+        <Button onClick={handleSave} disabled={!dirty || pending}>
           {m.common_save()}
         </Button>
       </SaveBar>
@@ -418,10 +500,231 @@ function SpindownRow({
   )
 }
 
+const DAEMON_WARNING: Record<DaemonWarning, () => string> = {
+  schedule: m.automation_daemon_warn_schedule,
+  spindown: m.automation_daemon_warn_spindown,
+  docker_pause: m.automation_daemon_warn_docker_pause,
+  notifications: m.automation_daemon_warn_notifications,
+  other_array: m.automation_daemon_warn_other_array,
+}
+
+// snapraid-daemon listens on 7627, further instances usually on the next ports
+const newTarget = (port: number): DaemonTarget => ({
+  configPath: '',
+  url: `http://127.0.0.1:${port}`,
+  username: '',
+  password: '',
+})
+
+// One daemon per array: each entry is a snapraidd instance (snapraidd@<name>) with its own port
+function DaemonList({
+  daemons,
+  onChange,
+}: {
+  daemons: DaemonTarget[]
+  onChange: (daemons: DaemonTarget[]) => void
+}) {
+  const { data: config } = useConfig()
+  const configs = config?.snapraidConfigs ?? []
+  const free = configs.filter(
+    (entry) => !daemons.some((target) => target.configPath === entry.path),
+  )
+
+  const update = (index: number, changes: Partial<DaemonTarget>) =>
+    onChange(
+      daemons.map((target, i) =>
+        i === index ? { ...target, ...changes } : target,
+      ),
+    )
+
+  return (
+    <>
+      {daemons.map((target, index) => (
+        <DaemonFields
+          // Entries have no id; one is only ever added at the end or removed as a whole
+          // biome-ignore lint/suspicious/noArrayIndexKey: see above
+          key={index}
+          index={index}
+          target={target}
+          configOptions={configs.filter(
+            (entry) =>
+              entry.path === target.configPath ||
+              !daemons.some((other) => other.configPath === entry.path),
+          )}
+          onChange={(changes) => update(index, changes)}
+          onRemove={
+            daemons.length > 1
+              ? () => onChange(daemons.filter((_, i) => i !== index))
+              : undefined
+          }
+        />
+      ))}
+      {free.length > 0 && daemons.length > 0 && (
+        <div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              onChange([...daemons, newTarget(7627 + daemons.length)])
+            }
+          >
+            <Plus />
+            {m.automation_daemon_add()}
+          </Button>
+        </div>
+      )}
+      <p className={hintClass}>{m.automation_daemon_hint()}</p>
+    </>
+  )
+}
+
+function DaemonFields({
+  index,
+  target,
+  configOptions,
+  onChange,
+  onRemove,
+}: {
+  index: number
+  target: DaemonTarget
+  configOptions: Array<{ name: string; path: string }>
+  onChange: (changes: Partial<DaemonTarget>) => void
+  onRemove?: () => void
+}) {
+  const [check, setCheck] = useState<DaemonCheck | null>(null)
+  const [testing, setTesting] = useState(false)
+  const daemon = target
+  const id = (field: string) => `daemon-${index}-${field}`
+
+  const handleTest = async () => {
+    setTesting(true)
+    try {
+      setCheck(await engineApi.test(target))
+    } catch (error) {
+      setCheck({ ok: false, error: errorMessage(error), warnings: [] })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4 rounded-lg border bg-background/60 p-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className={`${fieldClass} sm:col-span-2`}>
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor={id('config')}>{m.automation_daemon_config()}</Label>
+            {onRemove && (
+              <Button variant="ghost" size="sm" onClick={onRemove}>
+                <Trash2 />
+                {m.automation_daemon_remove()}
+              </Button>
+            )}
+          </div>
+          <Select
+            id={id('config')}
+            size="sm"
+            value={daemon.configPath}
+            onChange={(configPath) => onChange({ configPath })}
+            options={[
+              ...(daemon.configPath
+                ? []
+                : [{ value: '', label: m.automation_daemon_config_none() }]),
+              ...configOptions.map((entry) => ({
+                value: entry.path,
+                label: entry.name,
+                hint: entry.path,
+              })),
+            ]}
+          />
+        </div>
+        <div className={`${fieldClass} sm:col-span-2`}>
+          <Label htmlFor={id('url')}>{m.automation_daemon_url()}</Label>
+          <Input
+            id={id('url')}
+            type="url"
+            value={daemon.url}
+            onChange={(e) => onChange({ url: e.target.value })}
+            placeholder="http://127.0.0.1:7627"
+            className="bg-background font-mono"
+          />
+        </div>
+        <div className={fieldClass}>
+          <Label htmlFor={id('username')}>
+            {m.automation_daemon_username()}
+          </Label>
+          <Input
+            id={id('username')}
+            value={daemon.username}
+            onChange={(e) => onChange({ username: e.target.value })}
+            autoComplete="off"
+            className="bg-background"
+          />
+        </div>
+        <div className={fieldClass}>
+          <Label htmlFor={id('password')}>
+            {m.automation_daemon_password()}
+          </Label>
+          <Input
+            id={id('password')}
+            type="password"
+            value={daemon.password}
+            onChange={(e) => onChange({ password: e.target.value })}
+            autoComplete="new-password"
+            className="bg-background"
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleTest}
+            disabled={testing || !daemon.url}
+          >
+            <Plug />
+            {testing
+              ? m.automation_daemon_testing()
+              : m.automation_daemon_test()}
+          </Button>
+        </div>
+        {check?.ok && (
+          <p className="text-xs font-medium text-green-700">
+            ✓{' '}
+            {m.automation_daemon_connected({
+              daemon: check.daemonVersion ?? '?',
+              engine: check.engineVersion ?? '?',
+              conf: check.engineConf ?? '?',
+            })}
+          </p>
+        )}
+        {check && !check.ok && (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertDescription className="text-inherit">
+              {m.automation_daemon_failed({ error: check.error ?? '' })}
+            </AlertDescription>
+          </Alert>
+        )}
+        {check?.warnings.map((warning) => (
+          <Alert key={warning} variant="warning">
+            <AlertCircle />
+            <AlertDescription className="text-inherit">
+              {DAEMON_WARNING[warning]()}
+            </AlertDescription>
+          </Alert>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function SectionCard({
   icon,
   iconClass,
   title,
+  badge,
   description,
   enabled,
   onToggle,
@@ -430,6 +733,7 @@ function SectionCard({
   icon: ReactNode
   iconClass: string
   title: string
+  badge?: ReactNode
   description: string
   enabled: boolean
   onToggle: (enabled: boolean) => void
@@ -444,7 +748,10 @@ function SectionCard({
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold">{title}</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-semibold">{title}</h3>
+            {badge}
+          </div>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
         <Switch

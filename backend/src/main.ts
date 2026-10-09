@@ -3,8 +3,10 @@ import { cors } from "hono/cors";
 import { loadAppConfig } from "./config-parser.ts";
 import { broadcast, handleWebSocketUpgrade } from "./websocket.ts";
 import { setBroadcast, setSnapraidLogManager } from "./routes/snapraid.ts";
-import { getEngine, setEngine, wrapJobs } from "./engine/engine.ts";
+import { activeEngine, type SnapRaidEngine, setEngine, wrapJobs } from "./engine/engine.ts";
 import { createCliEngine } from "./engine/cli-engine.ts";
+import { buildEngine, loadEngineSettings } from "./engine/engine-settings.ts";
+import { engineRoutes, setEngineApplier } from "./routes/engine.ts";
 import { createLogManager } from "./log-manager.ts";
 import { setLogManager } from "./routes/logs.ts";
 import { createScheduler } from "./scheduler.ts";
@@ -66,6 +68,7 @@ app.route("/api/logs", logsRoutes);
 app.route("/api/schedules", schedulesRoutes);
 app.route("/api/notifications", notificationsRoutes);
 app.route("/api/maintenance", maintenanceRoutes);
+app.route("/api/engine", engineRoutes);
 
 // Health check
 app.get("/", (c) => {
@@ -94,14 +97,24 @@ const main = async (): Promise<void> => {
   // Inject log manager into routes
   setLogManager(logManager, config);
 
-  // The SnapRAID CLI runs the jobs and reads the array
-  setEngine(createCliEngine(logManager));
+  // The SnapRAID CLI runs the jobs and reads the array, or snapraid-daemon for the config it serves
+  const cli = createCliEngine(logManager);
   setSnapraidLogManager(logManager);
-  const engine = getEngine();
-  // Progress comes from the job's log, not its output, so it is sent on its own
-  engine.onProgress((job, progress) =>
-    broadcast({ type: "progress", command: job.command, processId: job.processId, progress })
-  );
+  const applyEngine = (next: SnapRaidEngine) => {
+    // Progress comes from the job's log or the daemon's task, not its output, so it is sent on its own
+    next.onProgress((job, progress) =>
+      broadcast({ type: "progress", command: job.command, processId: job.processId, progress })
+    );
+    setEngine(next);
+  };
+  const engineSettings = await loadEngineSettings();
+  applyEngine(buildEngine(engineSettings, cli));
+  setEngineApplier((settings) => applyEngine(buildEngine(settings, cli)));
+  if (engineSettings.mode === "daemon") {
+    engineSettings.daemons.forEach((target) => console.log(`🧩 snapraid-daemon at ${target.url} runs ${target.configPath}`));
+  }
+  // Scheduler and spindown keep this one, it always passes on to the engine in place
+  const engine = activeEngine;
 
   // Initialize scheduler
   const schedulesConfigPath = resolveFromBase("schedules.json");

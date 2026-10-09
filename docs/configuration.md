@@ -40,6 +40,7 @@ All state lives in one directory, `/app/snapraid` in the container. Mount it as 
 | `notifications.json` | Notification settings, including the SMTP password and ntfy token in plain text. See [Notifications](notifications.md). |
 | `notifications-state.json` | The last reported SMART problem per disk, so the same problem isn't reported twice. |
 | `maintenance.json` | Docker pause and spindown settings, see [Automation](automation.md). |
+| `engine.json` | Whether jobs run on the SnapRAID CLI or on snapraid-daemon, with the daemons' addresses and passwords (file mode `600`). See [Automation](automation.md#snapraid-daemon-experimental). |
 | `paused-containers.json` | Containers paused for the running job, so they are resumed after a restart. Only exists while a job runs. |
 | `smart-history.json` | Daily SMART values per disk (temperature, sector counts, CRC errors, wear), up to 365 days. |
 | `smart-baseline.json` | The last known CRC error count per disk, to tell new transfer errors from old ones. See [SMART](smart.md). |
@@ -51,7 +52,7 @@ All state lives in one directory, `/app/snapraid` in the container. Mount it as 
 Files that don't exist yet are created when they are first needed. The container runs as root, so the files on the host belong to root.
 
 > [!TIP]
-> To move SnapRAID UI to another machine, copy the whole data directory, or use *Download backup* and *Restore backup* in the interface. The backup contains `config.json`, `schedules.json`, `notifications.json`, `maintenance.json`, the SMART and usage histories and the SnapRAID configs inside the data directory. It doesn't contain logs, `replacements.json` or the session secret. See [Managing disks](disks.md).
+> To move SnapRAID UI to another machine, copy the whole data directory, or use *Download backup* and *Restore backup* in the interface. The backup contains `config.json`, `schedules.json`, `notifications.json`, `maintenance.json`, `engine.json`, the SMART and usage histories and the SnapRAID configs inside the data directory. It doesn't contain logs, `replacements.json` or the session secret. See [Managing disks](disks.md).
 
 Content files you put in the data directory (e.g. `content /app/snapraid/snapraid.content`) are also stored here. Keep that in mind when you clean up or move the directory.
 
