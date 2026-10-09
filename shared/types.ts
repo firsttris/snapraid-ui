@@ -401,6 +401,12 @@ export interface DiffFileInfo {
   size?: string;           // File size if available
 }
 
+// A file to bring back from parity: its data disk and its path on that disk, as diff reports it
+export interface RestoreFile {
+  disk: string;
+  path: string;
+}
+
 export interface DiffReport {
   files: DiffFileInfo[];
   totalFiles: number;

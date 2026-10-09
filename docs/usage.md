@@ -8,6 +8,7 @@ This page walks you through the SnapRAID UI: finding your way around, reading th
 - [Command palette](#command-palette)
 - [Dashboard](#dashboard)
 - [Running commands](#running-commands)
+- [Recover files](#recover-files)
 - [Live output and progress](#live-output-and-progress)
 - [Safety stops](#safety-stops)
 - [Theme, language and animations](#theme-language-and-animations)
@@ -21,7 +22,7 @@ The sidebar on the left holds everything that is not specific to one page:
 | Element | What it does |
 |---|---|
 | *Active Configuration* | Switches the SnapRAID configuration that all pages work on. Only enabled configurations are listed. The dropdown also has *Edit configuration* and *Manage Configurations*. You can't switch while a job is running. |
-| *Overview* | Links to the pages *Dashboard*, *SMART*, *Schedules*, *Logs* and *Notifications*. |
+| *Overview* | Links to the pages *Dashboard*, *Recover files*, *SMART*, *Schedules*, *Logs*, *Notifications* and *Automation*. |
 | *Array* | *Edit configuration* opens the config editor for the active configuration, *Manage Configurations* lets you add, create, rename or enable configurations. See [Disks & configurations](disks.md). |
 | *Animations* | *Off*, *Subtle* or *Strong*, see [below](#theme-language-and-animations). |
 | User box | Shown only when the login is enabled: your username and a *Log out* button. See [Security](security.md). |
@@ -216,6 +217,24 @@ The check runs as a job with progress and can be aborted. When it has finished, 
 For the last two, enter a path or use *Browse Files*. With several data disks, *Browse from Data Disk* picks the disk to browse. An absolute path below a data disk is converted to the path relative to that disk, which is what SnapRAID expects.
 
 Under *Advanced Options (for disk recovery)*, *Disk Filter (Optional)* limits the fix to one disk (`-d`, e.g. `d1` or `parity`). To restore a whole failed disk, use the replacement wizard instead, see [Disks & configurations](disks.md).
+
+## Recover files
+
+Until the next sync, the parity still holds every file as it was at the last sync. *Recover files* in the sidebar lists what changed since then, from `snapraid diff`, and brings it back:
+
+| Tab | Files | What *Restore* does |
+|---|---|---|
+| *Deleted* | Removed since the last sync, deliberately, by mistake, or because a disk is not mounted | Recreates them with their content and time of the last sync |
+| *Changed* | Same name, other content since the last sync, e.g. encrypted by ransomware or overwritten by mistake | Puts back the content of the last sync. The current content is replaced and lost, the confirmation says so |
+
+Tick the files, or *Select all shown files* after narrowing the list with the search (part of the path, or the exact disk name such as `d1`), then *Restore N files*. SnapRAID runs `fix -d <disk> -f /<path>…`, one run per disk, so a file with the same path on another disk is left alone. Wildcard characters in file names (`*`, `?`, `[`) are matched literally. Up to 1000 files at once.
+
+Restored files disappear from the list. A file restored in place can still show up as changed in *Diff* until the next sync: SnapRAID sometimes keeps its new modification time to avoid mixing it up with another file. Its content is the one of the last sync, and the next sync just reads it again.
+
+When a sync schedule of this configuration is enabled, a notice says when it runs next. After that sync, the files listed here can no longer be restored, so recover them first, or [skip the next run](scheduling.md#the-schedule-list). Files without a disk in the diff can't be restored by path, use [Undelete](#undelete).
+
+> [!TIP]
+> After ransomware, do not sync. Stop the schedules (or *Skip next run*), remove the cause, then restore the *Changed* files here. The [sync guard for changed files](scheduling.md#sync-guard) keeps a scheduled sync from overwriting their parity in the meantime.
 
 ## Live output and progress
 
