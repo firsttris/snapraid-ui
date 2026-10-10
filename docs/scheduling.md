@@ -1,64 +1,58 @@
 # Scheduling
 
-The built-in scheduler runs SnapRAID commands on a cron schedule, so you don't need a crontab on the host. Open **Schedules** in the sidebar (page title *Scheduled Jobs*) to create and manage them.
+The built-in scheduler runs SnapRAID commands on a cron schedule, so you don't need a crontab on the host. Open **Schedules** in the sidebar to create and manage them.
 
-<img src="screenshots/schedules.png" alt="Scheduled jobs: a nightly sync with touch and scrub, a weekly scrub and a SMART check" width="900">
+<img src="screenshots/schedules.png" alt="Schedules: the next seven days, a nightly sync with touch and scrub, a weekly scrub and a SMART check" width="900">
 
 ## Creating a schedule
 
-Click *Create Schedule* and fill in the form:
+Click *Create Schedule*. The form opens as a panel on the right, over the list, and goes from top to bottom:
 
-| Field | Description |
+| Section | Description |
 |---|---|
-| *Name* | Any label, e.g. "Nightly sync". It is also used in notifications. |
-| *Command* | `sync`, `scrub`, `status`, `diff`, `check` or `smart`. |
-| *Configuration* | The SnapRAID config the job runs against. |
-| *Schedule* | When the job runs, see [Choosing when it runs](#choosing-when-it-runs). |
-| *Enabled* | Switch it off to keep the schedule without running it. |
+| *Configuration* | The SnapRAID config the job runs against. Only shown when you have more than one; otherwise the panel names the array in its header. |
+| *What should run?* | *Sync*, *Scrub*, *Check* or *SMART*. Existing schedules that run `status` or `diff` keep that choice. |
+| *When?* | See [Choosing when it runs](#choosing-when-it-runs). |
+| *Sequence* | `sync` only: the [nightly routine](#the-nightly-sync-routine). For `scrub` the [scrub plan](#scrub-plans) takes this place. |
+| *Sync guard* | `sync` only, see [Sync guard](#sync-guard). |
+| *Name (optional)* | Used in the list and in notifications. Left empty, the schedule is named after its command and time, e.g. "Sync · Daily at 02:00". |
 
-Depending on the command, more options appear: a [scrub plan](#scrub-plans) for `scrub`, and the [sync guard](#sync-guard) and the [nightly routine](#the-nightly-sync-routine) for `sync`.
+A new schedule is enabled. You switch it on and off in the list.
 
 > [!TIP]
 > A good starting point for most arrays:
-> - a daily `sync` with *Run touch first* and *Scrub afterwards* (the defaults for a new sync schedule),
+> - a daily `sync` with *Run touch first*, *Scrub afterwards* and the sync guard switched on,
 > - a daily `smart` job, so you get [SMART warnings](notifications.md#smart-warnings) and a [SMART history](smart.md#history).
 
 ## Choosing when it runs
 
-The *Schedule* section has three modes:
+Pick *Daily*, *Weekly*, *Monthly* or *Every N hours*:
 
-**Quick presets**
+| Choice | Fields | Cron expression, e.g. |
+|---|---|---|
+| *Daily* | *Time* | `0 2 * * *` |
+| *Weekly* | *Day of week*, *Time* | `0 2 * * 0` (Sunday, 2 AM) |
+| *Monthly* | *Day of month (1-31)*, *Time* | `0 2 1 * *` (1st of the month, 2 AM) |
+| *Every N hours* | *Every … hours* (1–23), *At minute* | `0 */6 * * *` |
 
-| Preset | Cron expression |
-|---|---|
-| *Daily 2 AM* | `0 2 * * *` |
-| *Weekly Sunday* | `0 2 * * 0` (Sunday, 2 AM) |
-| *Monthly 1st* | `0 2 1 * *` (1st of the month, 2 AM) |
-| *Every 6 hours* | `0 */6 * * *` |
+Below, *Next runs* shows the next three times, e.g. "today 02:00 · tomorrow 02:00 · Sat 02:00".
 
-**Custom** lets you pick a *Frequency*:
+*Edit as cron expression* switches to a raw five-field cron expression, starting from the current choice: `minute hour day month weekday`, for example `30 3 * * 1-5` for 3:30 AM on weekdays. Weekdays count from Sunday = 0. An invalid expression shows *Not a valid cron expression* and cannot be saved. *Back to the simple choice* appears when the expression fits one of the four choices.
 
-- *Every N hours*: every 1–23 hours, at a chosen minute.
-- *Daily*, *Weekly* (with *Day of week*) or *Monthly* (with *Day of month (1-31)*): at a chosen hour and minute. *Every hour* and *Every N minutes* replace the fixed hour or minute.
-
-**Cron expression** takes a raw five-field cron expression: `minute hour day month weekday`, for example `30 3 * * 1-5` for 3:30 AM on weekdays. Weekdays count from Sunday = 0.
-
-In the first two modes the resulting cron expression is shown below the picker. Switching to *Cron expression* starts from that expression, so you can fine-tune it. An invalid expression is rejected when you save.
-
-When you edit an existing schedule, the form opens on the matching preset, or in *Cron expression* mode for anything else, so saving other fields never changes when it runs.
+When you edit an existing schedule, the form opens on the matching choice, or with the cron expression for anything else, so saving other fields never changes when it runs.
 
 > [!NOTE]
 > Times are evaluated in the local time zone of the backend process, i.e. the container's time zone.
 
 ## The nightly sync routine
 
-A `sync` schedule can run more commands in the same run, under *Nightly routine*:
+A `sync` schedule can run more commands in the same run, under *Sequence*. All of them are off for a new schedule:
 
-| Option | Default for new schedules | What it does |
-|---|---|---|
-| *Run touch first* | on | Runs `snapraid touch` before the sync. It gives files without sub-second timestamps one, so SnapRAID recognizes moved and copied files. File dates stay as they are. |
-| *Pre-hash* | off | Runs the sync with `-h`: new data is read twice and verified before parity is computed, so faulty RAM or cabling cannot slip damaged data into the parity. Takes longer. |
-| *Scrub afterwards* | on, plan *Default* | Runs `snapraid scrub` right after the sync, while the parity is up to date. You can pick *Default*, *Custom amount* or *New blocks only* as plan. |
+| Option | What it does |
+|---|---|
+| *Run touch first* | Runs `snapraid touch` before the sync. It gives files without sub-second timestamps one, so SnapRAID recognizes moved and copied files. File dates stay as they are. |
+| *Pre-hash* | Runs the sync with `-h`: new data is read twice and verified before parity is computed, so faulty RAM or cabling cannot slip damaged data into the parity. Takes longer. |
+| *Scrub afterwards* | Runs `snapraid scrub` right after the sync, while the parity is up to date. You can pick *Default*, *Custom amount* or *New blocks only* as plan. |
 
 Each step only runs after the previous one succeeded (finished OK or with warnings). If a step fails, the remaining steps are skipped and the notification lists them as "not run".
 
@@ -68,19 +62,21 @@ If you start a job manually in the UI between two steps, the scheduler does not 
 
 If a data disk is missing, not mounted or suddenly empty, an unattended sync would remove its files from the parity, which is exactly what you need to recover them. Ransomware does the same in another way: it encrypts files in place, and the next sync would replace their parity with that of the encrypted files. The sync guard protects against both.
 
-With *Skip sync when too many files were deleted* or *Skip sync when too many files were changed* switched on (both are the default for new sync schedules), the scheduler first runs `snapraid diff`. The sync is skipped when:
+It is off for a new schedule. With *Skip the sync when many files changed* switched on, the scheduler first runs `snapraid diff`. The sync is skipped when:
 
-- `diff` reports more deleted files than *Max. deleted files* (default **50**),
-- `diff` reports more updated files than *Max. changed files* (default **100**, as `sync_threshold_updates` of snapraid-daemon), or
+- `diff` reports more deleted files than *Max. deleted files* (suggested **50**),
+- `diff` reports more updated files than *Max. changed files* (suggested **100**, as `sync_threshold_updates` of snapraid-daemon), or
 - `diff` itself fails.
+
+Leave one of the two fields empty for no limit on that kind; at least one needs a number.
 
 After a skip for changed files, open a few of the changed files (the *Changed* tab of the [Changes](usage.md#changes-since-the-last-sync) page lists them). If they are unreadable, do not sync: restore them there, the parity still holds the old content. If you changed them yourself, for example by re-tagging a music collection, start the sync manually.
 
-Schedules created before this check have no limit for changed files; edit the schedule to switch it on.
+Schedules created before this check have no limit for changed files; edit the schedule and enter one.
 
 The schedule row then shows *Skipped* with the reason, and a [*A scheduled job was skipped*](notifications.md#events) notification is sent. Check on the [Changes](usage.md#changes-since-the-last-sync) page whether a disk is missing. If the deletions are intended, start the sync manually.
 
-The row of a sync schedule shows the current settings, e.g. "Skipped when more than 50 files were deleted" and "Skipped when more than 100 files were changed", or *No protection against deletions* when that guard is off.
+The row of a sync schedule with the guard on shows its limits, e.g. "Sync guard: at most 50 deleted, at most 100 changed".
 
 > [!TIP]
 > Set the limit above what you delete on a normal day, but far below the number of files on your smallest data disk.
@@ -100,20 +96,27 @@ A `scrub` schedule (and *Scrub afterwards*) runs one of these plans:
 
 ## The schedule list
 
-Each row shows:
+*Next 7 days* at the top shows, for each day, which enabled schedule runs when, coloured by command. A schedule that runs several times a day shows its first time and how often, e.g. "3×". A run that is [skipped once](#skipping-the-next-run) is struck through. A schedule that starts while another job is running is skipped, so this is where you spot two jobs at the same time.
 
-- name, command and badges for the routine (*+ touch before*, *Pre-hash*, *+ scrub after · plan*) or the scrub plan (*Plan: …*),
-- the schedule in plain words (e.g. "Daily at 02:00") next to the cron expression,
-- the sync guard setting and the configuration,
-- *Next Run* (enabled schedules only) and *Last Run* with its result: *Succeeded*, *With warnings*, *Failed*, *Aborted*, *Incomplete* or *Skipped*. A routine also shows the result of each step, e.g. "Sync: Succeeded", "Scrub: Failed".
+Each row below shows:
 
-The header shows how many schedules are active and when the next one runs.
+- the name and what runs, e.g. "Touch → Sync → Scrub (New blocks only)" for a routine or the plan of a scrub schedule,
+- the schedule in plain words (e.g. "Daily at 02:00", the cron expression when there are none) and the next run (enabled schedules only),
+- the array, only when you have more than one,
+- the [sync guard](#sync-guard) limits, when it is on,
+- *Last run* with its result: *Succeeded*, *With warnings*, *Failed*, *Aborted*, *Incomplete* or *Skipped*, or *Not run yet*. For a routine where a step did not succeed, the result of each step follows, e.g. "Sync: Succeeded · Scrub: Failed".
 
-Use the pencil to edit, the bin to delete (after a confirmation), and the switch to enable or disable a schedule. A disabled schedule stays saved but never runs.
+The header shows how many schedules are active and when the next one runs, and which one.
 
-The skip button (*Skip next run*) leaves out the next timed run once, for example while you move files around or a disk is out for repair. The row shows *Next run skipped*; click the button again (*Run next time again*) to take it back. When the time comes, the run is recorded as *Skipped* with "Skipped once, as asked.", no notification is sent, and the schedule runs normally afterwards. *Run now* is not affected by it.
+*Run now* starts a schedule once, right away, exactly as at its time: the same steps, the [sync guard](#sync-guard), the checks for missing disks, the Docker pause and the notifications. It works for disabled schedules too, so you can try a routine before you enable it. It is greyed out while a job is running.
 
-The play button (*Run now*) starts a schedule once, right away, exactly as at its time: the same steps, the [sync guard](#sync-guard), the checks for missing disks, the Docker pause and the notifications. It works for disabled schedules too, so you can try a routine before you enable it. It is greyed out while a job is running.
+The switch enables or disables a schedule. A disabled schedule stays saved but never runs.
+
+The ⋯ menu (*More actions*) holds *Edit*, *Skip next run* and *Delete* (after a confirmation).
+
+### Skipping the next run
+
+*Skip next run* leaves out the next timed run once, for example while you move files around or a disk is out for repair. The row shows *Next run skipped*; choose *Run next time again* in the menu to take it back. When the time comes, the run is recorded as *Skipped* with "Skipped once, as asked.", no notification is sent, and the schedule runs normally afterwards. *Run now* is not affected by it.
 
 Every command of a scheduled run writes its own log, which you find under [Logs](logs.md). While a scheduled job runs, its output is sent to the live output like any other job.
 

@@ -4,14 +4,15 @@ import { Calendar, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { PageLayout } from '../components/PageLayout'
-import { SAVE_BAR_SPACE } from '../components/SaveBar'
 import {
   ScheduleForm,
   type ScheduleInput,
 } from '../components/schedules/ScheduleForm'
 import { ScheduleRow } from '../components/schedules/ScheduleRow'
+import { ScheduleWeek } from '../components/schedules/ScheduleWeek'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
+import { Sheet, SheetContent } from '../components/ui/sheet'
 import {
   useConfig,
   useCreateSchedule,
@@ -41,19 +42,24 @@ function SchedulesPage() {
   const runSchedule = useRunSchedule()
   const job = useJob()
 
-  const [isCreating, setIsCreating] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+  // The panel keeps its schedule while it slides out; each opening starts a fresh form
+  const [form, setForm] = useState({
+    open: false,
+    id: null as string | null,
+    count: 0,
+  })
+  const openForm = (id: string | null) =>
+    setForm((current) => ({ open: true, id, count: current.count + 1 }))
+  const closeForm = () => setForm((current) => ({ ...current, open: false }))
 
-  // One form at a time, each brings its own save bar
   const startCreating = () => {
-    setEditingId(null)
-    setIsCreating(true)
+    openForm(null)
   }
 
   const handleCreate = async (schedule: ScheduleInput) => {
     try {
       await createSchedule.mutateAsync(schedule)
-      setIsCreating(false)
+      closeForm()
       toast.success(m.schedules_created({ name: schedule.name }))
     } catch (error) {
       toast.error(errorMessage(error))
@@ -66,7 +72,7 @@ function SchedulesPage() {
   ) => {
     try {
       await updateSchedule.mutateAsync({ id, updates })
-      setEditingId(null)
+      closeForm()
       toast.success(m.schedules_saved())
     } catch (error) {
       toast.error(errorMessage(error))
@@ -125,24 +131,28 @@ function SchedulesPage() {
 
   const configs = config?.snapraidConfigs || []
   const active = schedules.filter((s) => s.enabled)
-  const nextRun = active
-    .map((s) => s.nextRun)
-    .filter((d): d is string => !!d)
-    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0]
-  const isFormOpen = isCreating || editingId !== null
+  const next = active
+    .filter((s) => s.nextRun)
+    .sort(
+      (a, b) =>
+        new Date(a.nextRun as string).getTime() -
+        new Date(b.nextRun as string).getTime(),
+    )[0]
+  const editing = schedules.find((s) => s.id === form.id)
 
   return (
     <PageLayout
-      title={m.schedules_title()}
+      title={m.schedules()}
       description={
         schedules.length > 0 && (
           <>
             {m.schedules_summary_active({ count: active.length })}
-            {nextRun && (
+            {next?.nextRun && (
               <>
                 {' · '}
                 {m.schedules_summary_next({
-                  when: formatRelativeTime(nextRun, getLocale()),
+                  when: formatRelativeTime(next.nextRun, getLocale()),
+                  name: next.name,
                 })}
               </>
             )}
@@ -152,78 +162,76 @@ function SchedulesPage() {
       actions={
         // The empty state has its own button, one is enough
         schedules.length > 0 && (
-          <Button onClick={startCreating} disabled={isCreating}>
+          <Button onClick={startCreating} disabled={form.open}>
             <Plus />
             {m.schedules_create_new()}
           </Button>
         )
       }
     >
-      {isCreating && (
-        <ScheduleForm
-          configs={configs}
-          onSubmit={handleCreate}
-          onCancel={() => setIsCreating(false)}
-        />
-      )}
+      <Sheet open={form.open} onOpenChange={(open) => !open && closeForm()}>
+        <SheetContent className="w-full gap-0 sm:max-w-xl">
+          <ScheduleForm
+            // A fresh form for each schedule
+            key={form.count}
+            schedule={editing}
+            configs={configs}
+            onSubmit={(input) =>
+              editing ? handleUpdate(editing.id, input) : handleCreate(input)
+            }
+            onCancel={closeForm}
+          />
+        </SheetContent>
+      </Sheet>
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">{m.common_loading()}</p>
       ) : schedules.length === 0 ? (
-        !isCreating && (
-          <Card className="ui-fade-in items-center gap-0 border-dashed px-6 py-10 text-center shadow-none">
-            <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-              <Calendar className="size-6" />
-            </div>
-            <h3 className="text-base font-semibold">
-              {m.schedules_empty_title()}
-            </h3>
-            <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              {m.schedules_empty()}
-            </p>
-            <Button onClick={startCreating} className="mt-5">
-              <Plus />
-              {m.schedules_create_new()}
-            </Button>
-          </Card>
-        )
-      ) : (
-        <Card className="gap-0 divide-y overflow-hidden py-0">
-          {schedules.map((schedule) =>
-            editingId === schedule.id ? (
-              <ScheduleForm
-                key={schedule.id}
-                embedded
-                schedule={schedule}
-                configs={configs}
-                onSubmit={(updates) => handleUpdate(schedule.id, updates)}
-                onCancel={() => setEditingId(null)}
-              />
-            ) : (
-              <ScheduleRow
-                key={schedule.id}
-                schedule={schedule}
-                configName={
-                  configs.find((c) => c.path === schedule.configPath)?.name ||
-                  schedule.configPath
-                }
-                onEdit={() => {
-                  setIsCreating(false)
-                  setEditingId(schedule.id)
-                }}
-                onDelete={() => handleDelete(schedule.id)}
-                onToggle={() => handleToggle(schedule.id)}
-                onRun={() => handleRun(schedule.id, schedule.name)}
-                onSkipNext={() => handleSkipNext(schedule)}
-                runDisabled={job.isRunning || runSchedule.isPending}
-              />
-            ),
-          )}
+        <Card className="ui-fade-in items-center gap-0 border-dashed px-6 py-10 text-center shadow-none">
+          <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <Calendar className="size-6" />
+          </div>
+          <h3 className="text-base font-semibold">
+            {m.schedules_empty_title()}
+          </h3>
+          <p className="mt-1 max-w-md text-sm text-muted-foreground">
+            {m.schedules_empty()}
+          </p>
+          <Button onClick={startCreating} className="mt-5">
+            <Plus />
+            {m.schedules_create_new()}
+          </Button>
         </Card>
+      ) : (
+        <>
+          <ScheduleWeek schedules={schedules} />
+          <Card className="gap-0 divide-y overflow-hidden py-0">
+            {schedules.map((schedule) => {
+              const configName = configs.find(
+                (c) => c.path === schedule.configPath,
+              )?.name
+              return (
+                <ScheduleRow
+                  key={schedule.id}
+                  schedule={schedule}
+                  // The array only matters when there is more than one, or it is gone
+                  configName={
+                    configs.length > 1 || !configName
+                      ? configName || schedule.configPath
+                      : undefined
+                  }
+                  onEdit={() => openForm(schedule.id)}
+                  onDelete={() => handleDelete(schedule.id)}
+                  onToggle={() => handleToggle(schedule.id)}
+                  onRun={() => handleRun(schedule.id, schedule.name)}
+                  onSkipNext={() => handleSkipNext(schedule)}
+                  runDisabled={job.isRunning || runSchedule.isPending}
+                />
+              )
+            })}
+          </Card>
+        </>
       )}
-
-      {/* Room for the save bar, so the end of the form stays reachable */}
-      {isFormOpen && <div aria-hidden className={`-mt-6 ${SAVE_BAR_SPACE}`} />}
     </PageLayout>
   )
 }
