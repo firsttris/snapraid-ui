@@ -756,7 +756,6 @@
   "smart_stat_failure": "Ausfall / Jahr",
   "smart_stat_power_on": "Betrieb",
   "smart_unit_years_short": "J",
-  "smart_tab_raw": "Rohdaten",
   "smart_temperature_bar": "Temperatur {celsius} °C von {critical} °C kritisch",
   "report_filter_placeholder": "Nach Pfad filtern…",
   "report_filter_no_match": "Keine Einträge passen zum Filter.",
@@ -1042,7 +1041,7 @@
   "smart_attr_load_cycles": "Kopf-Parkvorgänge",
   "smart_attr_load_cycles_desc": "Wie oft die Köpfe geparkt und wieder ausgefahren wurden. Platten sind für etwa 300 000 (Desktop) bis 600 000 (NAS) ausgelegt; Tausende am Tag verschleißen sie früh.",
   "smart_attr_temperature": "Temperatur",
-  "smart_attr_temperature_desc": "Aktuelle Temperatur in °C (Rohwert). Bis etwa 45 °C ist alles gut, ab 50 °C läuft die Platte heiß.",
+  "smart_attr_temperature_desc": "Aktuelle Temperatur in °C, viele Platten merken sich auch die niedrigste und höchste je gemessene. Bis etwa 45 °C ist alles gut, ab 50 °C läuft die Platte heiß.",
   "smart_attr_hardware_ecc": "ECC-Korrekturen",
   "smart_attr_hardware_ecc_desc": "Fehler, die die Platte selbst korrigiert hat. Herstellerabhängig und meist hoch, für sich allein kein Grund zur Sorge.",
   "smart_attr_reallocation_events": "Reallozierungen",
@@ -1072,7 +1071,7 @@
   "smart_attr_col_attribute": "Attribut",
   "smart_attr_col_assessment": "Bewertung",
   "smart_attr_ok": "OK",
-  "smart_attr_values_hint": "Wert, Schlechtester und Schwellenwert sind die normierte Skala des Herstellers (höher ist besser), Roh ist der tatsächliche Zählerstand.",
+  "smart_attr_values_hint": "Wert und Schlechtester sind die Gesundheitsskala des Herstellers, höher ist besser. Ein Attribut gilt als ausgefallen, wenn sein Wert auf den Schwellenwert sinkt. Roh ist der eigene Zählerstand oder Messwert der Platte und wird nicht mit dem Schwellenwert verglichen.",
   "selftest_all": "Selbsttest",
   "selftest_all_short": "Kurztest aller Platten",
   "selftest_all_long": "Langtest aller Platten",
@@ -1154,5 +1153,8 @@
   "integrity_intro": "Was snapraid status über deine Daten sagt: was Aufmerksamkeit braucht, wie viel des Arrays Scrub schon geprüft hat und wie lange die letzte Prüfung jedes Teils her ist.",
   "integrity_busy": "Ein Job läuft, SnapRAID liest den Status, sobald er fertig ist.",
   "integrity_error": "Der Status konnte nicht gelesen werden: {error}",
-  "health_details": "Details"
+  "health_details": "Details",
+  "smart_raw_output": "Ausgabe von snapraid smart",
+  "smart_attr_temp_raw": "{celsius} °C",
+  "smart_attr_temp_range": "min. {min} · max. {max}"
 }

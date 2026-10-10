@@ -12,7 +12,10 @@ test('a short self-test runs to the end, a long one can be stopped', async ({ pa
   await app.addArray(array, 'SMART')
 
   await page.goto('/smart')
+  // SnapRAID's report covers all disks: below the details, not one of a disk's tabs
+  await expect(page.getByText('Output of snapraid smart')).toBeVisible()
   await page.getByRole('button', { name: 'd1', exact: true }).click()
+  await expect(page.getByRole('tab', { name: 'Raw output' })).toHaveCount(0)
   await page.getByRole('tab', { name: 'Self-test' }).click()
   const panel = page.getByRole('tabpanel', { name: 'Self-test' })
   await expect(panel.getByText('No self-test has run yet.')).toBeVisible()

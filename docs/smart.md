@@ -39,18 +39,19 @@ Click a card to show its details below the cards. Until you pick one, the detail
 
 ### Details
 
-The details have up to four tabs:
+The details have up to three tabs:
 
 - **SMART Attributes**: the attribute table, see [Attributes](#attributes).
 - **History (N days)**: charts of the daily values, see [History](#history).
 - **Self-test**: start, follow and stop the disk's self-tests, and its log of past tests, see [Self-tests](#self-tests).
-- **Raw output**: SnapRAID's text output of the smart command.
+
+Below them, **Output of snapraid smart** unfolds SnapRAID's text report. It is one report for all disks of the array, so it is not part of a disk's details.
 
 ### Attributes
 
-Each attribute shows a plain name (e.g. *Reallocated sectors*), its id and name as the disk reports it (`5 · Reallocated_Sector_Ct`) and a sentence on what it measures and which values are fine. About 30 common attributes are explained this way; others show the disk's name only.
+Each attribute shows a plain name (e.g. *Reallocated sectors*), its id and name as the disk reports it (`5 · Reallocated_Sector_Ct`) and a sentence on what it measures and which values are fine. About 30 common attributes are explained this way; others show the disk's name only. Some vendors use an id for something else, e.g. SanDisk reports NAND writes as 233 where others report wear; such an attribute shows the disk's name only, without an explanation that doesn't fit.
 
-*Value*, *Worst* and *Threshold* are the vendor's normalized scale, higher is better; *Raw* is the actual count. *Assessment* says *OK*, *Watch* or *Critical*: an attribute that is or was below its threshold, and counters that matter (see below) with a raw value above 0, are highlighted. The flags (e.g. `PO--CK`) are in the tooltip of the assessment.
+*Value* and *Worst* are the vendor's health scale, higher is better. An attribute fails when its *Value* drops to its *Threshold*. *Raw* is the disk's own count or reading and is not compared with the threshold. For the temperature (194, 190) *Raw* shows the °C; many disks pack the lowest and highest temperature ever measured into the same number, it is shown below (*min 20 · max 75*). *Assessment* says *OK*, *Watch* or *Critical*: an attribute that is or was below its threshold, and counters that matter (see below) with a raw value above 0, are highlighted. The flags (e.g. `PO--CK`) are in the tooltip of the assessment.
 
 The attributes that say something about the disk's health come first: sectors and errors, temperature, power-on hours, SSD wear, and every attribute that is not *OK*. The others (counters such as power cycles or head load cycles) wait behind **Show all attributes**.
 

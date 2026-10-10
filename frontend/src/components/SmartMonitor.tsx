@@ -1,4 +1,4 @@
-import { ATTRIBUTE_INFO } from '@shared/smart-attributes'
+import { attributeInfo, temperatureRaw } from '@shared/smart-attributes'
 import {
   assessSmart,
   attributeLevel,
@@ -24,6 +24,7 @@ import type {
 import {
   Activity,
   AlertTriangle,
+  ChevronRight,
   CircleCheck,
   Moon,
   OctagonAlert,
@@ -515,12 +516,36 @@ const DiskCard = ({
  * The attributes in plain words: what each measures and whether the value is fine; the ones
  * that say something about the disk's health first, the rest on request
  */
+// Their raw value packs the current, lowest and highest temperature
+const TEMPERATURE_KEYS = new Set(['temperature', 'airflow_temperature'])
+
+const RawValue = ({
+  raw,
+  temperature,
+}: {
+  raw: string
+  temperature: boolean
+}) => {
+  const reading = temperature ? temperatureRaw(raw) : undefined
+  if (!reading) return raw
+  return (
+    <span title={raw}>
+      {m.smart_attr_temp_raw({ celsius: reading.current })}
+      {reading.min !== undefined && reading.max !== undefined && (
+        <span className="block text-xs whitespace-nowrap text-muted-foreground">
+          {m.smart_attr_temp_range({ min: reading.min, max: reading.max })}
+        </span>
+      )}
+    </span>
+  )
+}
+
 const AttributeTable = ({ disk }: { disk: SmartDiskInfo }) => {
   const [showAll, setShowAll] = useState(false)
   const rows = (disk.attributes ?? []).map((attribute) => ({
     attribute,
     level: attributeLevel(attribute, disk),
-    info: ATTRIBUTE_INFO[attribute.id],
+    info: attributeInfo(attribute),
   }))
   const important = rows.filter(
     ({ level, info }) => level !== 'ok' || info?.important,
@@ -580,7 +605,10 @@ const AttributeTable = ({ disk }: { disk: SmartDiskInfo }) => {
                   {attribute.threshold}
                 </TableCell>
                 <TableCell className="text-right align-top font-mono tabular-nums">
-                  {attribute.raw}
+                  <RawValue
+                    raw={attribute.raw}
+                    temperature={TEMPERATURE_KEYS.has(info?.key ?? '')}
+                  />
                 </TableCell>
                 <TableCell className="align-top" title={attribute.flag}>
                   {level === 'ok' ? (
@@ -624,18 +652,16 @@ const AttributeTable = ({ disk }: { disk: SmartDiskInfo }) => {
   )
 }
 
-type DetailTab = 'attributes' | 'history' | 'selftest' | 'raw'
+type DetailTab = 'attributes' | 'history' | 'selftest'
 
 const DiskDetails = ({
   disk,
   history,
-  rawOutput,
   configPath,
   selfTests,
 }: {
   disk: SmartDiskInfo
   history: SmartHistoryPoint[] | undefined
-  rawOutput: string
   configPath: string
   selfTests: ReturnType<typeof useSelfTests>
 }) => {
@@ -645,7 +671,6 @@ const DiskDetails = ({
     ...(attributes.length > 0 ? (['attributes'] as const) : []),
     ...(hasSmartHistory(history) ? (['history'] as const) : []),
     'selftest' as const,
-    ...(rawOutput ? (['raw'] as const) : []),
   ]
   // Another disk may lack the tab that was open
   const current = tabs.includes(tab) ? tab : tabs[0]
@@ -699,9 +724,6 @@ const DiskDetails = ({
                 </TabsTrigger>
               )}
               <TabsTrigger value="selftest">{m.selftest_tab()}</TabsTrigger>
-              {tabs.includes('raw') && (
-                <TabsTrigger value="raw">{m.smart_tab_raw()}</TabsTrigger>
-              )}
             </TabsList>
           )}
         </div>
@@ -733,12 +755,6 @@ const DiskDetails = ({
             onRefresh={() => selfTests.refetch()}
             refreshing={selfTests.isFetching}
           />
-        </TabsContent>
-
-        <TabsContent value="raw" className="border-t">
-          <pre className="max-h-[32rem] overflow-auto bg-muted/50 p-5 font-mono text-xs">
-            {rawOutput}
-          </pre>
         </TabsContent>
       </Tabs>
     </Card>
@@ -908,10 +924,22 @@ export const SmartMonitor = ({ configPath }: SmartMonitorProps) => {
             <DiskDetails
               disk={selected.disk}
               history={history?.[selected.disk.name]}
-              rawOutput={report.rawOutput}
               configPath={configPath}
               selfTests={selfTests}
             />
+          )}
+
+          {/* One report for the whole array, like snapraid status on the Integrity page */}
+          {report.rawOutput.trim() && (
+            <details className="group rounded-lg border bg-card">
+              <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+                <ChevronRight className="size-4 text-muted-foreground transition-transform group-open:rotate-90" />
+                {m.smart_raw_output()}
+              </summary>
+              <pre className="max-h-[32rem] overflow-auto border-t bg-muted/50 p-4 font-mono text-xs">
+                {report.rawOutput}
+              </pre>
+            </details>
           )}
         </>
       ) : (
