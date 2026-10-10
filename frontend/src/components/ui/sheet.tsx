@@ -86,3 +86,29 @@ export const SheetDescription = ({
     {...props}
   />
 )
+
+// The scrolling part between header and footer of a form in a sheet
+export const SheetBody = ({
+  className,
+  ...props
+}: React.ComponentProps<'div'>) => (
+  <div
+    data-slot="sheet-body"
+    className={cn('min-h-0 flex-1 overflow-y-auto p-4', className)}
+    {...props}
+  />
+)
+
+export const SheetFooter = ({
+  className,
+  ...props
+}: React.ComponentProps<'div'>) => (
+  <div
+    data-slot="sheet-footer"
+    className={cn(
+      'flex flex-wrap items-center justify-end gap-3 border-t p-4',
+      className,
+    )}
+    {...props}
+  />
+)

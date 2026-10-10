@@ -75,7 +75,7 @@ Entities of a device *SnapRAID &lt;name&gt;*:
 | *disk* temperature, *disk* used | sensor (°C, %) | Per disk, from the last SMART read and status read |
 | Sync, Scrub | button | Starts the job, scrub with the default plan |
 
-The *Sync* button runs with the sync guard of a new schedule: it is skipped when `diff` reports more than 50 deleted or 100 changed files, and the *A scheduled job was skipped* notification says why. Nothing starts while another job runs.
+The *Sync* button runs with the suggested sync guard limits: it is skipped when `diff` reports more than 50 deleted or 100 changed files, and the *A scheduled job was skipped* notification says why. Nothing starts while another job runs.
 
 The values come from what SnapRAID UI already knows, as for the [Prometheus metrics](#prometheus-metrics), so publishing never wakes a disk. State is published when it changes (checked every 5 seconds for jobs, every 30 seconds otherwise) and at least every 5 minutes, all as retained messages. `snapraid-ui/status` is `online` while SnapRAID UI is connected and `offline` otherwise (MQTT last will), so the entities turn unavailable when SnapRAID UI is down. When Home Assistant restarts, it gets the discovery again; entities of a removed array are removed.
 

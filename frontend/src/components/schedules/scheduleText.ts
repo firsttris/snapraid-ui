@@ -1,4 +1,6 @@
-import type { ScheduleOutcome } from '@shared/types'
+import type { Schedule, ScheduleOutcome } from '@shared/types'
+import { Cron } from 'croner'
+import { getCommandLabel } from '../../lib/commands'
 import { localizeServer } from '../../lib/i18n'
 import * as m from '../../paraglide/messages'
 import { getLocale } from '../../paraglide/runtime'
@@ -81,7 +83,7 @@ export const weekdayName = (day: number) =>
     new Date(2023, 0, 1 + day),
   )
 
-const formatTime = (hour: number, minute: number) =>
+export const formatTime = (hour: number, minute: number) =>
   new Intl.DateTimeFormat(getLocale(), {
     hour: '2-digit',
     minute: '2-digit',
@@ -126,3 +128,129 @@ export const describeCron = (cron: string): string | undefined => {
   }
   return undefined
 }
+
+// The four shapes the form offers instead of a cron expression
+export type Frequency = 'daily' | 'weekly' | 'monthly' | 'hourly'
+
+export interface SimpleSchedule {
+  frequency: Frequency
+  hour: number
+  minute: number
+  dayOfWeek: number // 0 = Sunday, as in cron
+  dayOfMonth: number
+  everyNHours: number
+}
+
+export const DEFAULT_SIMPLE_SCHEDULE: SimpleSchedule = {
+  frequency: 'daily',
+  hour: 2,
+  minute: 0,
+  dayOfWeek: 0,
+  dayOfMonth: 1,
+  everyNHours: 6,
+}
+
+export const toCron = (s: SimpleSchedule): string => {
+  switch (s.frequency) {
+    case 'hourly':
+      return s.everyNHours === 1
+        ? `${s.minute} * * * *`
+        : `${s.minute} */${s.everyNHours} * * *`
+    case 'weekly':
+      return `${s.minute} ${s.hour} * * ${s.dayOfWeek}`
+    case 'monthly':
+      return `${s.minute} ${s.hour} ${s.dayOfMonth} * *`
+    default:
+      return `${s.minute} ${s.hour} * * *`
+  }
+}
+
+const inRange = (value: string, min: number, max: number) =>
+  NUMBER.test(value) && Number(value) >= min && Number(value) <= max
+
+/**
+ * The simple form of a cron expression, undefined when the form cannot show it,
+ * so an existing schedule opens as cron and saving never changes when it runs
+ */
+export const parseSimpleCron = (cron: string): SimpleSchedule | undefined => {
+  const fields = cron.trim().split(/\s+/)
+  if (fields.length !== 5) return undefined
+  const [min, hour, dom, month, dow] = fields
+  if (month !== '*' || !inRange(min, 0, 59)) return undefined
+  const base = { ...DEFAULT_SIMPLE_SCHEDULE, minute: Number(min) }
+
+  const hourStep = STEP.exec(hour)
+  if ((hour === '*' || hourStep) && dom === '*' && dow === '*') {
+    const everyNHours = hourStep ? Number(hourStep[1]) : 1
+    if (everyNHours < 1 || everyNHours > 23) return undefined
+    return { ...base, frequency: 'hourly', everyNHours }
+  }
+  if (!inRange(hour, 0, 23)) return undefined
+  const timed = { ...base, hour: Number(hour) }
+  if (dom === '*' && dow === '*') return { ...timed, frequency: 'daily' }
+  if (dom === '*' && inRange(dow, 0, 7)) {
+    return { ...timed, frequency: 'weekly', dayOfWeek: Number(dow) % 7 }
+  }
+  if (dow === '*' && inRange(dom, 1, 31)) {
+    return { ...timed, frequency: 'monthly', dayOfMonth: Number(dom) }
+  }
+  return undefined
+}
+
+/** The next runs of a cron expression, as the scheduler computes them; undefined when it is invalid */
+export const nextRuns = (
+  cron: string,
+  count: number,
+  from: Date = new Date(),
+): Date[] | undefined => {
+  try {
+    return new Cron(cron.trim()).nextRuns(count, from)
+  } catch {
+    return undefined
+  }
+}
+
+const startOfDay = (date: Date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate())
+
+const daysBetween = (from: Date, to: Date) =>
+  Math.round(
+    (startOfDay(to).getTime() - startOfDay(from).getTime()) / 86_400_000,
+  )
+
+// "today 02:00", "tomorrow 02:00", "Sat 02:00", later ones with their date
+export const formatRunDay = (date: Date, now: Date = new Date()): string => {
+  const time = formatTime(date.getHours(), date.getMinutes())
+  const days = daysBetween(now, date)
+  if (days === 0) return m.schedules_day_today_at({ time })
+  if (days === 1) return m.schedules_day_tomorrow_at({ time })
+  const options: Intl.DateTimeFormatOptions =
+    days < 7 ? { weekday: 'short' } : { day: 'numeric', month: 'short' }
+  return `${new Intl.DateTimeFormat(getLocale(), options).format(date)} ${time}`
+}
+
+// The commands one run executes, e.g. "Touch → Sync → Scrub (8 %, older than 10 days)"
+export const describeRoutine = (
+  schedule: Pick<Schedule, 'command' | 'args' | 'touchBefore' | 'scrubAfter'>,
+): string | undefined => {
+  if (schedule.command === 'scrub') return describeScrubArgs(schedule.args)
+  if (schedule.command !== 'sync') return undefined
+  const preHash = !!schedule.args?.includes('-h')
+  if (!schedule.touchBefore && !schedule.scrubAfter && !preHash)
+    return undefined
+  const sync = preHash
+    ? m.schedules_step_pre_hash({ command: getCommandLabel('sync') })
+    : getCommandLabel('sync')
+  return [
+    schedule.touchBefore && getCommandLabel('touch'),
+    sync,
+    schedule.scrubAfter &&
+      `${getCommandLabel('scrub')} (${describeScrubArgs(schedule.scrubAfter)})`,
+  ]
+    .filter(Boolean)
+    .join(' → ')
+}
+
+// Name of a schedule left unnamed, e.g. "Sync · Daily at 02:00"
+export const defaultScheduleName = (command: string, cron: string) =>
+  [getCommandLabel(command), describeCron(cron) ?? cron].join(' · ')

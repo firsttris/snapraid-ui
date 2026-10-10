@@ -50,6 +50,19 @@ const COMMAND_TONES: Partial<Record<SnapRaidCommand, string>> = {
 export const getCommandTone = (command: SnapRaidCommand | string): string =>
   COMMAND_TONES[command as SnapRaidCommand] ?? 'bg-gray-100 text-gray-600'
 
+// Dots in timelines, the same hue as the icon tile
+const COMMAND_DOTS: Partial<Record<SnapRaidCommand, string>> = {
+  sync: 'bg-blue-500',
+  scrub: 'bg-purple-500',
+  check: 'bg-indigo-500',
+  fix: 'bg-orange-500',
+  diff: 'bg-cyan-500',
+  smart: 'bg-emerald-500',
+}
+
+export const getCommandDot = (command: SnapRaidCommand | string): string =>
+  COMMAND_DOTS[command as SnapRaidCommand] ?? 'bg-gray-400'
+
 export const getCommandLabel = (command: SnapRaidCommand | string): string => {
   switch (command) {
     case 'status':
@@ -105,6 +118,8 @@ export const getCommandDescription = (command: SnapRaidCommand): string => {
       return m.commands_desc_dup()
     case 'touch':
       return m.commands_desc_touch()
+    case 'smart':
+      return m.commands_desc_smart()
     default:
       return ''
   }

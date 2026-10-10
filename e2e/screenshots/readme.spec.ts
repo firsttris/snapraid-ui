@@ -74,7 +74,7 @@ test('logs', async ({ page }) => {
 
 test('schedules', async ({ page }) => {
   await page.goto('/schedules')
-  await expect(page.getByText('Nightly sync')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'More actions for Nightly sync' })).toBeVisible()
   await page.waitForLoadState('networkidle')
   await shot(page, 'screenshots/schedules.png')
 })

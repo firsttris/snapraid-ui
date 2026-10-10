@@ -42,11 +42,16 @@ test('the nightly routine runs touch, sync and scrub one after the other', async
 
   await page.goto('/schedules')
   await page.getByRole('button', { name: 'Create Schedule' }).click()
-  await page.getByLabel('Name').fill('Nightly')
-  // Touch before and scrub after are on for a new sync schedule
-  await page.getByText('New blocks only').click()
-  await page.getByRole('button', { name: 'Create', exact: true }).click()
+  const form = page.getByRole('dialog', { name: 'New schedule' })
+  // A new sync schedule runs nothing extra until asked to
+  await expect(form.getByRole('switch', { name: 'Run touch first' })).not.toBeChecked()
+  await form.getByRole('switch', { name: 'Run touch first' }).click()
+  await form.getByRole('switch', { name: 'Scrub afterwards' }).click()
+  await form.getByText('New blocks only').click()
+  await form.getByLabel('Name').fill('Nightly')
+  await form.getByRole('button', { name: 'Create Schedule' }).click()
   await expect(page.getByText('Schedule "Nightly" created')).toBeVisible()
+  await expect(form).toBeHidden()
 
   await page.getByRole('button', { name: 'Run now' }).click()
   await expect(page.getByText('Nightly started')).toBeVisible()
@@ -61,8 +66,35 @@ test('the nightly routine runs touch, sync and scrub one after the other', async
   expect(await array.snapraid('diff')).toMatch(/No differences/)
 
   await page.reload()
-  await expect(page.getByText('Sync: Succeeded')).toBeVisible()
-  await expect(page.getByText('Scrub: Succeeded')).toBeVisible()
+  await expect(page.getByText('Touch → Sync → Scrub (New blocks only)')).toBeVisible()
+  // One result for the whole run while every step succeeded
+  await expect(page.getByText('Succeeded', { exact: true })).toBeVisible()
+  await expect(page.getByText('Sync: Succeeded')).toBeHidden()
+})
+
+test('a schedule left unnamed is named after its command and time', async ({ page, app }) => {
+  const array = await createArray('unnamed')
+  await app.addArray(array, 'Unnamed')
+
+  await page.goto('/schedules')
+  await page.getByRole('button', { name: 'Create Schedule' }).click()
+  const form = page.getByRole('dialog', { name: 'New schedule' })
+  await form.getByRole('radio', { name: /SMART/ }).click()
+  await form.getByRole('radio', { name: 'Weekly' }).click()
+  await form.getByRole('combobox', { name: 'Day of week' }).click()
+  await page.getByRole('option', { name: 'Monday' }).click()
+  await form.getByLabel('Time', { exact: true }).fill('04:30')
+  await expect(form.locator('p', { hasText: 'Next runs:' })).toContainText('04:30')
+  await form.getByRole('button', { name: 'Create Schedule' }).click()
+  // The time as the browser's locale writes it, e.g. 04:30 AM
+  await expect(page.getByText(/^Schedule "SMART · Every Monday at 04:30( AM)?" created$/)).toBeVisible()
+
+  const [stored] = (await (await app.api.get(`${API_URL}/schedules`)).json()) as {
+    command: string
+    cronExpression: string
+  }[]
+  expect(stored).toMatchObject({ command: 'smart', cronExpression: '30 4 * * 1' })
+  await expect(page.getByRole('region', { name: 'Next 7 days' })).toBeVisible()
 })
 
 test('a disk that is not mounted pauses the scheduled sync', async ({ page, app }) => {
@@ -115,7 +147,7 @@ test('mass changes, as ransomware leaves them, stop the scheduled sync', async (
     },
   })
   await page.goto('/schedules')
-  await expect(page.getByText('Skipped when more than 2 files were changed')).toBeVisible()
+  await expect(page.getByText('Sync guard: at most 50 deleted, at most 2 changed')).toBeVisible()
   await page.getByRole('button', { name: 'Run now' }).click()
 
   const outcome = await waitForOutcome(app.api, 'Nightly sync')
@@ -136,12 +168,15 @@ test('the next run of a schedule can be skipped and taken back', async ({ page, 
     ((await (await app.api.get(`${API_URL}/schedules`)).json()) as StoredSchedule[])[0]
 
   await page.goto('/schedules')
-  await page.getByRole('button', { name: 'Skip next run' }).click()
+  const menu = page.getByRole('button', { name: 'More actions for Nightly sync' })
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Skip next run' }).click()
   await expect(page.getByText('The next run of Nightly sync is skipped')).toBeVisible()
   await expect(page.getByText('Next run skipped')).toBeVisible()
   expect((await stored()).skipNext).toBe(true)
 
-  await page.getByRole('button', { name: 'Run next time again' }).click()
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Run next time again' }).click()
   await expect(page.getByText('Nightly sync runs next time again')).toBeVisible()
   await expect(page.getByText('Next run skipped')).toBeHidden()
   expect((await stored()).skipNext).toBe(false)
