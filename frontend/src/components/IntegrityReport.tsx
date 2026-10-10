@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Bar } from 'react-chartjs-2'
+import { useChartAnimation } from '../lib/theme'
 import { cn, SCRUB_OLDEST_STALE_DAYS, scrubKeepingUp } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
@@ -154,6 +155,7 @@ const Stat = ({
  * far scrub got, and how old the blocks are
  */
 export function IntegrityReport({ status, lastScrub }: IntegrityReportProps) {
+  const animation = useChartAnimation()
   const keepingUp = scrubKeepingUp(lastScrub)
   const findings = getFindings(status, keepingUp)
   const locale = getLocale()
@@ -185,6 +187,7 @@ export function IntegrityReport({ status, lastScrub }: IntegrityReportProps) {
   }
 
   const chartOptions = {
+    animation,
     responsive: true,
     maintainAspectRatio: false,
     plugins: {

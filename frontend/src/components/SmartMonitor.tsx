@@ -484,7 +484,7 @@ const DiskCard = ({
             >
               <div
                 className={cn(
-                  'ui-bar h-full rounded-full',
+                  'ui-bar ui-bar-glow h-full rounded-full',
                   TEMPERATURE_BAR[tempLevel],
                 )}
                 style={{

@@ -11,9 +11,9 @@ import { getLocale } from '../paraglide/runtime'
 import { errorMessage, useFeedback } from './Feedback'
 import { type CommandFilter, LogFilters } from './LogFilters'
 import { LogListItem } from './LogListItem'
+import { Skeleton } from './Skeleton'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
-import { Skeleton } from './ui/skeleton'
 
 export const isProblem = (log: LogFile) =>
   log.result === 'warning' || log.result === 'error' || log.result === 'aborted'

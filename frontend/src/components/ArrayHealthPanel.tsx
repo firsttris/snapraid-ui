@@ -473,7 +473,7 @@ const Tile = ({
   corner?: ReactNode // Badge or icon at the top right
   children: ReactNode
 }) => (
-  <Card lift className="min-w-0 gap-2 p-[18px]">
+  <Card className="min-w-0 gap-2 p-[18px]">
     <div className="flex min-h-6 items-center justify-between gap-2">
       <p className="text-[13px] font-medium text-muted-foreground">{label}</p>
       {corner}
@@ -536,7 +536,7 @@ const LastRunTile = ({
     return (
       <Tile label={label} corner={idleIcon}>
         <TileValue className="flex items-center gap-2 text-blue-700">
-          <span className="size-2 animate-pulse rounded-full bg-blue-600" />
+          <span className="ui-ping size-2 rounded-full bg-blue-600" />
           {m.health_running_now()}
         </TileValue>
         {run && (
@@ -619,7 +619,7 @@ const ScrubCoverage = ({
         })}
       >
         <div
-          className="ui-bar h-full rounded-full bg-green-500 transition-[width] duration-500"
+          className="ui-bar ui-bar-glow h-full rounded-full bg-green-500"
           style={{ width: `${status.scrubPercentage}%` }}
         />
       </div>

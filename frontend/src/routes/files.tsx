@@ -168,7 +168,7 @@ function FilesContent({
 
   return (
     <>
-      <Card lift className="gap-0 overflow-hidden py-0">
+      <Card className="gap-0 overflow-hidden py-0">
         <div className="flex flex-col gap-3 px-5 py-4">
           <label
             htmlFor="file-search"
@@ -285,7 +285,7 @@ function FilesContent({
             </span>
             <span className="hidden h-1.5 overflow-hidden rounded-full bg-muted sm:block">
               <span
-                className="block h-full rounded-full bg-primary/70"
+                className="ui-bar ui-bar-glow block h-full rounded-full bg-primary/70"
                 style={{ width: `${(entry.bytes / largestFolder) * 100}%` }}
               />
             </span>

@@ -144,6 +144,12 @@ export const useTheme = () => {
 /**
  * How strong animations are: off, subtle (default) or strong
  */
+/**
+ * Chart.js animation for the motion setting: none when it is off, its own otherwise
+ */
+export const useChartAnimation = (): false | undefined =>
+  useMotion().motion === 'off' ? false : undefined
+
 export const useMotion = () => {
   const { motion } = useSettings()
   const setMotion = (preference: MotionPreference) => {

@@ -49,7 +49,7 @@ export const RunningJobBox = ({
   isAborting,
   onAbort,
 }: RunningJobBoxProps) => (
-  <Card lift className="ui-fade-in gap-4 p-5">
+  <Card className="ui-fade-in gap-4 p-5">
     <div className="flex flex-wrap items-center gap-3">
       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
         <Loader2 className="size-5 animate-spin" />

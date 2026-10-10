@@ -1,11 +1,12 @@
 import type { DiskSelfTest, SelfTestLogEntry } from '@shared/types'
-import { Loader2, Moon, Play, RefreshCw, Square } from 'lucide-react'
+import { Moon, Play, RefreshCw, Square } from 'lucide-react'
 import { useControlSelfTests } from '../hooks/queries'
 import { useJob } from '../hooks/useJob'
 import { cn } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { errorMessage, useFeedback } from './Feedback'
+import { LoadingHint } from './Skeleton'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Progress } from './ui/progress'
@@ -89,10 +90,9 @@ export const SmartSelfTest = ({
 
   if (loading) {
     return (
-      <p className="flex items-center gap-2 p-5 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        {m.selftest_loading()}
-      </p>
+      <div className="p-5">
+        <LoadingHint>{m.selftest_loading()}</LoadingHint>
+      </div>
     )
   }
   if (!test) {
@@ -172,6 +172,7 @@ export const SmartSelfTest = ({
             <Progress
               value={100 - test.running.remainingPercent}
               aria-label={m.selftest_running()}
+              indicatorClassName="ui-stripes bg-blue-600"
             />
           )}
           <p className="text-xs text-muted-foreground">

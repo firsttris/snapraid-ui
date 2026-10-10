@@ -705,7 +705,7 @@ export const DisksPanel = ({
   )
 
   return (
-    <Card lift className="@container gap-0 overflow-hidden py-0">
+    <Card className="@container gap-0 overflow-hidden py-0">
       <Tabs
         value={showHistory ? view : 'table'}
         onValueChange={(value) => setView(value as 'table' | 'history')}
