@@ -12,7 +12,7 @@ import { useConfig, useLogout, useSession } from '../hooks/queries'
 import { useAppShell } from '../hooks/useAppShell'
 import { useJob } from '../hooks/useJob'
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
-import { ARRAY_NAV_ITEM, NAV_ITEMS } from '../lib/nav'
+import { ARRAY_NAV_ITEM, FILE_NAV_ITEMS, NAV_ITEMS } from '../lib/nav'
 import { type MotionPreference, useMotion } from '../lib/theme'
 import { cn } from '../lib/utils'
 import { APP_VERSION, releaseUrl } from '../lib/version'
@@ -241,6 +241,25 @@ const SidebarBody = ({ onNavigate }: { onNavigate: () => void }) => {
             data-slot="nav-link"
             className={navLinkClass}
             activeOptions={{ exact: to === '/' }}
+          >
+            <Icon />
+            {label()}
+          </Link>
+        ))}
+      </nav>
+
+      <nav
+        className="flex flex-col gap-0.5"
+        aria-label={m.sidebar_group_files()}
+      >
+        <GroupLabel>{m.sidebar_group_files()}</GroupLabel>
+        {FILE_NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+          <Link
+            key={to}
+            to={to}
+            onClick={onNavigate}
+            data-slot="nav-link"
+            className={navLinkClass}
           >
             <Icon />
             {label()}

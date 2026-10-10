@@ -74,11 +74,11 @@ With *Skip sync when too many files were deleted* or *Skip sync when too many fi
 - `diff` reports more updated files than *Max. changed files* (default **100**, as `sync_threshold_updates` of snapraid-daemon), or
 - `diff` itself fails.
 
-After a skip for changed files, open a few of the changed files (*Diff* on the dashboard lists them). If they are unreadable, do not sync: restore them on the [Recover files](usage.md#recover-files) page (*Changed* tab), the parity still holds the old content. If you changed them yourself, for example by re-tagging a music collection, start the sync manually.
+After a skip for changed files, open a few of the changed files (the *Changed* tab of the [Changes](usage.md#changes-since-the-last-sync) page lists them). If they are unreadable, do not sync: restore them there, the parity still holds the old content. If you changed them yourself, for example by re-tagging a music collection, start the sync manually.
 
 Schedules created before this check have no limit for changed files; edit the schedule to switch it on.
 
-The schedule row then shows *Skipped* with the reason, and a [*A scheduled job was skipped*](notifications.md#events) notification is sent. Check with *Diff* on the dashboard whether a disk is missing. If the deletions are intended, start the sync manually.
+The schedule row then shows *Skipped* with the reason, and a [*A scheduled job was skipped*](notifications.md#events) notification is sent. Check on the [Changes](usage.md#changes-since-the-last-sync) page whether a disk is missing. If the deletions are intended, start the sync manually.
 
 The row of a sync schedule shows the current settings, e.g. "Skipped when more than 50 files were deleted" and "Skipped when more than 100 files were changed", or *No protection against deletions* when that guard is off.
 

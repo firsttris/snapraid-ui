@@ -8,7 +8,7 @@ This page walks you through the SnapRAID UI: finding your way around, reading th
 - [Command palette](#command-palette)
 - [Dashboard](#dashboard)
 - [Running commands](#running-commands)
-- [Recover files](#recover-files)
+- [Files](#files): [changes since the last sync](#changes-since-the-last-sync), [recover files](#recover-files), [protected files](#protected-files), [duplicates](#duplicates)
 - [Live output and progress](#live-output-and-progress)
 - [Safety stops](#safety-stops)
 - [Theme, language and animations](#theme-language-and-animations)
@@ -22,7 +22,8 @@ The sidebar on the left holds everything that is not specific to one page:
 | Element | What it does |
 |---|---|
 | *Active array* | Switches the SnapRAID array that all pages work on. Hidden arrays are not listed. The dropdown also has *Configuration* and *Manage arrays*. You can't switch while a job is running. |
-| *Overview* | Links to the pages *Dashboard*, *Recover files*, *SMART*, *Schedules*, *Logs*, *Notifications* and *Automation*. |
+| *Overview* | Links to the pages *Dashboard*, *SMART*, *Schedules*, *Logs*, *Notifications* and *Automation*. |
+| *Files* | *Changes*, *Protected files* and *Duplicates*: the files on the data disks of the active array, see [Files](#files). |
 | *Array* | *Configuration* opens the page with the `snapraid.conf` of the active array, *Manage arrays* lets you add, set up, rename, show or hide arrays. See [Disks & configurations](disks.md). |
 | *Backup* | Downloads or restores all settings in one file, see [Backup and restore](disks.md#backup-and-restore). |
 | *Animations* | *Off*, *Subtle* or *Strong*, see [below](#theme-language-and-animations). |
@@ -54,8 +55,8 @@ Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>⌘</kbd>+<kbd>K</kbd> on a Mac) or cli
 
 | Group | Entries |
 |---|---|
-| *SnapRAID commands* | Sync, Scrub, Status, Diff, Check, Touch, Duplicates, File List, Devices. Picking one opens the dashboard and starts the command there, including its dialog (for example the sync preview). Disabled while a job is running. |
-| *Navigation* | The pages from the sidebar, including *Configuration*. *Recover files* is also found with *undelete* or *fix*. |
+| *SnapRAID commands* | Sync, Scrub, Status, Check, Touch, Devices. Picking one opens the dashboard and starts the command there, including its dialog (for example the sync preview). Disabled while a job is running. |
+| *Navigation* | The pages from the sidebar, including *Configuration*. *Changes* is also found with *diff*, *undelete*, *fix* or *recover*, *Protected files* with *list* and *Duplicates* with *dup*. |
 | *Arrays* | *Switch to "…"* for every other shown array, *Manage arrays* and *Backup* |
 | *Settings* | *Theme: Light / Dark / System* and *Animations: Off / Subtle / Strong* |
 
@@ -139,9 +140,9 @@ The buttons at the top right of the dashboard start the commands: *Status*, *Scr
 
 | Group | Commands |
 |---|---|
-| *Information* (read-only, changes nothing) | *Diff*, *File List*, *Duplicates*, *Devices* |
+| *Information* (read-only) | *Diff*, *File List* and *Duplicates* open their [pages](#files), *Devices* a dialog |
 | *Maintenance* | *Check*, *Touch*, *Pool* |
-| *Recovery* | *Recover files*, opens the [Recover files](#recover-files) page |
+| *Recovery* | *Recover files*, opens the deleted files on the [Changes](#recover-files) page |
 
 The *Sync* button turns green when a sync is due. Only one SnapRAID job can run at a time: while one is running, all command buttons are disabled, on every open browser tab.
 
@@ -152,21 +153,21 @@ The *Sync* button turns green when a sync is due. Only one SnapRAID job can run 
 | *Sync* | Opens *Prepare sync*, see [Sync](#sync) | `sync`, `sync -h` |
 | *Scrub* | Opens *Start scrub* with a choice of plans, see [Scrub](#scrub) | `scrub`, `scrub -p …` |
 | *Status* | Opens *Integrity & scrub*, see [Status](#status) | `status` |
-| *Diff* | Opens the *Diff Report*: new, modified, deleted, moved, copied and restored files since the last sync | `diff` |
+| *Diff* | Opens [Changes since the last sync](#changes-since-the-last-sync) | `diff` |
 | *Check* | Opens *Verify data*, see [Check](#check) | `check`, `check -a`, `check -d …` |
 | *Touch* | Starts right away: gives files without a sub-second timestamp one | `touch` |
 | *Pool* | Starts right away: rebuilds the links in the pool directory. Needs a `pool` directory in the config, see [Disks & configurations](disks.md). | `pool` |
-| *Duplicates* | Lists files with identical content. Uses the hashes stored at the last sync, no file is read; files added since then are not included. | `dup` |
-| *File List* | Lists all protected files with size, date and time | `list` |
+| *Duplicates* | Opens [Duplicates](#duplicates) | `dup` |
+| *File List* | Opens [Protected files](#protected-files) | `list` |
 | *Devices* | Shows which device and partition each disk maps to | `devices` |
 
-The report dialogs (*Diff*, *File List*, *Duplicates*, *Check Report*) have a *Filter by path…* field. *Status*, *Diff*, *File List*, *Duplicates* and *Devices* only read data: their result opens in a dialog and they don't write a log. Sync, scrub, check, restore, touch and pool run as jobs with [live output](#live-output-and-progress) and a log entry.
+The *Check Report* has a *Filter by path…* field. *Status*, *Diff*, *File List*, *Duplicates* and *Devices* only read data and don't write a log. Sync, scrub, check, restore, touch and pool run as jobs with [live output](#live-output-and-progress) and a log entry.
 
 ### Sync
 
 Before a sync, *Prepare sync* runs a diff and shows what will be written to parity: the number of new, modified, moved, copied, restored and deleted files.
 
-- If files were **deleted**, a red warning lists them (the first 20, then *… and N more*) and the start button turns red. After the sync they can no longer be restored from parity. If that was unintended (for example a disk is not mounted), cancel and bring them back on [Recover files](#recover-files).
+- If files were **deleted**, a red warning lists them (the first 20, then *… and N more*) and the start button turns red. After the sync they can no longer be restored from parity. If that was unintended (for example a disk is not mounted), cancel and bring them back on the [Changes](#recover-files) page.
 - If a previous sync did not finish, a notice says so; the new sync continues where the old one stopped.
 - If the diff fails, the button reads *Sync anyway*.
 - **Pre-hash** (`-h`) reads new data twice and verifies it before computing parity, so faulty RAM or cabling can't slip damaged data into the parity. It takes longer. Your browser remembers the choice.
@@ -204,9 +205,28 @@ Regular scrubs are best run by a schedule, see [Scheduling](scheduling.md).
 
 The check runs as a job with progress and can be aborted. When it has finished, the result message has a *Show report* button that opens the *Check Report* with the files checked, errors and blocks to rehash.
 
-## Recover files
+## Files
 
-Until the next sync, the parity still holds every file as it was at the last sync. *Recover files* in the sidebar lists what changed since then, from `snapraid diff`, and brings it back:
+The sidebar's *Files* group has three pages about the files on the data disks of the active array.
+
+### Changes since the last sync
+
+*Changes* shows what the next sync would record, from `snapraid diff`. The page runs the diff when it opens; *Check again* runs it once more. The card at the top counts the files per kind, says how much new data the next sync protects and has a **Start sync** button, which opens *Prepare sync* on the dashboard.
+
+| Tab | Files |
+|---|---|
+| *Deleted* | Removed since the last sync, deliberately, by mistake, or because a disk is not mounted. They can be [restored](#recover-files). |
+| *Changed* | Same name, other content since the last sync. The earlier version can be [restored](#recover-files). |
+| *New* | Added since the last sync, with their size and the totals of the biggest folders. They are not protected yet: if a disk fails before the next sync, they are lost. |
+| *Moved/copied* | Same content under a new name (`old -> new`) or at a second place, and files SnapRAID restored. Nothing is lost, the next sync records them without recomputing parity for the content. |
+
+The page opens on the first tab that has files. The search narrows the list by part of the path, or the exact disk name such as `d1`. Without any changes it says *No changes: every file is as it was at the last sync.*
+
+<img src="screenshots/changes.png" alt="Changes since the last sync, new files with folder totals" width="900">
+
+### Recover files
+
+Until the next sync, the parity still holds every file as it was at the last sync. The *Deleted* and *Changed* tabs bring files back:
 
 | Tab | Files | What *Restore* does |
 |---|---|---|
@@ -215,16 +235,39 @@ Until the next sync, the parity still holds every file as it was at the last syn
 
 Tick the files, or *Select all shown files* after narrowing the list with the search (part of the path, or the exact disk name such as `d1`), then *Restore N files*. SnapRAID runs `fix -d <disk> -f /<path>…`, one run per disk, so a file with the same path on another disk is left alone. Wildcard characters in file names (`*`, `?`, `[`) are matched literally. Up to 1000 files at once.
 
-On the *Deleted* tab, **Restore all N deleted** brings back every deleted file of every disk in one run (`fix -m`), as many as there are, e.g. after an accidental `rm -rf`. Changed files stay as they are. This is what *Undelete* did in earlier versions; the *Recover files* entry in the dashboard's *More commands* menu (and *undelete* or *fix* in the command palette) leads here.
+On the *Deleted* tab, **Restore all N deleted** brings back every deleted file of every disk in one run (`fix -m`), as many as there are, e.g. after an accidental `rm -rf`. Changed files stay as they are. This is what *Undelete* did in earlier versions; the *Recover files* entry in the dashboard's *More commands* menu (and *undelete* or *fix* in the command palette) leads here, and so does the old address `/recovery`.
 
 **Owner and permissions.** SnapRAID stores no owner or permissions. A deleted file it brings back, and the folders it has to create for it, would belong to whoever runs SnapRAID, `root` in the Docker image, with mode `600`. SnapRAID UI gives them the owner, group and permissions of the folder they are restored into, the closest folder that still existed. Files get the folder's read and write bits (`755` → `644`, `775` → `664`, `750` → `640`), new folders the folder's permissions. A folder no longer on the disk takes its owner from the same folder on another data disk, else from the disk's top folder. The live output says how many files and folders were adjusted. Changed files are fixed in place and keep their owner and permissions anyway. A file that belonged to someone else than its folder's owner comes back with the folder's owner.
 
-Restored files disappear from the list. A file restored in place can still show up as changed in *Diff* until the next sync: SnapRAID sometimes keeps its new modification time to avoid mixing it up with another file. Its content is the one of the last sync, and the next sync just reads it again.
+Restored files disappear from the list. A file restored in place can still show up as changed here until the next sync: SnapRAID sometimes keeps its new modification time to avoid mixing it up with another file. Its content is the one of the last sync, and the next sync just reads it again.
 
 When a sync schedule of this configuration is enabled, a notice says when it runs next. After that sync, the files listed here can no longer be restored, so recover them first, or [skip the next run](scheduling.md#the-schedule-list). Files without a disk in the diff can't be restored by path, *Restore all N deleted* brings them back.
 
 > [!TIP]
 > After ransomware, do not sync. Stop the schedules (or *Skip next run*), remove the cause, then restore the *Changed* files here. The [sync guard for changed files](scheduling.md#sync-guard) keeps a scheduled sync from overwriting their parity in the meantime.
+
+### Protected files
+
+*Protected files* lists every file the last sync protected, from `snapraid list`. It only reads the content file, so no disk spins up.
+
+<img src="screenshots/protected-files.png" alt="Protected files with a search" width="900">
+
+- **Is my file protected?** Type a file name or part of the path (not case sensitive). The matching files are listed with disk, size and modification time, the first 200 of them; above them, how many match and how many of them are on each disk (hover for their size). A file that is not found was added after the last sync, or is excluded in the config; *Show new files* opens the *New* tab of [Changes](#changes-since-the-last-sync).
+- **Folders**: the folders of all disks merged, as a pool would show them, the biggest first, with the disks that hold each one, its files and size. Click a folder to open it, the path above leads back. On the right, how many files and bytes the last sync protected in all.
+
+### Duplicates
+
+*Duplicates* finds files with the same content, from `snapraid dup`, and deletes the copies you don't need. It compares the hashes stored at the last sync, so no file is read; files added since then are not included. Each group lists its copies, the size of each and the space freed by keeping only one, the groups that free the most first.
+
+<img src="screenshots/duplicates.png" alt="Duplicates, one group ticked" width="900">
+
+1. Choose which copy stays: **Keep** *First found* (the copy SnapRAID found first) or *Shortest path*, or type part of a path (or a disk, such as `d1/`) in *Or the copy whose path contains*. A copy picked by hand with its radio button wins over these.
+2. Tick the groups to clean up, or *Select all shown* after narrowing the list with the search. The copies that go are struck through and marked *Will be deleted*, the one that stays *Stays*.
+3. **Delete N copies** and confirm.
+
+A copy is only deleted while it and the copy that stays are exactly as at the last sync: neither may show up in the diff, and both still have the size `dup` reported. Otherwise, or when the copy is the one that stays in another group, it is left alone, and the result says why for each one (*changed since the last sync, run a sync first*, *no longer there*, …). Up to 5000 copies at once; nothing is deleted while a job runs.
+
+Until the next sync, deleted copies can still be brought back: *Show deleted files* opens the *Deleted* tab of [Changes](#recover-files). Copies that are no longer on their disk drop out of the list, even before a sync takes them out of the content file.
 
 ## Live output and progress
 

@@ -26,8 +26,8 @@ import {
 import { getResultLabel, RESULT_ICONS } from '../lib/run-result'
 import {
   cn,
+  formatBytes,
   formatDuration,
-  formatFileSize,
   formatRelativeTime,
 } from '../lib/utils'
 import * as m from '../paraglide/messages'
@@ -583,7 +583,7 @@ export const LogViewer = ({ selectedLog, onSelectLog }: LogViewerProps) => {
             </MetaItem>
             <MetaItem label={m.log_meta_size()}>
               <span className="tabular-nums">
-                {formatFileSize(log?.size ?? content?.length ?? 0)}
+                {formatBytes(log?.size ?? content?.length ?? 0)}
               </span>
               <span className="font-normal text-muted-foreground">
                 {' · '}

@@ -19,7 +19,7 @@ import {
   getCommandIcon,
   getCommandLabel,
 } from '../lib/commands'
-import { ARRAY_NAV_ITEM, NAV_ITEMS } from '../lib/nav'
+import { ARRAY_NAV_ITEM, FILE_NAV_ITEMS, NAV_ITEMS } from '../lib/nav'
 import { useMotion, useTheme } from '../lib/theme'
 import * as m from '../paraglide/messages'
 import {
@@ -37,11 +37,8 @@ const PALETTE_COMMANDS: SnapRaidCommand[] = [
   'sync',
   'scrub',
   'status',
-  'diff',
   'check',
   'touch',
-  'dup',
-  'list',
   'devices',
 ]
 
@@ -110,17 +107,19 @@ export const CommandPalette = () => {
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading={m.palette_group_navigation()}>
-          {[...NAV_ITEMS, ARRAY_NAV_ITEM].map(({ to, label, icon: Icon }) => (
-            <CommandItem
-              key={to}
-              // Recover files is where undelete (snapraid fix) lives
-              value={`nav ${label()}${to === '/recovery' ? ' undelete fix' : ''}`}
-              onSelect={() => run(() => navigate({ to }))}
-            >
-              <Icon />
-              {label()}
-            </CommandItem>
-          ))}
+          {[...NAV_ITEMS, ...FILE_NAV_ITEMS, ARRAY_NAV_ITEM].map(
+            ({ to, label, icon: Icon, keywords }) => (
+              <CommandItem
+                key={to}
+                // diff, list, dup and fix have their own pages
+                value={`nav ${label()} ${keywords?.() ?? ''}`}
+                onSelect={() => run(() => navigate({ to }))}
+              >
+                <Icon />
+                {label()}
+              </CommandItem>
+            ),
+          )}
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading={m.palette_group_configs()}>

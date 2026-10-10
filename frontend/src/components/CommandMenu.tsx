@@ -78,7 +78,7 @@ export const CommandMenu = ({
                   className="flex-col items-start gap-0"
                 >
                   <span className="font-medium">
-                    {/* Opens the Recover files page, named like it */}
+                    {/* Opens the deleted files on the changes page */}
                     {id === 'fix' ? m.nav_recovery() : getCommandLabel(id)}
                   </span>
                   <span className="text-xs text-muted-foreground">

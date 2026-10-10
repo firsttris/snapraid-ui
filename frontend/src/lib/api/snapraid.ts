@@ -6,6 +6,8 @@ import type {
   DiffReport,
   DiskReplacement,
   DiskSelfTest,
+  DuplicateDeletion,
+  DuplicateSkip,
   DupReport,
   FinishedJob,
   LastRuns,
@@ -495,6 +497,22 @@ export const restoreFiles = async (
     body: JSON.stringify({ configPath, files }),
   })
   if (!response.ok) throw await apiError(response)
+}
+
+/**
+ * Delete duplicates; each one only while it and the copy that stays are as at the last sync
+ */
+export const deleteDuplicates = async (
+  configPath: string,
+  files: DuplicateDeletion[],
+): Promise<{ deleted: DuplicateDeletion[]; skipped: DuplicateSkip[] }> => {
+  const response = await apiFetch(`${API_BASE}/snapraid/duplicates/delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configPath, files }),
+  })
+  if (!response.ok) throw await apiError(response)
+  return response.json()
 }
 
 /**
