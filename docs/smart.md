@@ -39,12 +39,13 @@ Click a card to show its details below the cards. Until you pick one, the detail
 
 ### Details
 
-The details have up to four tabs:
+The details have up to three tabs:
 
 - **SMART Attributes**: the attribute table, see [Attributes](#attributes).
 - **History (N days)**: charts of the daily values, see [History](#history).
 - **Self-test**: start, follow and stop the disk's self-tests, and its log of past tests, see [Self-tests](#self-tests).
-- **Raw output**: SnapRAID's text output of the smart command.
+
+Below them, **Output of snapraid smart** unfolds SnapRAID's text report. It is one report for all disks of the array, so it is not part of a disk's details.
 
 ### Attributes
 

@@ -756,7 +756,6 @@
   "smart_stat_failure": "Guasto / anno",
   "smart_stat_power_on": "In funzione",
   "smart_unit_years_short": "a",
-  "smart_tab_raw": "Output grezzo",
   "smart_temperature_bar": "Temperatura {celsius} °C su {critical} °C critici",
   "report_filter_placeholder": "Filtra per percorso…",
   "report_filter_no_match": "Nessuna voce corrisponde al filtro.",
@@ -1154,5 +1153,6 @@
   "integrity_intro": "Cosa dice snapraid status sui tuoi dati: cosa richiede attenzione, quanta parte dell'array lo scrub ha verificato e da quanto tempo ogni parte è stata controllata.",
   "integrity_busy": "Un job è in corso, SnapRAID legge lo stato quando ha finito.",
   "integrity_error": "Impossibile leggere lo stato: {error}",
-  "health_details": "Dettagli"
+  "health_details": "Dettagli",
+  "smart_raw_output": "Output di snapraid smart"
 }

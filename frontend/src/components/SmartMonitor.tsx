@@ -24,6 +24,7 @@ import type {
 import {
   Activity,
   AlertTriangle,
+  ChevronRight,
   CircleCheck,
   Moon,
   OctagonAlert,
@@ -624,18 +625,16 @@ const AttributeTable = ({ disk }: { disk: SmartDiskInfo }) => {
   )
 }
 
-type DetailTab = 'attributes' | 'history' | 'selftest' | 'raw'
+type DetailTab = 'attributes' | 'history' | 'selftest'
 
 const DiskDetails = ({
   disk,
   history,
-  rawOutput,
   configPath,
   selfTests,
 }: {
   disk: SmartDiskInfo
   history: SmartHistoryPoint[] | undefined
-  rawOutput: string
   configPath: string
   selfTests: ReturnType<typeof useSelfTests>
 }) => {
@@ -645,7 +644,6 @@ const DiskDetails = ({
     ...(attributes.length > 0 ? (['attributes'] as const) : []),
     ...(hasSmartHistory(history) ? (['history'] as const) : []),
     'selftest' as const,
-    ...(rawOutput ? (['raw'] as const) : []),
   ]
   // Another disk may lack the tab that was open
   const current = tabs.includes(tab) ? tab : tabs[0]
@@ -699,9 +697,6 @@ const DiskDetails = ({
                 </TabsTrigger>
               )}
               <TabsTrigger value="selftest">{m.selftest_tab()}</TabsTrigger>
-              {tabs.includes('raw') && (
-                <TabsTrigger value="raw">{m.smart_tab_raw()}</TabsTrigger>
-              )}
             </TabsList>
           )}
         </div>
@@ -733,12 +728,6 @@ const DiskDetails = ({
             onRefresh={() => selfTests.refetch()}
             refreshing={selfTests.isFetching}
           />
-        </TabsContent>
-
-        <TabsContent value="raw" className="border-t">
-          <pre className="max-h-[32rem] overflow-auto bg-muted/50 p-5 font-mono text-xs">
-            {rawOutput}
-          </pre>
         </TabsContent>
       </Tabs>
     </Card>
@@ -908,10 +897,22 @@ export const SmartMonitor = ({ configPath }: SmartMonitorProps) => {
             <DiskDetails
               disk={selected.disk}
               history={history?.[selected.disk.name]}
-              rawOutput={report.rawOutput}
               configPath={configPath}
               selfTests={selfTests}
             />
+          )}
+
+          {/* One report for the whole array, like snapraid status on the Integrity page */}
+          {report.rawOutput.trim() && (
+            <details className="group rounded-lg border bg-card">
+              <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+                <ChevronRight className="size-4 text-muted-foreground transition-transform group-open:rotate-90" />
+                {m.smart_raw_output()}
+              </summary>
+              <pre className="max-h-[32rem] overflow-auto border-t bg-muted/50 p-4 font-mono text-xs">
+                {report.rawOutput}
+              </pre>
+            </details>
           )}
         </>
       ) : (
