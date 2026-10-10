@@ -55,7 +55,7 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 - Integrity page: what needs attention, scrub coverage and how old the checked blocks are
 - Changes since the last sync at a glance: new files with folder sizes, deleted, changed and moved ones
 - Repair and verify bad blocks with one click
-- Recover deleted or encrypted files from parity, picked from a list, with the owner and permissions of their folder
+- Restore deleted and changed files from parity to their state of the last sync, picked from a list, with the owner and permissions of their folder
 - "Is my file protected?": search the protected files and see which disk they are on, sizes per folder
 - Duplicates: choose the copy that stays, the others are deleted safely
 - Live output while a job runs
@@ -69,7 +69,7 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 ### 🗓️ Automation
 - Cron schedules without editing a crontab
 - Nightly routine: touch, sync, then scrub
-- Sync guard that skips a sync after mass deletions or mass changes (ransomware)
+- Sync guard that skips a scheduled sync when too many files were deleted or changed since the last sync
 - Skip the next run of a schedule, or run it right now
 - Pauses Docker containers during sync and scrub
 - Spins idle disks down, or by hand
@@ -172,6 +172,41 @@ Its source lives in [docs/](docs/).
 | [Managing disks](https://firsttris.github.io/snapraid-ui/disks.html) | Config editor, adding, replacing and removing disks, backup |
 | [Security](https://firsttris.github.io/snapraid-ui/security.html) · [Troubleshooting](https://firsttris.github.io/snapraid-ui/troubleshooting.html) | Login and exposure, common problems |
 | [Architecture](https://firsttris.github.io/snapraid-ui/architecture.html) · [Development](https://firsttris.github.io/snapraid-ui/development.html) | How it works, API, contributing |
+
+## ❓ FAQ
+
+**I already use SnapRAID. Can I keep my setup?**
+Yes. Copy your `snapraid.conf` into the data directory and SnapRAID UI picks it up. Parity
+and content files stay as they are, and you can go back to the command line anytime.
+Turn off cron jobs or scripts like snapraid-runner, so only one scheduler runs SnapRAID.
+
+**Do I need Docker?**
+Yes, or Podman. The image (amd64 and arm64) ships SnapRAID 14, which SnapRAID UI needs
+for its structured log. Most distributions still have 12.x.
+
+**Does it wake my disks?**
+Only when SnapRAID needs them. Status, protected files and duplicates come from the
+content file.
+
+**Can I open it to the internet?**
+Turn on the login and put it behind a reverse proxy with HTTPS, see
+[Security](https://firsttris.github.io/snapraid-ui/security.html).
+
+**SnapRAID UI or snapraid-daemon?**
+[snapraid-daemon](https://github.com/amadvance/snapraid-daemon) is Andrea Mazzoleni's lean
+background service with a REST API, a scheduler and a web interface. SnapRAID UI is the
+full app around SnapRAID (see [Features](#-features)). You don't have to choose: SnapRAID UI
+can hand its jobs to the daemon.
+
+**Is this an official SnapRAID project?**
+No, it's independent and runs the unchanged `snapraid` binary.
+
+**How did this start?**
+As a web UI for SnapRAID. In December 2025 we proposed machine-readable output for it
+([amadvance/snapraid#28](https://github.com/amadvance/snapraid/pull/28)); Andrea suggested
+log tags instead and merged ours on December 10
+([#29](https://github.com/amadvance/snapraid/pull/29)). snapraid-daemon followed on
+December 23.
 
 ## 🛠️ Development
 
