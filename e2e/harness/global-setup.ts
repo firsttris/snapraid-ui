@@ -83,6 +83,8 @@ const startImage = async (image: string): Promise<Server> => {
     '-v', `${BASE}:/app/snapraid`,
     '-v', `${ARRAYS}:${ARRAYS}`,
     '-v', '/var/run/docker.sock:/var/run/docker.sock',
+    // As in the compose file: SnapRAID resolves the disks' devices for smart and probe
+    '--privileged',
     // The test disks are directories on one filesystem
     '-e', 'SNAPRAID_EXTRA_ARGS=--test-skip-device',
     '-v', `${FAKE_SMARTCTL_DIR}:/e2e-bin:ro`,
