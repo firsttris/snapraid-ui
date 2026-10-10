@@ -1,3 +1,4 @@
+import { Loader2 } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 /**
@@ -18,7 +19,7 @@ export const LoadingHint = ({ children }: { children: string }) => (
     role="status"
     className="inline-flex items-center gap-2 text-sm text-muted-foreground"
   >
-    <span className="size-3.5 animate-spin rounded-full border-2 border-muted border-t-foreground" />
+    <Loader2 className="size-3.5 animate-spin" />
     {children}
   </span>
 )

@@ -301,6 +301,6 @@ These settings are stored in your browser, so each device and browser can have i
 |---|---|---|
 | Theme | *Theme* menu in the header, or the command palette | *Light*, *Dark*, *System* (default, follows your operating system, also when it changes) |
 | Language | Language menu in the header (shows the current code, e.g. `EN`) | English, German, Italian. Without a choice, the browser language is used, falling back to English. |
-| Animations | *Animations* in the sidebar, or the command palette | *Off* (nothing moves), *Subtle* (soft transitions, a calm progress bar), *Strong* (glow, stripes, fade-ins, hover effects). Without a choice: *Subtle*, or *Off* if your system asks to reduce motion. |
+| Animations | *Animations* in the sidebar, or the command palette | *Off*: nothing moves, bars and charts show their value right away, only spinners turn. *Subtle*: sections and new content fade in, bars and charts grow to their value, a soft light passes along bars and running progress. *Strong*: the same, plus moving stripes on running progress, glowing bars and active items, and hover effects on buttons, sidebar links and cards you can click. Without a choice: *Subtle*, or *Off* if your system asks to reduce motion. |
 
 Notifications don't follow the UI language; they have their own language setting, see [Notifications](notifications.md).

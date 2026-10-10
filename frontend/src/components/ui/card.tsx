@@ -2,7 +2,8 @@ import type * as React from 'react'
 import { cn } from '@/lib/utils'
 
 /**
- * `lift` lets the card rise on hover when animations are set to strong
+ * `lift` lets the card rise on hover when animations are set to strong; only for a card that
+ * is clickable as a whole, like the SMART disk cards
  */
 export const Card = ({
   className,

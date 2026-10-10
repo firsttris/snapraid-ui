@@ -121,7 +121,7 @@ function ChooseStep({ onNew }: { onNew: () => void }) {
   const { openConfigDialog } = useAppShell()
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <Card lift className="gap-4 p-6">
+      <Card className="gap-4 p-6">
         <span className="flex size-10 items-center justify-center rounded-lg bg-sky-50 text-sky-700">
           <FileCog className="size-5" />
         </span>
@@ -137,7 +137,7 @@ function ChooseStep({ onNew }: { onNew: () => void }) {
           </Button>
         </div>
       </Card>
-      <Card lift className="gap-4 p-6">
+      <Card className="gap-4 p-6">
         <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
           <Sparkles className="size-5" />
         </span>

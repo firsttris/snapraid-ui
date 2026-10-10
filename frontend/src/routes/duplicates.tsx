@@ -265,7 +265,7 @@ function DuplicatesContent({
             <p className="text-sm text-muted-foreground">{m.dup_hint()}</p>
           </Card>
 
-          <Card lift className="gap-0 overflow-hidden py-0">
+          <Card className="gap-0 overflow-hidden py-0">
             <div className="flex flex-wrap items-end gap-x-6 gap-y-3 px-5 py-4">
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium text-muted-foreground">

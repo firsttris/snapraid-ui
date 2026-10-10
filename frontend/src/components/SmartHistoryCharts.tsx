@@ -9,7 +9,7 @@ import {
   type TooltipItem,
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
-import { useTheme } from '../lib/theme'
+import { useChartAnimation, useTheme } from '../lib/theme'
 import { getLocale } from '../paraglide/runtime'
 import { type Metric, shownMetrics } from './smartHistory'
 
@@ -38,6 +38,7 @@ const MetricChart = ({
 }) => {
   // Re-renders on a theme switch, so the axes pick up the new token values
   useTheme()
+  const animation = useChartAnimation()
   const themeColor = (name: string) =>
     getComputedStyle(document.documentElement).getPropertyValue(name).trim()
   const gridColor = themeColor('--border')
@@ -73,6 +74,7 @@ const MetricChart = ({
             ],
           }}
           options={{
+            animation,
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },

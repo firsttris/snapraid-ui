@@ -318,7 +318,7 @@ function ChangesContent({
               {m.changes_start_sync()}
             </Button>
           </Card>
-          <Card lift className="gap-0 overflow-hidden py-0">
+          <Card className="gap-0 overflow-hidden py-0">
             <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
               <Tabs
                 value={kind}

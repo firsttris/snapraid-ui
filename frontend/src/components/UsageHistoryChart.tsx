@@ -10,6 +10,7 @@ import {
   type TooltipItem,
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
+import { useChartAnimation } from '../lib/theme'
 import { formatGB } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
@@ -34,6 +35,7 @@ export const UsageHistoryChart = ({
 }: {
   points: UsagePoint[] | undefined
 }) => {
+  const animation = useChartAnimation()
   if (!hasUsageHistory(points)) return null
 
   const forecast = forecastFill(points)
@@ -77,6 +79,7 @@ export const UsageHistoryChart = ({
             ],
           }}
           options={{
+            animation,
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
