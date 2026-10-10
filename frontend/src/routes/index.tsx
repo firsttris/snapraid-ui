@@ -3,16 +3,9 @@ import {
   assessSmart,
   DEFAULT_SMART_FAILURE_THRESHOLD,
 } from '@shared/smart-health'
-import type { CheckReport, DevicesReport, SnapRaidCommand } from '@shared/types'
+import type { CheckReport, SnapRaidCommand } from '@shared/types'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ArrayHealthPanel,
   DashboardActions,
@@ -22,7 +15,6 @@ import {
 import { CheckDialog } from '../components/CheckDialog'
 import { CheckViewer } from '../components/CheckViewer'
 import { ConfigBar } from '../components/ConfigBar'
-import { DeviceList } from '../components/DeviceList'
 import { DisksPanel } from '../components/DisksPanel'
 import { errorMessage, useFeedback } from '../components/Feedback'
 import { ForceRetryBox } from '../components/ForceRetryBox'
@@ -49,19 +41,8 @@ import {
 import { useAppShell } from '../hooks/useAppShell'
 import { useJob } from '../hooks/useJob'
 import { useSelectedConfig } from '../hooks/useSelectedConfig'
-import {
-  getCheckReport,
-  getDevices,
-  SnapRaidBusyError,
-} from '../lib/api/snapraid'
+import { getCheckReport, SnapRaidBusyError } from '../lib/api/snapraid'
 import * as m from '../paraglide/messages'
-
-// chart.js is only loaded once the status dialog is opened
-const StatusModal = lazy(() =>
-  import('../components/StatusModal').then((module) => ({
-    default: module.StatusModal,
-  })),
-)
 
 export const Route = createFileRoute('/')({
   component: Dashboard,
@@ -71,18 +52,16 @@ export const Route = createFileRoute('/')({
 })
 
 // Commands answered by a report dialog instead of streamed console output
-type Report =
-  | { kind: 'devices'; data: DevicesReport | null }
-  | { kind: 'check'; data: CheckReport | null }
+type Report = { kind: 'check'; data: CheckReport | null }
 
 const REPORT_LOADERS = {
-  devices: getDevices,
   // check runs as a job, its report is read from the log afterwards
   check: getCheckReport,
 } as const
 
 // Commands with a page of their own, the menu and the command palette lead there
 const COMMAND_PAGES = {
+  status: { to: '/integrity' },
   diff: { to: '/changes' },
   fix: { to: '/changes', search: { tab: 'deleted' } },
   list: { to: '/files' },
@@ -101,7 +80,6 @@ function Dashboard() {
   const { report: requestedReport } = Route.useSearch()
   const navigate = useNavigate()
   const job = useJob()
-  const [showStatusModal, setShowStatusModal] = useState(false)
   const [showSyncPreview, setShowSyncPreview] = useState(false)
   const [showScrubDialog, setShowScrubDialog] = useState(false)
   const [showCheckDialog, setShowCheckDialog] = useState(false)
@@ -273,12 +251,6 @@ function Dashboard() {
         return
       }
 
-      if (command === 'status') {
-        setShowStatusModal(true)
-        await refetchStatus()
-        return
-      }
-
       if (isReportCommand(command)) {
         await openReport(command)
         return
@@ -286,14 +258,7 @@ function Dashboard() {
 
       runCommand(command)
     },
-    [
-      selectedConfig,
-      job.isRunning,
-      runCommand,
-      refetchStatus,
-      openReport,
-      navigate,
-    ],
+    [selectedConfig, job.isRunning, runCommand, openReport, navigate],
   )
 
   // A command picked in the command palette, possibly on another page
@@ -371,6 +336,7 @@ function Dashboard() {
             onExecute={executeCommand}
             disabled={actionsDisabled}
             syncDue={syncDue}
+            hasPool={!!parsedConfig?.pool}
           />
         )
       }
@@ -481,14 +447,6 @@ function Dashboard() {
           />
         )}
 
-        {report?.kind === 'devices' && (
-          <DeviceList
-            devices={report.data?.devices || []}
-            isLoading={!report.data}
-            onClose={closeReport}
-          />
-        )}
-
         {report?.kind === 'check' && (
           <CheckViewer
             files={report.data?.files || []}
@@ -499,17 +457,6 @@ function Dashboard() {
             isLoading={!report.data}
             onClose={closeReport}
           />
-        )}
-
-        {showStatusModal && statusData && (
-          <Suspense fallback={null}>
-            <StatusModal
-              status={statusData.status}
-              lastScrub={lastRuns?.scrub}
-              onClose={() => setShowStatusModal(false)}
-              onRefresh={refetchStatus}
-            />
-          </Suspense>
         )}
       </ConfigBar>
     </PageLayout>

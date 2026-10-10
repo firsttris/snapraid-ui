@@ -15,6 +15,7 @@ import { Route as AutomationRouteImport } from './routes/automation'
 import { Route as ChangesRouteImport } from './routes/changes'
 import { Route as DuplicatesRouteImport } from './routes/duplicates'
 import { Route as FilesRouteImport } from './routes/files'
+import { Route as IntegrityRouteImport } from './routes/integrity'
 import { Route as LogsRouteImport } from './routes/logs'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as RecoveryRouteImport } from './routes/recovery'
@@ -50,6 +51,11 @@ const DuplicatesRoute = DuplicatesRouteImport.update({
 const FilesRoute = FilesRouteImport.update({
   id: '/files',
   path: '/files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IntegrityRoute = IntegrityRouteImport.update({
+  id: '/integrity',
+  path: '/integrity',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LogsRoute = LogsRouteImport.update({
@@ -90,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/changes': typeof ChangesRoute
   '/duplicates': typeof DuplicatesRoute
   '/files': typeof FilesRoute
+  '/integrity': typeof IntegrityRoute
   '/logs': typeof LogsRoute
   '/notifications': typeof NotificationsRoute
   '/recovery': typeof RecoveryRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/changes': typeof ChangesRoute
   '/duplicates': typeof DuplicatesRoute
   '/files': typeof FilesRoute
+  '/integrity': typeof IntegrityRoute
   '/logs': typeof LogsRoute
   '/notifications': typeof NotificationsRoute
   '/recovery': typeof RecoveryRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/changes': typeof ChangesRoute
   '/duplicates': typeof DuplicatesRoute
   '/files': typeof FilesRoute
+  '/integrity': typeof IntegrityRoute
   '/logs': typeof LogsRoute
   '/notifications': typeof NotificationsRoute
   '/recovery': typeof RecoveryRoute
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/changes'
     | '/duplicates'
     | '/files'
+    | '/integrity'
     | '/logs'
     | '/notifications'
     | '/recovery'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/changes'
     | '/duplicates'
     | '/files'
+    | '/integrity'
     | '/logs'
     | '/notifications'
     | '/recovery'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/changes'
     | '/duplicates'
     | '/files'
+    | '/integrity'
     | '/logs'
     | '/notifications'
     | '/recovery'
@@ -178,6 +190,7 @@ export interface RootRouteChildren {
   ChangesRoute: typeof ChangesRoute
   DuplicatesRoute: typeof DuplicatesRoute
   FilesRoute: typeof FilesRoute
+  IntegrityRoute: typeof IntegrityRoute
   LogsRoute: typeof LogsRoute
   NotificationsRoute: typeof NotificationsRoute
   RecoveryRoute: typeof RecoveryRoute
@@ -228,6 +241,13 @@ declare module '@tanstack/react-router' {
       path: '/files'
       fullPath: '/files'
       preLoaderRoute: typeof FilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/integrity': {
+      id: '/integrity'
+      path: '/integrity'
+      fullPath: '/integrity'
+      preLoaderRoute: typeof IntegrityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/logs': {
@@ -282,6 +302,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChangesRoute: ChangesRoute,
   DuplicatesRoute: DuplicatesRoute,
   FilesRoute: FilesRoute,
+  IntegrityRoute: IntegrityRoute,
   LogsRoute: LogsRoute,
   NotificationsRoute: NotificationsRoute,
   RecoveryRoute: RecoveryRoute,

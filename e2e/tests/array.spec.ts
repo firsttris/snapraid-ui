@@ -60,17 +60,15 @@ test('scrub finds silently corrupted data, one click repairs and verifies it', a
   expect(await array.snapraid('status')).toContain('No error detected')
 })
 
-test('undelete in the commands menu brings back all deleted files from parity', async ({ page, app }) => {
+test('undelete: Changes in the sidebar brings back all deleted files from parity', async ({ page, app }) => {
   const array = await createArray('undelete')
   const original = await array.readFile('d2', 'movies/trailer.mkv')
   await unlink(join(array.disk('d2'), 'movies/trailer.mkv'))
   await app.addArray(array, 'Undelete')
   await page.goto('/')
 
-  // The menu entry leads to the deleted files on the changes page
-  await page.getByRole('button', { name: 'More commands' }).click()
-  await page.getByRole('menuitem', { name: /Recover files/ }).click()
-  await expect(page).toHaveURL(/\/changes\?tab=deleted$/)
+  await page.getByRole('navigation', { name: 'Files' }).getByRole('link', { name: 'Changes' }).click()
+  await expect(page.getByRole('tab', { name: /Deleted\s*1/ })).toHaveAttribute('aria-selected', 'true')
 
   await page.getByRole('button', { name: 'Restore all 1 deleted' }).click()
   await expect(page.getByRole('alertdialog')).toContainText('snapraid fix -m')
@@ -78,6 +76,24 @@ test('undelete in the commands menu brings back all deleted files from parity', 
 
   await app.expectFinished('Restore')
   expect((await array.readFile('d2', 'movies/trailer.mkv')).equals(original)).toBe(true)
+})
+
+test('the dashboard runs Scrub and Sync, the menu the maintenance; status has its own page', async ({ page, app }) => {
+  const array = await createArray('actions')
+  await app.addArray(array, 'Actions')
+  await page.goto('/')
+
+  await expect(page.getByRole('button', { name: 'Status', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'More commands' }).click()
+  // No pool directory in the config: no Pool
+  await expect(page.getByRole('menuitem')).toHaveText([/^Check/, /^Touch/])
+  await page.keyboard.press('Escape')
+
+  await page.getByRole('link', { name: 'Details →' }).click()
+  await expect(page).toHaveURL(/\/integrity$/)
+  await expect(page.getByRole('heading', { name: 'Integrity' })).toBeVisible()
+  await expect(page.getByText('No problems found')).toBeVisible()
+  await expect(page.getByText('Oldest block checked')).toBeVisible()
 })
 
 test('disks can be spun up and down by hand', async ({ page, app }) => {

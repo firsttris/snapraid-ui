@@ -6,7 +6,7 @@ Every SnapRAID job, whether you started it on the dashboard or a schedule did, w
 
 ## What gets logged
 
-A log is written for every job: sync, scrub, check, restore (fix), touch and pool from the dashboard, the steps of the disk wizards, and every step a schedule runs (for example touch, sync and scrub of a nightly routine, or a scheduled SMART check). A scheduled run that is skipped (see [Scheduling](scheduling.md)) leaves no log. The read-only commands (*Status*, *Diff*, *File List*, *Duplicates*, *Devices*), the pages that run them and the diff in the sync preview don't write a log. Deleting duplicates writes none either.
+A log is written for every job: sync, scrub, check, restore (fix), touch and pool from the dashboard, the steps of the disk wizards, and every step a schedule runs (for example touch, sync and scrub of a nightly routine, or a scheduled SMART check). A scheduled run that is skipped (see [Scheduling](scheduling.md)) leaves no log. The read-only commands (*Status*, *Diff*, *File List*, *Duplicates*), the pages that run them and the diff in the sync preview don't write a log. Deleting duplicates writes none either.
 
 The UI starts SnapRAID with `-l <file>`, so each log is SnapRAID's own structured log: one `tag:value` line per event, with the command line, the config, every message, error and the final summary. The UI reads it to work out the result and the figures shown on this page and on the dashboard; see [Architecture](architecture.md) for details.
 

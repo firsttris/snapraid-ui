@@ -51,7 +51,8 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 <td width="50%" valign="top">
 
 ### ⚡ Commands
-- Sync with preview, scrub plans, status, check, fix
+- Sync with preview, scrub plans, check, fix
+- Integrity page: what needs attention, scrub coverage and how old the checked blocks are
 - Changes since the last sync at a glance: new files with folder sizes, deleted, changed and moved ones
 - Repair and verify bad blocks with one click
 - Recover deleted or encrypted files from parity, picked from a list, with the owner and permissions of their folder

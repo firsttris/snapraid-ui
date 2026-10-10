@@ -33,14 +33,7 @@ import {
 } from './ui/command'
 
 // The commands the dashboard can run, in the order of daily use
-const PALETTE_COMMANDS: SnapRaidCommand[] = [
-  'sync',
-  'scrub',
-  'status',
-  'check',
-  'touch',
-  'devices',
-]
+const PALETTE_COMMANDS: SnapRaidCommand[] = ['sync', 'scrub', 'check', 'touch']
 
 /**
  * Ctrl/Cmd+K: run SnapRAID commands, jump to pages, switch configs and settings
@@ -111,7 +104,7 @@ export const CommandPalette = () => {
             ({ to, label, icon: Icon, keywords }) => (
               <CommandItem
                 key={to}
-                // diff, list, dup and fix have their own pages
+                // status, diff, list, dup and fix have their own pages
                 value={`nav ${label()} ${keywords?.() ?? ''}`}
                 onSelect={() => run(() => navigate({ to }))}
               >

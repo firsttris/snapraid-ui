@@ -128,12 +128,13 @@ test('new files with their folder totals and moved files are listed, sync starts
   await expect(page.getByRole('dialog', { name: 'Prepare sync' })).toBeVisible()
 })
 
-test('the commands menu leads to the changes page for diff', async ({ page, app }) => {
+test('diff in the command palette leads to the changes page', async ({ page, app }) => {
   const array = await createArray('changes-menu')
   await app.addArray(array, 'Changes menu')
   await page.goto('/')
-  await page.getByRole('button', { name: 'More commands' }).click()
-  await page.getByRole('menuitem', { name: /^Diff/ }).click()
+  await page.getByRole('button', { name: /Run a command/ }).click()
+  await page.getByPlaceholder('Search commands and pages…').fill('diff')
+  await page.getByRole('option', { name: 'Changes' }).click()
   await expect(page).toHaveURL(/\/changes$/)
   await expect(page.getByText('No changes: every file is as it was at the last sync.')).toBeVisible()
 })

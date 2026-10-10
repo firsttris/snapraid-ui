@@ -1,6 +1,6 @@
 import type { SnapRaidCommand } from '@shared/types'
 import { MoreHorizontal } from 'lucide-react'
-import { Fragment, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getCommandDescription, getCommandLabel } from '../lib/commands'
 import * as m from '../paraglide/messages'
 import { Button } from './ui/button'
@@ -10,39 +10,22 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
 
-// Everything besides status, sync and scrub, which have their own buttons
-const MENU_GROUPS: Array<{
-  title: () => string
-  description: () => string
-  commands: SnapRaidCommand[]
-}> = [
-  {
-    title: m.commands_group_info,
-    description: m.commands_group_info_desc,
-    commands: ['diff', 'list', 'dup', 'devices'],
-  },
-  {
-    title: m.commands_group_maintenance,
-    description: m.commands_group_maintenance_desc,
-    commands: ['check', 'touch', 'pool'],
-  },
-  {
-    title: m.commands_group_recovery,
-    description: m.commands_group_recovery_desc,
-    commands: ['fix'],
-  },
-]
+// The rarer maintenance next to the Scrub and Sync buttons; what only shows something has
+// its own page. Pool only with a pool directory in the config.
+const maintenanceCommands = (hasPool: boolean): SnapRaidCommand[] =>
+  hasPool ? ['check', 'touch', 'pool'] : ['check', 'touch']
 
 export const CommandMenu = ({
   onSelect,
   disabled,
+  hasPool,
 }: {
   onSelect: (command: SnapRaidCommand) => void
   disabled: boolean
+  hasPool: boolean
 }) => {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -64,31 +47,23 @@ export const CommandMenu = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
-        {MENU_GROUPS.map((group, groupIndex) => (
-          <Fragment key={group.title()}>
-            {groupIndex > 0 && <DropdownMenuSeparator />}
-            <DropdownMenuGroup>
-              <DropdownMenuLabel title={group.description()}>
-                {group.title()}
-              </DropdownMenuLabel>
-              {group.commands.map((id) => (
-                <DropdownMenuItem
-                  key={id}
-                  onSelect={() => onSelect(id)}
-                  className="flex-col items-start gap-0"
-                >
-                  <span className="font-medium">
-                    {/* Opens the deleted files on the changes page */}
-                    {id === 'fix' ? m.nav_recovery() : getCommandLabel(id)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {getCommandDescription(id)}
-                  </span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          </Fragment>
-        ))}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel title={m.commands_group_maintenance_desc()}>
+            {m.commands_group_maintenance()}
+          </DropdownMenuLabel>
+          {maintenanceCommands(hasPool).map((id) => (
+            <DropdownMenuItem
+              key={id}
+              onSelect={() => onSelect(id)}
+              className="flex-col items-start gap-0"
+            >
+              <span className="font-medium">{getCommandLabel(id)}</span>
+              <span className="text-xs text-muted-foreground">
+                {getCommandDescription(id)}
+              </span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )

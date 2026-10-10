@@ -13,32 +13,21 @@ import {
   CircleX,
   Info,
   type LucideIcon,
-  RefreshCw,
   TriangleAlert,
 } from 'lucide-react'
-import { type ReactNode, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Bar } from 'react-chartjs-2'
 import { cn, SCRUB_OLDEST_STALE_DAYS, scrubKeepingUp } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
 import { Alert, AlertDescription, AlertTitle } from './ui/alert'
-import { Button } from './ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog'
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
+import { Card } from './ui/card'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ChartTooltip)
 
-interface StatusModalProps {
+interface IntegrityReportProps {
   status: SnapRaidStatus
   lastScrub?: LastRun | null
-  onClose: () => void
-  onRefresh?: () => Promise<unknown>
 }
 
 type Tone = 'ok' | 'info' | 'warning' | 'error'
@@ -147,7 +136,7 @@ const Stat = ({
   highlight?: boolean
   children: ReactNode
 }) => (
-  <div className="rounded-lg border p-3" title={hint}>
+  <Card className="gap-0 p-3 shadow-none" title={hint}>
     <p className="text-xs text-muted-foreground">{label}</p>
     <p
       className={cn(
@@ -157,26 +146,14 @@ const Stat = ({
     >
       {children}
     </p>
-  </div>
+  </Card>
 )
 
-export function StatusModal({
-  status,
-  lastScrub,
-  onClose,
-  onRefresh,
-}: StatusModalProps) {
-  const [isRefreshing, setIsRefreshing] = useState(false)
-
-  const refresh = async () => {
-    setIsRefreshing(true)
-    try {
-      await onRefresh?.()
-    } finally {
-      setIsRefreshing(false)
-    }
-  }
-
+/**
+ * What `snapraid status` says about the integrity of the array: findings with what to do, how
+ * far scrub got, and how old the blocks are
+ */
+export function IntegrityReport({ status, lastScrub }: IntegrityReportProps) {
   const keepingUp = scrubKeepingUp(lastScrub)
   const findings = getFindings(status, keepingUp)
   const locale = getLocale()
@@ -248,130 +225,87 @@ export function StatusModal({
   }
 
   return (
-    <Dialog
-      open
-      onOpenChange={(open) => {
-        if (!open) onClose()
-      }}
-    >
-      <DialogContent
-        className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-4xl"
-        onOpenAutoFocus={(event) => {
-          // Focus the dialog itself, not the refresh button (its tooltip
-          // would pop up right away)
-          event.preventDefault()
-          ;(event.currentTarget as HTMLElement | null)?.focus()
-        }}
-      >
-        <div className="flex items-start justify-between gap-4 border-b p-4 pr-12 sm:p-6 sm:pr-14">
-          <DialogHeader>
-            <DialogTitle>{m.status_modal_title()}</DialogTitle>
-            <DialogDescription>
-              {m.status_modal_description()}
-            </DialogDescription>
-          </DialogHeader>
-          {onRefresh && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={refresh}
-                  disabled={isRefreshing}
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={m.status_modal_refresh()}
-                  className="-mt-2 sm:-mt-4"
-                >
-                  <RefreshCw className={isRefreshing ? 'animate-spin' : ''} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{m.status_modal_refresh()}</TooltipContent>
-            </Tooltip>
-          )}
-        </div>
+    <>
+      <div className="space-y-2">
+        {findings.map((finding) => {
+          const Icon = TONE_ICON[finding.tone]
+          return (
+            <Alert key={finding.title} variant={TONE_ALERT[finding.tone]}>
+              <Icon />
+              <AlertTitle>{finding.title}</AlertTitle>
+              <AlertDescription>{finding.message}</AlertDescription>
+            </Alert>
+          )
+        })}
+      </div>
 
-        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
-          <div className="space-y-2">
-            {findings.map((finding) => {
-              const Icon = TONE_ICON[finding.tone]
-              return (
-                <Alert key={finding.title} variant={TONE_ALERT[finding.tone]}>
-                  <Icon />
-                  <AlertTitle>{finding.title}</AlertTitle>
-                  <AlertDescription>{finding.message}</AlertDescription>
-                </Alert>
-              )
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Stat
+          label={m.status_modal_oldest()}
+          highlight={
+            !keepingUp &&
+            (status.oldestScrubDays ?? 0) > SCRUB_OLDEST_STALE_DAYS
+          }
+        >
+          {formatDaysAgo(status.oldestScrubDays)}
+        </Stat>
+        <Stat label={m.status_modal_median()}>
+          {formatDaysAgo(status.medianScrubDays)}
+        </Stat>
+        <Stat label={m.status_modal_newest()}>
+          {formatDaysAgo(status.newestScrubDays)}
+        </Stat>
+        <Stat
+          label={m.status_modal_scrubbed()}
+          hint={m.status_modal_scrubbed_hint()}
+        >
+          {status.scrubPercentage === undefined
+            ? '–'
+            : `${status.scrubPercentage}%`}
+        </Stat>
+        <Stat
+          label={m.status_modal_bad_blocks()}
+          highlight={(status.badBlocks ?? 0) > 0}
+        >
+          {(status.badBlocks ?? 0).toLocaleString(locale)}
+        </Stat>
+        <Stat
+          label={m.status_modal_unsynced_blocks()}
+          highlight={(status.unsyncedBlocks ?? 0) > 0}
+        >
+          {status.unsyncedBlocks === undefined
+            ? '–'
+            : status.unsyncedBlocks.toLocaleString(locale)}
+        </Stat>
+      </div>
+
+      {history.length > 0 && (
+        <div>
+          <h4 className="text-base font-semibold">
+            {m.status_modal_scrub_age()}
+          </h4>
+          <p className="mt-1 mb-3 text-sm text-muted-foreground">
+            {m.status_modal_scrub_age_hint({
+              days: String(SCRUB_OLDEST_STALE_DAYS),
             })}
+          </p>
+          <div className="h-64 rounded-lg border bg-card p-3">
+            <Bar data={chartData} options={chartOptions} />
           </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <Stat
-              label={m.status_modal_oldest()}
-              highlight={
-                !keepingUp &&
-                (status.oldestScrubDays ?? 0) > SCRUB_OLDEST_STALE_DAYS
-              }
-            >
-              {formatDaysAgo(status.oldestScrubDays)}
-            </Stat>
-            <Stat label={m.status_modal_median()}>
-              {formatDaysAgo(status.medianScrubDays)}
-            </Stat>
-            <Stat label={m.status_modal_newest()}>
-              {formatDaysAgo(status.newestScrubDays)}
-            </Stat>
-            <Stat
-              label={m.status_modal_scrubbed()}
-              hint={m.status_modal_scrubbed_hint()}
-            >
-              {status.scrubPercentage === undefined
-                ? '–'
-                : `${status.scrubPercentage}%`}
-            </Stat>
-            <Stat
-              label={m.status_modal_bad_blocks()}
-              highlight={(status.badBlocks ?? 0) > 0}
-            >
-              {(status.badBlocks ?? 0).toLocaleString(locale)}
-            </Stat>
-            <Stat
-              label={m.status_modal_unsynced_blocks()}
-              highlight={(status.unsyncedBlocks ?? 0) > 0}
-            >
-              {status.unsyncedBlocks === undefined
-                ? '–'
-                : status.unsyncedBlocks.toLocaleString(locale)}
-            </Stat>
-          </div>
-
-          {history.length > 0 && (
-            <div>
-              <h4 className="text-base font-semibold">
-                {m.status_modal_scrub_age()}
-              </h4>
-              <p className="mt-1 mb-3 text-sm text-muted-foreground">
-                {m.status_modal_scrub_age_hint({
-                  days: String(SCRUB_OLDEST_STALE_DAYS),
-                })}
-              </p>
-              <div className="h-56 rounded-lg border p-3">
-                <Bar data={chartData} options={chartOptions} />
-              </div>
-            </div>
-          )}
-
-          {status.rawOutput.trim() && (
-            <details className="group rounded-lg border">
-              <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
-                <ChevronRight className="size-4 text-muted-foreground transition-transform group-open:rotate-90" />
-                {m.status_modal_raw_output()}
-              </summary>
-              <pre className="overflow-x-auto border-t bg-muted/50 p-4 font-mono text-xs">
-                {status.rawOutput}
-              </pre>
-            </details>
-          )}
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+
+      {status.rawOutput.trim() && (
+        <details className="group rounded-lg border bg-card">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+            <ChevronRight className="size-4 text-muted-foreground transition-transform group-open:rotate-90" />
+            {m.status_modal_raw_output()}
+          </summary>
+          <pre className="overflow-x-auto border-t bg-muted/50 p-4 font-mono text-xs">
+            {status.rawOutput}
+          </pre>
+        </details>
+      )}
+    </>
   )
 }
