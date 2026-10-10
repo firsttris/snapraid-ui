@@ -1055,7 +1055,7 @@
   "smart_attr_load_cycles": "Head load cycles",
   "smart_attr_load_cycles_desc": "How often the heads parked and unparked. Disks are rated for about 300 000 (desktop) to 600 000 (NAS); thousands a day wear them out early.",
   "smart_attr_temperature": "Temperature",
-  "smart_attr_temperature_desc": "Current temperature in °C (raw value). Up to about 45 °C is fine, from 50 °C the disk runs hot.",
+  "smart_attr_temperature_desc": "Current temperature in °C, many disks also keep the lowest and highest ever measured. Up to about 45 °C is fine, from 50 °C the disk runs hot.",
   "smart_attr_hardware_ecc": "ECC corrections",
   "smart_attr_hardware_ecc_desc": "Errors the disk corrected on the fly. Vendor-specific and usually high, no cause for concern on its own.",
   "smart_attr_reallocation_events": "Reallocation events",
@@ -1085,7 +1085,7 @@
   "smart_attr_col_attribute": "Attribute",
   "smart_attr_col_assessment": "Assessment",
   "smart_attr_ok": "OK",
-  "smart_attr_values_hint": "Value, Worst and Threshold are the vendor’s normalized scale (higher is better), Raw is the actual count.",
+  "smart_attr_values_hint": "Value and Worst are the vendor's health scale, higher is better. An attribute fails when its Value drops to the Threshold. Raw is the disk's own count or reading; it is not compared with the threshold.",
   "selftest_all": "Self-test",
   "selftest_all_short": "Short test of all disks",
   "selftest_all_long": "Long test of all disks",
@@ -1168,5 +1168,7 @@
   "integrity_busy": "A job is running, SnapRAID reads the status once it is done.",
   "integrity_error": "Could not read the status: {error}",
   "health_details": "Details",
-  "smart_raw_output": "Output of snapraid smart"
+  "smart_raw_output": "Output of snapraid smart",
+  "smart_attr_temp_raw": "{celsius} °C",
+  "smart_attr_temp_range": "min {min} · max {max}"
 }

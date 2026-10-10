@@ -1041,7 +1041,7 @@
   "smart_attr_load_cycles": "Cicli di parcheggio testine",
   "smart_attr_load_cycles_desc": "Quante volte le testine si sono parcheggiate. I dischi sono progettati per circa 300 000 (desktop) a 600 000 (NAS); migliaia al giorno li usurano presto.",
   "smart_attr_temperature": "Temperatura",
-  "smart_attr_temperature_desc": "Temperatura attuale in °C (valore grezzo). Fino a circa 45 °C va bene, da 50 °C il disco è caldo.",
+  "smart_attr_temperature_desc": "Temperatura attuale in °C, molti dischi conservano anche la minima e la massima mai misurate. Fino a circa 45 °C va bene, da 50 °C il disco è caldo.",
   "smart_attr_hardware_ecc": "Correzioni ECC",
   "smart_attr_hardware_ecc_desc": "Errori corretti al volo dal disco. Dipende dal produttore e di solito è alto, da solo non preoccupa.",
   "smart_attr_reallocation_events": "Eventi di riallocazione",
@@ -1071,7 +1071,7 @@
   "smart_attr_col_attribute": "Attributo",
   "smart_attr_col_assessment": "Valutazione",
   "smart_attr_ok": "OK",
-  "smart_attr_values_hint": "Valore, Peggiore e Soglia sono la scala normalizzata del produttore (più alto è meglio), Grezzo è il conteggio effettivo.",
+  "smart_attr_values_hint": "Valore e Peggiore sono la scala di salute del produttore, più alto è meglio. Un attributo fallisce quando il suo Valore scende alla Soglia. Grezzo è il conteggio o la misura del disco e non si confronta con la soglia.",
   "selftest_all": "Autotest",
   "selftest_all_short": "Test breve di tutti i dischi",
   "selftest_all_long": "Test lungo di tutti i dischi",
@@ -1154,5 +1154,7 @@
   "integrity_busy": "Un job è in corso, SnapRAID legge lo stato quando ha finito.",
   "integrity_error": "Impossibile leggere lo stato: {error}",
   "health_details": "Dettagli",
-  "smart_raw_output": "Output di snapraid smart"
+  "smart_raw_output": "Output di snapraid smart",
+  "smart_attr_temp_raw": "{celsius} °C",
+  "smart_attr_temp_range": "min {min} · max {max}"
 }
