@@ -335,20 +335,14 @@ export const DashboardActions = ({
   onExecute,
   disabled,
   syncDue,
+  hasPool,
 }: {
   onExecute: (command: SnapRaidCommand) => void
   disabled: boolean
   syncDue: boolean
+  hasPool: boolean
 }) => (
   <div className="flex flex-wrap items-center gap-2">
-    <Button
-      onClick={() => onExecute('status')}
-      disabled={disabled}
-      variant="outline"
-      title={getCommandDescription('status')}
-    >
-      {getCommandLabel('status')}
-    </Button>
     <Button
       onClick={() => onExecute('scrub')}
       disabled={disabled}
@@ -366,7 +360,7 @@ export const DashboardActions = ({
       <RefreshCw />
       {getCommandLabel('sync')}
     </Button>
-    <CommandMenu onSelect={onExecute} disabled={disabled} />
+    <CommandMenu onSelect={onExecute} disabled={disabled} hasPool={hasPool} />
   </div>
 )
 
@@ -896,6 +890,14 @@ export const ArrayHealthPanel = ({
                   )}
                 </TileValue>
                 {!hasNotice && message && <TileCaption>{message}</TileCaption>}
+                {status && (
+                  <Link
+                    to="/integrity"
+                    className="block text-[13px] font-medium underline-offset-4 hover:underline"
+                  >
+                    {m.health_details()} →
+                  </Link>
+                )}
                 {isBusy && status && statusTimestamp && (
                   <TileCaption>
                     <span className="flex items-center gap-1">

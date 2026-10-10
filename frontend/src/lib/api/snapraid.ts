@@ -2,7 +2,6 @@ import type {
   CheckReport,
   CommandOutput,
   DataDiskUsage,
-  DevicesReport,
   DiffReport,
   DiskReplacement,
   DiskSelfTest,
@@ -421,21 +420,6 @@ export const setDiskPower = async (
 export const probe = async (configPath: string): Promise<ProbeReport> => {
   const response = await apiFetch(
     `${API_BASE}/snapraid/probe?path=${encodeURIComponent(configPath)}`,
-  )
-  if (!response.ok) {
-    throw await apiError(response)
-  }
-  return response.json()
-}
-
-/**
- * Get device information
- */
-export const getDevices = async (
-  configPath: string,
-): Promise<DevicesReport> => {
-  const response = await apiFetch(
-    `${API_BASE}/snapraid/devices?path=${encodeURIComponent(configPath)}`,
   )
   if (!response.ok) {
     throw await apiError(response)

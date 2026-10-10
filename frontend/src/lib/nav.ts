@@ -1,5 +1,6 @@
 import {
   Activity,
+  BadgeCheck,
   Bell,
   Calendar,
   Copy,
@@ -16,6 +17,7 @@ import * as m from '../paraglide/messages'
 export interface NavItem {
   to:
     | '/'
+    | '/integrity'
     | '/changes'
     | '/files'
     | '/duplicates'
@@ -32,6 +34,12 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: m.nav_dashboard, icon: LayoutDashboard },
+  {
+    to: '/integrity',
+    label: m.nav_integrity,
+    icon: BadgeCheck,
+    keywords: () => `status scrub ${m.status_modal_scrub_age()}`,
+  },
   { to: '/smart', label: m.nav_smart, icon: Activity },
   { to: '/schedules', label: m.schedules, icon: Calendar },
   { to: '/logs', label: m.logs, icon: FileText },

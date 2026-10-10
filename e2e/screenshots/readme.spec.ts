@@ -85,6 +85,14 @@ test('notifications', async ({ page }) => {
   await shot(page, 'screenshots/notifications.png')
 })
 
+test('integrity', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1150 })
+  await page.goto('/integrity')
+  await expect(page.getByText('Oldest block checked')).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  await shot(page, 'screenshots/integrity.png')
+})
+
 test('changes', async ({ page }) => {
   await page.goto('/changes?tab=added')
   await expect(page.getByRole('tab', { name: /New\s*\d/ })).toBeVisible()

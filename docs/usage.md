@@ -22,7 +22,7 @@ The sidebar on the left holds everything that is not specific to one page:
 | Element | What it does |
 |---|---|
 | *Active array* | Switches the SnapRAID array that all pages work on. Hidden arrays are not listed. The dropdown also has *Configuration* and *Manage arrays*. You can't switch while a job is running. |
-| *Overview* | Links to the pages *Dashboard*, *SMART*, *Schedules*, *Logs*, *Notifications* and *Automation*. |
+| *Overview* | Links to the pages *Dashboard*, *[Integrity](#integrity)*, *SMART*, *Schedules*, *Logs*, *Notifications* and *Automation*. |
 | *Files* | *Changes*, *Protected files* and *Duplicates*: the files on the data disks of the active array, see [Files](#files). |
 | *Array* | *Configuration* opens the page with the `snapraid.conf` of the active array, *Manage arrays* lets you add, set up, rename, show or hide arrays. See [Disks & configurations](disks.md). |
 | *Backup* | Downloads or restores all settings in one file, see [Backup and restore](disks.md#backup-and-restore). |
@@ -55,12 +55,12 @@ Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>⌘</kbd>+<kbd>K</kbd> on a Mac) or cli
 
 | Group | Entries |
 |---|---|
-| *SnapRAID commands* | Sync, Scrub, Status, Check, Touch, Devices. Picking one opens the dashboard and starts the command there, including its dialog (for example the sync preview). Disabled while a job is running. |
-| *Navigation* | The pages from the sidebar, including *Configuration*. *Changes* is also found with *diff*, *undelete*, *fix* or *recover*, *Protected files* with *list* and *Duplicates* with *dup*. |
+| *SnapRAID commands* | Sync, Scrub, Check, Touch. Picking one opens the dashboard and starts the command there, including its dialog (for example the sync preview). Disabled while a job is running. |
+| *Navigation* | The pages from the sidebar, including *Configuration*. *Integrity* is also found with *status*, *Changes* with *diff*, *undelete*, *fix* or *recover*, *Protected files* with *list* and *Duplicates* with *dup*. |
 | *Arrays* | *Switch to "…"* for every other shown array, *Manage arrays* and *Backup* |
 | *Settings* | *Theme: Light / Dark / System* and *Animations: Off / Subtle / Strong* |
 
-*Pool* is only available in the dashboard's *More commands* menu.
+*Pool* is only available in the dashboard's *More commands* menu, when the config has a `pool` directory.
 
 ## Dashboard
 
@@ -136,13 +136,7 @@ Once at least two days of usage are recorded, a *History* tab next to *Table* sh
 
 ## Running commands
 
-The buttons at the top right of the dashboard start the commands: *Status*, *Scrub* and *Sync*, plus the *More commands* menu (⋯) with the rest:
-
-| Group | Commands |
-|---|---|
-| *Information* (read-only) | *Diff*, *File List* and *Duplicates* open their [pages](#files), *Devices* a dialog |
-| *Maintenance* | *Check*, *Touch*, *Pool* |
-| *Recovery* | *Recover files*, opens the deleted files on the [Changes](#recover-files) page |
+The buttons at the top right of the dashboard start the two commands of daily use, *Scrub* and *Sync*. The *More commands* menu (⋯) holds the maintenance: *Check*, *Touch* and, when the config has a `pool` directory, *Pool*. What only reads the array has its own page: the status on [Integrity](#integrity), diff, file list and duplicates under [Files](#files).
 
 The *Sync* button turns green when a sync is due. Only one SnapRAID job can run at a time: while one is running, all command buttons are disabled, on every open browser tab.
 
@@ -152,16 +146,15 @@ The *Sync* button turns green when a sync is due. Only one SnapRAID job can run 
 |---|---|---|
 | *Sync* | Opens *Prepare sync*, see [Sync](#sync) | `sync`, `sync -h` |
 | *Scrub* | Opens *Start scrub* with a choice of plans, see [Scrub](#scrub) | `scrub`, `scrub -p …` |
-| *Status* | Opens *Integrity & scrub*, see [Status](#status) | `status` |
+| *Status* | The [Integrity](#integrity) page; the refresh button next to *As of …* runs it again | `status` |
 | *Diff* | Opens [Changes since the last sync](#changes-since-the-last-sync) | `diff` |
 | *Check* | Opens *Verify data*, see [Check](#check) | `check`, `check -a`, `check -d …` |
 | *Touch* | Starts right away: gives files without a sub-second timestamp one | `touch` |
 | *Pool* | Starts right away: rebuilds the links in the pool directory. Needs a `pool` directory in the config, see [Disks & configurations](disks.md). | `pool` |
 | *Duplicates* | Opens [Duplicates](#duplicates) | `dup` |
 | *File List* | Opens [Protected files](#protected-files) | `list` |
-| *Devices* | Shows which device and partition each disk maps to | `devices` |
 
-The *Check Report* has a *Filter by path…* field. *Status*, *Diff*, *File List*, *Duplicates* and *Devices* only read data and don't write a log. Sync, scrub, check, restore, touch and pool run as jobs with [live output](#live-output-and-progress) and a log entry.
+The *Check Report* has a *Filter by path…* field. *Status*, *Diff*, *File List* and *Duplicates* only read data and don't write a log. Sync, scrub, check, restore, touch and pool run as jobs with [live output](#live-output-and-progress) and a log entry.
 
 ### Sync
 
@@ -186,9 +179,11 @@ Scrub reads data and parity and compares them with the stored checksums to find 
 
 Regular scrubs are best run by a schedule, see [Scheduling](scheduling.md).
 
-### Status
+### Integrity
 
-*Integrity & scrub* shows the details of `snapraid status`:
+*Integrity* in the sidebar (or *Details* on the dashboard's health card) shows the details of `snapraid status`, the same status as the dashboard:
+
+<img src="screenshots/integrity.png" alt="Integrity page" width="900">
 
 - findings with what to do, most severe first (bad blocks, blocks without parity, changes not synced yet, old blocks), or *No problems found*
 - *Oldest block checked*, *Median*, *Last checked*, *Checked since sync*, *Bad blocks* and *Blocks without parity*
