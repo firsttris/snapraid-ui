@@ -10,6 +10,7 @@ SnapRAID UI runs as a single container that bundles SnapRAID, the web interface 
 - [Privileged mode and SMART](#privileged-mode-and-smart)
 - [First start](#first-start)
 - [Reverse proxy and HTTPS](#reverse-proxy-and-https)
+- [Install as an app](#install-as-an-app)
 - [Updating](#updating)
 - [Using your own SnapRAID binary](#using-your-own-snapraid-binary)
 - [Building the image yourself](#building-the-image-yourself)
@@ -200,6 +201,18 @@ server {
 ```
 
 Read [Security](security.md#behind-a-reverse-proxy) for what changes for the login behind a proxy, and how to use an authentication proxy such as Authelia or Authentik instead of the built-in login.
+
+## Install as an app
+
+SnapRAID UI is a progressive web app: on a phone, tablet or desktop you can add it to the home screen or app list, where it opens with its own icon and in a window of its own, without the browser's address bar.
+
+- **Android (Chrome):** open the UI, then ⋮ → *Install app* (or *Add to home screen*).
+- **iPhone and iPad (Safari):** open the UI, then the share button → *Add to Home Screen*.
+- **Desktop (Chrome, Edge):** the install icon at the end of the address bar.
+
+Browsers only install a web app over **HTTPS** (or on `localhost`). Opened as `http://<your-server>:3000`, Chrome only offers a plain shortcut that opens a browser tab. Put the UI behind a [reverse proxy with HTTPS](#reverse-proxy-and-https) first. The certificate has to be one the phone trusts: a public one, such as the Let's Encrypt certificate Caddy gets for a public domain, works as is; for a certificate from Caddy's own CA (`tls internal`) or another private CA, install its root certificate on the phone.
+
+The app doesn't work offline. It caches styles, icons and fonts so it starts faster, but every page and all data come live from the server, so the server has to be reachable.
 
 ## Updating
 
