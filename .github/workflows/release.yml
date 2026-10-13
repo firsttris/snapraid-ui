@@ -1,6 +1,7 @@
 name: Release
 
-# Pushing a tag vX.Y.Z publishes that version: the CI first, then the shared Docker release from
+# Pushing a tag vX.Y.Z publishes that version: the CI first (skipped when master's CI already tested
+# the code, see https://github.com/firsttris/workflows#tested-on-main), then the shared Docker release from
 # firsttris/workflows, which pushes the image as :x.y.z, :x.y and :latest, updates the Docker Hub
 # description and creates the GitHub release. The tag must match the version in frontend/package.json.
 # Run by hand on master: the same checks, then the image as :edge, nothing is released.
@@ -10,11 +11,24 @@ on:
   workflow_dispatch:
 
 jobs:
+  tested:
+    uses: firsttris/workflows/.github/workflows/tested-on-main.yml@ccr-161f105b-9ns022
+    permissions:
+      actions: read
+      contents: read
+
   checks:
+    needs: tested
+    if: needs.tested.outputs.tested != 'true'
     uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      packages: write # the e2e image build keeps its cache
 
   docker:
-    needs: checks
+    needs: [tested, checks]
+    # The checks either passed or were not needed
+    if: ${{ !cancelled() && needs.tested.result == 'success' && needs.checks.result != 'failure' }}
     uses: firsttris/workflows/.github/workflows/docker-release.yml@v1
     with:
       image: tristanteu/snapraid-ui

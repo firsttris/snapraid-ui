@@ -58,16 +58,21 @@ jobs:
       - run: npm run build
 
   # SnapRAID, snapraid-daemon and the UI for real, driven through the browser (docs/development.md).
-  # local: backend and built frontend as processes; image: the Docker image from docker/Dockerfile
+  # local: backend and built frontend as processes; image: the Docker image from docker/Dockerfile.
+  # Each target in two shards: every shard starts its own servers and runs half of the test files
   e2e:
     if: ${{ !github.event.pull_request.draft }}
-    name: e2e (${{ matrix.target }})
+    name: e2e (${{ matrix.target }}, ${{ matrix.shard }}/2)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write # the image's build cache, shared with the release
     strategy:
       fail-fast: false
       matrix:
         target: [local, image]
+        shard: [1, 2]
     defaults:
       run:
         working-directory: e2e
@@ -90,12 +95,13 @@ jobs:
         with:
           path: e2e/.tools
           key: e2e-tools-${{ runner.os }}-${{ hashFiles('e2e/scripts/setup-tools.sh', 'backend/src/engine/REVIEWED_DAEMON_VERSION') }}
+      # smartmontools: SnapRAID lists the disks on the SMART page with it, self-tests use a stand-in
+      - uses: firsttris/workflows/actions/apt-install@ccr-161f105b-9ns022
+        with:
+          packages: autoconf automake zlib1g-dev smartmontools
+          recommends: "false"
       - name: Build SnapRAID 14, SnapRAID 15 and snapraid-daemon
-        run: |
-          sudo apt-get update
-          # smartmontools: SnapRAID lists the disks on the SMART page with it, self-tests use a stand-in
-          sudo apt-get install -y --no-install-recommends autoconf automake zlib1g-dev smartmontools
-          npm run setup
+        run: npm run setup
       - run: npm ci
       - run: npm run typecheck
       - run: npx playwright install --with-deps chromium
@@ -103,16 +109,19 @@ jobs:
         if: matrix.target == 'local'
         working-directory: frontend
         run: npm ci
+      # With the release's build cache: only the layers that changed are built again
       - name: Build the Docker image
         if: matrix.target == 'image'
-        working-directory: .
-        run: docker build -t "$E2E_IMAGE" -f docker/Dockerfile .
-      - run: npm test
+        uses: firsttris/workflows/actions/docker-build@ccr-161f105b-9ns022
+        with:
+          dockerfile: docker/Dockerfile
+          tags: ${{ env.E2E_IMAGE }}
+      - run: npm test -- --shard=${{ matrix.shard }}/2
       - name: Upload traces and server logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-${{ matrix.target }}
+          name: e2e-${{ matrix.target }}-${{ matrix.shard }}
           path: |
             e2e/playwright-report/
             e2e/test-results/
