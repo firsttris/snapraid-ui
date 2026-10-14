@@ -7,11 +7,13 @@ Sync, scrub, schedule and watch your disks and their SMART health from any brows
 One Docker image for your home server or NAS, with SnapRAID 14 included.
 
 [![CI](https://github.com/firsttris/snapraid-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/firsttris/snapraid-ui/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/firsttris/snapraid-ui?logo=github&label=release)](https://github.com/firsttris/snapraid-ui/releases/latest)
 [![Docker Pulls](https://img.shields.io/docker/pulls/tristanteu/snapraid-ui?logo=docker&logoColor=white)](https://hub.docker.com/r/tristanteu/snapraid-ui)
 [![Image Size](https://img.shields.io/docker/image-size/tristanteu/snapraid-ui/latest?logo=docker&logoColor=white&label=image)](https://hub.docker.com/r/tristanteu/snapraid-ui)
 [![Platforms](https://img.shields.io/badge/platform-amd64%20%7C%20arm64-lightgrey)](https://hub.docker.com/r/tristanteu/snapraid-ui/tags)
 [![SnapRAID](https://img.shields.io/badge/SnapRAID-14.x-2ea44f)](https://www.snapraid.it/)
 [![Docs](https://img.shields.io/badge/docs-firsttris.github.io-4f46e5?logo=materialformkdocs&logoColor=white)](https://firsttris.github.io/snapraid-ui/)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 
 [Features](#-features) •
 [Screenshots](#-screenshots) •
