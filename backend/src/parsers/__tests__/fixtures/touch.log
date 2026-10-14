@@ -1,0 +1,38 @@
+version:14.10
+unixtime:1791913040
+time:2026-10-14 01:37:20
+command:touch
+argv:0:/usr/local/bin/snapraid
+argv:1:-c
+argv:2:/app/snapraid/snapraid.conf
+argv:3:-l
+argv:4:/app/snapraid/logs/touch-20261013-173720.log
+argv:5:touch
+conf:file:/app/snapraid/snapraid.conf
+blocksize:262144
+data:disk1:/mnt/disk1/:
+data:disk2:/mnt/disk2/:
+mode:par1
+parity:/mnt/parity/snapraid.parity:
+msg:progress: Loading state from /var/lib/snapraid/snapraid.content...
+content:/var/lib/snapraid/snapraid.content
+content_info:read_unixtime:1791910373
+msg:verbose:    22341 files
+content_info:file:22341
+content_info:block:386643
+content_info:block_unscrubbed:252321
+msg:progress: Using 26 MiB of memory for the file-system.
+msg:progress: Setting sub-second timestamps...
+msg:status:
+msg:status:     1750 touched files
+msg:progress: Saving state to /var/lib/snapraid/snapraid.content...
+msg:progress: Saving state to /mnt/disk1/snapraid.content...
+msg:progress: Saving state to /mnt/parity/snapraid.content...
+content_info:file:22341
+content_info:block:386643
+content_info:block_unscrubbed:252321
+msg:progress: Verifying...
+msg:progress: Verified /var/lib/snapraid/snapraid.content in 0 seconds
+msg:progress: Verified /mnt/disk1/snapraid.content in 0 seconds
+msg:progress: Verified /mnt/parity/snapraid.content in 0 seconds
+content_info:write_unixtime:1791913041

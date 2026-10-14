@@ -52,3 +52,64 @@ Deno.test("parseRunResult - diff and dup that found something succeeded", () => 
   assertEquals(parseRunResult("summary:exit:dup"), "ok");
   assertEquals(parseRunResult("summary:exit:bad"), "error");
 });
+
+
+const fixture = (name: string) =>
+  Deno.readTextFileSync(new URL(`../parsers/__tests__/fixtures/${name}`, import.meta.url));
+
+// The touch log of issue #48 ends with the saved content file, the smart log with the array failure probability
+const TOUCH_LOG = fixture("touch.log");
+const SMART_LOG = fixture("smart.log");
+
+Deno.test("listLogs - finished touch and smart runs are not incomplete", async () => {
+  const dir = await Deno.makeTempDir();
+  try {
+    await Deno.writeTextFile(join(dir, "touch-20261013-173720.log"), TOUCH_LOG);
+    await Deno.writeTextFile(join(dir, "smart-20261013-173000.log"), SMART_LOG);
+    const logs = createLogManager(dir);
+
+    assertEquals(
+      (await logs.listLogs()).map((log) => [log.command, log.result]),
+      [["touch", "ok"], ["smart", "ok"]],
+    );
+  } finally {
+    await Deno.remove(dir, { recursive: true });
+  }
+});
+
+Deno.test("listLogs - a touch or smart log cut short stays incomplete until it finishes", async () => {
+  const dir = await Deno.makeTempDir();
+  try {
+    const touch = join(dir, "touch-20261013-173720.log");
+    const smart = join(dir, "smart-20261013-173000.log");
+    // Written up to the line before the one that marks the end
+    await Deno.writeTextFile(touch, TOUCH_LOG.slice(0, TOUCH_LOG.indexOf("content_info:write_unixtime:")));
+    await Deno.writeTextFile(smart, SMART_LOG.slice(0, SMART_LOG.indexOf("summary:array_failure:")));
+    const logs = createLogManager(dir);
+
+    assertEquals((await logs.listLogs()).map((log) => log.result), ["incomplete", "incomplete"]);
+
+    // The cached result is replaced once the run writes its last lines
+    await Deno.writeTextFile(touch, TOUCH_LOG);
+    await Deno.writeTextFile(smart, SMART_LOG);
+    assertEquals((await logs.listLogs()).map((log) => log.result), ["ok", "ok"]);
+  } finally {
+    await Deno.remove(dir, { recursive: true });
+  }
+});
+
+Deno.test("findLastRun - a finished touch counts as ok", async () => {
+  const dir = await Deno.makeTempDir();
+  try {
+    await Deno.writeTextFile(join(dir, "touch-20261013-173720.log"), TOUCH_LOG);
+    const logs = createLogManager(dir);
+
+    const last = await logs.findLastRun("touch", "/app/snapraid/snapraid.conf");
+    assertEquals(
+      [last?.result, last?.logFile, last?.timestamp, last?.forceOption],
+      ["ok", "touch-20261013-173720.log", "2026-10-13T17:37:20.000Z", undefined],
+    );
+  } finally {
+    await Deno.remove(dir, { recursive: true });
+  }
+});
