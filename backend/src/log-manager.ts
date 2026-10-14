@@ -2,6 +2,7 @@ import { join } from "@std/path";
 import { expandGlob } from "@std/fs";
 import type { SnapRaidCommand, LogFile, LastRun, RunResult } from "@shared/types.ts";
 import { detectForceOption } from "@shared/force-option.ts";
+import { parseRunResult } from "@shared/run-result.ts";
 
 export interface LogManager {
   ensureLogDirectory(): Promise<void>;
@@ -27,22 +28,7 @@ const parseLogTimestamp = (dateStr: string, timeStr: string): string => {
   return new Date(Date.UTC(year, month, day, hour, minute, second)).toISOString();
 };
 
-/**
- * Derive the outcome of a run from its structured log
- */
-export const parseRunResult = (log: string): RunResult => {
-  if (/^sigint:/m.test(log)) return "aborted";
-  const exit = log.match(/^summary:exit:(\w+)/m)?.[1];
-  // SnapRAID bails out on fatal errors before writing the summary
-  if (!exit) return /^msg:fatal:/m.test(log) ? "error" : "incomplete";
-  if (exit === "ok" || exit === "warning") return exit;
-  // diff and dup report what they found, finding something is no failure
-  if (["equal", "diff", "nodup", "dup"].includes(exit)) return "ok";
-  // fix and check report what happened to the errors they found
-  if (exit === "recovered") return "ok";
-  if (exit === "recoverable") return "warning";
-  return "error";
-};
+export { parseRunResult };
 
 export const createLogManager = (logDirectory: string): LogManager => {
   // Outcome and config of each log, read once per file version; the list is reloaded often

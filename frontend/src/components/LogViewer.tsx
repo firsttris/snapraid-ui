@@ -1,3 +1,4 @@
+import { parseRunResult } from '@shared/run-result'
 import type { LogFile, RunResult } from '@shared/types'
 import {
   ArrowLeft,
@@ -98,16 +99,6 @@ const getStateDescription = (state: ViewState): string => {
     case 'incomplete':
       return m.log_state_incomplete()
   }
-}
-
-// Same rules as the backend's parseRunResult, for a log that is not in the list (yet)
-const resultFromLog = (log: ParsedLog, hasFatal: boolean): RunResult => {
-  if (log.aborted) return 'aborted'
-  if (!log.exit) return hasFatal ? 'error' : 'incomplete'
-  if (['ok', 'recovered', 'equal', 'diff', 'nodup', 'dup'].includes(log.exit))
-    return 'ok'
-  if (log.exit === 'warning' || log.exit === 'recoverable') return 'warning'
-  return 'error'
 }
 
 const STAT_LABELS: Array<[string, () => string]> = [
@@ -462,14 +453,11 @@ export const LogViewer = ({ selectedLog, onSelectLog }: LogViewerProps) => {
     log?.command ?? parsed?.args.at(-1) ?? selectedLog.split('-')[0]
   const startedAt = parsed?.startedAt ?? log?.timestamp
   const duration = log && !isRunning ? runDuration(log) : undefined
+  // A log that is not in the list (yet) is read the same way the backend does
   const state: ViewState | undefined = isRunning
     ? 'running'
     : (log?.result ??
-      (parsed &&
-        resultFromLog(
-          parsed,
-          parsed.messages.some((msg) => msg.level === 'fatal'),
-        )))
+      (content !== undefined ? parseRunResult(content) : undefined))
   const problemCount = parsed
     ? parsed.messages.length + parsed.blockErrors.length
     : 0
