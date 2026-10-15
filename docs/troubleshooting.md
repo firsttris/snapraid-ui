@@ -111,6 +111,15 @@ SnapRAID calls `smartctl` on the device behind each mount. The device nodes only
 - Rootless Podman cannot read SMART data. Run the container as root if you need it.
 - USB enclosures and some RAID/HBA controllers do not pass SMART through. Use a `smartctl` option in your `snapraid.conf` for such disks if your controller supports it (see the SnapRAID manual).
 
+### "Failed to dereference device '0:…'" / "Smart is unsupported in this platform"
+
+SnapRAID looks up the device behind every `data`, `parity` and `extra` path in `snapraid.conf`. If it can't resolve one of them, the whole `smart` run fails, not just that disk. Inside the container this happens when a path is not on a filesystem mounted from the host, e.g. `extra system /`: in the container `/` is the container's own filesystem, which has no device.
+
+- Point such a path at a host mount the container sees. If `/mnt` comes from the host's root filesystem, `extra system /mnt` finds the system disk.
+- Or remove the `extra` line.
+
+`grep ' 0:45 ' /proc/self/mountinfo` inside the container (with the number from the message) shows which filesystem SnapRAID can't resolve.
+
 ### "Probe command is not supported on this platform"
 
 SnapRAID cannot read the power state of the disks. This is common with NVMe drives or certain disk controllers. Everything else keeps working.
