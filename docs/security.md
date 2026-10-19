@@ -104,5 +104,5 @@ A backup from *Download backup* contains the notification passwords and tokens i
 - [ ] Not reachable from the internet, or only through a VPN or an HTTPS proxy
 - [ ] Only container port 80 published, and only to the proxy if you use one
 - [ ] Data directory and backup files readable only by you
-- [ ] Metrics and the MCP endpoint off, or their tokens kept private
+- [ ] Metrics and the MCP endpoint off, or their tokens kept private; the MCP endpoint's actions only allowed if you need them
 - [ ] `--privileged` only if you need SMART data (see [Installation](installation.md#privileged-mode-and-smart))

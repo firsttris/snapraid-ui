@@ -23,7 +23,8 @@ export const DEFAULT_MAINTENANCE_SETTINGS: MaintenanceSettings = {
   mcp: {
     enabled: false,
     token: "",
-    allowActions: true,
+    // Reading answers most questions; actions are switched on deliberately
+    allowActions: false,
   },
 };
 

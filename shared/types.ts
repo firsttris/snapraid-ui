@@ -558,7 +558,7 @@ export interface MaintenanceSettings {
   mcp: {
     enabled: boolean;
     token: string;               // Bearer token the agent sends, always required
-    allowActions: boolean;       // Start and stop jobs, change schedules, create arrays; else read only
+    allowActions: boolean;       // Start and stop jobs, skip schedule runs, create arrays; else read only
   };
 }
 

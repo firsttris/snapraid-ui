@@ -835,7 +835,7 @@
   "automation_mcp_token": "Token di accesso",
   "automation_mcp_token_hint": "L’agente lo invia come bearer token, è sempre richiesto. Chi lo possiede può leggere lo stato dei tuoi array e, con le azioni consentite, avviare job; il login dell’interfaccia non si applica.",
   "automation_mcp_actions": "Consenti azioni",
-  "automation_mcp_actions_hint": "Avviare e interrompere sync e scrub, eseguire, sospendere e saltare pianificazioni, creare nuovi array. Disattivato, l’agente legge soltanto. Le riparazioni (fix, ripristino di file, sostituzione di un disco) restano nell’interfaccia.",
+  "automation_mcp_actions_hint": "Avviare e interrompere sync e scrub, eseguire pianificazioni o saltarne la prossima esecuzione, creare nuovi array. Disattivato, l’agente legge soltanto, e questo risponde alla maggior parte delle domande. Riparazioni, eliminazione di file e disattivazione delle pianificazioni restano nell’interfaccia. Il testo dei tuoi dischi, come i nomi dei file, arriva all’agente e può cercare di ingannarlo: lascia che il client chieda conferma prima di ogni azione.",
   "automation_mcp_claude_code": "Claude Code",
   "automation_mcp_claude_code_hint": "In un terminale sul tuo computer. -s user lo rende disponibile in tutti i tuoi progetti.",
   "automation_mcp_desktop": "Claude Desktop",

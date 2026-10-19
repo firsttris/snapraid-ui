@@ -164,9 +164,10 @@ Put your `snapraid.conf` into `./snapraid/` (or add one or set up a new array un
 ## 🤖 Ask Claude about your array
 
 SnapRAID UI has an [MCP](https://modelcontextprotocol.io) endpoint, so Claude and other AI agents can answer
-questions from the real state of your server and from this documentation, and start a sync when you ask them to.
+questions from the real state of your server and from this documentation, and, if you allow it, start a sync when you ask.
 
-1. In SnapRAID UI open **Automation → AI agent (MCP)**, switch it on and click *Save*.
+1. In SnapRAID UI open **Automation → AI agent (MCP)**, switch it on and click *Save*. It only reads until you
+   also tick *Allow actions*.
 2. Copy the command from the card and run it on your computer:
    ```bash
    claude mcp add -s user --transport http snapraid http://<your-server>:3000/api/mcp --header "Authorization: Bearer <token>"

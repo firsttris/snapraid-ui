@@ -1,5 +1,6 @@
-// AI agents over MCP: the endpoint switched on in the UI, refused without the token, and an
-// agent's calls answered from the real array, the shipped documentation and a sync it starts
+// AI agents over MCP: the endpoint switched on in the UI, refused without the token, read only
+// until actions are allowed, and an agent's calls answered from the real array, the shipped
+// documentation and a sync it starts
 import { createArray } from '../harness/array'
 import { API_URL } from '../harness/env'
 import { expect, test } from '../harness/fixtures'
@@ -39,6 +40,8 @@ test('an agent reads the array and the documentation and starts a sync', async (
     const token = await page.locator('#mcp-token').inputValue()
     expect(token).toMatch(/^[0-9a-f]{48}$/)
     await expect(page.getByText(`claude mcp add -s user --transport http snapraid`)).toBeVisible()
+    // Read only until actions are allowed
+    await expect(page.getByLabel('Allow actions')).not.toBeChecked()
     await page.getByRole('button', { name: 'Save' }).click()
     await expect(page.getByText('Settings saved')).toBeVisible()
 
@@ -62,6 +65,18 @@ test('an agent reads the array and the documentation and starts a sync', async (
       '# Configurations and disks',
     )
 
+    const toolNames = async () => (await rpc(token, 'tools/list')).tools.map((tool: { name: string }) => tool.name)
+    const readOnly = await toolNames()
+    expect(readOnly).toContain('get_overview')
+    expect(readOnly).not.toContain('start_job')
+
+    await page.getByLabel('Allow actions').click()
+    await page.getByRole('button', { name: 'Save' }).click()
+    // The toast of the first save may still show, the tools tell when this one is stored
+    await expect.poll(toolNames).toContain('skip_schedule_run')
+    // Schedules can be skipped, not turned off
+    expect(await toolNames()).not.toContain('update_schedule')
+
     const started = new Date().toISOString()
     expect(await callTool(token, 'start_job', { array: 'MCP', command: 'sync' })).toMatchObject({ isError: false })
     // The last job of an earlier test does not count
@@ -74,15 +89,6 @@ test('an agent reads the array and the documentation and starts a sync', async (
         { timeout: 60_000 },
       )
       .toMatchObject({ command: 'sync', exitCode: 0 })
-
-    // Read only: the actions are gone
-    await page.getByLabel('Allow actions').click()
-    await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText('Settings saved')).toBeVisible()
-    const { tools } = await rpc(token, 'tools/list')
-    const names = tools.map((tool: { name: string }) => tool.name)
-    expect(names).toContain('get_overview')
-    expect(names).not.toContain('start_job')
   } finally {
     await app.api.put(`${API_URL}/maintenance`, { data: defaults })
   }

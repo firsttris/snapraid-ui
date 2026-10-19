@@ -849,7 +849,7 @@
   "automation_mcp_token": "Access token",
   "automation_mcp_token_hint": "The agent sends it as bearer token, it is always required. Whoever has it can read the state of your arrays and, with actions allowed, start jobs; the login of the UI does not apply.",
   "automation_mcp_actions": "Allow actions",
-  "automation_mcp_actions_hint": "Start and abort sync and scrub, run, pause and skip schedules, create new arrays. Off, the agent only reads. Repairs (fix, restoring files, replacing a disk) stay in the UI.",
+  "automation_mcp_actions_hint": "Start and abort sync and scrub, run schedules or skip their next run, create new arrays. Off, the agent only reads, which answers most questions. Repairs, deleting files and turning schedules off stay in the UI. Text on your disks, such as file names, reaches the agent and can try to trick it: let your client ask before each action.",
   "automation_mcp_claude_code": "Claude Code",
   "automation_mcp_claude_code_hint": "In a terminal on your computer. -s user makes it available in all your projects.",
   "automation_mcp_desktop": "Claude Desktop",

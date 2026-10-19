@@ -110,7 +110,17 @@ const setup = async (overrides: Partial<McpDeps> = {}) => {
   return { client, call, calls, engine, close: () => client.close() };
 };
 
-const ACTIONS = ["start_job", "abort_job", "run_schedule", "update_schedule", "create_array"];
+const ACTIONS = ["start_job", "abort_job", "run_schedule", "skip_schedule_run", "create_array"];
+
+Deno.test("mcp - an agent can't turn a schedule off", async () => {
+  const { client, call, calls, close } = await setup();
+  const skip = (await client.listTools()).tools.find((tool) => tool.name === "skip_schedule_run");
+  assertEquals(Object.keys(skip?.inputSchema.properties ?? {}).sort(), ["scheduleId", "skip"]);
+  // Unknown arguments are dropped, the schedule is only skipped
+  await call("skip_schedule_run", { scheduleId: "nightly", enabled: false });
+  assertEquals(calls, ['update nightly {"skipNext":true}']);
+  await close();
+});
 
 Deno.test("mcp - the actions are only offered when allowed", async () => {
   const open = await setup();
@@ -180,16 +190,16 @@ Deno.test("mcp - logs are listed newest first and only known ones are read", asy
   await close();
 });
 
-Deno.test("mcp - schedules come with their next run and can be skipped", async () => {
+Deno.test("mcp - schedules come with their next run and can be skipped and run", async () => {
   const { call, calls, close } = await setup();
   const [schedule] = JSON.parse((await call("list_schedules")).text);
   assertEquals(schedule.array, "Media");
   assertEquals(schedule.nextRun, "2026-10-20T02:00:00.000Z");
 
-  assertEquals((await call("update_schedule", { scheduleId: "nightly" })).isError, true);
-  await call("update_schedule", { scheduleId: "nightly", skipNext: true });
+  await call("skip_schedule_run", { scheduleId: "nightly" });
+  await call("skip_schedule_run", { scheduleId: "nightly", skip: false });
   await call("run_schedule", { scheduleId: "nightly" });
-  assertEquals(calls, ['update nightly {"skipNext":true}', "run nightly"]);
+  assertEquals(calls, ['update nightly {"skipNext":true}', 'update nightly {"skipNext":false}', "run nightly"]);
   await close();
 });
 

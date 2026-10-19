@@ -835,7 +835,7 @@
   "automation_mcp_token": "Zugriffstoken",
   "automation_mcp_token_hint": "Der Agent schickt es als Bearer-Token, es ist immer nötig. Wer es hat, kann den Zustand deiner Arrays lesen und, wenn Aktionen erlaubt sind, Jobs starten; der Login der UI gilt dafür nicht.",
   "automation_mcp_actions": "Aktionen erlauben",
-  "automation_mcp_actions_hint": "Sync und Scrub starten und abbrechen, Zeitpläne ausführen, pausieren und überspringen, neue Arrays anlegen. Aus, liest der Agent nur. Reparaturen (fix, Dateien wiederherstellen, Platte ersetzen) bleiben in der UI.",
+  "automation_mcp_actions_hint": "Sync und Scrub starten und abbrechen, Zeitpläne ausführen oder ihren nächsten Lauf überspringen, neue Arrays anlegen. Aus, liest der Agent nur, und das beantwortet die meisten Fragen. Reparaturen, das Löschen von Dateien und das Abschalten von Zeitplänen bleiben in der UI. Text von deinen Platten, etwa Dateinamen, erreicht den Agenten und kann versuchen, ihn zu täuschen: Lass deinen Client vor jeder Aktion nachfragen.",
   "automation_mcp_claude_code": "Claude Code",
   "automation_mcp_claude_code_hint": "In einem Terminal auf deinem Rechner. -s user macht ihn in allen deinen Projekten verfügbar.",
   "automation_mcp_desktop": "Claude Desktop",

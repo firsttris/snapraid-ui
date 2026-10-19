@@ -167,7 +167,7 @@ The test adds files to the array's first data disk. In `snapraidd.conf` set `net
 | `replace.spec.ts` | A failed data disk replaced in the wizard: its files come back from parity onto an empty disk, owned like the same folders on the other disk |
 | `home-assistant.spec.ts` | Home Assistant set up in the UI against an MQTT broker in the test: discovery and state arrive, the Scrub and Sync buttons run their jobs |
 | `monitoring.spec.ts` | The heartbeat pinged by *Send ping* and after a successful scheduled run; Prometheus metrics switched on, refused without the token, describing the array with it |
-| `mcp.spec.ts` | The MCP endpoint switched on in the UI and refused without the token; an agent's calls answered from the array and the shipped documentation, a sync it starts; with *Allow actions* off the actions are gone |
+| `mcp.spec.ts` | The MCP endpoint switched on in the UI and refused without the token, read only until *Allow actions* is ticked; an agent's calls answered from the array and the shipped documentation, a sync it starts |
 | `notifications.spec.ts` | Webhook set up in the UI: the test message and the *job failed* message of a sync without its parity disk reach a local receiver |
 | `config.spec.ts` | A data disk added on the configuration page (next free name suggested) is in `snapraid.conf` and protected by the next sync; *Manage arrays*: rename from the row menu, *Edit* opens the array's page, an option under *Advanced* saved on leaving the field, *Set up a new array* starts the wizard at the disks |
 | `docker.spec.ts` | A container picked under Automation is paused during the sync and resumed after it (`docker events`); skipped without a Docker daemon |
