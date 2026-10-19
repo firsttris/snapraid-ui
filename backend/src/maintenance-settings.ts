@@ -20,6 +20,12 @@ export const DEFAULT_MAINTENANCE_SETTINGS: MaintenanceSettings = {
     enabled: false,
     token: "",
   },
+  mcp: {
+    enabled: false,
+    token: "",
+    // Reading answers most questions; actions are switched on deliberately
+    allowActions: false,
+  },
 };
 
 // Commands worth pausing containers for, the others are quick or only read the content file
@@ -32,6 +38,7 @@ const withDefaults = (stored: Partial<MaintenanceSettings>): MaintenanceSettings
   dockerPause: { ...DEFAULT_MAINTENANCE_SETTINGS.dockerPause, ...stored.dockerPause },
   spindown: { ...DEFAULT_MAINTENANCE_SETTINGS.spindown, ...stored.spindown },
   metrics: { ...DEFAULT_MAINTENANCE_SETTINGS.metrics, ...stored.metrics },
+  mcp: { ...DEFAULT_MAINTENANCE_SETTINGS.mcp, ...stored.mcp },
 });
 
 export const loadMaintenanceSettings = async (): Promise<MaintenanceSettings> => {
@@ -58,9 +65,10 @@ export const normalizeMaintenanceSettings = (
     dockerPause: { ...settings.dockerPause, socketPath: settings.dockerPause.socketPath.trim(), containers, commands },
     spindown: { ...settings.spindown, idleMinutes: Math.round(settings.spindown.idleMinutes) },
     metrics: { ...settings.metrics, token: settings.metrics.token.trim() },
+    mcp: { ...settings.mcp, token: settings.mcp.token.trim() },
   };
 
-  const { dockerPause, spindown } = normalized;
+  const { dockerPause, spindown, mcp } = normalized;
   if (dockerPause.enabled && !dockerPause.socketPath.startsWith("/")) {
     return { settings: normalized, error: "The Docker socket must be an absolute path" };
   }
@@ -69,6 +77,10 @@ export const normalizeMaintenanceSettings = (
   }
   if (!(spindown.idleMinutes >= 5 && spindown.idleMinutes <= 1440)) {
     return { settings: normalized, error: "The idle time must be between 5 and 1440 minutes" };
+  }
+  // The endpoint runs jobs, it is never open without a token
+  if (mcp.enabled && mcp.token.length < 16) {
+    return { settings: normalized, error: "The MCP access token must have at least 16 characters" };
   }
   return { settings: normalized };
 };

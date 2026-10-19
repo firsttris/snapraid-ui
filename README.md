@@ -19,6 +19,7 @@ One Docker image for your home server or NAS, with SnapRAID 14 included.
 [Screenshots](#-screenshots) •
 [Quick start](#-quick-start) •
 [Documentation](https://firsttris.github.io/snapraid-ui/) •
+[AI agents](#-ask-claude-about-your-array) •
 [Development](#️-development)
 
 <picture>
@@ -86,6 +87,7 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 - Notifications via ntfy, e-mail or webhook, and a heartbeat for healthchecks.io or Uptime Kuma
 - Prometheus metrics for Grafana and alerts
 - Home Assistant: each array as a device with sensors and sync/scrub buttons (MQTT discovery)
+- AI agents: ask Claude or any MCP client about your arrays, or let it set one up (MCP endpoint)
 - Searchable logs of every run
 
 </td>
@@ -159,6 +161,23 @@ Put your `snapraid.conf` into `./snapraid/` (or add one or set up a new array un
 > exists only since version 14.0, and most distributions still ship 12.x. If cron jobs on the host run
 > SnapRAID for the same array, move them to the UI's scheduler.
 
+## 🤖 Ask Claude about your array
+
+SnapRAID UI has an [MCP](https://modelcontextprotocol.io) endpoint, so Claude and other AI agents can answer
+questions from the real state of your server and from this documentation, and, if you allow it, start a sync when you ask.
+
+1. In SnapRAID UI open **Automation → AI agent (MCP)**, switch it on and click *Save*. It only reads until you
+   also tick *Allow actions*.
+2. Copy the command from the card and run it on your computer:
+   ```bash
+   claude mcp add -s user --transport http snapraid http://<your-server>:3000/api/mcp --header "Authorization: Bearer <token>"
+   ```
+3. Start `claude` and ask: *"How is my array doing?"*, *"Why did last night's sync fail?"*,
+   *"How could I set up SnapRAID with the disks in this server?"*
+
+Claude Desktop, Cursor, what the agent may do and what to keep in mind:
+[AI agents (MCP)](https://firsttris.github.io/snapraid-ui/automation.html#ai-agents-mcp).
+
 ## 📖 Documentation
 
 The full documentation, with search, is at **[firsttris.github.io/snapraid-ui](https://firsttris.github.io/snapraid-ui/)**.
@@ -172,6 +191,7 @@ Its source lives in [docs/](docs/).
 | [Scheduling](https://firsttris.github.io/snapraid-ui/scheduling.html) · [Notifications](https://firsttris.github.io/snapraid-ui/notifications.html) | Automate jobs and get told when something goes wrong |
 | [SMART & disk health](https://firsttris.github.io/snapraid-ui/smart.html) · [Logs](https://firsttris.github.io/snapraid-ui/logs.html) | What the UI watches and how to read it |
 | [Managing disks](https://firsttris.github.io/snapraid-ui/disks.html) | Config editor, adding, replacing and removing disks, backup |
+| [Automation](https://firsttris.github.io/snapraid-ui/automation.html) | Docker pause, disk spindown, Home Assistant, Prometheus, AI agents (MCP), snapraid-daemon |
 | [Security](https://firsttris.github.io/snapraid-ui/security.html) · [Troubleshooting](https://firsttris.github.io/snapraid-ui/troubleshooting.html) | Login and exposure, common problems |
 | [Architecture](https://firsttris.github.io/snapraid-ui/architecture.html) · [Development](https://firsttris.github.io/snapraid-ui/development.html) | How it works, API, contributing |
 

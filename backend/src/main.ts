@@ -20,6 +20,7 @@ import { notificationsRoutes } from "./routes/notifications.ts";
 import { maintenanceRoutes, setSpindownMonitor } from "./routes/maintenance.ts";
 import { setupRoutes } from "./routes/setup.ts";
 import { metricsRoutes } from "./routes/metrics.ts";
+import { mcpRoutes, setMcpSources } from "./routes/mcp.ts";
 import { setSnapshotSources, snapshotConfigs } from "./array-snapshot.ts";
 import { homeAssistantRoutes, setHomeAssistant } from "./routes/home-assistant.ts";
 import { createHomeAssistant } from "./home-assistant-service.ts";
@@ -76,6 +77,7 @@ app.route("/api/schedules", schedulesRoutes);
 app.route("/api/notifications", notificationsRoutes);
 app.route("/api/maintenance", maintenanceRoutes);
 app.route("/api/metrics", metricsRoutes);
+app.route("/api/mcp", mcpRoutes);
 app.route("/api/setup", setupRoutes);
 app.route("/api/home-assistant", homeAssistantRoutes);
 app.route("/api/engine", engineRoutes);
@@ -183,6 +185,7 @@ const main = async (): Promise<void> => {
 
   // Inject scheduler into routes
   setScheduler(scheduler);
+  setMcpSources(logManager, scheduler);
 
   // Containers paused for a job that was cut off by a restart
   await resumeLeftoverContainers();

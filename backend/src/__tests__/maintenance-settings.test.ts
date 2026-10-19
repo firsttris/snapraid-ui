@@ -31,3 +31,17 @@ Deno.test("normalizeMaintenanceSettings - rejects a relative socket, no jobs and
     "string",
   );
 });
+
+Deno.test("normalizeMaintenanceSettings - the MCP endpoint needs a long token", () => {
+  const withMcp = (token: string) => ({
+    ...DEFAULT_MAINTENANCE_SETTINGS,
+    mcp: { enabled: true, token, allowActions: true },
+  });
+  assertEquals(typeof normalizeMaintenanceSettings(withMcp("")).error, "string");
+  assertEquals(typeof normalizeMaintenanceSettings(withMcp("short")).error, "string");
+  const { settings, error } = normalizeMaintenanceSettings(withMcp("  0123456789abcdef0123  "));
+  assertEquals(error, undefined);
+  assertEquals(settings.mcp.token, "0123456789abcdef0123");
+  // Settings written before the endpoint existed
+  assertEquals(normalizeMaintenanceSettings({}).settings.mcp, DEFAULT_MAINTENANCE_SETTINGS.mcp);
+});

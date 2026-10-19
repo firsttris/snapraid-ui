@@ -13,6 +13,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import {
   Activity,
   AlertCircle,
+  Bot,
   Container,
   House,
   Moon,
@@ -221,6 +222,26 @@ function AutomationForm({
         <MetricsFields
           settings={settings.metrics}
           onChange={(changes) => update('metrics', changes)}
+        />
+      </SectionCard>
+
+      <SectionCard
+        icon={<Bot />}
+        iconClass="bg-violet-50 text-violet-700"
+        title={m.automation_mcp_title()}
+        description={m.automation_mcp_desc()}
+        enabled={settings.mcp.enabled}
+        onToggle={(enabled) =>
+          // Never without a token, the endpoint starts jobs
+          update('mcp', {
+            enabled,
+            token: settings.mcp.token || newToken(),
+          })
+        }
+      >
+        <McpFields
+          settings={settings.mcp}
+          onChange={(changes) => update('mcp', changes)}
         />
       </SectionCard>
 
@@ -461,6 +482,126 @@ function MetricsFields({
       </div>
       <p className={hintClass}>{m.automation_metrics_hint()}</p>
     </>
+  )
+}
+
+function McpFields({
+  settings,
+  onChange,
+}: {
+  settings: MaintenanceSettings['mcp']
+  onChange: (changes: Partial<MaintenanceSettings['mcp']>) => void
+}) {
+  const url =
+    typeof window === 'undefined'
+      ? '/api/mcp'
+      : `${window.location.origin}/api/mcp`
+  const claudeCode = `claude mcp add -s user --transport http snapraid ${url} --header "Authorization: Bearer ${settings.token}"`
+  // Claude Desktop reaches servers in the home network only through a local bridge
+  const desktopConfig = JSON.stringify(
+    {
+      mcpServers: {
+        snapraid: {
+          command: 'npx',
+          args: [
+            '-y',
+            'mcp-remote',
+            url,
+            '--header',
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: mcp-remote fills it in from env
+            'Authorization:${AUTH_HEADER}',
+            ...(url.startsWith('http:') ? ['--allow-http'] : []),
+          ],
+          env: { AUTH_HEADER: `Bearer ${settings.token}` },
+        },
+      },
+    },
+    null,
+    2,
+  )
+  const urlConfig = JSON.stringify(
+    {
+      mcpServers: {
+        snapraid: {
+          url,
+          headers: { Authorization: `Bearer ${settings.token}` },
+        },
+      },
+    },
+    null,
+    2,
+  )
+
+  return (
+    <>
+      <div className={fieldClass}>
+        <Label htmlFor="mcp-token">{m.automation_mcp_token()}</Label>
+        <div className="flex max-w-xl gap-2">
+          <Input
+            id="mcp-token"
+            value={settings.token}
+            onChange={(e) => onChange({ token: e.target.value })}
+            autoComplete="off"
+            className="bg-background font-mono"
+          />
+          <Button
+            variant="outline"
+            onClick={() => onChange({ token: newToken() })}
+          >
+            {m.automation_metrics_new_token()}
+          </Button>
+        </div>
+        <p className={hintClass}>{m.automation_mcp_token_hint()}</p>
+      </div>
+      <div className={fieldClass}>
+        <Label className="flex items-center gap-2 font-normal">
+          <Checkbox
+            checked={settings.allowActions}
+            onCheckedChange={(checked) =>
+              onChange({ allowActions: checked === true })
+            }
+          />
+          {m.automation_mcp_actions()}
+        </Label>
+        <p className={hintClass}>{m.automation_mcp_actions_hint()}</p>
+      </div>
+      <Snippet
+        title={m.automation_mcp_claude_code()}
+        hint={m.automation_mcp_claude_code_hint()}
+        code={claudeCode}
+      />
+      <Snippet
+        title={m.automation_mcp_desktop()}
+        hint={m.automation_mcp_desktop_hint()}
+        code={desktopConfig}
+      />
+      <Snippet
+        title={m.automation_mcp_config()}
+        hint={m.automation_mcp_config_hint()}
+        code={urlConfig}
+      />
+      <p className={hintClass}>{m.automation_mcp_hint()}</p>
+    </>
+  )
+}
+
+function Snippet({
+  title,
+  hint,
+  code,
+}: {
+  title: string
+  hint: string
+  code: string
+}) {
+  return (
+    <div className={fieldClass}>
+      <span className="text-sm font-medium">{title}</span>
+      <p className={hintClass}>{hint}</p>
+      <pre className="overflow-x-auto rounded-md border bg-background px-3 py-2 font-mono text-xs">
+        {code}
+      </pre>
+    </div>
   )
 }
 

@@ -554,6 +554,12 @@ export interface MaintenanceSettings {
     enabled: boolean;
     token: string;               // Bearer token the scraper sends; empty for none
   };
+  // MCP endpoint at /api/mcp for AI agents (Claude, Cursor, ...), with its own token
+  mcp: {
+    enabled: boolean;
+    token: string;               // Bearer token the agent sends, always required
+    allowActions: boolean;       // Start and stop jobs, skip schedule runs, create arrays; else read only
+  };
 }
 
 export interface DockerContainer {

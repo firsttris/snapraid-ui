@@ -34,7 +34,7 @@ const sha256Hex = async (value: string): Promise<string> => {
 };
 
 // Compares digests instead of the strings, so the time taken leaks neither content nor length
-const safeEqual = async (a: string, b: string): Promise<boolean> => {
+export const safeEqual = async (a: string, b: string): Promise<boolean> => {
   const [da, db] = await Promise.all([
     crypto.subtle.digest("SHA-256", encoder.encode(a)),
     crypto.subtle.digest("SHA-256", encoder.encode(b)),
@@ -144,9 +144,12 @@ export const createAuth = (options: AuthOptions) => {
     return c.json<AuthSession>({ enabled: true, authenticated: false });
   });
 
-  // Guards everything except the auth routes themselves and the metrics, which check their own token
+  // Guards everything except the auth routes themselves, the metrics and the MCP endpoint, which
+  // check their own token
   const middleware: MiddlewareHandler = async (c, next) => {
-    if (c.req.path.startsWith("/api/auth/") || c.req.path === "/api/metrics") return next();
+    if (c.req.path.startsWith("/api/auth/") || c.req.path === "/api/metrics" || c.req.path === "/api/mcp") {
+      return next();
+    }
     if (!(await readSession(c))) {
       return c.json({ error: "Unauthorized" }, 401);
     }
