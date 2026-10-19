@@ -38,7 +38,7 @@ test('an agent reads the array and the documentation and starts a sync', async (
     await page.getByRole('switch', { name: 'AI agent (MCP)' }).click()
     const token = await page.locator('#mcp-token').inputValue()
     expect(token).toMatch(/^[0-9a-f]{48}$/)
-    await expect(page.getByText(`claude mcp add --transport http snapraid`)).toBeVisible()
+    await expect(page.getByText(`claude mcp add -s user --transport http snapraid`)).toBeVisible()
     await page.getByRole('button', { name: 'Save' }).click()
     await expect(page.getByText('Settings saved')).toBeVisible()
 

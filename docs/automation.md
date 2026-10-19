@@ -151,23 +151,50 @@ The endpoint is `/api/mcp` (MCP over Streamable HTTP). Turn it on under *AI agen
 | *Access token* | generated | The agent sends it as bearer token (`Authorization: Bearer <token>`). It is always required, at least 16 characters. *New token* replaces it. |
 | *Allow actions* | on | Lets the agent start and abort jobs, change schedules and create arrays. Off, it only reads. |
 
-The page shows the command for Claude Code and the configuration for other clients, for example:
+Click *Save*, then connect your client.
+
+### Connect a client
+
+The card on the Automation page shows the address and the token, and the configurations below with both filled in, ready to copy. In the examples, `nas.local:3000` stands for the address you open SnapRAID UI at.
+
+**Claude Code**, in a terminal on your computer:
 
 ```sh
-claude mcp add --transport http snapraid http://nas.local:3000/api/mcp --header "Authorization: Bearer <token>"
+claude mcp add -s user --transport http snapraid http://nas.local:3000/api/mcp --header "Authorization: Bearer <token>"
 ```
+
+`-s user` makes it available in all your projects; without it, only in the folder you ran it in. `claude mcp list` shows whether it connects. Then start `claude` and ask away.
+
+**Claude Desktop** connects to servers on your home network through [mcp-remote](https://www.npmjs.com/package/mcp-remote), a small bridge that runs on your computer and needs [Node.js](https://nodejs.org). In Claude Desktop open *Settings → Developer → Edit Config*, add the server to `claude_desktop_config.json` and restart Claude Desktop:
 
 ```json
 {
   "mcpServers": {
     "snapraid": {
-      "type": "http",
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://nas.local:3000/api/mcp", "--header", "Authorization:${AUTH_HEADER}", "--allow-http"],
+      "env": { "AUTH_HEADER": "Bearer <token>" }
+    }
+  }
+}
+```
+
+`--allow-http` is needed for a plain `http://` address; leave it out for `https://`. *Settings → Connectors* does not work for this: Claude reaches those connectors from Anthropic's cloud, not from your computer.
+
+**Cursor** and other clients that connect by URL: add the server to their MCP configuration, for Cursor `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "snapraid": {
       "url": "http://nas.local:3000/api/mcp",
       "headers": { "Authorization": "Bearer <token>" }
     }
   }
 }
 ```
+
+**claude.ai in the browser, the Claude mobile apps and Claude Code on the web** connect from Anthropic's cloud and can't reach a server on your home network. They would need SnapRAID UI on a public HTTPS address, which [isn't recommended](security.md); use Claude Code or Claude Desktop on a computer in your network instead.
 
 What the agent can do:
 
