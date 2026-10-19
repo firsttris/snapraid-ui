@@ -53,6 +53,8 @@ COPY --from=backend-builder /deno-dir /deno-dir
 COPY --from=backend-builder /app/backend /app/backend
 COPY --from=backend-builder /app/shared /app/shared
 COPY --from=frontend-builder /app/frontend/.output /app/frontend/.output
+# The documentation, which the MCP endpoint offers to AI agents
+COPY docs/*.md /app/docs/
 
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker/supervisord.conf /etc/supervisord.conf

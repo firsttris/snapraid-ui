@@ -68,7 +68,7 @@ The image sets `SNAPRAID_BASE_PATH=/app/snapraid` and `SNAPRAID_BIN=/usr/local/b
 Middleware, in order:
 
 1. **CORS**: credentials are only accepted from an origin with the same hostname as the request, e.g. the dev frontend on `localhost:3000` calling `localhost:8080`.
-2. **Auth** (only when `SNAPRAID_UI_USERNAME` and `SNAPRAID_UI_PASSWORD` are both set): guards `/api/*` and `/ws`, except `/api/auth/*` and `/api/metrics`, which checks its own token. A missing or invalid session returns `401 {"error":"Unauthorized"}`. Sessions are HS256-signed JWTs in an HTTP-only `snapraid_session` cookie, see [Security](security.md).
+2. **Auth** (only when `SNAPRAID_UI_USERNAME` and `SNAPRAID_UI_PASSWORD` are both set): guards `/api/*` and `/ws`, except `/api/auth/*`, `/api/metrics` and `/api/mcp`, which check their own token. A missing or invalid session returns `401 {"error":"Unauthorized"}`. Sessions are HS256-signed JWTs in an HTTP-only `snapraid_session` cookie, see [Security](security.md).
 
 Module map:
 
@@ -409,7 +409,7 @@ All of these take `configPath` in the body, edit the `snapraid.conf` line by lin
 
 | Method | Path | Description | Notes |
 |---|---|---|---|
-| GET | `/api/maintenance` | Docker pause, spindown and metrics settings | `MaintenanceSettings` |
+| GET | `/api/maintenance` | Docker pause, spindown, metrics and MCP settings | `MaintenanceSettings` |
 | PUT | `/api/maintenance` | Save settings | Body: `MaintenanceSettings`. `400` if invalid |
 | GET | `/api/maintenance/containers` | Containers on the Docker socket | Query `socket` (default: the saved one). Returns `DockerContainersReport`, `available: false` with the error when the socket can't be reached |
 | GET | `/api/maintenance/spindown` | Disks the spindown watches, their last activity and when they were spun down | `SpindownStatus` |
@@ -419,6 +419,7 @@ All of these take `configPath` in the body, edit the `snapraid.conf` line by lin
 | PUT | `/api/home-assistant` | Save and reconnect | Body: `HomeAssistantSettings`; a masked password keeps the stored one. `400` if invalid |
 | POST | `/api/home-assistant/test` | Connect to the broker with the given, possibly unsaved settings | Returns `{ok, error?}` |
 | GET | `/api/metrics` | Prometheus metrics, see [Automation](automation.md#prometheus-metrics) | Text exposition format. Not behind the login; `Authorization: Bearer <token>` when a token is set (`401` otherwise), `404` while switched off |
+| POST | `/api/mcp` | MCP over Streamable HTTP for AI agents, see [Automation](automation.md#ai-agents-mcp) | Stateless, JSON responses. Not behind the login; always `Authorization: Bearer <token>` (`401` otherwise), `404` while switched off |
 
 See [Notifications](notifications.md) for the settings and the webhook payload.
 

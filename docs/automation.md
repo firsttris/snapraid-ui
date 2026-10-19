@@ -1,6 +1,6 @@
 # Automation
 
-What SnapRAID UI can do around the jobs, all off by default: pause Docker containers while SnapRAID reads the disks, spin disks down once they have been idle for a while, and hand the jobs of an array to [snapraid-daemon](#snapraid-daemon-experimental). Set them up under **Automation** in the sidebar.
+What SnapRAID UI can do around the jobs, all off by default: pause Docker containers while SnapRAID reads the disks, spin disks down once they have been idle for a while, report to Home Assistant and Prometheus, let [AI agents](#ai-agents-mcp) work with it, and hand the jobs of an array to [snapraid-daemon](#snapraid-daemon-experimental). Set them up under **Automation** in the sidebar.
 
 <img src="screenshots/automation.png" alt="Automation settings with Docker containers and disk spindown" width="900">
 
@@ -132,6 +132,65 @@ Example alert rules:
 - alert: SnapraidDiskHot
   expr: snapraid_disk_temperature_celsius >= 50
 ```
+
+## AI agents (MCP)
+
+Lets an AI agent such as [Claude](https://claude.ai), Cursor or any other [MCP](https://modelcontextprotocol.io) client work with SnapRAID UI. You ask in plain words, and the agent answers from the real state of your server and from this documentation:
+
+- *How is my array doing? Is any disk getting too hot?*
+- *How could I set up SnapRAID with the disks in this server?*
+- *Why did last night's sync fail?*
+- *When does disk 2 run full?*
+- *What changed since the last sync? If it looks normal, start the sync.*
+- *Skip tonight's scrub.*
+
+The endpoint is `/api/mcp` (MCP over Streamable HTTP). Turn it on under *AI agent (MCP)* on the Automation page:
+
+| Field | Default | Description |
+|---|---|---|
+| *Access token* | generated | The agent sends it as bearer token (`Authorization: Bearer <token>`). It is always required, at least 16 characters. *New token* replaces it. |
+| *Allow actions* | on | Lets the agent start and abort jobs, change schedules and create arrays. Off, it only reads. |
+
+The page shows the command for Claude Code and the configuration for other clients, for example:
+
+```sh
+claude mcp add --transport http snapraid http://nas.local:3000/api/mcp --header "Authorization: Bearer <token>"
+```
+
+```json
+{
+  "mcpServers": {
+    "snapraid": {
+      "type": "http",
+      "url": "http://nas.local:3000/api/mcp",
+      "headers": { "Authorization": "Bearer <token>" }
+    }
+  }
+}
+```
+
+What the agent can do:
+
+| Tool | What it does |
+|---|---|
+| `list_arrays` | The arrays with their data and parity disks |
+| `get_overview` | Health, last sync and scrub, bad blocks, scrub coverage, usage and when each disk runs full, temperatures and SMART counters, the running job. From what SnapRAID UI already knows, as for the [Prometheus metrics](#prometheus-metrics): never wakes a disk |
+| `read_status` | Runs `snapraid status` |
+| `get_changes` | Runs `snapraid diff`: new, changed, deleted and moved files since the last sync |
+| `get_job` | The running job with its progress, and how the last one ended |
+| `list_logs`, `read_log` | The logs of past runs and their output |
+| `list_schedules` | The schedules with their next run and last outcome |
+| `list_mounts`, `check_array_setup` | The disks that can become an array, and a check of a planned array with the `snapraid.conf` it would get |
+| `read_documentation` | The pages of this documentation, also offered as MCP resources |
+| `start_job` | Starts a sync or a scrub. The sync goes through the sync guard like the [Home Assistant](#home-assistant) button: skipped when `diff` reports more than 50 deleted or 100 changed files |
+| `abort_job` | Stops the running job |
+| `run_schedule`, `update_schedule` | Runs a schedule now, turns it on or off, skips its next run |
+| `create_array` | Writes the `snapraid.conf` of a new array, as the [setup wizard](disks.md#set-up-a-new-array) does. It never overwrites a file and syncs nothing |
+
+The last five are the actions, offered only while *Allow actions* is on. MCP clients ask you before each tool call unless you allowed it permanently. Repairs (`fix`, restoring files, replacing a disk) are not offered: the UI guides you through them.
+
+> [!WARNING]
+> Whoever has the token can read the state of your arrays and, with actions allowed, start jobs. The login of the UI does not apply to `/api/mcp`. Keep the token private and use the endpoint only on your home network, or through HTTPS and a VPN; see [Security](security.md).
 
 ## snapraid-daemon (experimental)
 
