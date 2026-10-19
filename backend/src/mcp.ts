@@ -489,7 +489,7 @@ export const createMcpServer = async (deps: McpDeps): Promise<McpServer> => {
       description:
         "Writes the snapraid.conf of a new array (as check_array_setup shows it) into the data directory and adds " +
         "the array. Nothing is synced yet: the first sync builds the parity and takes hours. Never overwrites a file.",
-      inputSchema: { name: z.string().min(1).describe("Name shown in the UI, e.g. Media"), ...setupShape },
+      inputSchema: { name: z.string().trim().min(1).describe("Name shown in the UI, e.g. Media"), ...setupShape },
       annotations: ACTION,
     }, async ({ name, dataDisks, parityPaths }) => {
       const result = await deps.createArray(name, `${fileNameOf(name)}.conf`, { dataDisks, parityPaths });

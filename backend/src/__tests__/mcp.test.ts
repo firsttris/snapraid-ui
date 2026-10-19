@@ -225,6 +225,18 @@ Deno.test("mcp - create_array names the config after the array", async () => {
   await close();
 });
 
+Deno.test("mcp - create_array refuses a blank name, like the setup wizard", async () => {
+  const { call, calls, close } = await setup();
+  const result = await call("create_array", {
+    name: "   ",
+    dataDisks: [{ name: "d1", path: "/mnt/d1" }],
+    parityPaths: ["/mnt/parity"],
+  });
+  assertEquals(result.isError, true);
+  assertEquals(calls, []);
+  await close();
+});
+
 Deno.test("mcp - get_changes and read_status leave out the raw output and report a locked SnapRAID", async () => {
   const { call, engine, close } = await setup();
   const changes = JSON.parse((await call("get_changes")).text);
