@@ -5,7 +5,7 @@ import { parseListOutput } from "../list-parser.ts";
 import { parseCheckOutput } from "../check-parser.ts";
 import { parseDupOutput } from "../dup-parser.ts";
 import { parseSmartArrayFailure, parseSmartOutput } from "../smart-parser.ts";
-import { parseProbeOutput } from "../probe-parser.ts";
+import { parseDegradedDisks, parseProbeOutput } from "../probe-parser.ts";
 import { parseDfOutput } from "../df-parser.ts";
 import { isLockedOutput, parseLogTags, splitStructuredOutput, unescapeTagValue } from "../structured-log.ts";
 import { parseParityLine } from "../../config-parser.ts";
@@ -193,6 +193,18 @@ Deno.test("parseSmartOutput - drive details, SSD wear and error counters", () =>
 Deno.test("parseSmartArrayFailure - probability of at least one failure", () => {
   assertEquals(parseSmartArrayFailure(fixture("smart.log")), 43.2);
   assertEquals(parseSmartArrayFailure("info:/dev/sda:d1"), undefined);
+});
+
+Deno.test("parseDegradedDisks - disks on a filesystem with a missing device (SnapRAID 15)", () => {
+  const log = [
+    "msg:error: DANGER! Disk 'd2' is degraded due to missing device(s).",
+    "degraded:d2",
+    "degraded:parity",
+    "degraded:d2",
+    "probe:/dev/sda:d1:1",
+  ].join("\n");
+  assertEquals(parseDegradedDisks(log), ["d2", "parity"]);
+  assertEquals(parseDegradedDisks(fixture("probe.log")), []);
 });
 
 Deno.test("parseProbeOutput - power states", () => {

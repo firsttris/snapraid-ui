@@ -62,6 +62,7 @@ interface DisksPanelProps {
   usageHistory: UsagePoint[] | undefined
   powerStates: DiskPowerStatus[] | undefined
   smartCritical: string[] // Disks SMART rates critical
+  fsDegraded: string[] // Disks on a filesystem running degraded with a missing device
   // Current temperature by disk from the live SMART read, and the daily history for the trend
   temperatures?: Record<string, number | undefined>
   smartHistory?: Record<string, SmartHistoryPoint[]>
@@ -108,9 +109,11 @@ const ISSUE_LABEL: Record<DiskIssue['kind'], () => string> = {
 const DiskAlerts = ({
   issue,
   smartCritical,
+  fsDegraded,
 }: {
   issue: DiskIssue | undefined
   smartCritical: boolean
+  fsDegraded: boolean
 }) => (
   <>
     {issue && (
@@ -119,6 +122,11 @@ const DiskAlerts = ({
         title={issue.path}
       >
         {ISSUE_LABEL[issue.kind]()}
+      </Badge>
+    )}
+    {fsDegraded && (
+      <Badge variant="destructive" title={m.disks_fs_degraded_title()}>
+        {m.disks_fs_degraded()}
       </Badge>
     )}
     {smartCritical && (
@@ -522,6 +530,7 @@ export const DisksPanel = ({
   usageHistory,
   powerStates,
   smartCritical,
+  fsDegraded,
   temperatures = {},
   smartHistory = {},
   onPower,
@@ -551,6 +560,7 @@ export const DisksPanel = ({
     <DiskAlerts
       issue={issueByDisk.get(`${type}:${name}`)}
       smartCritical={smartCritical.includes(name)}
+      fsDegraded={fsDegraded.includes(name)}
     />
   )
   const showTemperature =

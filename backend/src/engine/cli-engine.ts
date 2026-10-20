@@ -18,7 +18,7 @@ import { findDiskIssues } from "../disk-check.ts";
 import { DEMO_MODE, demoProbeLog, demoSmartLog, demoStatusLog } from "../demo.ts";
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { parseDiffOutput } from "../parsers/diff-parser.ts";
-import { parseProbeOutput } from "../parsers/probe-parser.ts";
+import { parseDegradedDisks, parseProbeOutput } from "../parsers/probe-parser.ts";
 import { parseSmartArrayFailure, parseSmartOutput } from "../parsers/smart-parser.ts";
 import { parseStatusOutput } from "../parsers/status-parser.ts";
 import { isLockedOutput, STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
@@ -46,7 +46,7 @@ const toOutcome = async (command: SnapRaidCommand, output: CommandOutput): Promi
   return {
     output,
     report,
-    ...(command === "smart" ? { smart: parseSmartOutput(report.log) } : {}),
+    ...(command === "smart" ? { smart: parseSmartOutput(report.log), degraded: parseDegradedDisks(report.log) } : {}),
   };
 };
 
@@ -115,6 +115,7 @@ export const createCliEngine = (logManager: LogManager | null): SnapRaidEngine =
       return {
         disks: parseSmartOutput(log),
         arrayFailureProbability: parseSmartArrayFailure(log),
+        degradedDisks: parseDegradedDisks(log),
         rawOutput: stdout,
         exitCode: code,
         ...(!deviceCommandSucceeded(code) ? { error: text || "Failed to get SMART report" } : {}),
@@ -136,7 +137,12 @@ export const createCliEngine = (logManager: LogManager | null): SnapRaidEngine =
         throw new EngineUnsupportedError(msg("server_error_probe_unsupported"), combined, code);
       }
       if (!deviceCommandSucceeded(code)) throw new EngineCommandError(text || "Failed to probe disk status", combined, code);
-      return { disks: parseProbeOutput(log), timestamp: new Date().toISOString(), rawOutput: stdout };
+      return {
+        disks: parseProbeOutput(log),
+        degradedDisks: parseDegradedDisks(log),
+        timestamp: new Date().toISOString(),
+        rawOutput: stdout,
+      };
     },
   };
 };

@@ -37,6 +37,7 @@ hardware.get("/smart", async (c) => {
     return c.json({
       disks,
       arrayFailureProbability: reading.arrayFailureProbability,
+      degradedDisks: reading.degradedDisks,
       timestamp: new Date().toISOString(),
       rawOutput: reading.rawOutput,
     });

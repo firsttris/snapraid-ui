@@ -78,6 +78,9 @@ const TEXT = {
       cooling: "Improve the cooling of the disk.",
       access: "An unreadable disk is not monitored. Check that it is connected; in Docker SMART needs a --privileged container.",
     },
+    degraded: (disk: string) => `${disk}: its filesystem runs degraded, a device is missing (btrfs, bcachefs or mdadm)`,
+    degradedHint:
+      "The data can still be read, but the filesystem has lost its own redundancy. Reconnect or replace the missing device and repair the filesystem.",
   },
   de: {
     result: {
@@ -150,6 +153,9 @@ const TEXT = {
       cooling: "Die Kühlung der Platte sollte verbessert werden.",
       access: "Eine nicht lesbare Platte wird nicht überwacht. Prüfe, ob sie angeschlossen ist; in Docker braucht SMART einen Container mit --privileged.",
     },
+    degraded: (disk: string) => `${disk}: Das Dateisystem läuft degradiert, ein Gerät fehlt (btrfs, bcachefs oder mdadm)`,
+    degradedHint:
+      "Die Daten sind noch lesbar, aber das Dateisystem hat seine eigene Redundanz verloren. Schließe das fehlende Gerät wieder an oder ersetze es und repariere das Dateisystem.",
   },
   it: {
     result: {
@@ -220,6 +226,9 @@ const TEXT = {
       cooling: "Migliora il raffreddamento del disco.",
       access: "Un disco illeggibile non viene monitorato. Verifica che sia collegato; in Docker SMART richiede un container con --privileged.",
     },
+    degraded: (disk: string) => `${disk}: il filesystem è in modalità degradata, manca un dispositivo (btrfs, bcachefs o mdadm)`,
+    degradedHint:
+      "I dati sono ancora leggibili, ma il filesystem ha perso la propria ridondanza. Ricollega o sostituisci il dispositivo mancante e ripara il filesystem.",
   },
 } as const;
 
@@ -367,6 +376,20 @@ export const diffSmartProblems = (
   return { report, state };
 };
 
+const degradedKey = (configPath: string, disk: string) => `${configPath}|degraded|${disk}`;
+
+/**
+ * Disks whose filesystem newly runs degraded, and the state to remember for the config
+ */
+export const diffDegradedDisks = (
+  configPath: string,
+  degraded: string[],
+  previous: Record<string, string>,
+): { report: string[]; state: Record<string, string> } => ({
+  report: degraded.filter((disk) => !previous[degradedKey(configPath, disk)]),
+  state: Object.fromEntries(degraded.map((disk) => [degradedKey(configPath, disk), "degraded"])),
+});
+
 const loadState = async (): Promise<NotificationState> => {
   const path = resolveFromBase(STATE_FILE);
   if (!existsSync(path)) return { smart: {} };
@@ -442,7 +465,7 @@ export const notifySkipped = (
     await notify(buildSkipNotification(settings.language, label, configPath, outcome));
   });
 
-export const notifySmart = (configPath: string, disks: SmartDiskInfo[]): Promise<void> =>
+export const notifySmart = (configPath: string, disks: SmartDiskInfo[], degraded: string[] = []): Promise<void> =>
   safely("SMART", async () => {
     const settings = await loadNotificationSettings();
     const state = await loadState();
@@ -452,19 +475,28 @@ export const notifySmart = (configPath: string, disks: SmartDiskInfo[]): Promise
       settings.smartFailureThreshold,
       state.smart,
     );
-    await saveState({ ...state, smart });
-    if (report.length === 0) return;
+    const newlyDegraded = diffDegradedDisks(configPath, degraded, state.smart);
+    await saveState({ ...state, smart: { ...smart, ...newlyDegraded.state } });
+    if (report.length === 0 && newlyDegraded.report.length === 0) return;
 
     const t = TEXT[settings.language];
-    const lines = report.map(({ disk, assessment }) =>
-      `${disk.name} (${[disk.device, disk.model, disk.serial].filter(Boolean).join(", ")}): ` +
-      assessment.reasons.map(t.smartReason).join(", ")
-    );
+    const lines = [
+      ...newlyDegraded.report.map(t.degraded),
+      ...report.map(({ disk, assessment }) =>
+        `${disk.name} (${[disk.device, disk.model, disk.serial].filter(Boolean).join(", ")}): ` +
+        assessment.reasons.map(t.smartReason).join(", ")
+      ),
+    ];
+    const hints = [
+      ...(newlyDegraded.report.length > 0 ? [t.degradedHint] : []),
+      ...smartHints(report.map(({ assessment }) => assessment)).map((hint) => t.smartHint[hint]),
+    ];
     await notify({
       event: "smart_warning",
-      severity: report.some(({ assessment }) => assessment.level === "critical") ? "error" : "warning",
+      severity: newlyDegraded.report.length > 0 || report.some(({ assessment }) => assessment.level === "critical")
+        ? "error"
+        : "warning",
       title: t.smartTitle(basename(configPath)),
-      message: [...lines, "", ...smartHints(report.map(({ assessment }) => assessment)).map((hint) => t.smartHint[hint])]
-        .join("\n"),
+      message: [...lines, "", ...hints].join("\n"),
     });
   });

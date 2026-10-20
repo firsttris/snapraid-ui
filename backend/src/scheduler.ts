@@ -241,7 +241,7 @@ export const executeScheduledCommand = async (
         break;
       }
       try {
-        const { report, smart } = await engine.runJob({
+        const { report, smart, degraded } = await engine.runJob({
           command: step.command,
           configPath: snapraidConfigPath,
           args: step.args,
@@ -251,7 +251,7 @@ export const executeScheduledCommand = async (
         if (smart) {
           const disks = await withCrcBaseline(snapraidConfigPath, smart);
           await recordSmartHistory(snapraidConfigPath, disks);
-          await notifySmart(snapraidConfigPath, disks);
+          await notifySmart(snapraidConfigPath, disks, degraded);
         }
         if (!isSuccessful(report.result)) break;
       } catch (error) {

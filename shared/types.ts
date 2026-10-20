@@ -275,12 +275,14 @@ export interface DiskPowerStatus {
 export interface SmartReport {
   disks: SmartDiskInfo[];
   arrayFailureProbability?: number; // Percentage 0-100 that at least one array disk fails in the next year
+  degradedDisks?: string[]; // On a filesystem running degraded with a missing device (btrfs, bcachefs, mdadm)
   timestamp: string; // ISO string
   rawOutput: string;
 }
 
 export interface ProbeReport {
   disks: DiskPowerStatus[];
+  degradedDisks?: string[]; // On a filesystem running degraded with a missing device (btrfs, bcachefs, mdadm)
   timestamp: string; // ISO string
   rawOutput: string;
 }
