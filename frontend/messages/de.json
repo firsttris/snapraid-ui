@@ -621,6 +621,7 @@
   "server_error_pattern_exists": "Das Muster '{pattern}' gibt es schon",
   "server_error_content_file_exists": "Die Content-Datei '{path}' gibt es schon",
   "server_error_positive_whole_number": "Der Wert muss eine positive ganze Zahl sein",
+  "server_error_smartignore_full": "{disk} ignoriert schon {max} SMART-Attribute, mehr erlaubt SnapRAID nicht. Nimm zuerst eines zurück.",
   "server_error_job_running": "Es läuft schon ein anderer Job",
   "server_error_replacement_running": "Platte '{disk}' wird noch ersetzt",
   "server_error_not_a_directory": "{path} gibt es nicht oder ist kein Verzeichnis",

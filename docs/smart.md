@@ -66,6 +66,8 @@ Some disks report an attribute wrongly, for example a raw value that grows witho
 
 Below the table, *Ignored attributes* lists what is ignored for the disk, including rules for all disks (`smartignore * …`) written by hand, with *Stop ignoring* to take one back. A change shows at the next SMART read.
 
+SnapRAID ignores at most **4 attributes per disk** (and 4 for all disks); a fifth is refused. Several `smartignore` lines for one disk don't add up in SnapRAID, a later line overwrites the first entries of an earlier one. The list shows what SnapRAID really applies, and the first change from the UI merges such lines into one.
+
 > [!NOTE]
 > The UI writes smartctl's attribute name rather than the id, because some vendors use an id for something else. Names need **SnapRAID 15** or newer, which the image ships. With your own SnapRAID 14 binary (`SNAPRAID_BIN`), write ids by hand instead (`smartignore d1 1`).
 

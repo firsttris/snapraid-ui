@@ -1,7 +1,7 @@
 import { basename, join } from "@std/path";
 import type { AppConfig, ParityLevel, ParsedSnapRaidConfig } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
-import { parseSmartIgnoreLine } from "./smart-ignore.ts";
+import { effectiveSmartIgnore, parseSmartIgnoreLine } from "./smart-ignore.ts";
 
 export const MAX_PARITY_LEVEL = 6;
 
@@ -44,7 +44,7 @@ export const parseSnapRaidConfig = async (
   const content = await Deno.readTextFile(configPath);
   const lines = content.split("\n");
 
-  return lines
+  const config = lines
     .map(line => line.trim())
     .filter(line => line && !line.startsWith("#"))
     .reduce<ParsedSnapRaidConfig>((config, line) => {
@@ -78,6 +78,11 @@ export const parseSnapRaidConfig = async (
         }
       }
       
+      if (line.startsWith("extra ")) {
+        const [name, ...path] = line.substring(6).trim().split(/\s+/);
+        if (name && path.length > 0) return { ...config, extra: { ...config.extra, [name]: path.join(" ") } };
+      }
+
       if (line.startsWith("exclude ")) {
         return {
           ...config,
@@ -112,6 +117,8 @@ export const parseSnapRaidConfig = async (
       exclude: [],
       smartIgnore: [],
     });
+  // Several lines for one disk overwrite each other in SnapRAID
+  return { ...config, smartIgnore: effectiveSmartIgnore(config.smartIgnore ?? []) };
 };
 
 /**

@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { join } from "@std/path";
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { resolveFromBase } from "../config.ts";
-import { editSmartIgnore, SMART_ATTRIBUTE_NAME } from "../smart-ignore.ts";
+import { editSmartIgnore, isSmartIgnoreAttribute, SMART_IGNORE_MAX, SmartIgnoreFullError } from "../smart-ignore.ts";
 import { msg } from "@shared/i18n.ts";
 
 const configOperations = new Hono();
@@ -273,7 +273,7 @@ configOperations.post("/smartignore", async (c) => {
   if (!relativePath || typeof disk !== "string" || typeof attribute !== "string" || typeof ignore !== "boolean") {
     return c.json({ error: "Missing configPath, disk, attribute or ignore" }, 400);
   }
-  if (!SMART_ATTRIBUTE_NAME.test(attribute)) {
+  if (!isSmartIgnoreAttribute(attribute)) {
     return c.json({ error: `Invalid SMART attribute: ${attribute}` }, 400);
   }
 
@@ -281,7 +281,12 @@ configOperations.post("/smartignore", async (c) => {
 
   try {
     const config = await parseSnapRaidConfig(configPath);
-    const disks = ["*", ...Object.keys(config.data), ...config.parity.map((level) => level.keyword)];
+    const disks = [
+      "*",
+      ...Object.keys(config.data),
+      ...config.parity.map((level) => level.keyword),
+      ...Object.keys(config.extra ?? {}),
+    ];
     // A rule of a disk that left the config can still be removed
     if (ignore && !disks.includes(disk)) {
       return c.json({ error: `Unknown disk: ${disk}` }, 400);
@@ -293,6 +298,9 @@ configOperations.post("/smartignore", async (c) => {
     const parsed = await parseSnapRaidConfig(configPath);
     return c.json({ success: true, config: parsed });
   } catch (error) {
+    if (error instanceof SmartIgnoreFullError) {
+      return c.json({ error: msg("server_error_smartignore_full", { disk, max: SMART_IGNORE_MAX }) }, 400);
+    }
     return c.json({ error: String(error) }, 500);
   }
 });

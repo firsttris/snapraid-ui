@@ -635,6 +635,7 @@
   "server_error_pattern_exists": "Pattern '{pattern}' already exists",
   "server_error_content_file_exists": "Content file '{path}' already exists",
   "server_error_positive_whole_number": "Value must be a positive whole number",
+  "server_error_smartignore_full": "{disk} already ignores {max} SMART attributes, the most SnapRAID allows. Stop ignoring one first.",
   "server_error_job_running": "Another job is already running",
   "server_error_replacement_running": "Disk '{disk}' is still being replaced",
   "server_error_not_a_directory": "{path} does not exist or is not a directory",

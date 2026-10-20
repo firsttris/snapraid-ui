@@ -35,7 +35,8 @@ export interface ParsedSnapRaidConfig {
   pool?: string;
   autosave?: number;       // GiB processed before sync/scrub saves the content file
   blocksize?: number;      // KiB, `block_size` is the older spelling
-  smartIgnore?: SmartIgnoreRule[];
+  extra?: Record<string, string>; // Disks outside the array SnapRAID still reads SMART from
+  smartIgnore?: SmartIgnoreRule[]; // What SnapRAID applies, one rule per disk
 }
 
 // A `smartignore` line: SMART attributes SnapRAID leaves out of its report and failure probability
