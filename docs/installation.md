@@ -20,7 +20,7 @@ SnapRAID UI runs as a single container that bundles SnapRAID, the web interface 
 
 - A Linux host with Docker or Podman. The image [`tristanteu/snapraid-ui`](https://hub.docker.com/r/tristanteu/snapraid-ui) is published for **amd64** and **arm64**.
 - Your data, parity and content locations mounted on the host (SnapRAID works on mounted file systems, not on raw devices).
-- Nothing else. The image ships SnapRAID 14 (currently 14.10, built from the official release), `smartctl` from smartmontools, and everything the UI needs.
+- Nothing else. The image ships SnapRAID 15 (currently 15.0, built from the official release), `smartctl` from smartmontools, and everything the UI needs.
 
 > [!IMPORTANT]
 > SnapRAID UI reads SnapRAID's structured log (`snapraid --log`), which only exists since **SnapRAID 14.0**. Most distributions still ship 12.x, so use the bundled binary unless you have a 14.x build of your own.
@@ -262,7 +262,7 @@ From the repository root:
 ```bash
 docker build -f docker/Dockerfile -t snapraid-ui .
 # Pin another SnapRAID release
-docker build -f docker/Dockerfile --build-arg SNAPRAID_VERSION=14.10 -t snapraid-ui .
+docker build -f docker/Dockerfile --build-arg SNAPRAID_VERSION=15.0 -t snapraid-ui .
 ```
 
 Or with Compose, using the `build:` section of the bundled file: `docker compose -f docker/docker-compose.yml up --build`. More in [Development](development.md).

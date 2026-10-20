@@ -63,7 +63,8 @@ jobs:
   e2e:
     if: ${{ !github.event.pull_request.draft }}
     name: e2e (${{ matrix.target }}, ${{ matrix.shard }}/2)
-    runs-on: ubuntu-latest
+    # Playwright 1.56 installs no browser on ubuntu-latest (26.04)
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -100,7 +101,7 @@ jobs:
         with:
           packages: autoconf automake zlib1g-dev smartmontools
           recommends: "false"
-      - name: Build SnapRAID 14, SnapRAID 15 and snapraid-daemon
+      - name: Build SnapRAID and snapraid-daemon
         run: npm run setup
       - run: npm ci
       - run: npm run typecheck

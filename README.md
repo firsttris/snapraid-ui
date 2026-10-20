@@ -4,14 +4,14 @@
 
 **A modern, self-hosted web interface for [SnapRAID](https://www.snapraid.it/).**<br>
 Sync, scrub, schedule and watch your disks and their SMART health from any browser, without touching the command line.<br>
-One Docker image for your home server or NAS, with SnapRAID 14 included.
+One Docker image for your home server or NAS, with SnapRAID 15 included.
 
 [![CI](https://github.com/firsttris/snapraid-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/firsttris/snapraid-ui/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/firsttris/snapraid-ui?logo=github&label=release)](https://github.com/firsttris/snapraid-ui/releases/latest)
 [![Docker Pulls](https://img.shields.io/docker/pulls/tristanteu/snapraid-ui?logo=docker&logoColor=white)](https://hub.docker.com/r/tristanteu/snapraid-ui)
 [![Image Size](https://img.shields.io/docker/image-size/tristanteu/snapraid-ui/latest?logo=docker&logoColor=white&label=image)](https://hub.docker.com/r/tristanteu/snapraid-ui)
 [![Platforms](https://img.shields.io/badge/platform-amd64%20%7C%20arm64-lightgrey)](https://hub.docker.com/r/tristanteu/snapraid-ui/tags)
-[![SnapRAID](https://img.shields.io/badge/SnapRAID-14.x-2ea44f)](https://www.snapraid.it/)
+[![SnapRAID](https://img.shields.io/badge/SnapRAID-15.x-2ea44f)](https://www.snapraid.it/)
 [![Docs](https://img.shields.io/badge/docs-firsttris.github.io-4f46e5?logo=materialformkdocs&logoColor=white)](https://firsttris.github.io/snapraid-ui/)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 
@@ -132,7 +132,7 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 
 ## 🚀 Quick start
 
-The Docker image ships with SnapRAID 14, so nothing needs to be installed on the host.
+The Docker image ships with SnapRAID 15, so nothing needs to be installed on the host.
 
 ```bash
 docker run -d --name snapraid-ui \
@@ -203,7 +203,7 @@ and content files stay as they are, and you can go back to the command line anyt
 Turn off cron jobs or scripts like snapraid-runner, so only one scheduler runs SnapRAID.
 
 **Do I need Docker?**
-Yes, or Podman. The image (amd64 and arm64) ships SnapRAID 14, which SnapRAID UI needs
+Yes, or Podman. The image (amd64 and arm64) ships SnapRAID 15, which SnapRAID UI needs
 for its structured log. Most distributions still have 12.x.
 
 **Does it wake my disks?**

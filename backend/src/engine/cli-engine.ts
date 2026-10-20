@@ -4,6 +4,7 @@ import { msg } from "@shared/i18n.ts";
 import { snapraidCommand } from "../config.ts";
 import {
   abortCommand,
+  deviceCommandSucceeded,
   executeCommand,
   getCurrentJob,
   getCurrentOutput,
@@ -116,7 +117,7 @@ export const createCliEngine = (logManager: LogManager | null): SnapRaidEngine =
         arrayFailureProbability: parseSmartArrayFailure(log),
         rawOutput: stdout,
         exitCode: code,
-        ...(code !== 0 ? { error: text || "Failed to get SMART report" } : {}),
+        ...(!deviceCommandSucceeded(code) ? { error: text || "Failed to get SMART report" } : {}),
       };
     },
 
@@ -134,7 +135,7 @@ export const createCliEngine = (logManager: LogManager | null): SnapRaidEngine =
       if (combined.includes("unsupported") || combined.includes("Probe is unsupported")) {
         throw new EngineUnsupportedError(msg("server_error_probe_unsupported"), combined, code);
       }
-      if (code !== 0) throw new EngineCommandError(text || "Failed to probe disk status", combined, code);
+      if (!deviceCommandSucceeded(code)) throw new EngineCommandError(text || "Failed to probe disk status", combined, code);
       return { disks: parseProbeOutput(log), timestamp: new Date().toISOString(), rawOutput: stdout };
     },
   };

@@ -1,4 +1,4 @@
-// The daemon engine against a stand-in for snapraid-daemon 2.0rc2. The responses follow
+// The daemon engine against a stand-in for snapraid-daemon 2.0. The responses follow
 // what a real daemon answered (fields trimmed); a task advances one step per poll.
 import { assert, assertEquals, assertRejects } from "@std/assert";
 import type { JobProgress } from "@shared/types.ts";

@@ -124,6 +124,27 @@ Deno.test("parseCheckOutput - groups block errors per file", () => {
   assertEquals(check.okCount, 0);
 });
 
+Deno.test("parseCheckOutput - data errors tagged by SnapRAID 15", () => {
+  // SnapRAID 15.0 tags silent data errors error_data and parity_error_data (14: error, parity_error)
+  const check = parseCheckOutput([
+    "version:15.0",
+    "error_data:15:disk1:photos/2024/holiday-002.jpg: Data error at position 0, diff hash bits 72/128",
+    "unrecoverable:15:disk1:photos/2024/holiday-002.jpg: Unrecoverable error at position 0",
+    "parity_error_data:1:parity: Data error, diff parity bits 71/524288",
+    "status:unrecoverable:disk1:photos/2024/holiday-002.jpg",
+    "summary:error_soft:0",
+    "summary:error_io:0",
+    "summary:error_data:2",
+    "summary:exit:unrecoverable",
+  ].join("\n"));
+
+  assertEquals(check.files, [
+    { status: "ERROR", disk: "disk1", name: "photos/2024/holiday-002.jpg", error: "unrecoverable: Data error at position 0, diff hash bits 72/128" },
+    { status: "ERROR", disk: "parity", name: "parity", error: "Data error, diff parity bits 71/524288" },
+  ]);
+  assertEquals(check.errorCount, 2);
+});
+
 Deno.test("parseCheckOutput - no errors", () => {
   const check = parseCheckOutput(fixture("check-ok.log"));
 
