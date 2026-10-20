@@ -21,5 +21,7 @@ Deno.test("setDiskPower - SnapRAID's last line when it failed, nothing when it w
     "Spindown is unsupported in this platform.",
   );
   assertEquals(await setDiskPower("up", "/cfg", [], run(2, "")), "snapraid up failed (exit code 2)");
-  assertEquals(ran.length, 3);
+  // SnapRAID 15: done, but a filesystem runs degraded
+  assertEquals(await setDiskPower("up", "/cfg", [], run(3, "Spinup...\n")), null);
+  assertEquals(ran.length, 4);
 });

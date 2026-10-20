@@ -1,6 +1,6 @@
 // Spin disks up or down by hand, with SnapRAID's `up` and `down` (smartctl and hdparm under the
 // hood). Like the automatic spindown this calls SnapRAID directly, also in daemon mode.
-import { executeSnapraidCommand } from "./executors/command-executor.ts";
+import { deviceCommandSucceeded, executeSnapraidCommand } from "./executors/command-executor.ts";
 import { DEMO_MODE } from "./demo.ts";
 
 export type PowerAction = "up" | "down";
@@ -27,7 +27,7 @@ export const setDiskPower = async (
 ): Promise<string | null> => {
   if (DEMO_MODE) return null;
   const { stdout, stderr, code } = await run(powerArgs(action, configPath, disks));
-  if (code === 0) return null;
+  if (deviceCommandSucceeded(code)) return null;
   const lines = `${stdout}\n${stderr}`.split("\n").map((line) => line.trim()).filter(Boolean);
   return lines.at(-1) ?? `snapraid ${action} failed (exit code ${code})`;
 };

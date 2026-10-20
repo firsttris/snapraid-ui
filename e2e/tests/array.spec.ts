@@ -104,9 +104,13 @@ test('disks can be spun up and down by hand', async ({ page, app }) => {
   await page.getByRole('button', { name: 'Actions for d1' }).click()
   await page.getByRole('menuitem', { name: 'Spin down' }).click()
   // The test disks are directories: SnapRAID runs, and says it cannot spin them down
-  await expect(page.getByText(/Spun down: d1|Spindown is unsupported|Failed/)).toBeVisible()
+  // (SnapRAID 15 without smartctl only says "Cannot find smartctl.")
+  await expect(page.getByText(/Spun down: d1|Spindown is unsupported|Cannot find smartctl|Failed/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Spin up/down' }).click()
   await page.getByRole('menuitem', { name: 'Spin up all disks' }).click()
-  await expect(page.getByText(/Spun up: all disks|Spinup is unsupported|Failed/)).toBeVisible()
+  // The spindown message may still show; SnapRAID 15 starts both with "Failed" on the test disks
+  await expect(
+    page.getByText(/Spun up: all disks|Spinup is unsupported|Failed/).filter({ hasNotText: /Spindown|Spun down|smartctl/ }),
+  ).toBeVisible()
 })

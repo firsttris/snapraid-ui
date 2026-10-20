@@ -1,4 +1,4 @@
-// The engine on snapraid-daemon's REST API (tested with 2.0rc2). The daemon runs SnapRAID for
+// The engine on snapraid-daemon's REST API (tested with 2.0). The daemon runs SnapRAID for
 // one array; jobs are queued with /v1/schedule and followed through /v1/tasks and /v1/activity,
 // the array and its disks come from /v1/array and /v2/disks.
 // The daemon has no touch and no status job, those go to the fallback engine (the CLI).

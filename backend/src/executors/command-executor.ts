@@ -259,6 +259,18 @@ export const getLastJob = (): FinishedJob | null => {
 };
 
 /**
+ * Exit code of the device commands (probe, smart, devices, up, down) since SnapRAID 15 when they
+ * ran through, but a filesystem of the array runs degraded with a missing device (btrfs,
+ * bcachefs, mdadm). The output is complete.
+ */
+export const EXIT_DEGRADED = 3;
+
+/**
+ * A device command ran through, degraded filesystem or not
+ */
+export const deviceCommandSucceeded = (code: number): boolean => code === 0 || code === EXIT_DEGRADED;
+
+/**
  * Execute snapraid command with given args (non-streaming)
  */
 export const executeSnapraidCommand = async (

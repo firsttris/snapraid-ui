@@ -41,6 +41,8 @@ const highlightSnapRaidConfig = (text: string): string => {
     'share',
     'smartctl',
     'nohidden',
+    'snapshot',
+    'smartignore',
     'verbose',
     'log',
   ]

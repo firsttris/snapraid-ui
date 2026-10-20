@@ -1,5 +1,5 @@
 // Starts what the tests run against: snapraid-daemon on its own array, the backend with
-// SnapRAID 14 for the CLI jobs, the built frontend, and the proxy in front of them.
+// SnapRAID 15 for the CLI jobs, the built frontend, and the proxy in front of them.
 // With E2E_IMAGE a container of that image takes the place of backend, frontend and proxy.
 // The data lives in e2e/.run/, recreated on each run.
 import { execFile, execFileSync } from 'node:child_process'

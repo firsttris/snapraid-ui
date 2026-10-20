@@ -100,7 +100,7 @@ jobs:
         with:
           packages: autoconf automake zlib1g-dev smartmontools
           recommends: "false"
-      - name: Build SnapRAID 14, SnapRAID 15 and snapraid-daemon
+      - name: Build SnapRAID and snapraid-daemon
         run: npm run setup
       - run: npm ci
       - run: npm run typecheck
