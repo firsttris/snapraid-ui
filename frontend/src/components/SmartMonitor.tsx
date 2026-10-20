@@ -18,6 +18,7 @@ import {
 } from '@shared/smart-health'
 import type {
   DiskSelfTest,
+  SmartAttribute,
   SmartDiskInfo,
   SmartHistoryPoint,
 } from '@shared/types'
@@ -26,6 +27,7 @@ import {
   AlertTriangle,
   ChevronRight,
   CircleCheck,
+  EyeOff,
   Moon,
   OctagonAlert,
   Wrench,
@@ -34,13 +36,16 @@ import { lazy, type ReactNode, Suspense, useState } from 'react'
 import {
   useNotificationSettings,
   useSelfTests,
+  useSetSmartIgnore,
   useSmart,
   useSmartHistory,
+  useSnapRaidConfig,
 } from '../hooks/queries'
 import { ATTRIBUTE_TEXT } from '../lib/smart-attributes'
 import { cn } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale } from '../paraglide/runtime'
+import { errorMessage, useFeedback } from './Feedback'
 import { SmartSelfTest } from './SmartSelfTest'
 import { hasSmartHistory } from './smartHistory'
 import { Alert, AlertDescription, AlertTitle } from './ui/alert'
@@ -540,7 +545,13 @@ const RawValue = ({
   )
 }
 
-const AttributeTable = ({ disk }: { disk: SmartDiskInfo }) => {
+const AttributeTable = ({
+  disk,
+  onIgnore,
+}: {
+  disk: SmartDiskInfo
+  onIgnore: (attribute: SmartAttribute) => void
+}) => {
   const [showAll, setShowAll] = useState(false)
   const rows = (disk.attributes ?? []).map((attribute) => ({
     attribute,
@@ -572,6 +583,9 @@ const AttributeTable = ({ disk }: { disk: SmartDiskInfo }) => {
               {m.smart_monitor_raw()}
             </TableHead>
             <TableHead>{m.smart_attr_col_assessment()}</TableHead>
+            <TableHead className="w-0">
+              <span className="sr-only">{m.smart_ignore()}</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -627,6 +641,18 @@ const AttributeTable = ({ disk }: { disk: SmartDiskInfo }) => {
                     </Badge>
                   )}
                 </TableCell>
+                <TableCell className="align-top">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 text-muted-foreground"
+                    title={m.smart_ignore()}
+                    aria-label={m.smart_ignore_label({ name: attribute.name })}
+                    onClick={() => onIgnore(attribute)}
+                  >
+                    <EyeOff className="size-3.5" />
+                  </Button>
+                </TableCell>
               </TableRow>
             )
           })}
@@ -652,6 +678,45 @@ const AttributeTable = ({ disk }: { disk: SmartDiskInfo }) => {
   )
 }
 
+interface IgnoredAttribute {
+  disk: string // The disk's name or "*" for all disks
+  attribute: string
+}
+
+// SnapRAID leaves them out of its report, so they are listed here to be taken back
+const IgnoredAttributes = ({
+  ignored,
+  onStop,
+}: {
+  ignored: IgnoredAttribute[]
+  onStop: (rule: IgnoredAttribute) => void
+}) => (
+  <div className="border-t px-5 py-3">
+    <h3 className="text-sm font-medium">{m.smart_ignored_title()}</h3>
+    <p className="text-xs text-muted-foreground">{m.smart_ignored_hint()}</p>
+    <ul className="mt-2 space-y-1">
+      {ignored.map((rule) => (
+        <li
+          key={`${rule.disk}:${rule.attribute}`}
+          className="flex flex-wrap items-center justify-between gap-2 text-sm"
+        >
+          <span>
+            <span className="font-mono">{rule.attribute}</span>
+            {rule.disk === '*' && (
+              <span className="ml-2 text-xs text-muted-foreground">
+                ({m.smart_ignored_all_disks()})
+              </span>
+            )}
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => onStop(rule)}>
+            {m.smart_ignore_stop()}
+          </Button>
+        </li>
+      ))}
+    </ul>
+  </div>
+)
+
 type DetailTab = 'attributes' | 'history' | 'selftest'
 
 const DiskDetails = ({
@@ -667,6 +732,34 @@ const DiskDetails = ({
 }) => {
   const [tab, setTab] = useState<DetailTab>('attributes')
   const attributes = disk.attributes ?? []
+  const { confirm, toast } = useFeedback()
+  const { data: config } = useSnapRaidConfig(configPath || undefined)
+  const smartIgnore = useSetSmartIgnore()
+  const ignored: IgnoredAttribute[] = (config?.smartIgnore ?? [])
+    .filter((rule) => rule.disk === disk.name || rule.disk === '*')
+    .flatMap((rule) =>
+      rule.attributes.map((attribute) => ({ disk: rule.disk, attribute })),
+    )
+  const setIgnored = async (rule: IgnoredAttribute, ignore: boolean) => {
+    try {
+      await smartIgnore.mutateAsync({ configPath, ...rule, ignore })
+    } catch (error) {
+      toast.error(errorMessage(error))
+    }
+  }
+  const ignoreAttribute = async (attribute: SmartAttribute) => {
+    const confirmed = await confirm({
+      title: m.smart_ignore_confirm_title({ name: attribute.name }),
+      message: m.smart_ignore_confirm({
+        name: attribute.name,
+        disk: disk.name,
+      }),
+      confirmLabel: m.smart_ignore(),
+    })
+    if (confirmed) {
+      await setIgnored({ disk: disk.name, attribute: attribute.name }, true)
+    }
+  }
   const tabs: DetailTab[] = [
     ...(attributes.length > 0 ? (['attributes'] as const) : []),
     ...(hasSmartHistory(history) ? (['history'] as const) : []),
@@ -737,7 +830,13 @@ const DiskDetails = ({
         )}
 
         <TabsContent value="attributes" className="border-t">
-          <AttributeTable disk={disk} />
+          <AttributeTable disk={disk} onIgnore={ignoreAttribute} />
+          {ignored.length > 0 && (
+            <IgnoredAttributes
+              ignored={ignored}
+              onStop={(rule) => setIgnored(rule, false)}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="history" className="border-t p-5">

@@ -373,6 +373,16 @@ export const setConfigOption = (
 ) => configOperation('set-option', { configPath, option, value })
 
 /**
+ * Ignore a SMART attribute on a disk ("*": all disks), or stop ignoring it
+ */
+export const setSmartIgnore = (
+  configPath: string,
+  disk: string,
+  attribute: string,
+  ignore: boolean,
+) => configOperation('smartignore', { configPath, disk, attribute, ignore })
+
+/**
  * Get SMART report for all disks
  */
 export const getSmart = async (configPath: string): Promise<SmartReport> => {

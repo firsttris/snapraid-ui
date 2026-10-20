@@ -1,6 +1,7 @@
 import { basename, join } from "@std/path";
 import type { AppConfig, ParityLevel, ParsedSnapRaidConfig } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
+import { parseSmartIgnoreLine } from "./smart-ignore.ts";
 
 export const MAX_PARITY_LEVEL = 6;
 
@@ -90,6 +91,11 @@ export const parseSnapRaidConfig = async (
         return { ...config, [key]: Number(option[2]) };
       }
 
+      const smartIgnore = parseSmartIgnoreLine(line);
+      if (smartIgnore) {
+        return { ...config, smartIgnore: [...(config.smartIgnore ?? []), smartIgnore] };
+      }
+
       if (line.startsWith("pool ")) {
         return {
           ...config,
@@ -104,6 +110,7 @@ export const parseSnapRaidConfig = async (
       data: {},
       pendingRemoval: [],
       exclude: [],
+      smartIgnore: [],
     });
 };
 

@@ -74,6 +74,7 @@ import {
   setConfigOption,
   setDiskPower,
   setPool,
+  setSmartIgnore,
   startDiskReplacement,
 } from '../lib/api/snapraid'
 
@@ -709,6 +710,32 @@ export const useSetConfigOption = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.snapraidConfig(variables.configPath),
+      })
+    },
+  })
+}
+
+export const useSetSmartIgnore = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      configPath,
+      disk,
+      attribute,
+      ignore,
+    }: {
+      configPath: string
+      disk: string
+      attribute: string
+      ignore: boolean
+    }) => setSmartIgnore(configPath, disk, attribute, ignore),
+    // SnapRAID applies it on the next SMART read
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.snapraidConfig(variables.configPath),
+      })
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.smart(variables.configPath),
       })
     },
   })

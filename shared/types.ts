@@ -35,6 +35,13 @@ export interface ParsedSnapRaidConfig {
   pool?: string;
   autosave?: number;       // GiB processed before sync/scrub saves the content file
   blocksize?: number;      // KiB, `block_size` is the older spelling
+  smartIgnore?: SmartIgnoreRule[];
+}
+
+// A `smartignore` line: SMART attributes SnapRAID leaves out of its report and failure probability
+export interface SmartIgnoreRule {
+  disk: string;            // Data disk name or parity keyword, "*" for all disks
+  attributes: string[];    // smartctl names (SnapRAID 15) or ids, as written in the config
 }
 
 // Quick check of a config file, shown in the config manager

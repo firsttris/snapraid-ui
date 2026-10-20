@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { join } from "@std/path";
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { resolveFromBase } from "../config.ts";
+import { editSmartIgnore, SMART_ATTRIBUTE_NAME } from "../smart-ignore.ts";
 import { msg } from "@shared/i18n.ts";
 
 const configOperations = new Hono();
@@ -256,6 +257,38 @@ configOperations.post("/set-option", async (c) => {
     }
 
     await Deno.writeTextFile(configPath, lines.join("\n"));
+
+    const parsed = await parseSnapRaidConfig(configPath);
+    return c.json({ success: true, config: parsed });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// POST /api/snapraid/smartignore - Ignore a SMART attribute on a disk ("*": all disks), or stop
+// ignoring it: { configPath, disk, attribute, ignore }
+configOperations.post("/smartignore", async (c) => {
+  const { configPath: relativePath, disk, attribute, ignore } = await c.req.json();
+
+  if (!relativePath || typeof disk !== "string" || typeof attribute !== "string" || typeof ignore !== "boolean") {
+    return c.json({ error: "Missing configPath, disk, attribute or ignore" }, 400);
+  }
+  if (!SMART_ATTRIBUTE_NAME.test(attribute)) {
+    return c.json({ error: `Invalid SMART attribute: ${attribute}` }, 400);
+  }
+
+  const configPath = resolveFromBase(relativePath);
+
+  try {
+    const config = await parseSnapRaidConfig(configPath);
+    const disks = ["*", ...Object.keys(config.data), ...config.parity.map((level) => level.keyword)];
+    // A rule of a disk that left the config can still be removed
+    if (ignore && !disks.includes(disk)) {
+      return c.json({ error: `Unknown disk: ${disk}` }, 400);
+    }
+
+    const lines = (await Deno.readTextFile(configPath)).split("\n");
+    await Deno.writeTextFile(configPath, editSmartIgnore(lines, disk, attribute, ignore).join("\n"));
 
     const parsed = await parseSnapRaidConfig(configPath);
     return c.json({ success: true, config: parsed });

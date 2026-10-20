@@ -135,6 +135,8 @@ Each problem is reported **once, until it changes**. A disk is reported again wh
 - a new kind of problem appears or its level changes (warning to critical),
 - a sector or error count changes, e.g. 8 to 12 reallocated sectors.
 
+A disk whose filesystem lost a device ([degraded](smart.md#degraded-filesystems)) is reported the same way, once, and again if it degrades another time after a repair.
+
 Temperature, failure probability and SSD wear are only compared by kind, since their values drift. When a disk is healthy again, it is forgotten, so a later problem is reported again. This state is kept in `notifications-state.json` in the data directory.
 
 *Warn from a yearly failure probability of* (default **25 %**, 1–100) sets when SnapRAID's failure estimate counts as a problem. 50 % and more is always critical. The SMART page uses the same threshold, so the page and the messages agree.
