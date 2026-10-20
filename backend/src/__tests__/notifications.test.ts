@@ -7,7 +7,7 @@ import {
   resolveSecrets,
   validateNotificationSettings,
 } from "../notifications.ts";
-import { buildRunNotification, buildSkipNotification, diffSmartProblems, heartbeatAfterRun } from "../notification-events.ts";
+import { buildRunNotification, buildSkipNotification, diffDegradedDisks, diffSmartProblems, heartbeatAfterRun } from "../notification-events.ts";
 import { failedReport, parseRunReport } from "../run-report.ts";
 import { combineResults, scheduleSteps } from "../scheduler.ts";
 import { assessSmart, attributeLevel, smartHints } from "@shared/smart-health.ts";
@@ -156,6 +156,17 @@ Deno.test("diffSmartProblems - reports a disk once per problem and forgets it wh
 
   const healthy = diffSmartProblems(cfg, [disk({})], 25, worse.state);
   assertEquals(healthy.state, {});
+});
+
+Deno.test("diffDegradedDisks - reports a degraded filesystem once, again after it was repaired", () => {
+  const cfg = "/cfg/a.conf";
+  const first = diffDegradedDisks(cfg, ["d2"], { "/cfg/b.conf|degraded|d2": "degraded" });
+  assertEquals(first.report, ["d2"]);
+  assertEquals(first.state, { "/cfg/a.conf|degraded|d2": "degraded" });
+  assertEquals(diffDegradedDisks(cfg, ["d2"], first.state).report, []);
+  const repaired = diffDegradedDisks(cfg, [], first.state);
+  assertEquals(repaired.state, {});
+  assertEquals(diffDegradedDisks(cfg, ["d2"], repaired.state).report, ["d2"]);
 });
 
 const sectors = (reallocated: number) =>

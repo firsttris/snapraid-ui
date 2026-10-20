@@ -112,6 +112,7 @@ interface DaemonSmartAttribute {
   norm?: number | { value?: number };
   worst?: number;
   thresh?: number;
+  ignored?: boolean; // smartignore in snapraidd.conf
 }
 
 export interface DaemonDevice {
@@ -230,7 +231,8 @@ export const toSmartDisks = (disks: DaemonDisks): SmartDiskInfo[] =>
         errorMedium: device.error_medium,
         errorProtocol: device.error_protocol,
         ...(standby ? { standby: true } : {}),
-        attributes: (device.smart?.attributes ?? []).map(toAttribute),
+        // Left out like SnapRAID leaves out those its own smartignore names
+        attributes: (device.smart?.attributes ?? []).filter((attribute) => !attribute.ignored).map(toAttribute),
       };
     })
   );

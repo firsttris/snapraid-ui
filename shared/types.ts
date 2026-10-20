@@ -35,6 +35,14 @@ export interface ParsedSnapRaidConfig {
   pool?: string;
   autosave?: number;       // GiB processed before sync/scrub saves the content file
   blocksize?: number;      // KiB, `block_size` is the older spelling
+  extra?: Record<string, string>; // Disks outside the array SnapRAID still reads SMART from
+  smartIgnore?: SmartIgnoreRule[]; // What SnapRAID applies, one rule per disk
+}
+
+// A `smartignore` line: SMART attributes SnapRAID leaves out of its report and failure probability
+export interface SmartIgnoreRule {
+  disk: string;            // Data disk name or parity keyword, "*" for all disks
+  attributes: string[];    // smartctl names (SnapRAID 15) or ids, as written in the config
 }
 
 // Quick check of a config file, shown in the config manager
@@ -275,12 +283,14 @@ export interface DiskPowerStatus {
 export interface SmartReport {
   disks: SmartDiskInfo[];
   arrayFailureProbability?: number; // Percentage 0-100 that at least one array disk fails in the next year
+  degradedDisks?: string[]; // On a filesystem running degraded with a missing device (btrfs, bcachefs, mdadm)
   timestamp: string; // ISO string
   rawOutput: string;
 }
 
 export interface ProbeReport {
   disks: DiskPowerStatus[];
+  degradedDisks?: string[]; // On a filesystem running degraded with a missing device (btrfs, bcachefs, mdadm)
   timestamp: string; // ISO string
   rawOutput: string;
 }

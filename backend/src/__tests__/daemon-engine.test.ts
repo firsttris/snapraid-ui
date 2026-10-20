@@ -316,6 +316,19 @@ Deno.test("daemon mapping - SMART attributes get their ids back, the assessment 
 
   const failing = toSmartDisks({ data_disks: [{ name: "d1", devices: [{ ...DEVICE, smart: { ...DEVICE.smart, failing: true } }] }] });
   assertEquals(failing[0].status, "FAIL");
+
+  // Attributes the daemon's smartignore names are left out, like SnapRAID leaves out its own
+  const ignored = toSmartDisks({
+    data_disks: [{
+      name: "d1",
+      devices: [{
+        ...DEVICE,
+        smart: { ...DEVICE.smart, attributes: (DEVICE.smart?.attributes ?? []).map((attribute, i) => ({ ...attribute, ignored: i === 0 })) },
+      }],
+    }],
+  });
+  assertEquals(ignored[0].attributes?.map((attribute) => attribute.name), ["Power_On_Hours"]);
+  assertEquals(assessSmart(ignored[0]).reasons, []);
 });
 
 Deno.test("daemon mapping - power states, diff and run results", () => {

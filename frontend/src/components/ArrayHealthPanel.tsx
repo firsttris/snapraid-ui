@@ -12,6 +12,7 @@ import {
   CalendarClock,
   CircleHelp,
   FileText,
+  HardDrive,
   Hourglass,
   Info,
   Loader2,
@@ -65,6 +66,7 @@ interface ArrayHealthPanelProps {
   isSchedulesLoading: boolean
   runningJob: RunningJobInfo | undefined // Job of this config that is running right now
   smartCritical: string[] // Disks SMART rates critical, empty until SMART was read
+  fsDegraded: string[] // Disks on a filesystem running degraded with a missing device
   onExecute: (command: SnapRaidCommand) => void
   onAbort: () => void
   onFixErrors: () => void
@@ -80,6 +82,7 @@ type Health =
   | 'disk_changed'
   | 'errors'
   | 'failing'
+  | 'fs_degraded'
   | 'degraded'
   | 'busy'
   | 'unknown'
@@ -136,6 +139,13 @@ const HEALTH_STYLES: Record<
     alert: 'destructive',
     icon: OctagonAlert,
   },
+  fs_degraded: {
+    tile: 'bg-red-50 text-red-700',
+    ping: 'bg-red-500',
+    value: 'text-red-700',
+    alert: 'destructive',
+    icon: HardDrive,
+  },
   degraded: {
     tile: 'bg-red-50 text-red-700',
     ping: 'bg-red-500',
@@ -166,6 +176,7 @@ const HealthBadge = ({ health }: { health: Health }) => {
     health === 'healthy' ||
     health === 'errors' ||
     health === 'failing' ||
+    health === 'fs_degraded' ||
     health === 'degraded'
   return (
     <span className="relative flex size-8 shrink-0 items-center justify-center">
@@ -203,6 +214,8 @@ const getHealthTitle = (
       return m.health_errors()
     case 'failing':
       return m.health_failing()
+    case 'fs_degraded':
+      return m.health_fs_degraded()
     case 'degraded':
       return m.health_degraded()
     case 'busy':
@@ -216,6 +229,7 @@ const getHealthMessage = (
   health: Health,
   status: SnapRaidStatus | undefined,
   smartCritical: string[],
+  fsDegraded: string[],
 ): string => {
   switch (health) {
     case 'healthy':
@@ -234,6 +248,8 @@ const getHealthMessage = (
       return m.health_errors_msg()
     case 'failing':
       return m.health_failing_msg({ disks: smartCritical.join(', ') })
+    case 'fs_degraded':
+      return m.health_fs_degraded_msg({ disks: fsDegraded.join(', ') })
     case 'degraded':
       return m.health_degraded_msg()
     case 'busy':
@@ -264,6 +280,7 @@ interface HealthInput {
   lastSync: LastRun | null | undefined
   lastScrub: LastRun | null | undefined
   smartCritical?: string[]
+  fsDegraded?: string[]
 }
 
 // A missing or empty disk is not there, a changed filesystem is expected after replacing one
@@ -280,6 +297,7 @@ export const getArrayHealth = ({
   lastSync,
   lastScrub,
   smartCritical = [],
+  fsDegraded = [],
 }: HealthInput) => {
   const diskIssues = status?.diskIssues ?? []
   // status only reads the content file, so it still looks healthy when the last
@@ -299,19 +317,21 @@ export const getArrayHealth = ({
       ? 'unknown'
       : diskIssues.some(isUnavailable)
         ? 'degraded'
-        : smartCritical.length > 0
-          ? 'failing'
-          : status.hasErrors
-            ? 'errors'
-            : status.syncIncomplete || lastSyncFailed
-              ? 'sync_incomplete'
-              : diskIssues.length > 0
-                ? 'disk_changed'
-                : syncOverdue !== undefined ||
-                    scrubOverdue !== undefined ||
-                    oldestOverdue !== undefined
-                  ? 'attention'
-                  : 'healthy'
+        : fsDegraded.length > 0
+          ? 'fs_degraded'
+          : smartCritical.length > 0
+            ? 'failing'
+            : status.hasErrors
+              ? 'errors'
+              : status.syncIncomplete || lastSyncFailed
+                ? 'sync_incomplete'
+                : diskIssues.length > 0
+                  ? 'disk_changed'
+                  : syncOverdue !== undefined ||
+                      scrubOverdue !== undefined ||
+                      oldestOverdue !== undefined
+                    ? 'attention'
+                    : 'healthy'
   // Sync is the fix for most problems, it only stands out when it is due
   const syncDue =
     health === 'sync_incomplete' ||
@@ -677,6 +697,7 @@ export const ArrayHealthPanel = ({
   onTouch,
   actionsDisabled,
   smartCritical,
+  fsDegraded,
 }: ArrayHealthPanelProps) => {
   const {
     health,
@@ -693,6 +714,7 @@ export const ArrayHealthPanel = ({
     lastSync,
     lastScrub,
     smartCritical,
+    fsDegraded,
   })
   const badBlocks = health === 'errors' ? (status?.badBlocks ?? 0) : 0
 
@@ -731,7 +753,7 @@ export const ArrayHealthPanel = ({
   }
 
   const isLoading = isStatusLoading && !status
-  const message = getHealthMessage(health, status, smartCritical)
+  const message = getHealthMessage(health, status, smartCritical, fsDegraded)
   // Problems with something to do get a notice below the job, the tile keeps the headline
   const hasNotice =
     !runningJob &&
@@ -741,6 +763,7 @@ export const ArrayHealthPanel = ({
       health === 'degraded' ||
       health === 'disk_changed' ||
       health === 'failing' ||
+      health === 'fs_degraded' ||
       badBlocks > 0)
   const HealthIcon = HEALTH_STYLES[health].icon
 

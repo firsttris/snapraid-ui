@@ -158,6 +158,17 @@ function Dashboard() {
       .map((disk) => disk.name)
   }, [smartReport, notificationSettings])
 
+  // SnapRAID 15 names them in every device command, the polled probe keeps it current
+  const fsDegraded = useMemo(
+    () => [
+      ...new Set([
+        ...(probeReport?.degradedDisks ?? []),
+        ...(smartReport?.degradedDisks ?? []),
+      ]),
+    ],
+    [probeReport, smartReport],
+  )
+
   const configFile = selectedConfig.replace(/^.*[/\\]/, '')
   const nextSchedule = useMemo(
     () =>
@@ -371,6 +382,7 @@ function Dashboard() {
           onTouch={() => runCommand('touch')}
           actionsDisabled={actionsDisabled}
           smartCritical={smartCritical}
+          fsDegraded={fsDegraded}
         />
 
         {!job.isRunning && forceStop && (
@@ -404,6 +416,7 @@ function Dashboard() {
           usageHistory={usageHistory}
           powerStates={probeReport?.disks}
           smartCritical={smartCritical}
+          fsDegraded={fsDegraded}
           temperatures={temperatures}
           smartHistory={smartHistory}
           onPower={handlePower}

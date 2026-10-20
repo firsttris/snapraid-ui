@@ -29,6 +29,7 @@ export interface JobOutcome {
   output: CommandOutput;
   report: RunReport;
   smart?: SmartDiskInfo[]; // smart: the disks it reported
+  degraded?: string[];     // smart: disks on a filesystem running degraded with a missing device
 }
 
 export interface StatusReading {
@@ -40,6 +41,7 @@ export interface StatusReading {
 export interface SmartReading {
   disks: SmartDiskInfo[];
   arrayFailureProbability?: number;
+  degradedDisks?: string[]; // On a filesystem running degraded with a missing device
   rawOutput: string;
   exitCode: number | null;
   error?: string;          // What went wrong when there are no disks

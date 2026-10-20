@@ -60,6 +60,19 @@ The attributes that say something about the disk's health come first: sectors an
 
 The heading also shows the model family, serial number and power-on hours.
 
+### Ignoring an attribute
+
+Some disks report an attribute wrongly, for example a raw value that grows without meaning anything. The button with the crossed-out eye at the end of a row ignores the attribute on this disk, after a confirmation. SnapRAID UI writes it to `snapraid.conf` as `smartignore <disk> <name>`, e.g. `smartignore d1 Raw_Read_Error_Rate`. SnapRAID then leaves the attribute out of its report and of its failure probability, so the SMART page and the notifications no longer warn about it.
+
+Below the table, *Ignored attributes* lists what is ignored for the disk, including rules for all disks (`smartignore * …`) written by hand, with *Stop ignoring* to take one back. A change shows at the next SMART read.
+
+SnapRAID ignores at most **4 attributes per disk** (and 4 for all disks); a fifth is refused. Several `smartignore` lines for one disk don't add up in SnapRAID, a later line overwrites the first entries of an earlier one. The list shows what SnapRAID really applies, and the first change from the UI merges such lines into one.
+
+> [!NOTE]
+> The UI writes smartctl's attribute name rather than the id, because some vendors use an id for something else. Names need **SnapRAID 15** or newer, which the image ships. With your own SnapRAID 14 binary (`SNAPRAID_BIN`), write ids by hand instead (`smartignore d1 1`).
+
+Only ignore an attribute you know your disk reports wrongly. A real problem in it goes unnoticed afterwards.
+
 ## Warnings and what to do
 
 A disk is rated by these rules. The worst finding sets the level of the disk.
@@ -111,6 +124,12 @@ The baseline is updated on every SMART read, from the page or a scheduled `smart
 ### Error log entries
 
 *Error log entries* are shown on the card but don't cause a warning on their own; they are harmless in most cases. The `LOGERR` status that SnapRAID derives from the error log does count as *Watch*.
+
+### Degraded filesystems
+
+A disk of the array can itself span several devices: a btrfs or bcachefs filesystem over two disks, or an mdadm RAID. When one of those devices is missing, the filesystem runs *degraded*: the data can still be read, but the filesystem has no redundancy of its own left. SnapRAID 15 notices this in every device command (`probe`, `smart`, `up`, `down`) and names the disk.
+
+SnapRAID UI then shows *Filesystem degraded* on the dashboard and *Degraded* next to the disk, and a scheduled `smart` run sends a [SMART warning](notifications.md#smart-warnings). Reconnect or replace the missing device and repair the filesystem (for example `btrfs replace`, or `mdadm --add`).
 
 ## Self-tests
 
