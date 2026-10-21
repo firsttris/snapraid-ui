@@ -13,6 +13,7 @@ import {
   type MqttMessage,
   parseCommand,
 } from "./home-assistant.ts";
+import { writeTextFileAtomic } from "./atomic-write.ts";
 
 const SETTINGS_FILE = "home-assistant.json";
 // State is checked this often and published when it changed, and at least every few minutes
@@ -49,7 +50,7 @@ export const loadHomeAssistantSettings = async (): Promise<HomeAssistantSettings
 
 export const saveHomeAssistantSettings = async (settings: HomeAssistantSettings): Promise<void> => {
   // Holds the broker password
-  await Deno.writeTextFile(settingsPath(), JSON.stringify(settings, null, 2), { mode: 0o600 });
+  await writeTextFileAtomic(settingsPath(), JSON.stringify(settings, null, 2), { mode: 0o600 });
 };
 
 export const maskHomeAssistantSecrets = (settings: HomeAssistantSettings): HomeAssistantSettings => ({

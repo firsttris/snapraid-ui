@@ -4,6 +4,7 @@ import { type DaemonCheck, type DaemonTarget, type DaemonWarning, type EngineSet
 import { resolveFromBase } from "../config.ts";
 import { createDaemonClient, createDaemonEngine, type DaemonArray, DaemonError } from "./daemon-engine.ts";
 import type { SnapRaidEngine } from "./engine.ts";
+import { writeTextFileAtomic } from "../atomic-write.ts";
 
 const SETTINGS_FILE = "engine.json";
 
@@ -31,7 +32,7 @@ export const loadEngineSettings = async (): Promise<EngineSettings> => {
 
 export const saveEngineSettings = async (settings: EngineSettings): Promise<void> => {
   // Holds the daemons' passwords
-  await Deno.writeTextFile(settingsPath(), JSON.stringify(settings, null, 2), { mode: 0o600 });
+  await writeTextFileAtomic(settingsPath(), JSON.stringify(settings, null, 2), { mode: 0o600 });
 };
 
 /**

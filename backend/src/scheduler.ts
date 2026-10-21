@@ -19,6 +19,7 @@ import { msg } from "@shared/i18n.ts";
 import { blockingIssues } from "./disk-check.ts";
 import { holdContainers } from "./container-pause.ts";
 import { rememberStatus } from "./status-cache.ts";
+import { writeTextFileAtomic } from "./atomic-write.ts";
 
 // Module-level storage for active jobs
 const activeJobs = new Map<string, Cron>();
@@ -82,7 +83,7 @@ const loadSchedulesFromFile = async (path: string): Promise<Schedule[]> => {
 // Save schedules to file
 const saveSchedulesToFile = async (path: string, schedules: Schedule[]): Promise<void> => {
   const config: ScheduleConfig = { schedules };
-  await Deno.writeTextFile(path, JSON.stringify(config, null, 2));
+  await writeTextFileAtomic(path, JSON.stringify(config, null, 2));
 };
 
 // Apply changes to one schedule; reloads first, it may have been edited while a job ran

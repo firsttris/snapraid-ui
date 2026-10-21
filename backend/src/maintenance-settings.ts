@@ -1,6 +1,7 @@
 import { existsSync } from "@std/fs";
 import type { MaintenanceSettings, SnapRaidCommand } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
+import { writeTextFileAtomic } from "./atomic-write.ts";
 
 const SETTINGS_FILE = "maintenance.json";
 
@@ -86,5 +87,5 @@ export const normalizeMaintenanceSettings = (
 };
 
 export const saveMaintenanceSettings = async (settings: MaintenanceSettings): Promise<void> => {
-  await Deno.writeTextFile(settingsPath(), JSON.stringify(settings, null, 2));
+  await writeTextFileAtomic(settingsPath(), JSON.stringify(settings, null, 2));
 };

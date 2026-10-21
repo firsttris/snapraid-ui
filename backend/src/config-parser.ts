@@ -2,6 +2,7 @@ import { basename, join } from "@std/path";
 import type { AppConfig, ParityLevel, ParsedSnapRaidConfig } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
 import { effectiveSmartIgnore, parseSmartIgnoreLine } from "./smart-ignore.ts";
+import { writeTextFileAtomic } from "./atomic-write.ts";
 
 export const MAX_PARITY_LEVEL = 6;
 
@@ -171,5 +172,5 @@ export const loadAppConfig = async (): Promise<AppConfig> => {
  */
 export const saveAppConfig = async (config: AppConfig): Promise<void> => {
   const configPath = resolveFromBase("config.json");
-  await Deno.writeTextFile(configPath, JSON.stringify(config, null, 2));
+  await writeTextFileAtomic(configPath, JSON.stringify(config, null, 2));
 };
