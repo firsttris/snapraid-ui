@@ -6,7 +6,7 @@ The **SMART** page shows the health of every disk in your array: temperature, fa
 
 ## Requirements
 
-SnapRAID UI reads SMART data with `snapraid smart`, which calls `smartctl` (smartmontools ships with the Docker image). Inside Docker, the container needs `--privileged` to access the disks, see [Installation](installation.md). Some USB enclosures don't pass SMART data through.
+SnapRAID UI reads SMART data with `snapraid smart`, which calls `smartctl` (smartmontools ships with the Docker image, the [installer](installation.md#without-docker) installs it when missing). Inside Docker, the container needs `--privileged` to access the disks, see [Installation](installation.md); without Docker the service runs as root and reaches them directly. Some USB enclosures don't pass SMART data through.
 
 If no disk reports SMART data, the page shows *SnapRAID found no disks with SMART data. Inside Docker, SMART needs the container to run with --privileged.*
 

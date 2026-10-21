@@ -109,6 +109,7 @@ The schedule list shows the reason of a skipped run, and you can get a notificat
 SnapRAID calls `smartctl` on the device behind each mount. The device nodes only exist in the container with **`--privileged`** (`privileged: true` in Compose, `PodmanArgs=--privileged` in the Quadlet unit).
 
 - Rootless Podman cannot read SMART data. Run the container as root if you need it.
+- Without Docker, check that `smartctl` is installed (`smartctl --version`); the installer adds smartmontools when it can.
 - USB enclosures and some RAID/HBA controllers do not pass SMART through. Use a `smartctl` option in your `snapraid.conf` for such disks if your controller supports it (see the SnapRAID manual).
 
 ### "Failed to dereference device '0:…'" / "Smart is unsupported in this platform"
@@ -219,20 +220,26 @@ Browsers only allow clipboard access on secure pages. Use the download button in
 
 Changing `blocksize` on an existing array requires a completely new sync. Only change it when you set up a new array.
 
-### Where are the container logs?
+### Where are the logs?
 
-Backend, frontend and Nginx all log to the container's output:
+SnapRAID UI is one process that logs to the container's output, or to the journal without Docker:
 
 ```bash
 docker logs -f snapraid-ui
 # Podman Quadlet
 journalctl --user -u snapraid-app
+# Without Docker (installer)
+journalctl -u snapraid-ui -f
 ```
+
+### The service does not start (without Docker)
+
+`journalctl -u snapraid-ui -n 50` shows why. Common causes: the port in `/etc/snapraid-ui/snapraid-ui.env` is taken by another program (change `PORT`, then `systemctl restart snapraid-ui`), or `SNAPRAID_BIN` points to a SnapRAID that was removed (run the installer again, it finds or builds one). `snapraid-ui --version` shows the installed version.
 
 ## Getting help
 
 If you think you found a bug, open an issue on [GitHub](https://github.com/firsttris/snapraid-ui/issues) with:
 
-- the image tag or version and how you run it (Docker, Compose, Podman),
-- the relevant part of the container log and of the SnapRAID log (remove private paths if needed),
+- the image tag or version and how you run it (Docker, Compose, Podman, installer),
+- the relevant part of the container or service log and of the SnapRAID log (remove private paths if needed),
 - what you expected and what happened.

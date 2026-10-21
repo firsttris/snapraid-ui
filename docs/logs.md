@@ -95,7 +95,7 @@ The result of a run is read from the end of its log:
 | *With warnings* | SnapRAID finished but reported warnings (e.g. files changed during a sync), or a check found errors that a fix can repair |
 | *Failed* | SnapRAID reported errors or stopped with a fatal error |
 | *Aborted* | The run was stopped early, e.g. with *Abort*. SnapRAID saved its progress up to that point. |
-| *Incomplete* | The log ends without a result, e.g. because the process was killed or the container stopped |
+| *Incomplete* | The log ends without a result, e.g. because the process was killed or the container or service stopped |
 
 ## Retention and cleanup
 

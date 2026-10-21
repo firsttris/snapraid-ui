@@ -198,13 +198,13 @@ If your existing config refers to content files outside the mounted paths, mount
 
 ## Reverse proxy and HTTPS
 
-Inside the container, Nginx listens on port 80 and serves the interface, the API under `/api` and live updates over a WebSocket under `/ws`. Put your own reverse proxy in front of that port to add HTTPS.
+SnapRAID UI serves the interface, the API under `/api` and live updates over a WebSocket under `/ws` on one port: 80 inside the container, 3000 with the [installer](#without-docker). Put your own reverse proxy in front of that port to add HTTPS.
 
 Requirements for the proxy:
 
 - **Forward WebSockets** on `/ws`, otherwise live output and job status don't update.
 - **Serve the UI at the root path** of a host name (for example `snapraid.example.com`). The interface requests `/api` and `/ws` as absolute paths, so a sub-path such as `example.com/snapraid/` doesn't work.
-- **Publish only the proxy.** Bind the container port to localhost (`127.0.0.1:3000:80`) or reach it over a shared Docker network, so nobody bypasses the proxy.
+- **Publish only the proxy.** Bind the container port to localhost (`127.0.0.1:3000:80`) or reach it over a shared Docker network, so nobody bypasses the proxy. Without Docker, set `SNAPRAID_UI_HOST=127.0.0.1` in `/etc/snapraid-ui/snapraid-ui.env` when the proxy runs on the same host.
 
 **Caddy** (WebSockets are forwarded automatically):
 

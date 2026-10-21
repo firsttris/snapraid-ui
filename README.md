@@ -4,7 +4,7 @@
 
 **A modern, self-hosted web interface for [SnapRAID](https://www.snapraid.it/).**<br>
 Sync, scrub, schedule and watch your disks and their SMART health from any browser, without touching the command line.<br>
-One Docker image for your home server or NAS, with SnapRAID 15 included.
+One Docker image or one installer for your home server or NAS, with SnapRAID 15 included.
 
 [![CI](https://github.com/firsttris/snapraid-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/firsttris/snapraid-ui/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/firsttris/snapraid-ui?logo=github&label=release)](https://github.com/firsttris/snapraid-ui/releases/latest)
@@ -194,7 +194,7 @@ Its source lives in [docs/](docs/).
 
 | | |
 |---|---|
-| [Installation](https://firsttris.github.io/snapraid-ui/installation.html) | Docker, Compose and Podman, disks and paths, reverse proxy, updates |
+| [Installation](https://firsttris.github.io/snapraid-ui/installation.html) | Docker, Compose, Podman or without Docker, disks and paths, reverse proxy, updates |
 | [Configuration](https://firsttris.github.io/snapraid-ui/configuration.html) | Environment variables, data directory, log retention |
 | [Using SnapRAID UI](https://firsttris.github.io/snapraid-ui/usage.html) | Dashboard, commands, reports, safety stops, command palette |
 | [Scheduling](https://firsttris.github.io/snapraid-ui/scheduling.html) · [Notifications](https://firsttris.github.io/snapraid-ui/notifications.html) | Automate jobs and get told when something goes wrong |
@@ -212,8 +212,11 @@ and content files stay as they are, and you can go back to the command line anyt
 Turn off cron jobs or scripts like snapraid-runner, so only one scheduler runs SnapRAID.
 
 **Do I need Docker?**
-Yes, or Podman. The image (amd64 and arm64) ships SnapRAID 15, which SnapRAID UI needs
-for its structured log. Most distributions still have 12.x.
+No. Run the image (amd64 and arm64) with Docker or Podman, or install SnapRAID UI on the host
+with the [installer](https://firsttris.github.io/snapraid-ui/installation.html#without-docker),
+as a systemd service. Either way you get SnapRAID 15, which SnapRAID UI needs for its structured
+log: the image ships it, the installer builds it when the host has no 14+. Most distributions
+still have 12.x.
 
 **Does it wake my disks?**
 Only when SnapRAID needs them. Status, protected files and duplicates come from the

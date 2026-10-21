@@ -14,6 +14,7 @@ The settings are environment variables: in the container you set them in the Com
 | `SNAPRAID_BIN` | `/usr/local/bin/snapraid` in the image, `snapraid` from the `PATH` otherwise | The SnapRAID binary to run. See [Using your own SnapRAID binary](installation.md#using-your-own-snapraid-binary). |
 | `SNAPRAID_BASE_PATH` | `/app/snapraid` in the image, `/var/lib/snapraid-ui` with the installer | The [data directory](#data-directory). Keep the default in the container and mount a volume there instead. |
 | `PORT` | `80` in the image, `3000` with the installer, `8080` otherwise | Port of the UI, the API and the WebSocket. In the container, change the host side of the port mapping instead, e.g. `-p 8090:80`. |
+| `SNAPRAID_UI_HOST` | `0.0.0.0` (all interfaces) | Address the UI listens on. `127.0.0.1` when only a reverse proxy on the same host should reach it, see [Security](security.md#behind-a-reverse-proxy). In the container, bind the published port instead (`127.0.0.1:3000:80`). |
 | `SNAPRAID_UI_VERSION` | *(unset)* | Overrides the version the UI reports to Home Assistant and AI agents; normally it comes from the build. |
 | `SNAPRAID_EXTRA_ARGS` | *(empty)* | Extra arguments put in front of every SnapRAID call, separated by spaces. Meant for testing, for example `--test-skip-device` in the development sandbox. Leave it empty on a real array. |
 | `TZ` | `UTC` in the container, the host's otherwise | Time zone of the container, e.g. `Europe/Berlin`. Schedules run in this time zone, see below. |

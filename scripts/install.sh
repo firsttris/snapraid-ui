@@ -194,6 +194,8 @@ write_env_file() {
 # Settings of SnapRAID UI, see https://firsttris.github.io/snapraid-ui/configuration.html
 # Apply changes with: systemctl restart snapraid-ui
 PORT=${SNAPRAID_UI_PORT:-3000}
+# Only a reverse proxy on this host may reach the UI: 127.0.0.1
+# SNAPRAID_UI_HOST=127.0.0.1
 SNAPRAID_BASE_PATH=$DATA_DIR
 ${SNAPRAID_BIN:+SNAPRAID_BIN=$SNAPRAID_BIN}
 # Login; remove both lines to leave the UI open (e.g. behind your own auth proxy)

@@ -42,7 +42,7 @@ Below, *Next runs* shows the next three times, e.g. "today 02:00 · tomorrow 02:
 When you edit an existing schedule, the form opens on the matching choice, or with the cron expression for anything else, so saving other fields never changes when it runs.
 
 > [!NOTE]
-> Times are evaluated in the local time zone of the backend process, i.e. the container's time zone.
+> Times are evaluated in the local time zone of the backend process, i.e. the container's time zone, or the host's without Docker.
 
 ## The nightly sync routine
 
