@@ -50,6 +50,8 @@ COPY --from=backend-builder /app/backend /app/backend
 COPY --from=backend-builder /app/shared /app/shared
 # The backend loads the frontend's server from here (backend/src/frontend.ts)
 COPY --from=frontend-builder /app/frontend/.output /app/frontend/.output
+# The version, which the backend reads from it (backend/src/version.ts)
+COPY frontend/package.json /app/frontend/package.json
 # The documentation, which the MCP endpoint offers to AI agents
 COPY docs/*.md /app/docs/
 

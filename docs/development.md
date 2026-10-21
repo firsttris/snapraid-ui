@@ -82,6 +82,8 @@ backend/
   deno.json            tasks, import map (Hono, Croner, Nodemailer, @std/*, @shared/)
   src/
     main.ts            app setup, middleware, startup
+    bin.ts             entry point of the standalone binary (--version, --help)
+    frontend.ts        loads the built frontend, which the backend serves
     routes/            HTTP routes per area
     executors/         job runner (spawn, stream, progress, abort)
     parsers/           structured log parsers, tests and real SnapRAID fixtures
@@ -100,6 +102,7 @@ frontend/
     lib/__tests__/     frontend unit tests
 shared/                types and logic used by backend and frontend
 docker/                Dockerfile, Compose file, Quadlet units
+scripts/build-binary.sh  the standalone binary (deno compile)
 dev/setup.sh           demo sandbox
 e2e/                   end-to-end tests (Playwright) against real SnapRAID and snapraid-daemon
 install.sh, start.sh   local setup and start
@@ -182,13 +185,14 @@ npx playwright install chromium   # once
 npm run setup                     # builds the tools into e2e/.tools, needs autoconf, automake, zlib1g-dev
 npm test                          # builds the frontend, starts everything, runs the tests (about 2 min)
 npm run test:image                # the same tests against the Docker image built from docker/Dockerfile
+E2E_BINARY=../dist/snapraid-ui-linux-x86_64 npm test   # against the standalone binary, see below
 ```
 
 `npm run setup` builds SnapRAID 15.0 (the version of the image) from the release tarball for the jobs SnapRAID UI runs itself, and SnapRAID from git (`SNAPRAID15_REF`) with snapraid-daemon at the version in `backend/src/engine/REVIEWED_DAEMON_VERSION`. The test disks are directories on one filesystem, so SnapRAID runs with `--test-skip-device`: the backend gets it through `SNAPRAID_EXTRA_ARGS`, the daemon through a small compiled wrapper as `sys_engine`.
 
 The global setup (`e2e/harness/global-setup.ts`) recreates `e2e/.run/` on every run: the backend's data directory, the arrays and a log per server. It starts snapraid-daemon on its own array, the backend (with `PORT`, `SNAPRAID_BASE_PATH` and `SNAPRAID_BIN` pointing into `e2e/`), which serves the production build of the frontend as in the image. Each test creates its own array, adds it through the API and opens it; the `app` fixture removes it, and the schedules, afterwards. Tests run one after the other, the backend runs one job at a time.
 
-With `E2E_IMAGE=<image>` the container takes the place of the backend: started as in `docker/docker-compose.yml`, with the data directory in `/app/snapraid`, the arrays at the same paths as on the host and the Docker socket mounted. It shares the host's network (the UI on port 80), so the backend reaches snapraid-daemon and the webhook receiver on `127.0.0.1`. `E2E_SKIP_BUILD=1` skips the frontend build of a local run. A failed test leaves a trace (`npx playwright show-trace e2e/test-results/…/trace.zip`) and the server logs in `e2e/.run/*.log`; CI uploads both.
+With `E2E_IMAGE=<image>` the container takes the place of the backend: started as in `docker/docker-compose.yml`, with the data directory in `/app/snapraid`, the arrays at the same paths as on the host and the Docker socket mounted. It shares the host's network (the UI on port 80), so the backend reaches snapraid-daemon and the webhook receiver on `127.0.0.1`. With `E2E_BINARY=<path>` the standalone binary takes the place of the backend's sources, with the same environment; it carries its own frontend, so nothing is built. `E2E_SKIP_BUILD=1` skips the frontend build of a local run. A failed test leaves a trace (`npx playwright show-trace e2e/test-results/…/trace.zip`) and the server logs in `e2e/.run/*.log`; CI uploads both.
 
 ## Linting and type checking
 
@@ -252,6 +256,21 @@ docker compose -f docker/docker-compose.yml up --build
 
 The build context is the whole repository; `.dockerignore` leaves out `node_modules`, test files, the local `snapraid/` data, `dev/` and `e2e/`. See [Architecture](architecture.md#container-layout) for the stages and [Installation](installation.md) for running the image.
 
+## Building the binary
+
+`scripts/build-binary.sh` builds SnapRAID UI as one executable with [`deno compile`](https://docs.deno.com/runtime/reference/cli/compile/): the backend, the built frontend, `frontend/package.json` (for the version) and the documentation pages (for the MCP endpoint) inside, nothing else to install but SnapRAID itself. It needs Deno and, for the frontend build, Node.js:
+
+```bash
+scripts/build-binary.sh                              # the host's architecture: dist/snapraid-ui-linux-x86_64
+scripts/build-binary.sh x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu   # both, cross-compiled
+SKIP_FRONTEND_BUILD=1 scripts/build-binary.sh        # with frontend/.output as it is
+
+dist/snapraid-ui-linux-x86_64 --version
+PORT=8080 SNAPRAID_BASE_PATH=$PWD/snapraid dist/snapraid-ui-linux-x86_64
+```
+
+The binary reads the same environment variables as the image ([Configuration](configuration.md)); without `SNAPRAID_BASE_PATH` the data directory is `./snapraid` in the working directory. It runs with the permissions of `deno task start`. See [Architecture](architecture.md#standalone-binary) for how the parts find each other inside it.
+
 ### Updating SnapRAID
 
 The image pins one SnapRAID release that the parsers are tested against. A weekly workflow (`upstream-release.yml`) opens an issue when a newer stable release is out. To bump it:
@@ -271,8 +290,8 @@ GitHub Actions workflows in `.github/workflows/`:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | Push and pull request to `master`; called by the release workflow | Backend: `deno check src/main.ts`, `deno test --allow-all`. Frontend: `npm ci`, `npx biome check`, `npm run typecheck`, `npm test`, `npm run build`. [End-to-end tests](#end-to-end-tests) twice, against the local build and against the Docker image (built with the release's registry cache), each split into two shards that run side by side; the built tools and apt packages are cached, a failure uploads traces and server logs |
-| `release.yml` | Push of a `v*` tag; manual run | Runs CI unless `master`'s CI already passed for the same code (a *Bump version* commit only changes the version), then the shared Docker release workflow from `firsttris/workflows`. A tag `vX.Y.Z` publishes `tristanteu/snapraid-ui:X.Y.Z`, `:X.Y` and `:latest`, updates the Docker Hub description and creates the GitHub release. A manual run on `master` runs the same checks and pushes `:edge`, without a release |
+| `ci.yml` | Push and pull request to `master`; called by the release workflow | Backend: `deno check src/main.ts src/bin.ts`, `deno test --allow-all`. Frontend: `npm ci`, `npx biome check`, `npm run typecheck`, `npm test`, `npm run build`. [End-to-end tests](#end-to-end-tests) three times: against the local build, against the Docker image (built with the release's registry cache) and against the standalone binary (built for x86_64 and arm64, the tests run the x86_64 one), each split into two shards that run side by side; the built tools and apt packages are cached, a failure uploads traces and server logs |
+| `release.yml` | Push of a `v*` tag; manual run | Runs CI unless `master`'s CI already passed for the same code (a *Bump version* commit only changes the version), then the shared Docker release workflow from `firsttris/workflows`. A tag `vX.Y.Z` publishes `tristanteu/snapraid-ui:X.Y.Z`, `:X.Y` and `:latest`, updates the Docker Hub description and creates the GitHub release, then the standalone binaries for x86_64 and arm64 are built and attached to it with their `SHA256SUMS`. A manual run on `master` runs the same checks and pushes `:edge`, without a release |
 | `bump.yml` | Manual run | Raises the version in `frontend/package.json` (patch, minor or major), commits it, tags the commit `vX.Y.Z` and starts `release.yml` on it (shared [`bump-version`](https://github.com/firsttris/workflows#bump-version)) |
 | `upstream-release.yml` | Mondays 06:00 UTC; manual run | Two jobs, each opens an issue with a checklist. `snapraid` compares the pinned `SNAPRAID_VERSION` with SnapRAID's latest stable release. `snapraid-daemon` compares `backend/src/engine/REVIEWED_DAEMON_VERSION` with snapraid-daemon's newest tag, release candidates included |
 | `docs.yml` | Push to `master` that changes `docs/`, `mkdocs.yml` or `requirements-docs.txt`; manual run | Builds `docs/` with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) (`mkdocs build --strict`, broken links fail the build) and publishes it to GitHub Pages at https://firsttris.github.io/snapraid-ui/. Locally: `pip install -r requirements-docs.txt && mkdocs serve` |

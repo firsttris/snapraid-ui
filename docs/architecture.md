@@ -60,6 +60,18 @@ The backend tells clients apart for the login lockout by the address of the conn
 
 The image sets `SNAPRAID_BASE_PATH=/app/snapraid`, `SNAPRAID_BIN=/usr/local/bin/snapraid` and `PORT=80`, declares `/app/snapraid` as a volume, and has a health check that requests `http://localhost/api/health`. See [Installation](installation.md) and [Configuration](configuration.md) for how to run it.
 
+## Standalone binary
+
+`scripts/build-binary.sh` compiles `backend/src/bin.ts` with `deno compile` into one executable per architecture (`snapraid-ui-linux-x86_64`, `snapraid-ui-linux-aarch64`), which the release attaches to the GitHub release. The binary embeds the Deno runtime, the backend with its npm and JSR dependencies, and with `--include` the built frontend (`frontend/.output/`), `frontend/package.json` and `docs/*.md`. Inside the binary these files keep their place relative to the backend's sources, so the code that finds them in the repository and in the image finds them there too:
+
+| File | Read by | For |
+|---|---|---|
+| `frontend/.output/server/index.mjs` | `backend/src/frontend.ts` | The UI |
+| `frontend/package.json` | `backend/src/version.ts` | The version, for `--version`, Home Assistant and the MCP endpoint; `SNAPRAID_UI_VERSION` overrides it |
+| `docs/*.md` | `backend/src/mcp.ts` | The documentation the MCP endpoint offers |
+
+`bin.ts` answers `--version` and `--help`, sets the data directory to `./snapraid` when `SNAPRAID_BASE_PATH` is not set, and then loads `main.ts`. SnapRAID and `smartctl` are not inside: the binary runs the ones installed on the host.
+
 ## Backend
 
 `backend/src/main.ts` builds the Hono app, wires the modules together and starts `Deno.serve` on `0.0.0.0` at `PORT` (8080 when unset, 80 in the image). On start it loads `config.json` (creating a default one if it is missing), creates the log directory, loads the schedules and runs one log rotation.

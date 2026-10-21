@@ -1,5 +1,5 @@
 import { assertEquals, assertRejects } from "@std/assert";
-import { type DockerRequest, listContainers, parseHttpResponse } from "../docker.ts";
+import { containerIdFromMountinfo, type DockerRequest, listContainers, parseHttpResponse } from "../docker.ts";
 import { pauseContainers, resumeContainers } from "../container-pause.ts";
 
 const response = (status: number, body = "") => ({ status, body });
@@ -64,4 +64,30 @@ Deno.test("resumeContainers - in reverse order", async () => {
   const calls: string[] = [];
   await resumeContainers(fakeDocker(calls), ["app", "web"], () => {});
   assertEquals(calls, ["POST /containers/web/unpause", "POST /containers/app/unpause"]);
+});
+
+const ID = "a".repeat(64);
+const OTHER = "b".repeat(64);
+
+Deno.test("containerIdFromMountinfo - Docker mounts the hostname file at /etc/hostname", () => {
+  const mountinfo = [
+    "613 612 0:56 / / rw,relatime master:310 - overlay overlay rw",
+    `626 613 259:2 /var/lib/docker/containers/${ID}/hostname /etc/hostname rw,relatime - ext4 /dev/nvme0n1p2 rw`,
+  ].join("\n");
+  assertEquals(containerIdFromMountinfo(mountinfo), ID);
+});
+
+Deno.test("containerIdFromMountinfo - Podman", () => {
+  const line =
+    `1040 1031 0:45 /containers/storage/overlay-containers/${ID}/userdata/hostname /etc/hostname rw - btrfs /dev/sda2 rw`;
+  assertEquals(containerIdFromMountinfo(line), ID);
+});
+
+Deno.test("containerIdFromMountinfo - a host running containers is not one of them", () => {
+  const mountinfo = [
+    "29 1 259:2 / / rw,relatime shared:1 - ext4 /dev/nvme0n1p2 rw",
+    `612 29 0:52 / /var/lib/docker/containers/${OTHER}/mounts/shm rw,nosuid shared:310 - tmpfs shm rw,size=65536k`,
+    "700 29 0:60 / /run/docker/netns/1a2b3c rw shared:320 - nsfs nsfs rw",
+  ].join("\n");
+  assertEquals(containerIdFromMountinfo(mountinfo), null);
 });
