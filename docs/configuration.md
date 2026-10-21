@@ -2,6 +2,8 @@
 
 Almost everything in SnapRAID UI is set up in the interface. This page covers the few settings made outside it: environment variables, the data directory and its files, log retention, and how SnapRAID config files are managed.
 
+The settings are environment variables: in the container you set them in the Compose file or with `-e`; a [native install](installation.md#without-docker) reads them from `/etc/snapraid-ui/snapraid-ui.env` (apply changes with `systemctl restart snapraid-ui`).
+
 ## Environment variables
 
 | Variable | Default | Description |
@@ -9,10 +11,12 @@ Almost everything in SnapRAID UI is set up in the interface. This page covers th
 | `SNAPRAID_UI_USERNAME` | *(unset)* | Username for the login. The login is enabled only when both username and password are set. |
 | `SNAPRAID_UI_PASSWORD` | *(unset)* | Password for the login. Changing it ends all existing sessions. |
 | `SNAPRAID_UI_SESSION_HOURS` | `168` (7 days) | How long a login lasts, in hours. Invalid or non-positive values fall back to 168. |
-| `SNAPRAID_BIN` | `/usr/local/bin/snapraid` in the image, `snapraid` otherwise | The SnapRAID binary to run. See [Using your own SnapRAID binary](installation.md#using-your-own-snapraid-binary). |
-| `SNAPRAID_BASE_PATH` | `/app/snapraid` in the image | The [data directory](#data-directory). Keep the default in the container and mount a volume there instead. |
+| `SNAPRAID_BIN` | `/usr/local/bin/snapraid` in the image, `snapraid` from the `PATH` otherwise | The SnapRAID binary to run. See [Using your own SnapRAID binary](installation.md#using-your-own-snapraid-binary). |
+| `SNAPRAID_BASE_PATH` | `/app/snapraid` in the image, `/var/lib/snapraid-ui` with the installer | The [data directory](#data-directory). Keep the default in the container and mount a volume there instead. |
+| `PORT` | `80` in the image, `3000` with the installer, `8080` otherwise | Port of the UI, the API and the WebSocket. In the container, change the host side of the port mapping instead, e.g. `-p 8090:80`. |
+| `SNAPRAID_UI_VERSION` | *(unset)* | Overrides the version the UI reports to Home Assistant and AI agents; normally it comes from the build. |
 | `SNAPRAID_EXTRA_ARGS` | *(empty)* | Extra arguments put in front of every SnapRAID call, separated by spaces. Meant for testing, for example `--test-skip-device` in the development sandbox. Leave it empty on a real array. |
-| `TZ` | `UTC` | Time zone of the container, e.g. `Europe/Berlin`. Schedules run in this time zone, see below. |
+| `TZ` | `UTC` in the container, the host's otherwise | Time zone of the container, e.g. `Europe/Berlin`. Schedules run in this time zone, see below. |
 
 The login is described in [Security](security.md).
 
@@ -26,11 +30,11 @@ The login is described in [Security](security.md).
 
 `SNAPRAID_DEMO=1` exists for the development sandbox only; it replaces SMART data, disk sizes, the scrub state and Docker with made-up values. Don't set it on a real system. See [Development](development.md).
 
-The container's ports are fixed: Nginx listens on port 80 inside the container. Change the port on the host side of the mapping instead, e.g. `-p 8090:80`.
+Inside the container the UI listens on port 80. Change the port on the host side of the mapping instead, e.g. `-p 8090:80`.
 
 ## Data directory
 
-All state lives in one directory, `/app/snapraid` in the container. Mount it as a volume so it survives updates. When you run the backend outside Docker without `SNAPRAID_BASE_PATH`, it is `../snapraid` relative to the backend's working directory, which is `snapraid/` in the repository root.
+All state lives in one directory, `/app/snapraid` in the container. Mount it as a volume so it survives updates. The [installer](installation.md#without-docker) uses `/var/lib/snapraid-ui`. When you run the backend from the repository without `SNAPRAID_BASE_PATH`, it is `../snapraid` relative to the backend's working directory, which is `snapraid/` in the repository root; the standalone binary uses `snapraid/` in its working directory.
 
 | Path | Contents |
 |---|---|

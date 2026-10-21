@@ -57,6 +57,62 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  # scripts/install.sh on a host with systemd, as users run it: the binary built here and served
+  # like the release, SnapRAID built from source (the runner has none), then update and uninstall
+  install:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck -s sh scripts/install.sh
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: scripts/build-binary.sh
+      - name: Serve the binary like a release
+        working-directory: dist
+        run: |
+          sha256sum snapraid-ui-linux-* > SHA256SUMS
+          python3 -m http.server 8765 --bind 127.0.0.1 > /dev/null 2>&1 &
+      - name: Install
+        run: sudo env SNAPRAID_UI_DOWNLOAD_URL=http://127.0.0.1:8765 sh scripts/install.sh
+      - name: The service serves the UI behind the login
+        run: |
+          systemctl is-active snapraid-ui
+          test "$(/usr/local/bin/snapraid --version | head -n 1 | cut -d' ' -f1-3)" = "SnapRAID CLI v15.0"
+          curl -fsS http://127.0.0.1:3000/api/health
+          curl -fsS -o /dev/null http://127.0.0.1:3000/
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/api/config)" = 401
+          password=$(sudo sed -n 's/^SNAPRAID_UI_PASSWORD=//p' /etc/snapraid-ui/snapraid-ui.env)
+          curl -fsS -c cookies -H 'Content-Type: application/json' \
+            -d "{\"username\":\"admin\",\"password\":\"$password\"}" http://127.0.0.1:3000/api/auth/login
+          curl -fsS -b cookies http://127.0.0.1:3000/api/config
+          sudo test -f /var/lib/snapraid-ui/config.json
+      - name: Running it again updates and keeps the settings
+        run: |
+          before=$(sudo sha256sum /etc/snapraid-ui/snapraid-ui.env)
+          sudo env SNAPRAID_UI_DOWNLOAD_URL=http://127.0.0.1:8765 sh scripts/install.sh
+          test "$(sudo sha256sum /etc/snapraid-ui/snapraid-ui.env)" = "$before"
+          curl -fsS http://127.0.0.1:3000/api/health
+      - name: Uninstall keeps the data
+        run: |
+          sudo sh scripts/install.sh --uninstall
+          if systemctl is-active --quiet snapraid-ui; then exit 1; fi
+          test ! -e /usr/local/bin/snapraid-ui
+          test ! -e /etc/systemd/system/snapraid-ui.service
+          sudo test -f /var/lib/snapraid-ui/config.json
+      - name: Service log
+        if: failure()
+        run: sudo journalctl -u snapraid-ui --no-pager | tail -n 100
+
   # SnapRAID, snapraid-daemon and the UI for real, driven through the browser (docs/development.md).
   # local: the backend's sources with the built frontend; image: the Docker image from docker/Dockerfile;
   # binary: the standalone binary from scripts/build-binary.sh.

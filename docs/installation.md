@@ -1,11 +1,12 @@
 # Installation
 
-SnapRAID UI runs as a single container that bundles SnapRAID, the web interface and its backend. This page shows how to run it with Docker, Docker Compose or Podman, how to give it access to your disks, and how to put it behind a reverse proxy.
+SnapRAID UI runs as a single container that bundles SnapRAID, the web interface and its backend, or without Docker as one binary with a systemd service. This page shows how to run it with Docker, Docker Compose, Podman or the installer, how to give it access to your disks, and how to put it behind a reverse proxy.
 
 - [Requirements](#requirements)
 - [Docker Compose](#docker-compose)
 - [Docker run](#docker-run)
 - [Podman Quadlet](#podman-quadlet)
+- [Without Docker](#without-docker)
 - [Disks and paths](#disks-and-paths)
 - [Privileged mode and SMART](#privileged-mode-and-smart)
 - [First start](#first-start)
@@ -18,7 +19,7 @@ SnapRAID UI runs as a single container that bundles SnapRAID, the web interface 
 
 ## Requirements
 
-- A Linux host with Docker or Podman. The image [`tristanteu/snapraid-ui`](https://hub.docker.com/r/tristanteu/snapraid-ui) is published for **amd64** and **arm64**.
+- A Linux host with Docker or Podman, or with systemd for the [installer](#without-docker). The image [`tristanteu/snapraid-ui`](https://hub.docker.com/r/tristanteu/snapraid-ui) is published for **amd64** and **arm64**.
 - Your data, parity and content locations mounted on the host (SnapRAID works on mounted file systems, not on raw devices).
 - Nothing else. The image ships SnapRAID 15 (currently 15.0, built from the official release), `smartctl` from smartmontools, and everything the UI needs.
 
@@ -114,6 +115,37 @@ Notes on the unit:
 - To run without a login, remove the `SNAPRAID_UI_USERNAME` and `Secret=` lines.
 
 Logs: `journalctl -u snapraid-app` (add `--user` for a rootless unit) or `podman logs snapraid-ui`.
+
+## Without Docker
+
+The installer sets SnapRAID UI up directly on the host: one binary (amd64 or arm64, glibc-based distributions such as Debian, Ubuntu, Fedora, openSUSE or Arch) and a systemd service. As root:
+
+```bash
+curl -fsSL https://github.com/firsttris/snapraid-ui/releases/latest/download/install.sh | sudo sh
+```
+
+It does the following and prints the address and the login at the end:
+
+1. Downloads `snapraid-ui-linux-<arch>` from the release, checks it against `SHA256SUMS` and installs it as `/usr/local/bin/snapraid-ui`.
+2. Looks for **SnapRAID 14 or newer** (`/usr/local/bin/snapraid`, then `snapraid` in the `PATH`). If there is none, or only an older one such as the 12.x most distributions ship, it builds SnapRAID 15.0 from the official release into `/usr/local/bin/snapraid` (installing `gcc` and `make` when missing; an older `/usr/local/bin/snapraid` is kept as `snapraid.old`).
+3. Installs `smartmontools` with the package manager when `smartctl` is missing.
+4. Writes the settings to `/etc/snapraid-ui/snapraid-ui.env` on the first install: port 3000, the data directory `/var/lib/snapraid-ui`, the SnapRAID binary, and a login `admin` with a random password.
+5. Sets up `snapraid-ui.service`, which runs as root (SnapRAID reads and writes your disks, `smartctl` needs the devices), starts it and waits until it answers.
+
+Nothing needs to be mounted: the UI sees the host's disks and paths as they are, so the paths in an existing `snapraid.conf` stay valid. Put your `snapraid.conf` into `/var/lib/snapraid-ui/`, add it where it is under *Manage arrays* → *Add existing file* (for example `/etc/snapraid.conf`), or set up a new array in the UI (see [First start](#first-start)).
+
+Settings for the installer, as environment variables, for example `curl ... | sudo env SNAPRAID_UI_PORT=8090 sh`:
+
+| Variable | Description |
+|---|---|
+| `SNAPRAID_UI_VERSION` | Install this release, e.g. `1.3.0`, instead of the latest |
+| `SNAPRAID_UI_PORT` | Port on the first install (default 3000); later, change `PORT` in the settings file |
+| `SNAPRAID_UI_SKIP_SNAPRAID` | `1` leaves SnapRAID and smartmontools alone, e.g. when you set `SNAPRAID_BIN` yourself |
+| `SNAPRAID_UI_DOWNLOAD_URL` | Where to download the binaries and `SHA256SUMS` from instead of the GitHub release |
+
+Change the settings, for example the password, the port or `TZ` (the service uses the host's time zone otherwise), in `/etc/snapraid-ui/snapraid-ui.env` and apply them with `sudo systemctl restart snapraid-ui`. All variables are listed in [Configuration](configuration.md#environment-variables).
+
+Logs: `journalctl -u snapraid-ui -f`. Without systemd the installer only installs the binary and prints the command to start it.
 
 ## Disks and paths
 
@@ -227,6 +259,8 @@ Releases are published as image tags:
 
 Your settings, schedules and logs live in the data directory, so updating only replaces the container.
 
+**Without Docker:** run the [installer](#without-docker) again. It replaces the binary and restarts the service, and keeps your settings file and data. Add `SNAPRAID_UI_VERSION=x.y.z` to go to a specific release.
+
 **Docker Compose:**
 
 ```bash
@@ -269,6 +303,10 @@ docker build -f docker/Dockerfile --build-arg SNAPRAID_VERSION=15.0 -t snapraid-
 Or with Compose, using the `build:` section of the bundled file: `docker compose -f docker/docker-compose.yml up --build`. More in [Development](development.md).
 
 ## Uninstalling
+
+Without Docker: `curl -fsSL https://github.com/firsttris/snapraid-ui/releases/latest/download/install.sh | sudo sh -s -- --uninstall` stops and removes the service and the binary. It keeps the data directory `/var/lib/snapraid-ui`, the settings in `/etc/snapraid-ui/` and SnapRAID; delete them yourself if you no longer need them.
+
+With Docker:
 
 1. Stop and remove the container: `docker compose down`, `docker rm -f snapraid-ui`, or for Podman `systemctl stop snapraid-app` and remove the `.container` and `.network` files, then `systemctl daemon-reload`.
 2. Optionally remove the image: `docker image rm tristanteu/snapraid-ui`.
