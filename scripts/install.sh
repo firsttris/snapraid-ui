@@ -91,7 +91,7 @@ snapraid_major() {
 ensure_snapraid() {
   checked=""
   for candidate in /usr/local/bin/snapraid "$(command -v snapraid 2>/dev/null || true)"; do
-    [ -n "$candidate" ] && [ -x "$candidate" ] && [ "$candidate" != "$checked" ] || continue
+    if [ -z "$candidate" ] || [ ! -x "$candidate" ] || [ "$candidate" = "$checked" ]; then continue; fi
     checked=$candidate
     major=$(snapraid_major "$candidate")
     if [ -n "$major" ] && [ "$major" -ge "$SNAPRAID_MIN_MAJOR" ]; then
