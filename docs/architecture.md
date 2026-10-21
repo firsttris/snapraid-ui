@@ -23,8 +23,8 @@ SnapRAID UI has three parts:
 
 | Part | Technology | Location |
 |---|---|---|
-| Backend | [Deno](https://deno.com/) + [Hono](https://hono.dev/), REST API and WebSocket on port 8080 | `backend/src/` |
-| Frontend | React 19, TanStack Start / Router / Query, Tailwind CSS, shadcn/ui, Paraglide JS; server-rendered by Nitro on Node.js | `frontend/src/` |
+| Backend | [Deno](https://deno.com/) + [Hono](https://hono.dev/), REST API and WebSocket; serves the built frontend on the same port | `backend/src/` |
+| Frontend | React 19, TanStack Start / Router / Query, Tailwind CSS, shadcn/ui, Paraglide JS; server-rendered by Nitro, which builds one fetch handler that the backend runs | `frontend/src/` |
 | Shared code | Types and logic used by both sides (types, i18n markers, SMART assessment, fill-up forecast, `--force-*` detection) | `shared/` |
 
 There is no database. All state lives in JSON files and log files in the data directory (`SNAPRAID_BASE_PATH`), next to your `snapraid.conf` files. The backend runs the `snapraid` binary as a child process and reads its **structured log** (available since SnapRAID 14.0) instead of scraping the human-readable console output.
@@ -36,34 +36,33 @@ The Docker image (`docker/Dockerfile`) is a multi-stage build:
 1. **snapraid-builder** (Debian bookworm-slim) downloads the pinned SnapRAID release (`ARG SNAPRAID_VERSION=15.0`) and compiles it.
 2. **backend-builder** (`denoland/deno:2.5.6`) installs the backend dependencies and warms the Deno module cache.
 3. **frontend-builder** (`node:22-bookworm-slim`) runs `npm ci` and `npm run build`, which produces `frontend/.output/`.
-4. The **final image** is based on `denoland/deno:2.5.6`, adds `nginx`, `supervisor`, `curl` and `smartmontools` (SnapRAID calls `smartctl` for `smart` and `probe`), and copies in the SnapRAID binary, the Node.js binary, the backend with its module cache and the built frontend.
+4. The **final image** is based on `denoland/deno:2.5.6`, adds `curl` and `smartmontools` (SnapRAID calls `smartctl` for `smart` and `probe`), and copies in the SnapRAID binary, the backend with its module cache and the built frontend.
 
-Inside the container, [Supervisor](http://supervisord.org/) (`docker/supervisord.conf`) runs three programs, and `docker/entrypoint.sh` simply starts `supervisord`:
+The container runs a single process, the backend, under [tini](https://github.com/krallin/tini) as PID 1, which passes `docker stop`'s `SIGTERM` on and reaps the processes the backend starts:
 
-| Program | Command | Listens on |
-|---|---|---|
-| `nginx` | `nginx -g "daemon off;"` | 80 |
-| `frontend` | `node .output/server/index.mjs` | 3000 |
-| `backend` | `deno run --allow-net --allow-read --allow-write --allow-run --allow-env --allow-sys=networkInterfaces,hostname src/main.ts` | 8080 |
+```
+deno run --allow-net --allow-read --allow-write --allow-run --allow-env --allow-sys=networkInterfaces,hostname src/main.ts
+```
+
+It listens on port 80 (`PORT=80`) and answers `/api` and `/ws` itself. Every other path goes to the frontend: Nitro builds the server-side rendering and the static files (`frontend/.output/`) with its `standard` preset into one fetch handler, which `backend/src/frontend.ts` loads from `../frontend/.output/server/index.mjs`.
 
 ```mermaid
 flowchart LR
-  B[Browser] -->|":80"| N[nginx]
-  N -->|"/"| F["frontend (Node, SSR) :3000"]
-  N -->|"/api"| A["backend (Deno + Hono) :8080"]
-  N -->|"/ws"| A
-  A -->|child process| S[snapraid]
+  B[Browser] -->|":80"| A["backend (Deno + Hono)"]
+  A -->|"/api, /ws"| R[routes]
+  A -->|"everything else"| F["frontend (SSR, static files)"]
+  R -->|child process| S[snapraid]
   S -->|smartctl| D[(disks)]
-  A <--> V[("/app/snapraid<br/>data directory")]
+  R <--> V[("/app/snapraid<br/>data directory")]
 ```
 
-Nginx (`docker/nginx.conf`) routes `/` to the frontend, `/api` and `/ws` to the backend, passes WebSocket upgrades through, and sets `X-Real-IP`, `X-Forwarded-For` and `X-Forwarded-Proto`. The backend uses `X-Real-IP` to tell clients apart for the login lockout and `X-Forwarded-Proto` to decide whether the session cookie gets the `Secure` flag (see [Security](security.md)).
+The backend tells clients apart for the login lockout by the address of the connection, and sets the `Secure` flag on the session cookie when the request arrived over HTTPS or a proxy says so with `X-Forwarded-Proto: https` (see [Security](security.md)).
 
-The image sets `SNAPRAID_BASE_PATH=/app/snapraid` and `SNAPRAID_BIN=/usr/local/bin/snapraid`, declares `/app/snapraid` as a volume, and has a health check that requests `http://localhost/` through nginx. See [Installation](installation.md) and [Configuration](configuration.md) for how to run it.
+The image sets `SNAPRAID_BASE_PATH=/app/snapraid`, `SNAPRAID_BIN=/usr/local/bin/snapraid` and `PORT=80`, declares `/app/snapraid` as a volume, and has a health check that requests `http://localhost/api/health`. See [Installation](installation.md) and [Configuration](configuration.md) for how to run it.
 
 ## Backend
 
-`backend/src/main.ts` builds the Hono app, wires the modules together and starts `Deno.serve` on `0.0.0.0:8080`. On start it loads `config.json` (creating a default one if it is missing), creates the log directory, loads the schedules and runs one log rotation.
+`backend/src/main.ts` builds the Hono app, wires the modules together and starts `Deno.serve` on `0.0.0.0` at `PORT` (8080 when unset, 80 in the image). On start it loads `config.json` (creating a default one if it is missing), creates the log directory, loads the schedules and runs one log rotation.
 
 Middleware, in order:
 
@@ -250,7 +249,7 @@ The frontend is a [TanStack Start](https://tanstack.com/start) app with file-bas
 | `src/lib/` | Command definitions, log parsing, progress, theme, i18n helper, navigation |
 | `src/server.ts` | Server entry; runs the Paraglide middleware so SSR renders the user's language |
 
-In production the API base is `/api` and the WebSocket URL is `/ws` (same origin, through nginx). In development the frontend calls `http://localhost:8080/api` and `ws://localhost:8080/ws` directly (`src/lib/api/constants.ts`). Every request is sent with `credentials: 'include'`; a `401` fires a `snapraid:unauthorized` event that brings back the login page.
+In production the API base is `/api` and the WebSocket URL is `/ws` (same origin, the backend serves the frontend). In development the frontend calls `http://localhost:8080/api` and `ws://localhost:8080/ws` directly (`src/lib/api/constants.ts`). Every request is sent with `credentials: 'include'`; a `401` fires a `snapraid:unauthorized` event that brings back the login page.
 
 Server state is managed with TanStack Query. Only the array status is persisted to `localStorage`, so the dashboard shows the last known status immediately after a reload. Theme and animation preferences are stored in `localStorage` and applied by an inline script before the first paint. The app is also an installable PWA (`vite-plugin-pwa`); pages and API data are deliberately not cached.
 
@@ -277,7 +276,7 @@ Most endpoints that work on a SnapRAID config take its path: as the `path` query
 
 | Method | Path | Purpose | Key params / response |
 |---|---|---|---|
-| GET | `/` | Backend health check (not under `/api`; only reachable on port 8080 directly, nginx sends `/` to the frontend) | `{status: "ok", service: "SnapRAID Backend"}` |
+| GET | `/api/health` | Health check, also of the image's `HEALTHCHECK`; open with the login enabled | `{status: "ok", service: "SnapRAID Backend"}` |
 | GET | `/api/auth/session` | Current login state | `AuthSession`: `{enabled, authenticated, username?}`. With login disabled: `{enabled: false, authenticated: true}` |
 | POST | `/api/auth/login` | Log in, sets the session cookie | Body `{username, password}`. `401` on wrong credentials, `429` with `Retry-After` header and `{retryAfter}` after 5 failures within 15 minutes. Only exists with login enabled |
 | POST | `/api/auth/logout` | Clear the session cookie | Only exists with login enabled |
@@ -425,7 +424,7 @@ See [Notifications](notifications.md) for the settings and the webhook payload.
 
 ## WebSocket
 
-Connect to `/ws` (through nginx) or `ws://<host>:8080/ws`. With the login enabled, the session cookie is required for the upgrade. The connection is server-to-client only: the backend ignores anything a client sends. Every message is a JSON object with a `type`:
+Connect to `/ws` on the address of the UI. With the login enabled, the session cookie is required for the upgrade. The connection is server-to-client only: the backend ignores anything a client sends. Every message is a JSON object with a `type`:
 
 | `type` | When | Fields |
 |---|---|---|

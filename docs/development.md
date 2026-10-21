@@ -36,6 +36,8 @@ Under the hood it starts `deno task dev` in `backend/` (with `--watch`, so the b
 > [!NOTE]
 > In development the frontend calls the backend directly at `http://localhost:8080` (`frontend/src/lib/api/constants.ts`), and the backend only accepts credentials from the same hostname. Open the dev frontend as `http://localhost:3000`, not via a LAN IP.
 
+To run the production build as the image does, build the frontend (`npm run build` in `frontend/`) and start the backend with `deno task start`: it finds `frontend/.output/` and serves the UI, the API and the WebSocket together on port 8080. Without a build it serves only the API.
+
 <details>
 <summary>Stopping leftover processes</summary>
 
@@ -97,7 +99,7 @@ frontend/
     lib/               API client, WebSocket, log parsing, theme, i18n, commands
     lib/__tests__/     frontend unit tests
 shared/                types and logic used by backend and frontend
-docker/                Dockerfile, Compose file, Quadlet units, nginx and supervisor config
+docker/                Dockerfile, Compose file, Quadlet units
 dev/setup.sh           demo sandbox
 e2e/                   end-to-end tests (Playwright) against real SnapRAID and snapraid-daemon
 install.sh, start.sh   local setup and start
@@ -184,9 +186,9 @@ npm run test:image                # the same tests against the Docker image buil
 
 `npm run setup` builds SnapRAID 15.0 (the version of the image) from the release tarball for the jobs SnapRAID UI runs itself, and SnapRAID from git (`SNAPRAID15_REF`) with snapraid-daemon at the version in `backend/src/engine/REVIEWED_DAEMON_VERSION`. The test disks are directories on one filesystem, so SnapRAID runs with `--test-skip-device`: the backend gets it through `SNAPRAID_EXTRA_ARGS`, the daemon through a small compiled wrapper as `sys_engine`.
 
-The global setup (`e2e/harness/global-setup.ts`) recreates `e2e/.run/` on every run: the backend's data directory, the arrays and a log per server. It starts snapraid-daemon on its own array, the backend (with `PORT`, `SNAPRAID_BASE_PATH` and `SNAPRAID_BIN` pointing into `e2e/`), the production build of the frontend and a small proxy that sends `/api` and `/ws` to the backend like nginx in the image. Each test creates its own array, adds it through the API and opens it; the `app` fixture removes it, and the schedules, afterwards. Tests run one after the other, the backend runs one job at a time.
+The global setup (`e2e/harness/global-setup.ts`) recreates `e2e/.run/` on every run: the backend's data directory, the arrays and a log per server. It starts snapraid-daemon on its own array, the backend (with `PORT`, `SNAPRAID_BASE_PATH` and `SNAPRAID_BIN` pointing into `e2e/`), which serves the production build of the frontend as in the image. Each test creates its own array, adds it through the API and opens it; the `app` fixture removes it, and the schedules, afterwards. Tests run one after the other, the backend runs one job at a time.
 
-With `E2E_IMAGE=<image>` the container takes the place of backend, frontend and proxy: started as in `docker/docker-compose.yml`, with the data directory in `/app/snapraid`, the arrays at the same paths as on the host and the Docker socket mounted. It shares the host's network (nginx on port 80), so the backend reaches snapraid-daemon and the webhook receiver on `127.0.0.1`. `E2E_SKIP_BUILD=1` skips the frontend build of a local run. A failed test leaves a trace (`npx playwright show-trace e2e/test-results/…/trace.zip`) and the server logs in `e2e/.run/*.log`; CI uploads both.
+With `E2E_IMAGE=<image>` the container takes the place of the backend: started as in `docker/docker-compose.yml`, with the data directory in `/app/snapraid`, the arrays at the same paths as on the host and the Docker socket mounted. It shares the host's network (the UI on port 80), so the backend reaches snapraid-daemon and the webhook receiver on `127.0.0.1`. `E2E_SKIP_BUILD=1` skips the frontend build of a local run. A failed test leaves a trace (`npx playwright show-trace e2e/test-results/…/trace.zip`) and the server logs in `e2e/.run/*.log`; CI uploads both.
 
 ## Linting and type checking
 

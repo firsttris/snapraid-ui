@@ -46,8 +46,12 @@ export const safeEqual = async (a: string, b: string): Promise<boolean> => {
   return diff === 0;
 };
 
-const clientKey = (c: Context): string =>
-  c.req.header("x-real-ip") ?? c.req.header("x-forwarded-for")?.split(",")[0].trim() ?? "local";
+// The address the connection came from, which Deno.serve passes as the env; not a header,
+// which a client could set to escape the lockout. Behind a proxy that is the proxy's address
+const clientKey = (c: Context): string => {
+  const remote = (c.env as Partial<Deno.ServeHandlerInfo> | undefined)?.remoteAddr;
+  return remote && "hostname" in remote ? remote.hostname : "local";
+};
 
 const isHttps = (c: Context): boolean =>
   c.req.header("x-forwarded-proto") === "https" || new URL(c.req.url).protocol === "https:";
@@ -145,9 +149,12 @@ export const createAuth = (options: AuthOptions) => {
   });
 
   // Guards everything except the auth routes themselves, the metrics and the MCP endpoint, which
-  // check their own token
+  // check their own token, and the health check of the container, which tells nothing
   const middleware: MiddlewareHandler = async (c, next) => {
-    if (c.req.path.startsWith("/api/auth/") || c.req.path === "/api/metrics" || c.req.path === "/api/mcp") {
+    if (
+      c.req.path.startsWith("/api/auth/") || c.req.path === "/api/metrics" || c.req.path === "/api/mcp" ||
+      c.req.path === "/api/health"
+    ) {
       return next();
     }
     if (!(await readSession(c))) {

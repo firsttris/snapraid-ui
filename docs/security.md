@@ -58,15 +58,14 @@ To slow down password guessing:
 
 The counters are kept in memory, so restarting the container clears them.
 
-The client address comes from the `X-Real-IP` header that the container's own Nginx sets to the address of whoever connected to it. Behind a reverse proxy, that is the proxy, so **all users share one counter**: five wrong passwords from anyone lock everyone out for up to 15 minutes. Restart the container if that locks you out.
+The client address is the address of the connection, not a header a client could set. Behind a reverse proxy, that is the proxy, so **all users share one counter**: five wrong passwords from anyone lock everyone out for up to 15 minutes. Restart the container if that locks you out.
 
 ## Behind a reverse proxy
 
 A reverse proxy is the usual way to add HTTPS. Set it up as described in [Installation](installation.md#reverse-proxy-and-https), and keep these points in mind:
 
 - **Only the proxy should reach the container.** Bind the port to localhost (`127.0.0.1:3000:80`) or use a shared Docker network without publishing a port.
-- **Publish only port 80 of the container.** The backend also listens on port 8080 inside the container. Don't publish it: requests to it bypass the container's Nginx, so a client could set its own `X-Real-IP` header and escape the lockout.
-- **The `Secure` cookie flag is not set behind a proxy.** The container's Nginx passes on the protocol of its own connection, which is plain HTTP from your proxy, so the backend can't tell that the browser used HTTPS. The cookie is still `HttpOnly` and `SameSite=Strict`. Configure your proxy to redirect HTTP to HTTPS, so the browser never sends the cookie unencrypted.
+- **Let the proxy send `X-Forwarded-Proto`.** The connection from your proxy is plain HTTP, so the backend only sets the `Secure` cookie flag when the proxy says the browser used HTTPS with `X-Forwarded-Proto: https`. Caddy and Traefik send it on their own, for Nginx add `proxy_set_header X-Forwarded-Proto $scheme;`. Without it the cookie is still `HttpOnly` and `SameSite=Strict`; configure your proxy to redirect HTTP to HTTPS either way, so the browser never sends the cookie unencrypted.
 
 ## Using an authentication proxy instead
 
