@@ -6,12 +6,10 @@ Published image: [`tristanteu/snapraid-ui`](https://hub.docker.com/r/tristanteu/
 
 | File | Purpose |
 |---|---|
-| `Dockerfile` | Multi-stage build: SnapRAID from source, Deno backend, TanStack Start frontend, Nginx + Supervisor runtime |
+| `Dockerfile` | Multi-stage build: SnapRAID from source, Deno backend, TanStack Start frontend; one Deno process serves all of it on port 80 |
 | `docker-compose.yml` | Compose setup using the published image (or `--build` to build from source) |
 | `snapraid-app.container` | Podman Quadlet unit |
 | `snapraid-net.network` | Podman Quadlet network |
-| `nginx.conf` | Reverse proxy: `/` → frontend (3000), `/api` and `/ws` → backend (8080) |
-| `supervisord.conf` | Runs backend, frontend and Nginx |
 
 ## Build from source
 

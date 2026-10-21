@@ -30,6 +30,7 @@ import { resumeLeftoverContainers } from "./container-pause.ts";
 import { resolveFromBase } from "./config.ts";
 import { withRestoredOwnership } from "./restore-ownership.ts";
 import { createAuth, disabledAuthRoutes, loadSessionSecret, readAuthEnv } from "./auth.ts";
+import { type FetchHandler, isBackendPath, loadFrontend } from "./frontend.ts";
 
 const app = new Hono();
 
@@ -82,13 +83,15 @@ app.route("/api/setup", setupRoutes);
 app.route("/api/home-assistant", homeAssistantRoutes);
 app.route("/api/engine", engineRoutes);
 
-// Health check
-app.get("/", (c) => {
+// Health check, also for the container's HEALTHCHECK
+app.get("/api/health", (c) => {
   return c.json({ status: "ok", service: "SnapRAID Backend" });
 });
 
-// 404 handler
+// Everything else is the UI, when the frontend is built
+let frontend: FetchHandler | null = null;
 app.notFound((c) => {
+  if (frontend && !isBackendPath(c.req.path)) return frontend(c.req.raw);
   return c.json({ error: "Not Found" }, 404);
 });
 
@@ -208,7 +211,10 @@ const main = async (): Promise<void> => {
     config.logs.maxAge
   );
 
-  console.log(`🚀 Starting SnapRAID Backend on http://${host}:${port}`);
+  frontend = await loadFrontend();
+  if (!frontend) console.log("🖥️  Frontend not built, serving the API only (development: the Vite dev server)");
+
+  console.log(`🚀 Starting SnapRAID UI on http://${host}:${port}`);
   console.log(`📝 Logs directory: ${config.logs.directory}`);
 
   Deno.serve({

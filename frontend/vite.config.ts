@@ -25,6 +25,11 @@ const config = defineConfig({
     }),
     devtools(),
     nitro({
+      // One fetch handler (.output/server/index.mjs) that the backend runs, no server of its own;
+      // it serves the static files too and bundles every dependency, Deno has no node_modules here
+      preset: 'standard',
+      serveStatic: true,
+      noExternals: true,
       // Writes .gz and .br next to the client assets; the server sends them to
       // browsers that accept them instead of the uncompressed files
       compressPublicAssets: { gzip: true, brotli: true },

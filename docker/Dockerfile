@@ -34,40 +34,36 @@ COPY shared/ ../shared/
 COPY frontend/ ./
 RUN npm run build
 
-# Final combined image
+# Final image: one Deno process serves the UI, the API and the WebSocket on port 80
 FROM docker.io/denoland/deno:2.5.6
 
 # smartmontools: SnapRAID calls smartctl for smart, probe (power state) and down (spin down)
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends nginx supervisor curl smartmontools \
+  && apt-get install -y --no-install-recommends curl smartmontools \
   && rm -rf /var/lib/apt/lists/* \
-  && rm -f /etc/nginx/sites-enabled/default \
-  && mkdir -p /app/snapraid /var/log/supervisor /run/nginx
+  && mkdir -p /app/snapraid
 
 COPY --from=snapraid-builder /usr/local/bin/snapraid /usr/local/bin/snapraid
-
-# Node runtime for the frontend server
-COPY --from=frontend-builder /usr/local/bin/node /usr/local/bin/node
 
 COPY --from=backend-builder /deno-dir /deno-dir
 COPY --from=backend-builder /app/backend /app/backend
 COPY --from=backend-builder /app/shared /app/shared
+# The backend loads the frontend's server from here (backend/src/frontend.ts)
 COPY --from=frontend-builder /app/frontend/.output /app/frontend/.output
 # The documentation, which the MCP endpoint offers to AI agents
 COPY docs/*.md /app/docs/
 
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
-COPY docker/supervisord.conf /etc/supervisord.conf
-COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 ENV SNAPRAID_BASE_PATH=/app/snapraid \
-    SNAPRAID_BIN=/usr/local/bin/snapraid
+    SNAPRAID_BIN=/usr/local/bin/snapraid \
+    PORT=80
 VOLUME /app/snapraid
 
-EXPOSE 80 8080
+EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD curl -f http://localhost/ || exit 1
+  CMD curl -f http://localhost/api/health || exit 1
 
-ENTRYPOINT ["/entrypoint.sh"]
+WORKDIR /app/backend
+# tini as PID 1 passes docker stop's SIGTERM on to Deno and reaps the processes it starts
+ENTRYPOINT ["/tini", "--"]
+CMD ["deno", "run", "--allow-net", "--allow-read", "--allow-write", "--allow-run", "--allow-env", "--allow-sys=networkInterfaces,hostname", "src/main.ts"]

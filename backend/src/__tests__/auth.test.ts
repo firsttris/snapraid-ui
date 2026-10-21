@@ -8,15 +8,19 @@ const buildApp = () => {
   app.use("/api/*", auth.middleware);
   app.route("/api/auth", auth.routes);
   app.get("/api/data", (c) => c.json({ ok: true }));
+  app.get("/api/health", (c) => c.json({ status: "ok" }));
   return app;
 };
 
-const login = (app: Hono, username: string, password: string, ip = "10.0.0.1") =>
+// The client's address as Deno.serve passes it
+const connection = (ip: string) => ({ remoteAddr: { transport: "tcp", hostname: ip, port: 50000 } });
+
+const login = (app: Hono, username: string, password: string, ip = "10.0.0.1", headers: Record<string, string> = {}) =>
   app.request("/api/auth/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Real-IP": ip },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify({ username, password }),
-  });
+  }, connection(ip));
 
 const sessionCookie = (res: Response): string => {
   const match = res.headers.get("set-cookie")?.match(new RegExp(`${SESSION_COOKIE}=([^;]+)`));
@@ -70,4 +74,20 @@ Deno.test("auth - locks out a client after repeated failures", async () => {
 
   // Other clients are not affected
   assertEquals((await login(app, "admin", "secret", "10.0.0.3")).status, 200);
+});
+
+Deno.test("auth - forwarding headers do not escape the lockout", async () => {
+  const app = buildApp();
+  for (let i = 0; i < 5; i++) {
+    assertEquals((await login(app, "admin", "wrong", "10.0.0.4", { "X-Real-IP": `192.168.1.${i}` })).status, 401);
+  }
+  const spoofed = await login(app, "admin", "secret", "10.0.0.4", {
+    "X-Real-IP": "192.168.1.99",
+    "X-Forwarded-For": "192.168.1.99",
+  });
+  assertEquals(spoofed.status, 429);
+});
+
+Deno.test("auth - the health check needs no session", async () => {
+  assertEquals((await buildApp().request("/api/health")).status, 200);
 });

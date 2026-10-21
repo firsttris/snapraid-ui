@@ -19,11 +19,9 @@ export const IMAGE = process.env.E2E_IMAGE
 export const IMAGE_CONTAINER = 'snapraid-ui-e2e'
 
 export const PORTS = {
-  // The proxy in front of frontend and backend, like nginx in the Docker image;
-  // the image's nginx itself listens on 80, it shares the host's network
+  // The backend, which serves the built frontend as well; the image listens on 80, it shares
+  // the host's network
   app: IMAGE ? 80 : 4173,
-  frontend: 4174,
-  backend: 4175,
   daemon: 4176,
   // Receives the webhook notifications of the tests
   webhook: 4177,

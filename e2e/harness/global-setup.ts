@@ -1,6 +1,6 @@
 // Starts what the tests run against: snapraid-daemon on its own array, the backend with
-// SnapRAID 15 for the CLI jobs, the built frontend, and the proxy in front of them.
-// With E2E_IMAGE a container of that image takes the place of backend, frontend and proxy.
+// SnapRAID 15 for the CLI jobs, which serves the built frontend as well.
+// With E2E_IMAGE a container of that image takes the place of the backend.
 // The data lives in e2e/.run/, recreated on each run.
 import { execFile, execFileSync } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -10,6 +10,7 @@ import { join } from 'node:path'
 import { createArray } from './array'
 import {
   API_URL,
+  APP_URL,
   ARRAYS,
   BASE,
   DAEMON_ARRAY,
@@ -25,7 +26,7 @@ import {
   SNAPRAID15_SKIP_DEVICE,
   SNAPRAIDD,
 } from './env'
-import { answers, type Server, startProcess, startProxy } from './servers'
+import { answers, type Server, startProcess } from './servers'
 
 export const DENO_PERMISSIONS = [
   '--allow-net',
@@ -68,6 +69,16 @@ const startDaemon = async (): Promise<Server> => {
     { ready: answers(`${DAEMON_URL}/snapraid/v1/array`) },
   )
 }
+
+/**
+ * The backend with the built frontend on the app's port, ready once both answer
+ */
+export const startBackend = (env: Record<string, string>): Promise<Server> =>
+  startProcess('backend', findDeno(), ['run', ...DENO_PERMISSIONS, 'src/main.ts'], {
+    cwd: join(ROOT, 'backend'),
+    env: { PORT: String(PORTS.app), ...env },
+    ready: async () => (await answers(`${API_URL}/config`)()) && (await fetch(`${APP_URL}/`)).ok,
+  })
 
 const docker = (...args: string[]) => promisify(execFile)('docker', args, { maxBuffer: 64 * 1024 * 1024 })
 
@@ -144,28 +155,14 @@ export default async function globalSetup() {
       return stopAll
     }
     servers.push(
-      await startProcess('backend', findDeno(), ['run', ...DENO_PERMISSIONS, 'src/main.ts'], {
-        cwd: join(ROOT, 'backend'),
-        env: {
-          PORT: String(PORTS.backend),
-          SNAPRAID_BASE_PATH: BASE,
-          SNAPRAID_BIN: SNAPRAID,
-          SNAPRAID_EXTRA_ARGS: '--test-skip-device',
-          SMARTCTL_BIN: join(FAKE_SMARTCTL_DIR, 'smartctl'),
-          FAKE_SMARTCTL_STATE: join(ARRAYS, '.smartctl'),
-        },
-        ready: answers(`http://127.0.0.1:${PORTS.backend}/api/config`),
+      await startBackend({
+        SNAPRAID_BASE_PATH: BASE,
+        SNAPRAID_BIN: SNAPRAID,
+        SNAPRAID_EXTRA_ARGS: '--test-skip-device',
+        SMARTCTL_BIN: join(FAKE_SMARTCTL_DIR, 'smartctl'),
+        FAKE_SMARTCTL_STATE: join(ARRAYS, '.smartctl'),
       }),
     )
-    servers.push(
-      await startProcess('frontend', 'node', ['.output/server/index.mjs'], {
-        cwd: frontend,
-        env: { PORT: String(PORTS.frontend), HOST: '127.0.0.1' },
-        ready: answers(`http://127.0.0.1:${PORTS.frontend}/`),
-      }),
-    )
-    servers.push(await startProxy(PORTS.app, PORTS.frontend, PORTS.backend))
-    if (!(await answers(`${API_URL}/config`)())) throw new Error('The proxy does not reach the backend')
   } catch (error) {
     await stopAll()
     throw error
