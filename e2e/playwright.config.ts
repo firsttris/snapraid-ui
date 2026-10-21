@@ -1,8 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
-import { APP_URL, IMAGE } from './harness/env'
+import { APP_URL, BINARY, IMAGE } from './harness/env'
 
-// Kept apart, so a run against the image does not replace the results of the local run
-const target = IMAGE ? 'image' : 'local'
+// Kept apart, so a run against the image or the binary does not replace the results of the local run
+const target = IMAGE ? 'image' : BINARY ? 'binary' : 'local'
 
 // One backend runs one job at a time, so the tests run one after the other
 export default defineConfig({

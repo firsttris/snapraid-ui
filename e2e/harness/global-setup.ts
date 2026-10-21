@@ -6,15 +6,17 @@ import { execFile, execFileSync } from 'node:child_process'
 import { promisify } from 'node:util'
 import { existsSync } from 'node:fs'
 import { mkdir, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { createArray } from './array'
 import {
   API_URL,
   APP_URL,
   ARRAYS,
   BASE,
+  BINARY,
   DAEMON_ARRAY,
   DAEMON_URL,
+  E2E_DIR,
   FAKE_SMARTCTL_DIR,
   IMAGE,
   IMAGE_CONTAINER,
@@ -71,14 +73,20 @@ const startDaemon = async (): Promise<Server> => {
 }
 
 /**
- * The backend with the built frontend on the app's port, ready once both answer
+ * The backend with the built frontend on the app's port, ready once both answer: from the sources,
+ * or with E2E_BINARY the standalone binary, which carries the frontend inside
  */
-export const startBackend = (env: Record<string, string>): Promise<Server> =>
-  startProcess('backend', findDeno(), ['run', ...DENO_PERMISSIONS, 'src/main.ts'], {
-    cwd: join(ROOT, 'backend'),
+export const startBackend = (env: Record<string, string>): Promise<Server> => {
+  const options = {
     env: { PORT: String(PORTS.app), ...env },
     ready: async () => (await answers(`${API_URL}/config`)()) && (await fetch(`${APP_URL}/`)).ok,
+  }
+  if (BINARY) return startProcess('backend', resolve(E2E_DIR, BINARY), [], { ...options, cwd: RUN_DIR })
+  return startProcess('backend', findDeno(), ['run', ...DENO_PERMISSIONS, 'src/main.ts'], {
+    ...options,
+    cwd: join(ROOT, 'backend'),
   })
+}
 
 const docker = (...args: string[]) => promisify(execFile)('docker', args, { maxBuffer: 64 * 1024 * 1024 })
 
@@ -140,7 +148,7 @@ export default async function globalSetup() {
 
   await mkdir(ARRAYS, { recursive: true })
   const frontend = join(ROOT, 'frontend')
-  if (!IMAGE && process.env.E2E_SKIP_BUILD !== '1') {
+  if (!IMAGE && !BINARY && process.env.E2E_SKIP_BUILD !== '1') {
     execFileSync('npm', ['run', 'build'], { cwd: frontend, stdio: 'inherit' })
   }
 

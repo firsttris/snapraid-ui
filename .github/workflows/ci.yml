@@ -35,7 +35,7 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.5.x
-      - run: deno check src/main.ts
+      - run: deno check src/main.ts src/bin.ts
       - run: deno test --allow-all
 
   frontend:
@@ -58,7 +58,8 @@ jobs:
       - run: npm run build
 
   # SnapRAID, snapraid-daemon and the UI for real, driven through the browser (docs/development.md).
-  # local: backend and built frontend as processes; image: the Docker image from docker/Dockerfile.
+  # local: the backend's sources with the built frontend; image: the Docker image from docker/Dockerfile;
+  # binary: the standalone binary from scripts/build-binary.sh.
   # Each target in two shards: every shard starts its own servers and runs half of the test files
   e2e:
     if: ${{ !github.event.pull_request.draft }}
@@ -72,13 +73,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [local, image]
+        target: [local, image, binary]
         shard: [1, 2]
     defaults:
       run:
         working-directory: e2e
     env:
       E2E_IMAGE: ${{ matrix.target == 'image' && 'snapraid-ui:e2e' || '' }}
+      E2E_BINARY: ${{ matrix.target == 'binary' && '../dist/snapraid-ui-linux-x86_64' || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
@@ -106,10 +108,15 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npx playwright install --with-deps chromium
-      - name: Install the frontend, the tests build it
-        if: matrix.target == 'local'
+      - name: Install the frontend, the tests or the binary build it
+        if: matrix.target != 'image'
         working-directory: frontend
         run: npm ci
+      # The tests run the x86_64 one; arm64 is built too, so the release does not find a problem first
+      - name: Build the binaries
+        if: matrix.target == 'binary'
+        working-directory: .
+        run: scripts/build-binary.sh x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
       # With the release's build cache: only the layers that changed are built again
       - name: Build the Docker image
         if: matrix.target == 'image'

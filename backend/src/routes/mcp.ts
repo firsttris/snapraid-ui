@@ -5,6 +5,7 @@ import { safeEqual } from "../auth.ts";
 import { snapshotConfigs } from "../array-snapshot.ts";
 import { loadAppConfig, parseSnapRaidConfig } from "../config-parser.ts";
 import { BASE_PATH, resolveFromBase } from "../config.ts";
+import { APP_VERSION } from "../version.ts";
 import { getEngine } from "../engine/engine.ts";
 import type { LogManager } from "../log-manager.ts";
 import { loadMaintenanceSettings } from "../maintenance-settings.ts";
@@ -43,7 +44,7 @@ export const createMcpRoutes = (loadSettings = loadMaintenanceSettings) =>
     const { logManager, scheduler } = state;
 
     const server = await createMcpServer({
-      version: Deno.env.get("SNAPRAID_UI_VERSION") ?? "",
+      version: APP_VERSION,
       allowActions: settings.allowActions,
       engine: getEngine,
       arrays: async () => (await loadAppConfig()).snapraidConfigs,

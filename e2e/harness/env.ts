@@ -18,6 +18,10 @@ export const ARRAYS = join(RUN_DIR, 'arrays')
 export const IMAGE = process.env.E2E_IMAGE
 export const IMAGE_CONTAINER = 'snapraid-ui-e2e'
 
+// Run the standalone binary instead of the backend's sources, e.g.
+// E2E_BINARY=../dist/snapraid-ui-linux-x86_64 (scripts/build-binary.sh builds it)
+export const BINARY = process.env.E2E_BINARY
+
 export const PORTS = {
   // The backend, which serves the built frontend as well; the image listens on 80, it shares
   // the host's network

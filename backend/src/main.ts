@@ -30,6 +30,7 @@ import { resumeLeftoverContainers } from "./container-pause.ts";
 import { resolveFromBase } from "./config.ts";
 import { withRestoredOwnership } from "./restore-ownership.ts";
 import { createAuth, disabledAuthRoutes, loadSessionSecret, readAuthEnv } from "./auth.ts";
+import { APP_VERSION } from "./version.ts";
 import { type FetchHandler, isBackendPath, loadFrontend } from "./frontend.ts";
 
 const app = new Hono();
@@ -166,7 +167,7 @@ const main = async (): Promise<void> => {
     currentJob: () => engine.currentJob(),
     lastJobFinishedAt: () => engine.lastJob()?.finishedAt,
     runCommand: (configPath, command) => startExternalJob(configPath, command, `Home Assistant ${command}`),
-    version: Deno.env.get("SNAPRAID_UI_VERSION") ?? "",
+    version: APP_VERSION,
   });
   setHomeAssistant(homeAssistant);
   await homeAssistant.start().catch((error) => console.error("Home Assistant failed to start:", error));
@@ -214,7 +215,7 @@ const main = async (): Promise<void> => {
   frontend = await loadFrontend();
   if (!frontend) console.log("🖥️  Frontend not built, serving the API only (development: the Vite dev server)");
 
-  console.log(`🚀 Starting SnapRAID UI on http://${host}:${port}`);
+  console.log(`🚀 Starting SnapRAID UI ${APP_VERSION} on http://${host}:${port}`);
   console.log(`📝 Logs directory: ${config.logs.directory}`);
 
   Deno.serve({

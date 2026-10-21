@@ -80,13 +80,27 @@ interface ApiContainer {
 }
 
 /**
- * Id of the container this process runs in, from the hostname file Docker and Podman mount
- * (`.../containers/<id>/hostname`); null outside a container
+ * Id of the container from /proc/self/mountinfo: Docker and Podman mount the container's hostname
+ * file (`.../containers/<id>/hostname`) at /etc/hostname. Only that mount counts: on a host that
+ * runs containers, mountinfo also lists their mounts (`.../containers/<id>/mounts/shm`)
+ */
+export const containerIdFromMountinfo = (mountinfo: string): string | null => {
+  for (const line of mountinfo.split("\n")) {
+    // id parent major:minor root mountpoint ...
+    const [, , , root, mountPoint] = line.split(" ");
+    if (mountPoint !== "/etc/hostname") continue;
+    const id = root?.match(/containers\/([0-9a-f]{64})\//)?.[1];
+    if (id) return id;
+  }
+  return null;
+};
+
+/**
+ * Id of the container this process runs in; null outside a container
  */
 export const ownContainerId = async (): Promise<string | null> => {
   try {
-    const mounts = await Deno.readTextFile("/proc/self/mountinfo");
-    return mounts.match(/containers\/([0-9a-f]{64})\//)?.[1] ?? null;
+    return containerIdFromMountinfo(await Deno.readTextFile("/proc/self/mountinfo"));
   } catch {
     return null;
   }
