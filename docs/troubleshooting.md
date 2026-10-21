@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Common problems and how to fix them. If your problem is not listed, check the container log (`docker logs snapraid-ui`) and the [log history](logs.md) of the failed run first; SnapRAID's own messages usually name the cause.
+Common problems and how to fix them. If your problem is not listed, check the container log (`docker logs snapraid-ui`, or `journalctl -u snapraid-ui` [without Docker](installation.md#without-docker)) and the [log history](logs.md) of the failed run first; SnapRAID's own messages usually name the cause.
 
 - [Setup and paths](#setup-and-paths)
 - [Status, reports and SnapRAID version](#status-reports-and-snapraid-version)
@@ -202,7 +202,7 @@ Only files created with **Download backup** can be restored. If the message afte
 | *Too many failed attempts. Try again in …* | After 5 failed attempts within 15 minutes, logins from that client are blocked until the 15 minutes are over. The counter lives in memory, so restarting the container also resets it. |
 | No login screen at all | Login is only active when both `SNAPRAID_UI_USERNAME` and `SNAPRAID_UI_PASSWORD` are set. The backend logs a warning when it is disabled. |
 | Everyone should be logged out | Change the password, or delete `.session-secret` in the data folder and restart. |
-| *The server cannot be reached* | The backend is not running or not reachable. Check `docker logs snapraid-ui`. |
+| *The server cannot be reached* | The backend is not running or not reachable. Check `docker logs snapraid-ui`, or `journalctl -u snapraid-ui` without Docker. |
 
 The lockout is counted per client address. Behind your own reverse proxy, all visitors may arrive with the proxy's address and then share one counter. See [Security](security.md).
 

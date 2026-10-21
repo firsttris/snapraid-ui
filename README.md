@@ -4,7 +4,7 @@
 
 **A modern, self-hosted web interface for [SnapRAID](https://www.snapraid.it/).**<br>
 Sync, scrub, schedule and watch your disks and their SMART health from any browser, without touching the command line.<br>
-One Docker image or one installer for your home server or NAS, with SnapRAID 15 included.
+One Docker image with SnapRAID 15 included, or one installer, for your home server or NAS.
 
 [![CI](https://github.com/firsttris/snapraid-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/firsttris/snapraid-ui/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/firsttris/snapraid-ui?logo=github&label=release)](https://github.com/firsttris/snapraid-ui/releases/latest)
@@ -214,9 +214,9 @@ Turn off cron jobs or scripts like snapraid-runner, so only one scheduler runs S
 **Do I need Docker?**
 No. Run the image (amd64 and arm64) with Docker or Podman, or install SnapRAID UI on the host
 with the [installer](https://firsttris.github.io/snapraid-ui/installation.html#without-docker),
-as a systemd service. Either way you get SnapRAID 15, which SnapRAID UI needs for its structured
-log: the image ships it, the installer builds it when the host has no 14+. Most distributions
-still have 12.x.
+as a systemd service. Either way you get SnapRAID 14 or newer, which SnapRAID UI needs for its
+structured log: the image ships 15, the installer uses the host's 14+ or builds 15. Most
+distributions still have 12.x.
 
 **Does it wake my disks?**
 Only when SnapRAID needs them. Status, protected files and duplicates come from the

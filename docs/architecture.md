@@ -74,7 +74,7 @@ The image sets `SNAPRAID_BASE_PATH=/app/snapraid`, `SNAPRAID_BIN=/usr/local/bin/
 
 ## Backend
 
-`backend/src/main.ts` builds the Hono app, wires the modules together and starts `Deno.serve` on `0.0.0.0` at `PORT` (8080 when unset, 80 in the image). On start it loads `config.json` (creating a default one if it is missing), creates the log directory, loads the schedules and runs one log rotation.
+`backend/src/main.ts` builds the Hono app, wires the modules together and starts `Deno.serve` on `SNAPRAID_UI_HOST` (`0.0.0.0` when unset) at `PORT` (8080 when unset, 80 in the image). On start it loads `config.json` (creating a default one if it is missing), creates the log directory, loads the schedules and runs one log rotation.
 
 Middleware, in order:
 
@@ -250,7 +250,7 @@ Writes are plain `Deno.writeTextFile` calls. Most files are read again whenever 
 
 ## Frontend
 
-The frontend is a [TanStack Start](https://tanstack.com/start) app with file-based routing. Nitro builds it into `frontend/.output/`, a Node.js server that renders pages on the server and serves the client bundle.
+The frontend is a [TanStack Start](https://tanstack.com/start) app with file-based routing. Nitro builds it into `frontend/.output/`, one fetch handler that the backend loads to render pages on the server and serve the client bundle (see [Container layout](#container-layout)).
 
 | Path | Content |
 |---|---|
