@@ -168,6 +168,6 @@ The test message has the title "Test notification" (in the message language), `e
 
 ## Good to know
 
-- Sending times out after 15 seconds per channel. A failed notification never fails the job. The error is written to the backend log (`docker logs snapraid-ui`).
+- Sending times out after 15 seconds per channel. A failed notification never fails the job. The error is written to the backend log (`docker logs snapraid-ui`, or `journalctl -u snapraid-ui` [without Docker](installation.md#without-docker)).
 - Settings are stored in `notifications.json` in the data directory, readable only by its owner (mode 600), because it holds the SMTP password and the ntfy token. The UI never sends them back to the browser; a stored secret is shown as `********`. To keep it, leave the field as is.
 - `notifications.json` is included in the [backup](disks.md), including the password and token. Keep backup files private.

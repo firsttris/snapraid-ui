@@ -10,7 +10,7 @@ SnapRAID UI works with your existing `snapraid.conf` files. This page explains h
 - [Backup and restore](#backup-and-restore)
 
 > [!NOTE]
-> All paths you enter (config files, disks, parity, content files) are paths **inside the container**. Mount your disks at the same paths as on the host so the paths in `snapraid.conf` stay valid, see [Installation](installation.md).
+> All paths you enter (config files, disks, parity, content files) are paths **inside the container**. Mount your disks at the same paths as on the host so the paths in `snapraid.conf` stay valid, see [Installation](installation.md). [Without Docker](installation.md#without-docker) they are simply the host's paths.
 
 ## Managing arrays
 
@@ -42,7 +42,7 @@ The configuration the wizard writes:
 | `data` | Each data disk with its name and mount point |
 | `exclude` | `*.unrecoverable`, `/tmp/`, `/lost+found/`, `.Trash-*/`, `.recycle/` |
 
-Data disks keep their files, SnapRAID only reads them. In Docker the wizard can only offer disks mounted into the container, so mount every disk first, at the same path as on the host. Creating the array replaces the *Default* entry of the first start if its `snapraid.conf` never existed; an existing file is never overwritten.
+Data disks keep their files, SnapRAID only reads them. In Docker the wizard can only offer disks mounted into the container, so mount every disk first, at the same path as on the host; without Docker it offers the host's mounted filesystems. Creating the array replaces the *Default* entry of the first start if its `snapraid.conf` never existed; an existing file is never overwritten.
 
 ### Add an existing file
 

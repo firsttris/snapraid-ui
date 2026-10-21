@@ -191,20 +191,20 @@ With Podman, mount the Podman socket instead, e.g. `/run/podman/podman.sock:/var
 
 On the first start, the backend creates `config.json` in the data directory with one configuration named *Default* that points to `snapraid.conf` in the same directory. As long as that file does not exist, the dashboard welcomes you with two options:
 
-- **Add existing configuration.** Copy your `snapraid.conf` into the data directory (`./snapraid/snapraid.conf` in the examples above) and reload the page, nothing else to do. Or add it where it is, under *Manage arrays* → *Add existing file* with an absolute path, as long as the file is reachable inside the container (mount it, for example `-v /etc/snapraid.conf:/etc/snapraid.conf`).
-- **Set up a new array.** The [setup wizard](disks.md#set-up-a-new-array) lists the disks mounted into the container, you pick data and parity disks, and it writes the configuration and starts the first sync. Mount the disks first, at the same paths as on the host (see [Disks and paths](#disks-and-paths)).
+- **Add existing configuration.** Copy your `snapraid.conf` into the data directory (`./snapraid/snapraid.conf` in the examples above) and reload the page, nothing else to do. Or add it where it is, under *Manage arrays* → *Add existing file* with an absolute path, as long as the file is reachable inside the container (mount it, for example `-v /etc/snapraid.conf:/etc/snapraid.conf`). [Without Docker](#without-docker) the data directory is `/var/lib/snapraid-ui/`, and any path on the host works.
+- **Set up a new array.** The [setup wizard](disks.md#set-up-a-new-array) lists the disks mounted into the container, you pick data and parity disks, and it writes the configuration and starts the first sync. Mount the disks first, at the same paths as on the host (see [Disks and paths](#disks-and-paths)). Without Docker it lists the host's mounted filesystems, nothing needs to be mounted.
 
 If your existing config refers to content files outside the mounted paths, mount those directories too, or move the content files as described in [Disks and paths](#disks-and-paths).
 
 ## Reverse proxy and HTTPS
 
-Inside the container, Nginx listens on port 80 and serves the interface, the API under `/api` and live updates over a WebSocket under `/ws`. Put your own reverse proxy in front of that port to add HTTPS.
+SnapRAID UI serves the interface, the API under `/api` and live updates over a WebSocket under `/ws` on one port: 80 inside the container, 3000 with the [installer](#without-docker). Put your own reverse proxy in front of that port to add HTTPS.
 
 Requirements for the proxy:
 
 - **Forward WebSockets** on `/ws`, otherwise live output and job status don't update.
 - **Serve the UI at the root path** of a host name (for example `snapraid.example.com`). The interface requests `/api` and `/ws` as absolute paths, so a sub-path such as `example.com/snapraid/` doesn't work.
-- **Publish only the proxy.** Bind the container port to localhost (`127.0.0.1:3000:80`) or reach it over a shared Docker network, so nobody bypasses the proxy.
+- **Publish only the proxy.** Bind the container port to localhost (`127.0.0.1:3000:80`) or reach it over a shared Docker network, so nobody bypasses the proxy. Without Docker, set `SNAPRAID_UI_HOST=127.0.0.1` in `/etc/snapraid-ui/snapraid-ui.env` when the proxy runs on the same host.
 
 **Caddy** (WebSockets are forwarded automatically):
 

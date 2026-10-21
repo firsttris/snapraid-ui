@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Common problems and how to fix them. If your problem is not listed, check the container log (`docker logs snapraid-ui`) and the [log history](logs.md) of the failed run first; SnapRAID's own messages usually name the cause.
+Common problems and how to fix them. If your problem is not listed, check the container log (`docker logs snapraid-ui`, or `journalctl -u snapraid-ui` [without Docker](installation.md#without-docker)) and the [log history](logs.md) of the failed run first; SnapRAID's own messages usually name the cause.
 
 - [Setup and paths](#setup-and-paths)
 - [Status, reports and SnapRAID version](#status-reports-and-snapraid-version)
@@ -109,6 +109,7 @@ The schedule list shows the reason of a skipped run, and you can get a notificat
 SnapRAID calls `smartctl` on the device behind each mount. The device nodes only exist in the container with **`--privileged`** (`privileged: true` in Compose, `PodmanArgs=--privileged` in the Quadlet unit).
 
 - Rootless Podman cannot read SMART data. Run the container as root if you need it.
+- Without Docker, check that `smartctl` is installed (`smartctl --version`); the installer adds smartmontools when it can.
 - USB enclosures and some RAID/HBA controllers do not pass SMART through. Use a `smartctl` option in your `snapraid.conf` for such disks if your controller supports it (see the SnapRAID manual).
 
 ### "Failed to dereference device '0:…'" / "Smart is unsupported in this platform"
@@ -201,7 +202,7 @@ Only files created with **Download backup** can be restored. If the message afte
 | *Too many failed attempts. Try again in …* | After 5 failed attempts within 15 minutes, logins from that client are blocked until the 15 minutes are over. The counter lives in memory, so restarting the container also resets it. |
 | No login screen at all | Login is only active when both `SNAPRAID_UI_USERNAME` and `SNAPRAID_UI_PASSWORD` are set. The backend logs a warning when it is disabled. |
 | Everyone should be logged out | Change the password, or delete `.session-secret` in the data folder and restart. |
-| *The server cannot be reached* | The backend is not running or not reachable. Check `docker logs snapraid-ui`. |
+| *The server cannot be reached* | The backend is not running or not reachable. Check `docker logs snapraid-ui`, or `journalctl -u snapraid-ui` without Docker. |
 
 The lockout is counted per client address. Behind your own reverse proxy, all visitors may arrive with the proxy's address and then share one counter. See [Security](security.md).
 
@@ -219,20 +220,26 @@ Browsers only allow clipboard access on secure pages. Use the download button in
 
 Changing `blocksize` on an existing array requires a completely new sync. Only change it when you set up a new array.
 
-### Where are the container logs?
+### Where are the logs?
 
-Backend, frontend and Nginx all log to the container's output:
+SnapRAID UI is one process that logs to the container's output, or to the journal without Docker:
 
 ```bash
 docker logs -f snapraid-ui
 # Podman Quadlet
 journalctl --user -u snapraid-app
+# Without Docker (installer)
+journalctl -u snapraid-ui -f
 ```
+
+### The service does not start (without Docker)
+
+`journalctl -u snapraid-ui -n 50` shows why. Common causes: the port in `/etc/snapraid-ui/snapraid-ui.env` is taken by another program (change `PORT`, then `systemctl restart snapraid-ui`), or `SNAPRAID_BIN` points to a SnapRAID that was removed (run the installer again, it finds or builds one). `snapraid-ui --version` shows the installed version.
 
 ## Getting help
 
 If you think you found a bug, open an issue on [GitHub](https://github.com/firsttris/snapraid-ui/issues) with:
 
-- the image tag or version and how you run it (Docker, Compose, Podman),
-- the relevant part of the container log and of the SnapRAID log (remove private paths if needed),
+- the image tag or version and how you run it (Docker, Compose, Podman, installer),
+- the relevant part of the container or service log and of the SnapRAID log (remove private paths if needed),
 - what you expected and what happened.

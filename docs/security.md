@@ -7,8 +7,8 @@ SnapRAID UI controls your array and runs with wide access to the host, so anyone
 Treat access to SnapRAID UI like root access to your server:
 
 - It runs SnapRAID commands that write to your disks, including `fix` to recover files or a whole disk, and sets the owner and permissions of the files it recovered.
-- Its API reads and writes files by path inside the container, which runs as root. The config editor and file browser rely on this.
-- In the recommended setup the container is privileged, which gives processes in it broad access to the host's devices.
+- Its API reads and writes files by path inside the container, which runs as root, or on the host with the [installer](installation.md#without-docker), whose service runs as root too. The config editor and file browser rely on this.
+- In the recommended setup the container is privileged, which gives processes in it broad access to the host's devices. Without Docker there is no container around it at all.
 
 So: **never expose SnapRAID UI directly to the internet.** Keep it on your home network, or reach it through a VPN (WireGuard, Tailscale) or a reverse proxy with HTTPS and authentication.
 
@@ -43,7 +43,7 @@ Sessions are not stored on the server. The token is signed with a key made of th
 
 - Sessions survive restarts and updates.
 - **Changing the username or password ends all sessions.**
-- Deleting `.session-secret` and restarting the container also ends all sessions.
+- Deleting `.session-secret` and restarting the container (or `systemctl restart snapraid-ui`) also ends all sessions.
 - *Log out* (at the bottom of the sidebar) deletes the cookie in that browser. A copy of the token stays valid until it expires, so if you suspect a session was stolen, change the password.
 
 When a session expires, the next request sends you back to the login page.
@@ -56,7 +56,7 @@ To slow down password guessing:
 - After **5 failed attempts**, further logins from the same client address are refused for the rest of a **15-minute** window that starts with the first failure. The login page shows a countdown (*Too many failed attempts. Try again in …*).
 - A successful login resets the counter for that address.
 
-The counters are kept in memory, so restarting the container clears them.
+The counters are kept in memory, so restarting the container or the service clears them.
 
 The client address is the address of the connection, not a header a client could set. Behind a reverse proxy, that is the proxy, so **all users share one counter**: five wrong passwords from anyone lock everyone out for up to 15 minutes. Restart the container if that locks you out.
 
@@ -64,7 +64,7 @@ The client address is the address of the connection, not a header a client could
 
 A reverse proxy is the usual way to add HTTPS. Set it up as described in [Installation](installation.md#reverse-proxy-and-https), and keep these points in mind:
 
-- **Only the proxy should reach the container.** Bind the port to localhost (`127.0.0.1:3000:80`) or use a shared Docker network without publishing a port.
+- **Only the proxy should reach the container.** Bind the port to localhost (`127.0.0.1:3000:80`) or use a shared Docker network without publishing a port. Without Docker, set `SNAPRAID_UI_HOST=127.0.0.1` when the proxy runs on the same host, otherwise limit the port with a firewall.
 - **Let the proxy send `X-Forwarded-Proto`.** The connection from your proxy is plain HTTP, so the backend only sets the `Secure` cookie flag when the proxy says the browser used HTTPS with `X-Forwarded-Proto: https`. Caddy and Traefik send it on their own, for Nginx add `proxy_set_header X-Forwarded-Proto $scheme;`. Without it the cookie is still `HttpOnly` and `SameSite=Strict`; configure your proxy to redirect HTTP to HTTPS either way, so the browser never sends the cookie unencrypted.
 
 ## Using an authentication proxy instead
@@ -72,7 +72,7 @@ A reverse proxy is the usual way to add HTTPS. Set it up as described in [Instal
 If you already run an authentication proxy such as Authelia, Authentik or oauth2-proxy, you can leave the built-in login off and let the proxy handle sign-in:
 
 1. Remove `SNAPRAID_UI_USERNAME` and `SNAPRAID_UI_PASSWORD`.
-2. Make sure the container is reachable **only** through the proxy (see above). With the login off, anyone who reaches the container port directly has full access.
+2. Make sure the container or service is reachable **only** through the proxy (see above). With the login off, anyone who reaches its port directly has full access.
 3. Protect the whole host name, including `/api` and `/ws`.
 
 Without the built-in login, the sidebar shows no user and no *Log out* button.
@@ -93,7 +93,7 @@ Everything lives in the data directory, see [Configuration](configuration.md#dat
 | `config.json`, `schedules.json`, histories | Settings and disk data | Plain text |
 | `logs/` | SnapRAID output, including file names from your disks | Plain text |
 
-The login password itself is never written to disk; it only exists in the environment of the container.
+In the container the login password is never written to disk; it only exists in the environment of the container. The [installer](installation.md#without-docker) keeps it in `/etc/snapraid-ui/snapraid-ui.env`, readable only by root (file mode `600`).
 
 A backup from *Download backup* contains the notification passwords and tokens in plain text. Keep backup files private.
 
@@ -101,7 +101,7 @@ A backup from *Download backup* contains the notification passwords and tokens i
 
 - [ ] Login enabled with a long, random password, or an authentication proxy in front
 - [ ] Not reachable from the internet, or only through a VPN or an HTTPS proxy
-- [ ] Only container port 80 published, and only to the proxy if you use one
+- [ ] Only container port 80 published, and only to the proxy if you use one; without Docker, `SNAPRAID_UI_HOST=127.0.0.1` or a firewall
 - [ ] Data directory and backup files readable only by you
 - [ ] Metrics and the MCP endpoint off, or their tokens kept private; the MCP endpoint's actions only allowed if you need them
 - [ ] `--privileged` only if you need SMART data (see [Installation](installation.md#privileged-mode-and-smart))

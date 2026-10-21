@@ -100,7 +100,8 @@ const main = async (): Promise<void> => {
   const config = await loadAppConfig();
 
   // Use environment variables with config fallback
-  const host = "0.0.0.0";
+  // All interfaces; 127.0.0.1 when only a reverse proxy on the same host may reach it
+  const host = Deno.env.get("SNAPRAID_UI_HOST") || "0.0.0.0";
   const port = Number(Deno.env.get("PORT") ?? 8080);
 
   // Initialize log manager

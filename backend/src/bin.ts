@@ -9,6 +9,7 @@ Usage: snapraid-ui [--version] [--help]
 
 Configured by environment variables, see https://firsttris.github.io/snapraid-ui/configuration.html:
   PORT                    port of the UI, API and WebSocket (default 8080)
+  SNAPRAID_UI_HOST        address to listen on (default 0.0.0.0, all interfaces)
   SNAPRAID_BASE_PATH      data directory: config.json, schedules, logs (default ./snapraid)
   SNAPRAID_BIN            SnapRAID binary (default snapraid from the PATH)
   SNAPRAID_UI_USERNAME    login, together with SNAPRAID_UI_PASSWORD

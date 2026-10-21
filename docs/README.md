@@ -10,7 +10,7 @@ Also as a website with search: **https://firsttris.github.io/snapraid-ui/**
 
 | | |
 |---|---|
-| [Installation](installation.md) | Requirements, Docker, Docker Compose and Podman, mounting disks, SMART access, reverse proxy and HTTPS, installing as an app, updating, using your own SnapRAID binary |
+| [Installation](installation.md) | Requirements, Docker, Docker Compose and Podman, without Docker (installer and systemd), mounting disks, SMART access, reverse proxy and HTTPS, installing as an app, updating, using your own SnapRAID binary |
 | [Configuration](configuration.md) | All environment variables, the data directory and its files, log retention |
 | [Security](security.md) | Login, sessions and lockout, running behind an auth proxy, exposing the UI safely |
 
@@ -30,7 +30,7 @@ Also as a website with search: **https://firsttris.github.io/snapraid-ui/**
 
 | | |
 |---|---|
-| [Architecture](architecture.md) | Components, container layout, how jobs run, storage, and the REST and WebSocket API |
+| [Architecture](architecture.md) | Components, container layout, the standalone binary, how jobs run, storage, and the REST and WebSocket API |
 | [Development](development.md) | Local setup with the demo sandbox, project structure, tests, translations, building and releasing |
 
 ## Screenshots
