@@ -14,6 +14,7 @@ import {
   unpauseContainer,
 } from "./docker.ts";
 import { loadMaintenanceSettings } from "./maintenance-settings.ts";
+import { writeTextFileAtomic } from "./atomic-write.ts";
 
 // Containers paused here, to resume them after a crash or restart of the backend
 const STATE_FILE = "paused-containers.json";
@@ -46,7 +47,7 @@ const statePath = () => resolveFromBase(STATE_FILE);
 
 const savePaused = async (paused: PausedState | null): Promise<void> => {
   if (paused && paused.containers.length > 0) {
-    await Deno.writeTextFile(statePath(), JSON.stringify(paused, null, 2));
+    await writeTextFileAtomic(statePath(), JSON.stringify(paused, null, 2));
   } else if (existsSync(statePath())) {
     await Deno.remove(statePath());
   }

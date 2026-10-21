@@ -8,6 +8,7 @@ import {
   SECRET_MASK,
 } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
+import { writeTextFileAtomic } from "./atomic-write.ts";
 
 export type Severity = "info" | "warning" | "error";
 
@@ -138,7 +139,7 @@ export const validateNotificationSettings = (settings: NotificationSettings): st
 
 export const saveNotificationSettings = async (settings: NotificationSettings): Promise<void> => {
   // Holds the SMTP password and the ntfy token
-  await Deno.writeTextFile(settingsPath(), JSON.stringify(settings, null, 2), { mode: 0o600 });
+  await writeTextFileAtomic(settingsPath(), JSON.stringify(settings, null, 2), { mode: 0o600 });
 };
 
 // ====================

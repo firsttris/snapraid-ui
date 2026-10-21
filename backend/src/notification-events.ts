@@ -11,6 +11,7 @@ import { resolveFromBase } from "./config.ts";
 import { loadNotificationSettings, type Notification, notify, pingHeartbeat } from "./notifications.ts";
 import { isSuccessful, type RunReport } from "./run-report.ts";
 import { parseLogTags, restOf, unescapeTagValue } from "./parsers/structured-log.ts";
+import { writeTextFileAtomic } from "./atomic-write.ts";
 
 type Language = NotificationSettings["language"];
 
@@ -401,7 +402,7 @@ const loadState = async (): Promise<NotificationState> => {
 };
 
 const saveState = (state: NotificationState) =>
-  Deno.writeTextFile(resolveFromBase(STATE_FILE), JSON.stringify(state, null, 2));
+  writeTextFileAtomic(resolveFromBase(STATE_FILE), JSON.stringify(state, null, 2));
 
 // ====================
 // Entry points, never throw: a failed notification must not fail the job

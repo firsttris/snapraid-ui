@@ -4,6 +4,7 @@ import type { DiskReplacement, ReplacementStep, ReplacementStepResult } from "@s
 import { parseParityLine } from "./config-parser.ts";
 import { resolveFromBase } from "./config.ts";
 import { msg } from "@shared/i18n.ts";
+import { writeTextFileAtomic } from "./atomic-write.ts";
 
 /**
  * Replacing a failed disk follows "Recovering" in the SnapRAID manual:
@@ -99,7 +100,7 @@ const loadState = async (): Promise<ReplacementState> => {
   }
 };
 
-const saveState = (state: ReplacementState) => Deno.writeTextFile(statePath(), JSON.stringify(state, null, 2));
+const saveState = (state: ReplacementState) => writeTextFileAtomic(statePath(), JSON.stringify(state, null, 2));
 
 export const getReplacement = async (configPath: string): Promise<DiskReplacement | null> =>
   (await loadState())[resolveFromBase(configPath)] ?? null;

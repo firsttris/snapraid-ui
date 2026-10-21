@@ -1,6 +1,7 @@
 import { existsSync } from "@std/fs";
 import type { SnapRaidStatus, UsagePoint } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
+import { writeTextFileAtomic } from "./atomic-write.ts";
 
 const STATE_FILE = "usage-history.json";
 // One point per day, two years show the growth of a slowly filling array
@@ -47,7 +48,7 @@ export const recordUsage = async (configPath: string, status: SnapRaidStatus): P
   try {
     const previous = await loadState();
     const state = addUsagePoint(configPath, status, previous);
-    if (state !== previous) await Deno.writeTextFile(resolveFromBase(STATE_FILE), JSON.stringify(state));
+    if (state !== previous) await writeTextFileAtomic(resolveFromBase(STATE_FILE), JSON.stringify(state));
   } catch (error) {
     console.error("Failed to record the usage history:", error);
   }

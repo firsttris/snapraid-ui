@@ -2,6 +2,7 @@ import { existsSync } from "@std/fs";
 import type { SmartDiskInfo } from "@shared/types.ts";
 import { CRC_ATTRIBUTE_ID } from "@shared/smart-health.ts";
 import { resolveFromBase } from "./config.ts";
+import { writeTextFileAtomic } from "./atomic-write.ts";
 
 const STATE_FILE = "smart-baseline.json";
 
@@ -79,7 +80,7 @@ export const withCrcBaseline = async (configPath: string, disks: SmartDiskInfo[]
     const previous = await loadState();
     const { disks: result, state } = applyCrcBaseline(configPath, disks, previous);
     if (JSON.stringify(state) !== JSON.stringify(previous)) {
-      await Deno.writeTextFile(resolveFromBase(STATE_FILE), JSON.stringify(state, null, 2));
+      await writeTextFileAtomic(resolveFromBase(STATE_FILE), JSON.stringify(state, null, 2));
     }
     return result;
   } catch (error) {

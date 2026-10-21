@@ -1,6 +1,7 @@
 import { existsSync } from "@std/fs";
 import type { SmartDiskInfo, SmartHistoryPoint } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
+import { writeTextFileAtomic } from "./atomic-write.ts";
 
 const STATE_FILE = "smart-history.json";
 // One point per disk and day is enough for slow trends, a year shows the long ones
@@ -70,7 +71,7 @@ const loadState = async (): Promise<SmartHistoryState> => {
 export const recordSmartHistory = async (configPath: string, disks: SmartDiskInfo[]): Promise<void> => {
   try {
     const state = addSmartPoints(configPath, disks, await loadState());
-    await Deno.writeTextFile(resolveFromBase(STATE_FILE), JSON.stringify(state));
+    await writeTextFileAtomic(resolveFromBase(STATE_FILE), JSON.stringify(state));
   } catch (error) {
     console.error("Failed to record the SMART history:", error);
   }

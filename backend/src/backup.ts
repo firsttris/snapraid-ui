@@ -3,6 +3,7 @@ import { dirname, isAbsolute, normalize } from "@std/path";
 import type { AppConfig, SettingsBackup } from "@shared/types.ts";
 import { msg } from "@shared/i18n.ts";
 import { resolveFromBase } from "./config.ts";
+import { writeTextFileAtomic } from "./atomic-write.ts";
 
 // Settings and history next to config.json; logs and replacement runs stay behind
 const STATE_FILES = [
@@ -16,6 +17,9 @@ const STATE_FILES = [
   "smart-history.json",
   "usage-history.json",
 ];
+
+// Hold passwords and tokens, saved readable only by the owner as their own writers do
+const SECRET_FILES = new Set(["notifications.json", "engine.json", "home-assistant.json"]);
 
 // A SnapRAID config inside the data folder; one elsewhere on the host is not written back
 const isRestorableConfig = (path: string) =>
@@ -95,7 +99,12 @@ export const restoreBackup = async (backup: unknown): Promise<{ restored: string
   for (const [path, content] of Object.entries(write)) {
     const target = resolveFromBase(path);
     if (!existsSync(dirname(target))) await Deno.mkdir(dirname(target), { recursive: true });
-    await Deno.writeTextFile(target, content);
+    if (STATE_FILES.includes(path)) {
+      // In one step like every other save of these files, the UI keeps reading them meanwhile
+      await writeTextFileAtomic(target, content, SECRET_FILES.has(path) ? { mode: 0o600 } : {});
+    } else {
+      await Deno.writeTextFile(target, content);
+    }
   }
   return { restored: Object.keys(write), skipped };
 };
