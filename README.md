@@ -156,6 +156,15 @@ Put your `snapraid.conf` into `./snapraid/` (or add one or set up a new array un
 - `TZ` sets the time zone your schedules run in (UTC otherwise).
 - Prefer Compose or Podman? See [Installation](https://firsttris.github.io/snapraid-ui/installation.html).
 
+**Without Docker**, as a systemd service on the host (amd64, arm64). It builds SnapRAID 15 too, if the host has no 14+:
+
+```bash
+curl -fsSL https://github.com/firsttris/snapraid-ui/releases/latest/download/install.sh | sudo sh
+```
+
+It prints the address and a generated login. Run it again to update. See
+[Without Docker](https://firsttris.github.io/snapraid-ui/installation.html#without-docker).
+
 > [!IMPORTANT]
 > Use the bundled SnapRAID rather than your distribution's. The UI reads SnapRAID's structured log, which
 > exists only since version 14.0, and most distributions still ship 12.x. If cron jobs on the host run

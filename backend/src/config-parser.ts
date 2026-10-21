@@ -131,7 +131,10 @@ export const loadAppConfig = async (): Promise<AppConfig> => {
     const content = await Deno.readTextFile(configPath);
     return JSON.parse(content);
   } catch (error) {
-    console.warn(`Failed to load config from ${configPath}, using defaults:`, error);
+    // A missing file is the first start, the defaults saved below say so
+    if (!(error instanceof Deno.errors.NotFound)) {
+      console.warn(`Failed to load config from ${configPath}, using defaults:`, error);
+    }
     
     // Return default config
     const defaultConfig: AppConfig = {

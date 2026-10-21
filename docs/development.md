@@ -103,6 +103,7 @@ frontend/
 shared/                types and logic used by backend and frontend
 docker/                Dockerfile, Compose file, Quadlet units
 scripts/build-binary.sh  the standalone binary (deno compile)
+scripts/install.sh     installer of the binary with a systemd service, attached to each release
 dev/setup.sh           demo sandbox
 e2e/                   end-to-end tests (Playwright) against real SnapRAID and snapraid-daemon
 install.sh, start.sh   local setup and start
@@ -276,7 +277,7 @@ The binary reads the same environment variables as the image ([Configuration](co
 The image pins one SnapRAID release that the parsers are tested against. A weekly workflow (`upstream-release.yml`) opens an issue when a newer stable release is out. To bump it:
 
 1. Read SnapRAID's `HISTORY` for changes to the structured log (`--log`).
-2. Change `SNAPRAID_VERSION` in `docker/Dockerfile`, `dev/setup.sh` **and** `e2e/scripts/setup-tools.sh`.
+2. Change `SNAPRAID_VERSION` in `docker/Dockerfile`, `dev/setup.sh`, `e2e/scripts/setup-tools.sh` **and** `scripts/install.sh`.
 3. Run `SNAPRAID_VERSION=<new> dev/setup.sh --reset`, start `./start.sh --demo` and run status, diff, sync, scrub, check, list, dup, touch and smart in the UI.
 4. For a major version, compare the log tags with the fixtures in `backend/src/parsers/__tests__/fixtures/`.
 
@@ -290,8 +291,8 @@ GitHub Actions workflows in `.github/workflows/`:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | Push and pull request to `master`; called by the release workflow | Backend: `deno check src/main.ts src/bin.ts`, `deno test --allow-all`. Frontend: `npm ci`, `npx biome check`, `npm run typecheck`, `npm test`, `npm run build`. [End-to-end tests](#end-to-end-tests) three times: against the local build, against the Docker image (built with the release's registry cache) and against the standalone binary (built for x86_64 and arm64, the tests run the x86_64 one), each split into two shards that run side by side; the built tools and apt packages are cached, a failure uploads traces and server logs |
-| `release.yml` | Push of a `v*` tag; manual run | Runs CI unless `master`'s CI already passed for the same code (a *Bump version* commit only changes the version), then the shared Docker release workflow from `firsttris/workflows`. A tag `vX.Y.Z` publishes `tristanteu/snapraid-ui:X.Y.Z`, `:X.Y` and `:latest`, updates the Docker Hub description and creates the GitHub release, then the standalone binaries for x86_64 and arm64 are built and attached to it with their `SHA256SUMS`. A manual run on `master` runs the same checks and pushes `:edge`, without a release |
+| `ci.yml` | Push and pull request to `master`; called by the release workflow | Backend: `deno check src/main.ts src/bin.ts`, `deno test --allow-all`. Frontend: `npm ci`, `npx biome check`, `npm run typecheck`, `npm test`, `npm run build`. [End-to-end tests](#end-to-end-tests) three times: against the local build, against the Docker image (built with the release's registry cache) and against the standalone binary (built for x86_64 and arm64, the tests run the x86_64 one), each split into two shards that run side by side; the built tools and apt packages are cached, a failure uploads traces and server logs. Installer: `shellcheck`, then `scripts/install.sh` on a runner with systemd against the binary built there (SnapRAID built from source, login, update, uninstall) |
+| `release.yml` | Push of a `v*` tag; manual run | Runs CI unless `master`'s CI already passed for the same code (a *Bump version* commit only changes the version), then the shared Docker release workflow from `firsttris/workflows`. A tag `vX.Y.Z` publishes `tristanteu/snapraid-ui:X.Y.Z`, `:X.Y` and `:latest`, updates the Docker Hub description and creates the GitHub release, then the standalone binaries for x86_64 and arm64 are built and attached to it with their `SHA256SUMS` and `scripts/install.sh` as `install.sh`. A manual run on `master` runs the same checks and pushes `:edge`, without a release |
 | `bump.yml` | Manual run | Raises the version in `frontend/package.json` (patch, minor or major), commits it, tags the commit `vX.Y.Z` and starts `release.yml` on it (shared [`bump-version`](https://github.com/firsttris/workflows#bump-version)) |
 | `upstream-release.yml` | Mondays 06:00 UTC; manual run | Two jobs, each opens an issue with a checklist. `snapraid` compares the pinned `SNAPRAID_VERSION` with SnapRAID's latest stable release. `snapraid-daemon` compares `backend/src/engine/REVIEWED_DAEMON_VERSION` with snapraid-daemon's newest tag, release candidates included |
 | `docs.yml` | Push to `master` that changes `docs/`, `mkdocs.yml` or `requirements-docs.txt`; manual run | Builds `docs/` with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) (`mkdocs build --strict`, broken links fail the build) and publishes it to GitHub Pages at https://firsttris.github.io/snapraid-ui/. Locally: `pip install -r requirements-docs.txt && mkdocs serve` |
