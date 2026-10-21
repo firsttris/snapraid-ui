@@ -5,7 +5,7 @@
 #   curl -fsSL https://github.com/firsttris/snapraid-ui/releases/latest/download/install.sh | sudo sh
 #   ... | sudo sh -s -- --uninstall      stops and removes the service and the binary, keeps the data
 #
-# Settings, as environment variables (sudo env NAME=value sh, or after `sh -s --`):
+# Settings, as environment variables (sudo env NAME=value sh) or as arguments (sh -s -- NAME=value):
 #   SNAPRAID_UI_VERSION         release to install, e.g. 1.3.0 (default: the latest)
 #   SNAPRAID_UI_PORT            port of the UI on the first install (default 3000)
 #   SNAPRAID_UI_SKIP_SNAPRAID   1: don't check, install or build SnapRAID
@@ -113,7 +113,10 @@ ensure_snapraid() {
       *) die "gcc and make are needed to build SnapRAID; install them, or SnapRAID $SNAPRAID_MIN_MAJOR+ yourself" ;;
     esac
   fi
-  src=$(mktemp -d)
+  # Not in /tmp, which is often mounted noexec: configure runs the programs it compiles
+  mkdir -p /usr/local/src
+  src=$(mktemp -d /usr/local/src/snapraid-build.XXXXXX)
+  trap 'cleanup' EXIT
   fetch "https://github.com/amadvance/snapraid/releases/download/v$SNAPRAID_VERSION/snapraid-$SNAPRAID_VERSION.tar.gz" "$src/snapraid.tar.gz"
   tar -xzf "$src/snapraid.tar.gz" -C "$src"
   (cd "$src/snapraid-$SNAPRAID_VERSION" && ./configure >/dev/null && make -j"$(nproc 2>/dev/null || echo 2)" >/dev/null)
@@ -135,6 +138,13 @@ ensure_smartctl() {
 
 # --- Install ----------------------------------------------------------------
 
+# Temporary files of a run, also when it stops with an error
+new="" sums="" src=""
+cleanup() {
+  rm -f "$new" "$sums"
+  [ -z "$src" ] || rm -rf "$src"
+}
+
 install_binary() {
   case "$(uname -m)" in
     x86_64 | amd64) arch=x86_64 ;;
@@ -142,22 +152,25 @@ install_binary() {
     *) die "No binary for $(uname -m); use the Docker image (amd64, arm64)" ;;
   esac
   url=$(download_url)
-  tmp=$(mktemp -d)
-  trap 'rm -rf "$tmp"' EXIT
+  # Next to its target, not in /tmp: that is often mounted noexec, and the rename stays on one filesystem
+  mkdir -p "$(dirname "$BIN")"
+  new=$(mktemp "$BIN.XXXXXX")
+  sums=$(mktemp)
+  trap 'cleanup' EXIT
   say "Downloading snapraid-ui-linux-$arch from $url"
-  fetch "$url/snapraid-ui-linux-$arch" "$tmp/snapraid-ui-linux-$arch"
-  fetch "$url/SHA256SUMS" "$tmp/SHA256SUMS"
+  fetch "$url/snapraid-ui-linux-$arch" "$new"
+  fetch "$url/SHA256SUMS" "$sums"
   if has sha256sum; then
-    (cd "$tmp" && grep " snapraid-ui-linux-$arch\$" SHA256SUMS | sha256sum -c - >/dev/null) ||
-      die "Checksum mismatch for snapraid-ui-linux-$arch"
+    expected=$(sed -n "s/^\([0-9a-f]\{64\}\)  *\*\{0,1\}snapraid-ui-linux-$arch\$/\1/p" "$sums")
+    actual=$(sha256sum "$new" | cut -d' ' -f1)
+    if [ -z "$expected" ] || [ "$expected" != "$actual" ]; then die "Checksum mismatch for snapraid-ui-linux-$arch"; fi
   else
     warn "sha256sum not found, the download is not verified"
   fi
-  chmod 0755 "$tmp/snapraid-ui-linux-$arch"
-  "$tmp/snapraid-ui-linux-$arch" --version >/dev/null || die "The downloaded binary does not run on this host"
+  chmod 0755 "$new"
+  "$new" --version >/dev/null || die "The downloaded binary does not run on this host"
   # Replaced by a rename, so a running service keeps its old file until the restart
-  mv -f "$tmp/snapraid-ui-linux-$arch" "$BIN.new"
-  mv -f "$BIN.new" "$BIN"
+  mv -f "$new" "$BIN"
   say "Installed SnapRAID UI $("$BIN" --version) at $BIN"
 }
 
@@ -235,8 +248,9 @@ do_install() {
   [ "$(uname -s)" = Linux ] || die "SnapRAID UI runs on Linux"
   [ "$(id -u)" -eq 0 ] || die "Run as root, e.g.: curl -fsSL https://github.com/$REPO/releases/latest/download/install.sh | sudo sh"
 
+  # An update when the service was set up; a first install that stopped before that starts over
   UPDATE=""
-  [ -x "$BIN" ] && UPDATE=1
+  [ -f "$UNIT" ] && UPDATE=1
 
   install_binary
   if [ "${SNAPRAID_UI_SKIP_SNAPRAID:-}" != 1 ]; then
@@ -255,11 +269,9 @@ do_install() {
     return
   fi
   write_unit
-  if [ -n "$UPDATE" ]; then
-    systemctl restart snapraid-ui
-  else
-    systemctl enable --now snapraid-ui >/dev/null 2>&1
-  fi
+  # enable is a no-op when it already is; restart starts it too when it was stopped
+  systemctl enable snapraid-ui >/dev/null 2>&1
+  systemctl restart snapraid-ui
   wait_healthy "${port:-3000}" || die "The service did not start, see: journalctl -u snapraid-ui"
 
   echo
@@ -288,9 +300,17 @@ do_uninstall() {
   say "SnapRAID UI removed. Kept: $DATA_DIR (your data), $ENV_FILE and SnapRAID; delete them yourself if you no longer need them"
 }
 
-case "${1:-}" in
-  "") do_install ;;
-  --uninstall) do_uninstall ;;
-  -h | --help) usage ;;
-  *) die "Unknown option: $1 (use --uninstall or --help)" ;;
+action=install
+for arg in "$@"; do
+  case "$arg" in
+    --uninstall) action=uninstall ;;
+    -h | --help) action=help ;;
+    SNAPRAID_UI_*=*) export "${arg?}" ;;
+    *) die "Unknown option: $arg (use --uninstall, --help or SNAPRAID_UI_...=value)" ;;
+  esac
+done
+case "$action" in
+  install) do_install ;;
+  uninstall) do_uninstall ;;
+  help) usage ;;
 esac

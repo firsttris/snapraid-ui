@@ -134,7 +134,7 @@ It does the following and prints the address and the login at the end:
 
 Nothing needs to be mounted: the UI sees the host's disks and paths as they are, so the paths in an existing `snapraid.conf` stay valid. Put your `snapraid.conf` into `/var/lib/snapraid-ui/`, add it where it is under *Manage arrays* → *Add existing file* (for example `/etc/snapraid.conf`), or set up a new array in the UI (see [First start](#first-start)).
 
-Settings for the installer, as environment variables, for example `curl ... | sudo env SNAPRAID_UI_PORT=8090 sh`:
+Settings for the installer, as environment variables or arguments, for example `curl ... | sudo env SNAPRAID_UI_PORT=8090 sh` or `curl ... | sudo sh -s -- SNAPRAID_UI_PORT=8090`:
 
 | Variable | Description |
 |---|---|
