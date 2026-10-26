@@ -33,7 +33,7 @@ There is no database. All state lives in JSON files and log files in the data di
 
 The Docker image (`docker/Dockerfile`) is a multi-stage build:
 
-1. **snapraid-builder** (Debian bookworm-slim) downloads the pinned SnapRAID release (`ARG SNAPRAID_VERSION=15.0`) and compiles it.
+1. **snapraid-builder** (Debian bookworm-slim) downloads the pinned SnapRAID release (`ARG SNAPRAID_VERSION=15.1`) and compiles it.
 2. **backend-builder** (`denoland/deno:2.5.6`) installs the backend dependencies and warms the Deno module cache.
 3. **frontend-builder** (`node:22-bookworm-slim`) runs `npm ci` and `npm run build`, which produces `frontend/.output/`.
 4. The **final image** is based on `denoland/deno:2.5.6`, adds `curl` and `smartmontools` (SnapRAID calls `smartctl` for `smart` and `probe`), and copies in the SnapRAID binary, the backend with its module cache and the built frontend.
@@ -132,7 +132,7 @@ Everything the UI could get from [snapraid-daemon](https://github.com/amadvance/
 There are two implementations:
 
 - `createCliEngine()` (`engine/cli-engine.ts`) wraps the command executor and the parsers.
-- `createDaemonEngine()` (`engine/daemon-engine.ts`) talks to one snapraid-daemon (tested with 2.0). Jobs the daemon has no task for go to its fallback, the CLI engine.
+- `createDaemonEngine()` (`engine/daemon-engine.ts`) talks to one snapraid-daemon (tested with 2.1). Jobs the daemon has no task for go to its fallback, the CLI engine.
 
 `buildEngine()` in `engine/engine-settings.ts` puts them together from `engine.json`: in daemon mode each listed config runs on its daemon (a daemon serves one array, several run as `snapraidd@<name>`), the other configs on the CLI. One job runs at a time across all of them. `GET`/`PUT /api/engine` read and switch it (not while a job runs), `POST /api/engine/test` checks one daemon.
 
@@ -162,7 +162,7 @@ Known gaps of the daemon engine:
 
 ### Keeping the engine in line with snapraid-daemon
 
-The API was last compared with snapraid-daemon **`v2.0`**; the version is in `backend/src/engine/REVIEWED_DAEMON_VERSION`. A weekly workflow (job `snapraid-daemon` in `upstream-release.yml`) opens an issue when a newer tag is out. For each new version:
+The API was last compared with snapraid-daemon **`v2.1`**; the version is in `backend/src/engine/REVIEWED_DAEMON_VERSION`. A weekly workflow (job `snapraid-daemon` in `upstream-release.yml`) opens an issue when a newer tag is out. For each new version:
 
 1. Compare `snapraidd.yaml` (the OpenAPI spec) between the reviewed and the new tag.
 2. If the daemon gained an endpoint for something in the "stays with the UI" list (for example `dup` or `list`), add a method to `SnapRaidEngine`, implement it in the CLI engine, move the callers to it and add a step to the contract tests.

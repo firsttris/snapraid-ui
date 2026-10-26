@@ -264,7 +264,7 @@ As before, one job runs at a time across all arrays.
 
 ### Limitations
 
-- The daemon mode was tested with snapraid-daemon 2.0 and SnapRAID 15.0. snapraid-daemon 2.0 needs SnapRAID 15.0 or newer.
+- The daemon mode was tested with snapraid-daemon 2.1 and SnapRAID 15.1. snapraid-daemon 2.0 and newer need SnapRAID 15.0 or newer; the daemon's `touch_zero_subseconds` option needs SnapRAID 15.1.
 - The daemon does not count files per disk, the *Files* column of the disks table shows "–".
 - *Last sync* and *Last scrub* come from the daemon's task history. Its logs are the daemon's, so there is no *Log* link and its runs don't show on the Logs page.
 - The daemon reports SMART attributes by name. SnapRAID UI maps the common ones (reallocated, pending and uncorrectable sectors, CRC errors, …) to their ids for its assessment; other attributes are shown without an id.

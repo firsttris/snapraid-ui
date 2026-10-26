@@ -53,7 +53,7 @@ pkill -f "vite dev"
 
 `dev/setup.sh` (run automatically by `./start.sh --demo`, a no-op once everything exists) prepares a self-contained SnapRAID environment:
 
-- builds SnapRAID (`SNAPRAID_VERSION`, default 15.0) from the official release tarball into `dev/bin/snapraid`, cached in `dev/.cache/`;
+- builds SnapRAID (`SNAPRAID_VERSION`, default 15.1) from the official release tarball into `dev/bin/snapraid`, cached in `dev/.cache/`;
 - downloads Deno (`DENO_VERSION`, default 2.9.7) into `dev/tools/` if `deno` is not installed;
 - creates `dev/sandbox/` with the array "Media Array": four data "disks" (`disks/disk1`–`disk4`) and a parity disk (`disks/parity1`) filled with random files, a `snapraid.conf` and `config.json`;
 - puts copies of a few files on other disks, for the duplicates page;
@@ -70,7 +70,7 @@ All sandbox disks are directories on one filesystem, which SnapRAID only accepts
 ```bash
 dev/setup.sh --reset                         # recreate the sandbox from scratch
 DISKS_DIR=/mnt dev/setup.sh --reset          # the disks at /mnt/disk1 … /mnt/parity1, as the screenshots show them
-SNAPRAID_VERSION=15.0 dev/setup.sh --reset  # build another SnapRAID release
+SNAPRAID_VERSION=15.1 dev/setup.sh --reset  # build another SnapRAID release
 ```
 
 `dev/bin/`, `dev/.cache/`, `dev/sandbox/` and `dev/tools/` are ignored by git.
@@ -189,7 +189,7 @@ npm run test:image                # the same tests against the Docker image buil
 E2E_BINARY=../dist/snapraid-ui-linux-x86_64 npm test   # against the standalone binary, see below
 ```
 
-`npm run setup` builds SnapRAID 15.0 (the version of the image) from the release tarball for the jobs SnapRAID UI runs itself, and SnapRAID from git (`SNAPRAID15_REF`) with snapraid-daemon at the version in `backend/src/engine/REVIEWED_DAEMON_VERSION`. The test disks are directories on one filesystem, so SnapRAID runs with `--test-skip-device`: the backend gets it through `SNAPRAID_EXTRA_ARGS`, the daemon through a small compiled wrapper as `sys_engine`.
+`npm run setup` builds SnapRAID 15.1 (the version of the image) from the release tarball for the jobs SnapRAID UI runs itself, and SnapRAID from git (`SNAPRAID15_REF`) with snapraid-daemon at the version in `backend/src/engine/REVIEWED_DAEMON_VERSION`. The test disks are directories on one filesystem, so SnapRAID runs with `--test-skip-device`: the backend gets it through `SNAPRAID_EXTRA_ARGS`, the daemon through a small compiled wrapper as `sys_engine`.
 
 The global setup (`e2e/harness/global-setup.ts`) recreates `e2e/.run/` on every run: the backend's data directory, the arrays and a log per server. It starts snapraid-daemon on its own array, the backend (with `PORT`, `SNAPRAID_BASE_PATH` and `SNAPRAID_BIN` pointing into `e2e/`), which serves the production build of the frontend as in the image. Each test creates its own array, adds it through the API and opens it; the `app` fixture removes it, and the schedules, afterwards. Tests run one after the other, the backend runs one job at a time.
 
@@ -250,7 +250,7 @@ From the repository root:
 ```bash
 docker build -f docker/Dockerfile -t snapraid-ui .
 # pin another SnapRAID release
-docker build -f docker/Dockerfile --build-arg SNAPRAID_VERSION=15.0 -t snapraid-ui .
+docker build -f docker/Dockerfile --build-arg SNAPRAID_VERSION=15.1 -t snapraid-ui .
 # or build and start with Compose
 docker compose -f docker/docker-compose.yml up --build
 ```

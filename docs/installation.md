@@ -21,7 +21,7 @@ SnapRAID UI runs as a single container that bundles SnapRAID, the web interface 
 
 - A Linux host with Docker or Podman, or with systemd for the [installer](#without-docker). The image [`tristanteu/snapraid-ui`](https://hub.docker.com/r/tristanteu/snapraid-ui) is published for **amd64** and **arm64**.
 - Your data, parity and content locations mounted on the host (SnapRAID works on mounted file systems, not on raw devices).
-- Nothing else. The image ships SnapRAID 15 (currently 15.0, built from the official release), `smartctl` from smartmontools, and everything the UI needs.
+- Nothing else. The image ships SnapRAID 15 (currently 15.1, built from the official release), `smartctl` from smartmontools, and everything the UI needs.
 
 > [!IMPORTANT]
 > SnapRAID UI reads SnapRAID's structured log (`snapraid --log`), which only exists since **SnapRAID 14.0**. Most distributions still ship 12.x, so use the bundled binary unless you have a 14.x build of your own.
@@ -127,7 +127,7 @@ curl -fsSL https://github.com/firsttris/snapraid-ui/releases/latest/download/ins
 It does the following and prints the address and the login at the end:
 
 1. Downloads `snapraid-ui-linux-<arch>` from the release, checks it against `SHA256SUMS` and installs it as `/usr/local/bin/snapraid-ui`.
-2. Looks for **SnapRAID 14 or newer** (`/usr/local/bin/snapraid`, then `snapraid` in the `PATH`). If there is none, or only an older one such as the 12.x most distributions ship, it builds SnapRAID 15.0 from the official release into `/usr/local/bin/snapraid` (installing `gcc` and `make` when missing; an older `/usr/local/bin/snapraid` is kept as `snapraid.old`).
+2. Looks for **SnapRAID 14 or newer** (`/usr/local/bin/snapraid`, then `snapraid` in the `PATH`). If there is none, or only an older one such as the 12.x most distributions ship, it builds SnapRAID 15.1 from the official release into `/usr/local/bin/snapraid` (installing `gcc` and `make` when missing; an older `/usr/local/bin/snapraid` is kept as `snapraid.old`).
 3. Installs `smartmontools` with the package manager when `smartctl` is missing.
 4. Writes the settings to `/etc/snapraid-ui/snapraid-ui.env` on the first install: port 3000, the data directory `/var/lib/snapraid-ui`, the SnapRAID binary, and a login `admin` with a random password.
 5. Sets up `snapraid-ui.service`, which runs as root (SnapRAID reads and writes your disks, `smartctl` needs the devices), starts it and waits until it answers.
@@ -297,7 +297,7 @@ From the repository root:
 ```bash
 docker build -f docker/Dockerfile -t snapraid-ui .
 # Pin another SnapRAID release
-docker build -f docker/Dockerfile --build-arg SNAPRAID_VERSION=15.0 -t snapraid-ui .
+docker build -f docker/Dockerfile --build-arg SNAPRAID_VERSION=15.1 -t snapraid-ui .
 ```
 
 Or with Compose, using the `build:` section of the bundled file: `docker compose -f docker/docker-compose.yml up --build`. More in [Development](development.md).
