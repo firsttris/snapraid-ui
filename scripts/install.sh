@@ -19,7 +19,7 @@ ENV_FILE=$CONF_DIR/snapraid-ui.env
 DATA_DIR=/var/lib/snapraid-ui
 UNIT=/etc/systemd/system/snapraid-ui.service
 # Built from source when the host has no SnapRAID 14+; the version the image ships (docker/Dockerfile)
-SNAPRAID_VERSION=15.0
+SNAPRAID_VERSION=15.1
 SNAPRAID_MIN_MAJOR=14
 
 say() { printf '\033[1m==>\033[0m %s\n' "$*"; }
@@ -81,7 +81,7 @@ download_url() {
 
 # --- SnapRAID ---------------------------------------------------------------
 
-# Major version of a SnapRAID binary, empty when it does not run: "SnapRAID CLI v15.0 by ..."
+# Major version of a SnapRAID binary, empty when it does not run: "SnapRAID CLI v15.1 by ..."
 # since 15, "snapraid v12.2 by ..." before
 snapraid_major() {
   "$1" --version 2>/dev/null | head -n 1 | sed -n 's/.* v\([0-9][0-9]*\)\..*/\1/p'

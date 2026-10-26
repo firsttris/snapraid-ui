@@ -33,7 +33,7 @@ There is no database. All state lives in JSON files and log files in the data di
 
 The Docker image (`docker/Dockerfile`) is a multi-stage build:
 
-1. **snapraid-builder** (Debian bookworm-slim) downloads the pinned SnapRAID release (`ARG SNAPRAID_VERSION=15.0`) and compiles it.
+1. **snapraid-builder** (Debian bookworm-slim) downloads the pinned SnapRAID release (`ARG SNAPRAID_VERSION=15.1`) and compiles it.
 2. **backend-builder** (`denoland/deno:2.5.6`) installs the backend dependencies and warms the Deno module cache.
 3. **frontend-builder** (`node:22-bookworm-slim`) runs `npm ci` and `npm run build`, which produces `frontend/.output/`.
 4. The **final image** is based on `denoland/deno:2.5.6`, adds `curl` and `smartmontools` (SnapRAID calls `smartctl` for `smart` and `probe`), and copies in the SnapRAID binary, the backend with its module cache and the built frontend.

@@ -2,7 +2,7 @@
 # Builds the pinned SnapRAID and snapraid-daemon versions the end-to-end tests run against,
 # into e2e/.tools/. Builds that are already there are kept.
 #
-#   snapraid       SnapRAID 15.0, the version of the Docker image, runs the CLI jobs
+#   snapraid       SnapRAID 15.1, the version of the Docker image, runs the CLI jobs
 #   snapraid15     SnapRAID from git (SNAPRAID15_REF), the engine snapraid-daemon needs
 #   snapraidd      snapraid-daemon
 #   snapraid15-skip-device
@@ -13,8 +13,8 @@
 # Needs git, curl, gcc, make, autoconf, automake and zlib (zlib1g-dev).
 set -euo pipefail
 
-SNAPRAID_VERSION="${SNAPRAID_VERSION:-15.0}"
-SNAPRAID15_REF="${SNAPRAID15_REF:-v15.0}"
+SNAPRAID_VERSION="${SNAPRAID_VERSION:-15.1}"
+SNAPRAID15_REF="${SNAPRAID15_REF:-v15.1}"
 # The version backend/src/engine/REVIEWED_DAEMON_VERSION names
 DAEMON_REF="${DAEMON_REF:-v$(cat "$(dirname "${BASH_SOURCE[0]}")/../../backend/src/engine/REVIEWED_DAEMON_VERSION")}"
 

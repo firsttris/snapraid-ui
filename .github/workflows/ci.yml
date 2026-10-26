@@ -90,7 +90,7 @@ jobs:
       - name: The service serves the UI behind the login
         run: |
           systemctl is-active snapraid-ui
-          test "$(/usr/local/bin/snapraid --version | head -n 1 | cut -d' ' -f1-3)" = "SnapRAID CLI v15.0"
+          test "$(/usr/local/bin/snapraid --version | head -n 1 | cut -d' ' -f1-3)" = "SnapRAID CLI v15.1"
           curl -fsS http://127.0.0.1:3000/api/health
           curl -fsS -o /dev/null http://127.0.0.1:3000/
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/api/config)" = 401
