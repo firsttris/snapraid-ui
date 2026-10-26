@@ -34,9 +34,9 @@ The key button next to *Log out* (at the bottom of the sidebar) opens *Sign-in*.
 
 - replaces the one from `SNAPRAID_UI_PASSWORD` until you change that variable,
 - is stored as a PBKDF2-SHA256 hash (600,000 rounds) in `auth.json` in the data directory, never in plain text,
-- ends every other session; the browser you changed it in stays signed in.
+- ends every other session, including their live connection for job output; the browser you changed it in stays signed in.
 
-**Forgot the password?** Set a new `SNAPRAID_UI_PASSWORD` (or a new `SNAPRAID_UI_USERNAME`) and restart the container or the service. At startup the backend sees that `auth.json` belongs to other credentials, removes it and logs `SNAPRAID_UI_USERNAME or SNAPRAID_UI_PASSWORD changed`: the password from the environment applies again, and all passkeys are gone.
+**Forgot the password?** Set a new `SNAPRAID_UI_PASSWORD` (or a new `SNAPRAID_UI_USERNAME`) and restart the container or the service. At startup the backend sees that `auth.json` belongs to other credentials, removes it and logs `auth.json does not belong to SNAPRAID_UI_USERNAME and SNAPRAID_UI_PASSWORD`: the password from the environment applies again, and all passkeys are gone. The same happens when `auth.json` is not valid JSON.
 
 ### Passkeys
 

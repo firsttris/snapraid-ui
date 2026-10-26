@@ -80,7 +80,8 @@ const isCredentialFile = (value: unknown): value is CredentialFile => {
 
 /**
  * The credentials in `path`, or kept in memory only without one (tests). Drops the file when it
- * belongs to other environment credentials, see the top of this file.
+ * belongs to other environment credentials, see the top of this file, or cannot be read as JSON
+ * (edited by hand, a damaged disk): starting with the environment's password beats not starting.
  */
 export const loadCredentials = async (
   path: string | null,
@@ -90,18 +91,27 @@ export const loadCredentials = async (
 ): Promise<CredentialStore> => {
   let file: CredentialFile | null = null;
   if (path) {
+    let text: string | null = null;
     try {
-      const parsed: unknown = JSON.parse(await Deno.readTextFile(path));
+      text = await Deno.readTextFile(path);
+    } catch (error) {
+      if (!(error instanceof Deno.errors.NotFound)) throw error;
+    }
+    if (text !== null) {
+      let parsed: unknown = null;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        console.warn(`🔑 ${path} is not valid JSON`);
+      }
       if (isCredentialFile(parsed) && await verifyPassword(environmentSecret(username, envPassword), parsed.environment)) {
         file = parsed;
       } else {
         await Deno.remove(path);
         console.log(
-          "🔑 SNAPRAID_UI_USERNAME or SNAPRAID_UI_PASSWORD changed: the password from the environment applies again, passkeys were removed",
+          "🔑 auth.json does not belong to SNAPRAID_UI_USERNAME and SNAPRAID_UI_PASSWORD: the password from the environment applies again, passkeys were removed",
         );
       }
-    } catch (error) {
-      if (!(error instanceof Deno.errors.NotFound)) throw error;
     }
   }
 

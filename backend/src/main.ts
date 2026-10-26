@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { loadAppConfig } from "./config-parser.ts";
-import { broadcast, handleWebSocketUpgrade } from "./websocket.ts";
+import { broadcast, closeAllClients, handleWebSocketUpgrade } from "./websocket.ts";
 import { setBroadcast, setSnapraidLogManager } from "./routes/snapraid.ts";
 import { activeEngine, type SnapRaidEngine, setEngine, wrapJobs } from "./engine/engine.ts";
 import { createCliEngine } from "./engine/cli-engine.ts";
@@ -56,6 +56,7 @@ if (authEnv) {
     ...authEnv,
     secret: await loadSessionSecret(),
     store: await loadCredentials(resolveFromBase("auth.json"), authEnv.username, authEnv.password),
+    onPasswordChange: closeAllClients,
   });
   // Registered before all other routes, so it guards them including the WebSocket
   app.use("/api/*", auth.middleware);

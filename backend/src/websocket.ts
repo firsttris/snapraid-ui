@@ -12,6 +12,15 @@ export const broadcast = (message: unknown): void => {
   });
 };
 
+/**
+ * Closes every connection, e.g. after a new password: the UI connects again with its session, a
+ * session that ended gets 401
+ */
+export const closeAllClients = (): void => {
+  wsClients.forEach((client) => client.close(1000, "Session ended"));
+  wsClients.clear();
+};
+
 export const handleWebSocketUpgrade = (req: Request): Response => {
   if (req.headers.get("upgrade") !== "websocket") {
     return new Response("Expected WebSocket", { status: 400 });

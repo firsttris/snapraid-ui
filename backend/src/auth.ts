@@ -27,6 +27,9 @@ export interface AuthOptions {
   sessionTtlSeconds: number;
   // The password set in the UI and the passkeys (credentials.ts)
   store: CredentialStore;
+  // After a new password: open connections that only checked the session when they opened, the
+  // WebSocket, have to go too
+  onPasswordChange?: () => void;
 }
 
 interface Attempts {
@@ -211,6 +214,7 @@ export const createAuth = async (options: AuthOptions) => {
       if (!result) return c.json({ error: msg("server_error_wrong_password") }, 403);
       await store.setPassword(await hashPassword(next));
       key = await signingKey();
+      options.onPasswordChange?.();
       await startSession(c);
       return c.json({ ok: true });
     }),
@@ -263,7 +267,7 @@ export const createAuth = async (options: AuthOptions) => {
 
   routes.post("/passkey/options", async (c) => {
     try {
-      return c.json(await passkeys.loginOptions(c.req.header("origin")));
+      return c.json(await passkeys.loginOptions(c.req.header("origin"), clientKey(c)));
     } catch (error) {
       if (error instanceof AuthError) return c.json({ error: error.message }, error.status);
       throw error;

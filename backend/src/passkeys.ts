@@ -22,6 +22,9 @@ import { type CredentialStore, fromBase64Url, type StoredPasskey, toBase64Url } 
 const RP_NAME = "SnapRAID UI";
 const CHALLENGE_TTL_MS = 5 * 60_000;
 const MAX_CHALLENGES = 1000;
+// Open challenges per session (registration) or client address (login): asking for more drops
+// the oldest of the same one, so a client flooding the login cannot push out anyone else's
+const MAX_CHALLENGES_PER_OWNER = 20;
 export const MAX_NAME_LENGTH = 64;
 
 /** A refusal with the HTTP status and a message for the UI */
@@ -81,23 +84,29 @@ type Purpose = "login" | "register";
 
 export const createPasskeys = (store: CredentialStore, username: string) => {
   // Each options request hands out a fresh challenge that a response may use once, within five
-  // minutes. A registration challenge is tied to the session that asked for it.
-  const challenges = new Map<string, { purpose: Purpose; sessionId?: string; rpId: string; expiresAt: number }>();
+  // minutes. A registration challenge is tied to the session that asked for it, a login challenge
+  // to the client address. Kept apart, so login requests, which need no session, cannot push out
+  // a registration.
+  type Challenge = { owner: string; rpId: string; expiresAt: number };
+  const challenges: Record<Purpose, Map<string, Challenge>> = { login: new Map(), register: new Map() };
 
-  const rememberChallenge = (challenge: string, entry: { purpose: Purpose; sessionId?: string; rpId: string }) => {
+  const rememberChallenge = (purpose: Purpose, challenge: string, entry: { owner: string; rpId: string }) => {
+    const pending = challenges[purpose];
     const now = Date.now();
-    for (const [key, value] of challenges) if (value.expiresAt < now) challenges.delete(key);
-    if (challenges.size >= MAX_CHALLENGES) challenges.delete(challenges.keys().next().value!);
-    challenges.set(challenge, { ...entry, expiresAt: now + CHALLENGE_TTL_MS });
+    for (const [key, value] of pending) if (value.expiresAt < now) pending.delete(key);
+    const own = [...pending].filter(([, value]) => value.owner === entry.owner);
+    if (own.length >= MAX_CHALLENGES_PER_OWNER) pending.delete(own[0][0]);
+    if (pending.size >= MAX_CHALLENGES) pending.delete(pending.keys().next().value!);
+    pending.set(challenge, { ...entry, expiresAt: now + CHALLENGE_TTL_MS });
   };
 
   /** Takes a challenge out of the store if it fits; a challenge never works twice */
-  const takeChallenge = (challenge: string, purpose: Purpose, rpId: string, sessionId?: string): boolean => {
-    const entry = challenges.get(challenge);
+  const takeChallenge = (purpose: Purpose, challenge: string, rpId: string, sessionId?: string): boolean => {
+    const pending = challenges[purpose];
+    const entry = pending.get(challenge);
     if (!entry) return false;
-    challenges.delete(challenge);
-    return entry.purpose === purpose && entry.rpId === rpId && entry.sessionId === sessionId &&
-      entry.expiresAt > Date.now();
+    pending.delete(challenge);
+    return entry.rpId === rpId && (purpose === "login" || entry.owner === sessionId) && entry.expiresAt > Date.now();
   };
 
   const find = (id: string): StoredPasskey => {
@@ -138,7 +147,7 @@ export const createPasskeys = (store: CredentialStore, username: string) => {
       })),
       authenticatorSelection: { residentKey: "required", userVerification: "required" },
     });
-    rememberChallenge(options.challenge, { purpose: "register", sessionId, rpId });
+    rememberChallenge("register", options.challenge, { owner: sessionId, rpId });
     return options;
   };
 
@@ -151,7 +160,7 @@ export const createPasskeys = (store: CredentialStore, username: string) => {
     const cleanedName = cleanName(name);
     const rp = relyingParty(origin);
     const challenge = signedChallenge(response?.response?.clientDataJSON);
-    if (!response || !takeChallenge(challenge, "register", rp.rpId, sessionId)) {
+    if (!response || !takeChallenge("register", challenge, rp.rpId, sessionId)) {
       throw new AuthError(400, msg("server_error_passkey_expired"));
     }
     let verification: Awaited<ReturnType<typeof verifyRegistrationResponse>>;
@@ -182,11 +191,14 @@ export const createPasskeys = (store: CredentialStore, username: string) => {
     return info(passkey);
   };
 
-  const loginOptions = async (origin: string | undefined): Promise<PublicKeyCredentialRequestOptionsJSON> => {
+  const loginOptions = async (
+    origin: string | undefined,
+    client: string,
+  ): Promise<PublicKeyCredentialRequestOptionsJSON> => {
     const { rpId } = relyingParty(origin);
     // No allowCredentials: the browser offers the passkeys it holds for this host
     const options = await generateAuthenticationOptions({ rpID: rpId, userVerification: "required" });
-    rememberChallenge(options.challenge, { purpose: "login", rpId });
+    rememberChallenge("login", options.challenge, { owner: client, rpId });
     return options;
   };
 
@@ -197,7 +209,7 @@ export const createPasskeys = (store: CredentialStore, username: string) => {
   ): Promise<boolean> => {
     const rp = relyingParty(origin);
     const challenge = signedChallenge(response?.response?.clientDataJSON);
-    if (!response || !takeChallenge(challenge, "login", rp.rpId)) {
+    if (!response || !takeChallenge("login", challenge, rp.rpId)) {
       throw new AuthError(400, msg("server_error_passkey_expired"));
     }
     const passkey = store.passkeys().find((p) => p.id === response.id);

@@ -3,7 +3,9 @@ import { join } from "@std/path";
 import { Hono } from "hono";
 import { createAuth, SESSION_COOKIE } from "../auth.ts";
 import { type CredentialStore, hashPassword, loadCredentials, verifyPassword } from "../credentials.ts";
-import { AuthError, relyingParty } from "../passkeys.ts";
+import { AuthError, createPasskeys, relyingParty } from "../passkeys.ts";
+import { broadcast, closeAllClients, handleWebSocketUpgrade } from "../websocket.ts";
+import { setEngine } from "../engine/engine.ts";
 
 // Few PBKDF2 rounds for the hash of the environment credentials, the tests make many stores
 const memoryStore = () => loadCredentials(null, "admin", "secret", { iterations: 1000 });
@@ -265,4 +267,111 @@ Deno.test("passkeys - listing and removing need a session, unknown ones are not 
     (await app.request("/api/auth/passkeys/nobody", { method: "DELETE", headers: { Cookie: cookie } })).status,
     404,
   );
+});
+
+Deno.test("auth - an auth.json that is not JSON is dropped at startup instead of stopping it", async () => {
+  const dir = await Deno.makeTempDir();
+  try {
+    const path = join(dir, "auth.json");
+    await Deno.writeTextFile(path, '{"environment": "x", "userId"');
+    const store = await loadCredentials(path, "admin", "secret", { iterations: 1000 });
+    assertEquals(store.passwordHash(), null);
+    await Deno.stat(path).then(() => assert(false, "auth.json removed"), () => {});
+  } finally {
+    await Deno.remove(dir, { recursive: true });
+  }
+});
+
+/** A browser's answer to a registration challenge; enough to reach the challenge check */
+const registration = (challenge: string) => ({
+  id: "x",
+  rawId: "x",
+  type: "public-key",
+  clientExtensionResults: {},
+  response: {
+    clientDataJSON: btoa(JSON.stringify({ type: "webauthn.create", challenge, origin: "https://nas.example.org" }))
+      .replaceAll("=", ""),
+    attestationObject: "AA",
+  },
+}) as never;
+
+Deno.test("passkeys - a flood of login requests pushes out neither a registration nor another client's login", async () => {
+  const passkeys = createPasskeys(await memoryStore(), "admin");
+  const origin = "https://nas.example.org";
+  const pending = await passkeys.registrationOptions(origin, "session-1");
+  const login = await passkeys.loginOptions(origin, "10.0.0.1");
+  for (let i = 0; i < 1100; i++) await passkeys.loginOptions("https://attacker.example", "10.0.0.66");
+
+  // The registration challenge is still there: the answer gets as far as its attestation
+  const error = await passkeys.register(origin, "session-1", registration(pending.challenge), "Laptop")
+    .then(() => "", (e: Error) => e.message);
+  assert(error.includes("server_error_passkey_invalid"), error);
+  // And so is the other client's login challenge: an unknown passkey, not an expired request
+  assertFalse(await passkeys.verifyLogin(origin, signed(login.challenge, "nobody") as never));
+});
+
+Deno.test({
+  name: "auth - a new password closes the WebSockets, an ended session cannot connect again",
+  // The WebSocket server's resources outlive the test by a moment
+  sanitizeOps: false,
+  sanitizeResources: false,
+  fn: async () => {
+    setEngine({ currentJob: () => null } as never);
+    const auth = await createAuth({
+      username: "admin",
+      password: "secret",
+      secret: "s",
+      sessionTtlSeconds: 3600,
+      store: await memoryStore(),
+      onPasswordChange: closeAllClients,
+    });
+    const app = new Hono();
+    app.use("/api/*", auth.middleware);
+    app.use("/ws", auth.middleware);
+    app.route("/api/auth", auth.routes);
+    app.get("/ws", (c) => handleWebSocketUpgrade(c.req.raw));
+    const server = Deno.serve({ port: 0, onListen: () => {} }, (req, info) => app.fetch(req, info));
+    const base = `http://127.0.0.1:${server.addr.port}`;
+    const connect = (cookie: string) =>
+      new WebSocket(`ws://127.0.0.1:${server.addr.port}/ws`, { headers: { Cookie: cookie } } as never);
+    try {
+      const signIn = async () => {
+        const res = await fetch(`${base}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: "admin", password: "secret" }),
+        });
+        await res.body?.cancel();
+        return sessionCookie(res);
+      };
+      const other = await signIn();
+      const mine = await signIn();
+      const socket = connect(other);
+      const received: string[] = [];
+      socket.onmessage = (event) => received.push(String(event.data));
+      await new Promise((resolve) => (socket.onopen = resolve));
+      const closed = new Promise((resolve) => (socket.onclose = resolve));
+
+      const res = await fetch(`${base}/api/auth/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Cookie: mine },
+        body: JSON.stringify({ current: "secret", next: "a-new-long-password" }),
+      });
+      await res.body?.cancel();
+      assertEquals(res.status, 200);
+      await closed;
+      broadcast({ type: "output", chunk: "/mnt/disk1/private.txt" });
+      assertEquals(received, []);
+
+      // Connecting again with the ended session fails
+      const again = connect(other);
+      await new Promise((resolve) => {
+        again.onerror = resolve;
+        again.onclose = resolve;
+      });
+      assertEquals(again.readyState, WebSocket.CLOSED);
+    } finally {
+      await server.shutdown();
+    }
+  },
 });
