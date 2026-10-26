@@ -1,4 +1,4 @@
-// The experimental daemon mode: snapraid-daemon 2.0 runs the jobs of its array
+// The experimental daemon mode: snapraid-daemon 2.1 runs the jobs of its array
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { openArray } from '../harness/array'

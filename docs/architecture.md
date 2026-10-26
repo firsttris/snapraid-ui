@@ -132,7 +132,7 @@ Everything the UI could get from [snapraid-daemon](https://github.com/amadvance/
 There are two implementations:
 
 - `createCliEngine()` (`engine/cli-engine.ts`) wraps the command executor and the parsers.
-- `createDaemonEngine()` (`engine/daemon-engine.ts`) talks to one snapraid-daemon (tested with 2.0). Jobs the daemon has no task for go to its fallback, the CLI engine.
+- `createDaemonEngine()` (`engine/daemon-engine.ts`) talks to one snapraid-daemon (tested with 2.1). Jobs the daemon has no task for go to its fallback, the CLI engine.
 
 `buildEngine()` in `engine/engine-settings.ts` puts them together from `engine.json`: in daemon mode each listed config runs on its daemon (a daemon serves one array, several run as `snapraidd@<name>`), the other configs on the CLI. One job runs at a time across all of them. `GET`/`PUT /api/engine` read and switch it (not while a job runs), `POST /api/engine/test` checks one daemon.
 
@@ -162,7 +162,7 @@ Known gaps of the daemon engine:
 
 ### Keeping the engine in line with snapraid-daemon
 
-The API was last compared with snapraid-daemon **`v2.0`**; the version is in `backend/src/engine/REVIEWED_DAEMON_VERSION`. A weekly workflow (job `snapraid-daemon` in `upstream-release.yml`) opens an issue when a newer tag is out. For each new version:
+The API was last compared with snapraid-daemon **`v2.1`**; the version is in `backend/src/engine/REVIEWED_DAEMON_VERSION`. A weekly workflow (job `snapraid-daemon` in `upstream-release.yml`) opens an issue when a newer tag is out. For each new version:
 
 1. Compare `snapraidd.yaml` (the OpenAPI spec) between the reviewed and the new tag.
 2. If the daemon gained an endpoint for something in the "stays with the UI" list (for example `dup` or `list`), add a method to `SnapRaidEngine`, implement it in the CLI engine, move the callers to it and add a step to the contract tests.
