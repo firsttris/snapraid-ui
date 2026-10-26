@@ -133,11 +133,8 @@ export const useLogout = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: logout,
-    onSuccess: () => {
-      queryClient.setQueryData<AuthSession>(queryKeys.session, {
-        enabled: true,
-        authenticated: false,
-      })
+    onSuccess: (session) => {
+      queryClient.setQueryData<AuthSession>(queryKeys.session, session)
       // Drop everything cached for the logged-in user, including the persisted status.
       // The session query stays, removing it would detach the observer of the AuthGate
       queryClient.removeQueries({

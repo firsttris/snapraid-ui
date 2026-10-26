@@ -73,16 +73,21 @@ const startDaemon = async (): Promise<Server> => {
 }
 
 /**
- * The backend with the built frontend on the app's port, ready once both answer: from the sources,
- * or with E2E_BINARY the standalone binary, which carries the frontend inside
+ * The backend with the built frontend on the app's port (or another one), ready once both answer:
+ * from the sources, or with E2E_BINARY the standalone binary, which carries the frontend inside
  */
-export const startBackend = (env: Record<string, string>): Promise<Server> => {
+export const startBackend = (
+  env: Record<string, string>,
+  { name = 'backend', port = PORTS.app }: { name?: string; port?: number } = {},
+): Promise<Server> => {
+  const url = port === PORTS.app ? APP_URL : `http://127.0.0.1:${port}`
   const options = {
-    env: { PORT: String(PORTS.app), ...env },
-    ready: async () => (await answers(`${API_URL}/config`)()) && (await fetch(`${APP_URL}/`)).ok,
+    env: { PORT: String(port), ...env },
+    // Any answer from the API: with the login on, it is a 401
+    ready: async () => (await answers(`${url}/api/config`)()) && (await fetch(`${url}/`)).ok,
   }
-  if (BINARY) return startProcess('backend', resolve(E2E_DIR, BINARY), [], { ...options, cwd: RUN_DIR })
-  return startProcess('backend', findDeno(), ['run', ...DENO_PERMISSIONS, 'src/main.ts'], {
+  if (BINARY) return startProcess(name, resolve(E2E_DIR, BINARY), [], { ...options, cwd: RUN_DIR })
+  return startProcess(name, findDeno(), ['run', ...DENO_PERMISSIONS, 'src/main.ts'], {
     ...options,
     cwd: join(ROOT, 'backend'),
   })

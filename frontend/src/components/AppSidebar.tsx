@@ -4,10 +4,12 @@ import {
   Check,
   ChevronsUpDown,
   HardDrive,
+  KeyRound,
   Layers,
   LogOut,
   Sparkles,
 } from 'lucide-react'
+import { useState } from 'react'
 import { useConfig, useLogout, useSession } from '../hooks/queries'
 import { useAppShell } from '../hooks/useAppShell'
 import { useJob } from '../hooks/useJob'
@@ -17,6 +19,7 @@ import { type MotionPreference, useMotion } from '../lib/theme'
 import { cn } from '../lib/utils'
 import { APP_VERSION, releaseUrl } from '../lib/version'
 import * as m from '../paraglide/messages'
+import { AccountDialog } from './AccountDialog'
 import { Button } from './ui/button'
 import {
   DropdownMenu,
@@ -166,6 +169,7 @@ const MotionSetting = () => {
 const UserBox = () => {
   const { data: session } = useSession()
   const logout = useLogout()
+  const [accountOpen, setAccountOpen] = useState(false)
   if (!session?.enabled) return null
   const name = session.username ?? ''
 
@@ -188,6 +192,19 @@ const UserBox = () => {
           <Button
             variant="ghost"
             size="icon-sm"
+            onClick={() => setAccountOpen(true)}
+            aria-label={m.account_title()}
+          >
+            <KeyRound />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{m.account_title()}</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={() => logout.mutate()}
             disabled={logout.isPending}
             aria-label={m.nav_logout()}
@@ -197,6 +214,7 @@ const UserBox = () => {
         </TooltipTrigger>
         <TooltipContent>{m.nav_logout()}</TooltipContent>
       </Tooltip>
+      {accountOpen && <AccountDialog onClose={() => setAccountOpen(false)} />}
     </div>
   )
 }

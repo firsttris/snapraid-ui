@@ -9,7 +9,7 @@ The settings are environment variables: in the container you set them in the Com
 | Variable | Default | Description |
 |---|---|---|
 | `SNAPRAID_UI_USERNAME` | *(unset)* | Username for the login. The login is enabled only when both username and password are set. |
-| `SNAPRAID_UI_PASSWORD` | *(unset)* | Password for the login. Changing it ends all existing sessions. |
+| `SNAPRAID_UI_PASSWORD` | *(unset)* | Password for the login, until it is changed in the UI. Changing it ends all existing sessions, and drops a password changed in the UI and the passkeys, see [Security](security.md#changing-the-password). |
 | `SNAPRAID_UI_SESSION_HOURS` | `168` (7 days) | How long a login lasts, in hours. Invalid or non-positive values fall back to 168. |
 | `SNAPRAID_BIN` | `/usr/local/bin/snapraid` in the image, `snapraid` from the `PATH` otherwise | The SnapRAID binary to run. See [Using your own SnapRAID binary](installation.md#using-your-own-snapraid-binary). |
 | `SNAPRAID_BASE_PATH` | `/app/snapraid` in the image, `/var/lib/snapraid-ui` with the installer | The [data directory](#data-directory). Keep the default in the container and mount a volume there instead. |
@@ -52,6 +52,7 @@ All state lives in one directory, `/app/snapraid` in the container. Mount it as 
 | `usage-history.json` | Daily used and free space per configuration and disk, up to 730 days. |
 | `replacements.json` | Progress of a running disk replacement, see [Managing disks](disks.md). |
 | `.session-secret` | Random key that signs login sessions, created on first start with the login enabled (file mode `600`). |
+| `auth.json` | The password changed in the UI (as a hash) and the passkeys, once there are any (file mode `600`). See [Security](security.md#changing-the-password). |
 | `logs/` | One log file per SnapRAID run, see [Log retention](#log-retention). |
 
 Files that don't exist yet are created when they are first needed. The container runs as root, so the files on the host belong to root.

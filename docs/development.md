@@ -178,6 +178,7 @@ The test adds files to the array's first data disk. In `snapraidd.conf` set `net
 | `config.spec.ts` | A data disk added on the configuration page (next free name suggested) is in `snapraid.conf` and protected by the next sync; *Manage arrays*: rename from the row menu, *Edit* opens the array's page, an option under *Advanced* saved on leaving the field, *Set up a new array* starts the wizard at the disks |
 | `docker.spec.ts` | A container picked under Automation is paused during the sync and resumed after it (`docker events`); skipped without a Docker daemon |
 | `daemon.spec.ts` | Daemon mode switched on in the UI: *Test connection*, then a sync runs as a task of snapraid-daemon |
+| `login.spec.ts` | A second backend with the login on, at `http://localhost`: the password changed in *Sign-in* (a wrong current one refused, the old one no longer signs in), a passkey added with Chromium's virtual authenticator, used on the login page, renamed and deleted; on `127.0.0.1` *Sign-in* says why passkeys are off; skipped against the image |
 
 ```bash
 cd e2e

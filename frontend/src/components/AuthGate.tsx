@@ -75,6 +75,7 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
   if (!authenticated) {
     return (
       <LoginPage
+        passkeys={session?.passkeys}
         onLogin={(newSession) =>
           queryClient.setQueryData(queryKeys.session, newSession)
         }
