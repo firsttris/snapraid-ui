@@ -521,6 +521,18 @@ export interface AuthSession {
   enabled: boolean;
   authenticated: boolean;
   username?: string;
+  // Whether a passkey is set up, so the login page offers it
+  passkeys?: boolean;
+}
+
+// A passkey of the login, without its key
+export interface PasskeyInfo {
+  id: string;
+  name: string;
+  // The host name it was made on, the only one it works on
+  rpId: string;
+  createdAt: number;
+  lastUsedAt: number | null;
 }
 
 // Disk replacement, following "Recovering" in the SnapRAID manual:

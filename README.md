@@ -107,7 +107,7 @@ remembering the right flags. SnapRAID UI puts all of it in one place:
 ### 🎨 Made for everyday use
 - Light and dark theme, works on the phone
 - Command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>)
-- English, German and Italian, optional login
+- English, German and Italian, optional login with passkeys
 
 </td>
 </tr>

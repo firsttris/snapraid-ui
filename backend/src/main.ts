@@ -30,6 +30,7 @@ import { resumeLeftoverContainers } from "./container-pause.ts";
 import { resolveFromBase } from "./config.ts";
 import { withRestoredOwnership } from "./restore-ownership.ts";
 import { createAuth, disabledAuthRoutes, loadSessionSecret, readAuthEnv } from "./auth.ts";
+import { loadCredentials } from "./credentials.ts";
 import { APP_VERSION } from "./version.ts";
 import { type FetchHandler, isBackendPath, loadFrontend } from "./frontend.ts";
 
@@ -51,9 +52,10 @@ app.use("*", cors({
 // Login, enabled by SNAPRAID_UI_USERNAME and SNAPRAID_UI_PASSWORD
 const authEnv = readAuthEnv();
 if (authEnv) {
-  const auth = createAuth({
+  const auth = await createAuth({
     ...authEnv,
-    secret: await loadSessionSecret(authEnv.username, authEnv.password),
+    secret: await loadSessionSecret(),
+    store: await loadCredentials(resolveFromBase("auth.json"), authEnv.username, authEnv.password),
   });
   // Registered before all other routes, so it guards them including the WebSocket
   app.use("/api/*", auth.middleware);

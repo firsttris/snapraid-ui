@@ -24,9 +24,29 @@ The login is turned on by setting both environment variables:
 
 If either one is missing, the login is off and the UI is open to anyone who can reach it. The backend logs `Login disabled` at startup in that case, and `Login enabled for user "<name>"` when it is on.
 
-With the login on, every API request and the WebSocket need a valid session; without one the backend answers `401 Unauthorized` and the browser shows the login page. There is one user, with the credentials from the environment. Passwords are compared in constant time, and a wrong username takes as long to reject as a wrong password.
+With the login on, every API request and the WebSocket need a valid session; without one the backend answers `401 Unauthorized` and the browser shows the login page. There is one user, with the username from the environment. Passwords are compared in constant time, and a wrong username takes as long to reject as a wrong password.
 
 For Podman, the Quadlet unit reads the password from a Podman secret instead of plain text, see [Installation](installation.md#podman-quadlet).
+
+### Changing the password
+
+The key button next to *Log out* (at the bottom of the sidebar) opens *Sign-in*. Under *Password*, enter the current password and a new one with at least 12 characters. The new password:
+
+- replaces the one from `SNAPRAID_UI_PASSWORD` until you change that variable,
+- is stored as a PBKDF2-SHA256 hash (600,000 rounds) in `auth.json` in the data directory, never in plain text,
+- ends every other session; the browser you changed it in stays signed in.
+
+**Forgot the password?** Set a new `SNAPRAID_UI_PASSWORD` (or a new `SNAPRAID_UI_USERNAME`) and restart the container or the service. At startup the backend sees that `auth.json` belongs to other credentials, removes it and logs `SNAPRAID_UI_USERNAME or SNAPRAID_UI_PASSWORD changed`: the password from the environment applies again, and all passkeys are gone.
+
+### Passkeys
+
+A passkey signs you in with your fingerprint, face or device PIN instead of the password. Add one under *Sign-in* → *Passkeys* → *Add passkey*: give it a name, confirm with the password, and your browser or phone creates it. The login page then shows *Sign in with a passkey*. The password keeps working next to it.
+
+- **WebAuthn needs HTTPS with a host name**, such as `https://nas.example.org` behind a [reverse proxy](#behind-a-reverse-proxy), or `http://localhost`. Over `http://` or an IP address (`http://192.168.1.10:3000`) the browser refuses passkeys, and *Sign-in* says so.
+- A passkey belongs to the host name it was made on and only works there. Opening the UI under another name needs a passkey of its own.
+- Adding one asks for the password again, so someone with a stolen session cannot add their own.
+- A passkey login needs user verification (fingerprint, face or PIN) and counts against the same [lockout](#failed-logins-and-lockout) as a password login.
+- Rename or delete passkeys in *Sign-in*. Setting a new `SNAPRAID_UI_PASSWORD` removes all of them (see above).
 
 ### Sessions
 
@@ -39,10 +59,10 @@ After signing in, the browser gets a session cookie:
 | Lifetime | `SNAPRAID_UI_SESSION_HOURS`, default 168 hours (7 days) |
 | Flags | `HttpOnly`, `SameSite=Strict`, `Path=/`; `Secure` when the request arrived over HTTPS (see [below](#behind-a-reverse-proxy)) |
 
-Sessions are not stored on the server. The token is signed with a key made of the random `.session-secret` in the data directory and a hash of the username and password. That means:
+Sessions are not stored on the server. The token is signed with a key made of the random `.session-secret` in the data directory and a hash of the username and the password. That means:
 
 - Sessions survive restarts and updates.
-- **Changing the username or password ends all sessions.**
+- **Changing the username or password ends all sessions**, in the environment or in *Sign-in* (there, the browser you changed it in stays signed in).
 - Deleting `.session-secret` and restarting the container (or `systemctl restart snapraid-ui`) also ends all sessions.
 - *Log out* (at the bottom of the sidebar) deletes the cookie in that browser. A copy of the token stays valid until it expires, so if you suspect a session was stolen, change the password.
 
@@ -53,6 +73,7 @@ When a session expires, the next request sends you back to the login page.
 To slow down password guessing:
 
 - Every failed login waits half a second before it answers.
+- Wrong passwords, unknown passkeys and a wrong password in *Sign-in* (to change it or add a passkey) all count.
 - After **5 failed attempts**, further logins from the same client address are refused for the rest of a **15-minute** window that starts with the first failure. The login page shows a countdown (*Too many failed attempts. Try again in …*).
 - A successful login resets the counter for that address.
 
@@ -88,18 +109,19 @@ Everything lives in the data directory, see [Configuration](configuration.md#dat
 | File | Contents | Protection |
 |---|---|---|
 | `.session-secret` | Key that signs sessions | Created with file mode `600` |
+| `auth.json` | The password set in *Sign-in* (PBKDF2 hash), the passkeys' public keys, and a hash of the environment credentials it belongs to | File mode `600`. Not part of a backup. |
 | `notifications.json` | Notification settings, including the SMTP password and ntfy token | Plain text. The API never sends them back to the browser; the form shows a placeholder instead. |
 | `engine.json` | snapraid-daemon addresses and passwords | Plain text, file mode `600`. The API never sends the passwords back to the browser. |
 | `config.json`, `schedules.json`, histories | Settings and disk data | Plain text |
 | `logs/` | SnapRAID output, including file names from your disks | Plain text |
 
-In the container the login password is never written to disk; it only exists in the environment of the container. The [installer](installation.md#without-docker) keeps it in `/etc/snapraid-ui/snapraid-ui.env`, readable only by root (file mode `600`).
+The password from the environment is never written to disk; it only exists in the environment of the container. A password changed in *Sign-in* is stored only as a hash. The [installer](installation.md#without-docker) keeps it in `/etc/snapraid-ui/snapraid-ui.env`, readable only by root (file mode `600`).
 
 A backup from *Download backup* contains the notification passwords and tokens in plain text. Keep backup files private.
 
 ## Checklist
 
-- [ ] Login enabled with a long, random password, or an authentication proxy in front
+- [ ] Login enabled with a long, random password (or passkeys, behind HTTPS), or an authentication proxy in front
 - [ ] Not reachable from the internet, or only through a VPN or an HTTPS proxy
 - [ ] Only container port 80 published, and only to the proxy if you use one; without Docker, `SNAPRAID_UI_HOST=127.0.0.1` or a firewall
 - [ ] Data directory and backup files readable only by you

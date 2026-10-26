@@ -4,6 +4,7 @@ import {
   Eye,
   EyeOff,
   HardDrive,
+  KeyRound,
   Languages,
   Loader2,
   Lock,
@@ -12,10 +13,17 @@ import {
   User,
 } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
-import { login } from '../lib/api/auth'
+import {
+  type LoginResult,
+  login,
+  loginWithPasskey,
+  passkeyCancelled,
+  passkeysSupported,
+} from '../lib/api/auth'
 import { cn } from '../lib/utils'
 import * as m from '../paraglide/messages'
 import { getLocale, locales, setLocale } from '../paraglide/runtime'
+import { errorMessage as messageOf } from './Feedback'
 import { Alert, AlertDescription } from './ui/alert'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader } from './ui/card'
@@ -28,8 +36,10 @@ const PARITY_COUNT = 2
 
 type LoginError =
   | { kind: 'invalid' }
+  | { kind: 'passkey' }
   | { kind: 'server' }
   | { kind: 'locked'; until: number }
+  | { kind: 'message'; text: string }
 
 const formatCountdown = (seconds: number): string => {
   const mins = Math.floor(seconds / 60)
@@ -70,8 +80,11 @@ const DiskArray = () => (
 
 export const LoginPage = ({
   onLogin,
+  passkeys = false,
 }: {
   onLogin: (session: AuthSession) => void
+  // A passkey is set up: offer it next to the password
+  passkeys?: boolean
 }) => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -82,6 +95,9 @@ export const LoginPage = ({
   const [attempt, setAttempt] = useState(0)
   const [now, setNow] = useState(() => Date.now())
   const currentLocale = getLocale()
+  // Only in the browser: the server render does not know the page's origin
+  const [passkeyLogin, setPasskeyLogin] = useState(false)
+  useEffect(() => setPasskeyLogin(passkeys && passkeysSupported()), [passkeys])
 
   const lockedSeconds =
     error?.kind === 'locked'
@@ -98,25 +114,45 @@ export const LoginPage = ({
     if (error?.kind === 'locked' && lockedSeconds === 0) setError(null)
   }, [error, lockedSeconds])
 
+  const finish = (result: LoginResult, failed: LoginError) => {
+    if (result.ok) {
+      onLogin(result.session)
+      return
+    }
+    setPassword('')
+    setError(
+      result.reason === 'locked'
+        ? { kind: 'locked', until: Date.now() + result.retryAfter * 1000 }
+        : failed,
+    )
+    setNow(Date.now())
+  }
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     if (submitting || lockedSeconds > 0) return
     setSubmitting(true)
     try {
-      const result = await login(username, password)
-      if (result.ok) {
-        onLogin(result.session)
-        return
-      }
-      setPassword('')
-      setError(
-        result.reason === 'locked'
-          ? { kind: 'locked', until: Date.now() + result.retryAfter * 1000 }
-          : { kind: 'invalid' },
-      )
-      setNow(Date.now())
+      finish(await login(username, password), { kind: 'invalid' })
     } catch {
       setError({ kind: 'server' })
+    } finally {
+      setAttempt((prev) => prev + 1)
+      setSubmitting(false)
+    }
+  }
+
+  const handlePasskey = async () => {
+    if (submitting || lockedSeconds > 0) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      finish(await loginWithPasskey(), { kind: 'passkey' })
+    } catch (err) {
+      // Closing the browser's dialog is no error
+      if (!passkeyCancelled(err)) {
+        setError({ kind: 'message', text: messageOf(err) })
+      }
     } finally {
       setAttempt((prev) => prev + 1)
       setSubmitting(false)
@@ -126,11 +162,15 @@ export const LoginPage = ({
   const errorMessage =
     error?.kind === 'invalid'
       ? m.login_invalid()
-      : error?.kind === 'server'
-        ? m.login_server_error()
-        : error?.kind === 'locked'
-          ? m.login_locked({ time: formatCountdown(lockedSeconds) })
-          : null
+      : error?.kind === 'passkey'
+        ? m.login_passkey_invalid()
+        : error?.kind === 'server'
+          ? m.login_server_error()
+          : error?.kind === 'locked'
+            ? m.login_locked({ time: formatCountdown(lockedSeconds) })
+            : error?.kind === 'message'
+              ? error.text
+              : null
 
   // The login is dark in both themes, so it sets its colors instead of using the theme tokens
   const inputClass =
@@ -289,6 +329,27 @@ export const LoginPage = ({
                 )}
               </Button>
             </form>
+
+            {passkeyLogin && (
+              <>
+                <div className="my-5 flex items-center gap-3 text-xs text-gray-500">
+                  <span className="h-px flex-1 bg-white/10" />
+                  {m.login_or()}
+                  <span className="h-px flex-1 bg-white/10" />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={handlePasskey}
+                  disabled={submitting || lockedSeconds > 0}
+                  className="h-11 w-full border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white dark:border-white/15 dark:bg-white/5 dark:hover:bg-white/10"
+                >
+                  <KeyRound />
+                  {m.login_passkey()}
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 

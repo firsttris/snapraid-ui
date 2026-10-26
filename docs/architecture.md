@@ -79,7 +79,7 @@ The image sets `SNAPRAID_BASE_PATH=/app/snapraid`, `SNAPRAID_BIN=/usr/local/bin/
 Middleware, in order:
 
 1. **CORS**: credentials are only accepted from an origin with the same hostname as the request, e.g. the dev frontend on `localhost:3000` calling `localhost:8080`.
-2. **Auth** (only when `SNAPRAID_UI_USERNAME` and `SNAPRAID_UI_PASSWORD` are both set): guards `/api/*` and `/ws`, except `/api/auth/*`, `/api/metrics` and `/api/mcp`, which check their own token. A missing or invalid session returns `401 {"error":"Unauthorized"}`. Sessions are HS256-signed JWTs in an HTTP-only `snapraid_session` cookie, see [Security](security.md).
+2. **Auth** (only when `SNAPRAID_UI_USERNAME` and `SNAPRAID_UI_PASSWORD` are both set): guards `/api/*` and `/ws`, except `/api/auth/*`, `/api/metrics` and `/api/mcp`, which check their own token. A missing or invalid session returns `401 {"error":"Unauthorized"}`. Sessions are HS256-signed JWTs in an HTTP-only `snapraid_session` cookie, see [Security](security.md). `auth.ts` has the routes, `credentials.ts` the password changed in the UI and the passkeys in `auth.json`, `passkeys.ts` WebAuthn with `@simplewebauthn/server`.
 
 Module map:
 
@@ -88,7 +88,9 @@ Module map:
 | `main.ts` | App setup, middleware, route mounting, dependency injection, startup |
 | `config.ts` | `SNAPRAID_BASE_PATH`, `SNAPRAID_BIN`, `SNAPRAID_EXTRA_ARGS`; `resolveFromBase()` (relative paths resolve against the data directory, absolute ones stay as they are); `snapraidCommand()` |
 | `config-parser.ts` | Parses `snapraid.conf` (parity levels incl. split parity, content, data, exclude, pool, `autosave`, `blocksize`); loads and saves `config.json` |
-| `auth.ts` | Login, logout, session cookie, lockout, session secret |
+| `auth.ts` | Login, logout, password change, passkey routes, session cookie, lockout, session secret |
+| `credentials.ts` | `auth.json`: the password changed in the UI (PBKDF2) and the passkeys, dropped when the environment credentials change |
+| `passkeys.ts` | WebAuthn registration and login (`@simplewebauthn/server`): relying party from the Origin, one-time challenges |
 | `websocket.ts` | WebSocket client set, `broadcast()`, replay of the running job on connect |
 | `executors/command-executor.ts` | Spawns long-running SnapRAID jobs, streams output, tracks the current and last job, follows progress, handles abort |
 | `executors/log-tail.ts` | Reads new lines that a running process appends to its log file |
@@ -244,6 +246,7 @@ Everything lives in the data directory, `SNAPRAID_BASE_PATH`. In the image that 
 | `usage-history.json` | Daily array usage (up to 730 points per config) |
 | `replacements.json` | Disk replacements in progress |
 | `.session-secret` | Random key that signs sessions (only with login enabled) |
+| `auth.json` | Password changed in the UI (hash) and passkeys (only with login enabled) |
 | `logs/*.log` | One structured log per job (directory set in `config.json`) |
 
 Writes are plain `Deno.writeTextFile` calls. Most files are read again whenever they are needed. Two things are read only at startup: the log directory and retention settings from `config.json`, and the cron timers, which are rebuilt from `schedules.json` on start, on changes through the API and after a restore. See [Configuration](configuration.md) for details on each file.

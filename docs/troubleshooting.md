@@ -201,7 +201,9 @@ Only files created with **Download backup** can be restored. If the message afte
 |---|---|
 | *Too many failed attempts. Try again in …* | After 5 failed attempts within 15 minutes, logins from that client are blocked until the 15 minutes are over. The counter lives in memory, so restarting the container also resets it. |
 | No login screen at all | Login is only active when both `SNAPRAID_UI_USERNAME` and `SNAPRAID_UI_PASSWORD` are set. The backend logs a warning when it is disabled. |
-| Everyone should be logged out | Change the password, or delete `.session-secret` in the data folder and restart. |
+| Everyone should be logged out | Change the password (in *Sign-in*, the key button at the bottom of the sidebar), or delete `.session-secret` in the data folder and restart. |
+| Forgot the password changed in the UI | Set a new `SNAPRAID_UI_PASSWORD` and restart. The password from the environment applies again; the passkeys are removed. |
+| *Sign in with a passkey* is missing, or *Add passkey* is greyed out | Passkeys need HTTPS with a host name, or `http://localhost`, not `http://` with an IP address. The login page only offers them once one is set up. |
 | *The server cannot be reached* | The backend is not running or not reachable. Check `docker logs snapraid-ui`, or `journalctl -u snapraid-ui` without Docker. |
 
 The lockout is counted per client address. Behind your own reverse proxy, all visitors may arrive with the proxy's address and then share one counter. See [Security](security.md).
