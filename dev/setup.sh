@@ -64,7 +64,7 @@ echo "Using $("$SNAPRAID" --version | head -1)"
 
 # --- Deno (only if not installed) -------------------------------------------
 
-DENO_VERSION="${DENO_VERSION:-2.9.7}"
+DENO_VERSION="${DENO_VERSION:-2.9.8}"
 TOOLS_DIR="$DEV_DIR/tools"
 
 if ! command -v deno >/dev/null && [[ ! -x "$TOOLS_DIR/deno" ]]; then

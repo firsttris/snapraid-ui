@@ -10,7 +10,7 @@ RUN apt-get update \
   && ./configure && make -j"$(nproc)" \
   && install -m 0755 snapraid /usr/local/bin/snapraid
 
-FROM docker.io/denoland/deno:2.5.6 AS backend-builder
+FROM docker.io/denoland/deno:2.9.8 AS backend-builder
 
 WORKDIR /app/backend
 
@@ -35,7 +35,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # Final image: one Deno process serves the UI, the API and the WebSocket on port 80
-FROM docker.io/denoland/deno:2.5.6
+FROM docker.io/denoland/deno:2.9.8
 
 # smartmontools: SnapRAID calls smartctl for smart, probe (power state) and down (spin down)
 RUN apt-get update \
