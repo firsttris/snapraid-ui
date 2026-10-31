@@ -1,16 +1,15 @@
 // Renovate (GitHub App, https://github.com/apps/renovate): a pull request for each new release of
-// what SnapRAID UI builds on, plus the "Dependency Dashboard" issue listing what is open.
-// Only those: SnapRAID itself (the parsers are tested against one release), Deno (backend, image
-// and standalone binary) and Node (frontend build). The npm and Deno packages and the actions are
-// not tracked here; snapraid-daemon stays an issue of upstream-release.yml, since its API has to be
-// compared by hand. Check with `npx --package renovate renovate-config-validator .github/renovate.json5`.
+// what SnapRAID UI builds on, plus the "Dependency Dashboard" issue listing what is open. Their own
+// pull requests: SnapRAID itself (the parsers are tested against one release), Deno (backend, image
+// and standalone binary) and Node (frontend build). snapraid-daemon stays an issue of
+// upstream-release.yml, since its API has to be compared by hand.
+// Everything else (the other packages, the actions, the images) comes with the shared settings of
+// firsttris/workflows (renovate/default.json5): minor and patch updates once a month in one pull
+// request that merges itself when CI is green, majors on request in the dashboard.
+// Check with `npx --package renovate renovate-config-validator .github/renovate.json5`.
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  extends: ["config:recommended"],
-  enabledManagers: ["dockerfile", "custom.regex"],
-  timezone: "Europe/Berlin",
-  labels: ["dependencies"],
-  automerge: false,
+  extends: ["github>firsttris/workflows//renovate/default.json5"],
   customManagers: [
     {
       // SnapRAID: every place that names the pinned release, as the bump to 15.1 (#65) changed
@@ -86,6 +85,9 @@
       prBodyNotes: [
         "The parsers are tested against this one release. Before merging: read SnapRAID's [HISTORY](https://github.com/amadvance/snapraid/blob/master/HISTORY) for changes to the structured log (`--log`); the end-to-end tests of this PR build and run the new release. Locally: `SNAPRAID_VERSION=<new> dev/setup.sh --reset`, then status, diff, sync, scrub, check, list, dup, touch and smart in the UI. A major version: compare the log tags with `backend/src/parsers/__tests__/fixtures/`, and the text \"SnapRAID 15\" in docs/installation.md. Check whether snapraid-daemon (`REVIEWED_DAEMON_VERSION`) needs this release; docs/automation.md names the versions the daemon mode was tested with.",
       ],
+      schedule: ["at any time"],
+      automerge: false,
+      dependencyDashboardApproval: false,
     },
     {
       // Deno of the image, CI, the binary and dev/setup.sh in one PR, so they do not drift apart
@@ -95,11 +97,17 @@
       prBodyNotes: [
         "The image, CI (`deno-version`), the standalone binary (`deno compile` in release.yml) and `dev/setup.sh` move together. Check `deno check` and the end-to-end tests against the image and the binary.",
       ],
+      schedule: ["at any time"],
+      automerge: false,
+      dependencyDashboardApproval: false,
     },
     {
       matchPackageNames: ["docker.io/library/node", "node"],
       groupName: "Node",
       sourceUrl: "https://github.com/nodejs/node",
+      schedule: ["at any time"],
+      automerge: false,
+      dependencyDashboardApproval: false,
     },
   ],
 }
