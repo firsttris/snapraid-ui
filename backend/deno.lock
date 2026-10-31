@@ -1,7 +1,7 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@hexagon/croner@^10.0.1": "10.0.1",
+    "jsr:@hexagon/croner@11": "11.0.0",
     "jsr:@hono/hono@^4.13.9": "4.13.14",
     "jsr:@std/assert@^1.0.19": "1.0.19",
     "jsr:@std/fs@^1.0.24": "1.0.24",
@@ -17,8 +17,8 @@
     "npm:zod@^4.1.12": "4.6.7"
   },
   "jsr": {
-    "@hexagon/croner@10.0.1": {
-      "integrity": "95120f312b5e63afaaa4861838fe2d7b42f32554d2af96b7524b072abf63dabd"
+    "@hexagon/croner@11.0.0": {
+      "integrity": "588cfa1e295501e3d2559efdb7cc8d0f329f7eb008ca581471b58d34ed6405a4"
     },
     "@hono/hono@4.13.14": {
       "integrity": "eb72ba9062b84caed0d6160804645f8d5c984ec47fd301df3f995ab8c5135123"
@@ -997,7 +997,7 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@hexagon/croner@^10.0.1",
+      "jsr:@hexagon/croner@11",
       "jsr:@hono/hono@^4.13.9",
       "jsr:@std/assert@^1.0.19",
       "jsr:@std/fs@^1.0.24",

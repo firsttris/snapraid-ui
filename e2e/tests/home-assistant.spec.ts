@@ -1,13 +1,13 @@
 // Home Assistant over MQTT: discovery, state and the buttons, against a broker in the test
 import { createServer } from 'node:net'
-import Aedes from 'aedes'
+import { Aedes } from 'aedes'
 import mqtt from 'mqtt'
 import { createArray } from '../harness/array'
 import { API_URL, PORTS } from '../harness/env'
 import { expect, expectHealth, test } from '../harness/fixtures'
 
 const startBroker = async () => {
-  const broker = new Aedes()
+  const broker = await Aedes.createBroker()
   const server = createServer(broker.handle)
   await new Promise<void>((resolve) => server.listen(PORTS.mqtt, '127.0.0.1', resolve))
   return {
