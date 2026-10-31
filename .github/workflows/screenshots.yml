@@ -37,7 +37,7 @@ jobs:
         run: apt-get update && apt-get install -y --no-install-recommends build-essential curl unzip
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.5.x
+          deno-version: 2.9.x
       - name: Cache the SnapRAID build
         uses: actions/cache@v4
         with:

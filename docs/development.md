@@ -54,7 +54,7 @@ pkill -f "vite dev"
 `dev/setup.sh` (run automatically by `./start.sh --demo`, a no-op once everything exists) prepares a self-contained SnapRAID environment:
 
 - builds SnapRAID (`SNAPRAID_VERSION`, default 15.1) from the official release tarball into `dev/bin/snapraid`, cached in `dev/.cache/`;
-- downloads Deno (`DENO_VERSION`, default 2.9.7) into `dev/tools/` if `deno` is not installed;
+- downloads Deno (`DENO_VERSION`, default 2.9.8) into `dev/tools/` if `deno` is not installed;
 - creates `dev/sandbox/` with the array "Media Array": four data "disks" (`disks/disk1`–`disk4`) and a parity disk (`disks/parity1`) filled with random files, a `snapraid.conf` and `config.json`;
 - puts copies of a few files on other disks, for the duplicates page;
 - runs sync, scrub, touch and sync again with their logs, then adds, changes, moves and deletes files and runs `diff` and `status`, so that every page has something to show;
