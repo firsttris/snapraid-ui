@@ -10,7 +10,7 @@
     "screenshots": "playwright test -c playwright.screenshots.config.ts"
   },
   "devDependencies": {
-    "@playwright/test": "1.56.1",
+    "@playwright/test": "1.64.1",
     "@types/node": "^22.19.0",
     "aedes": "^0.51.3",
     "mqtt": "^5.14.1",
