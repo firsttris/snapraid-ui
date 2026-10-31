@@ -275,7 +275,7 @@ The binary reads the same environment variables as the image ([Configuration](co
 
 ### Dependency updates
 
-[Renovate](https://github.com/apps/renovate) (`.github/renovate.json5`) opens a pull request for each new release of what SnapRAID UI builds on and lists what is open in the "Dependency Dashboard" issue. Nothing merges itself.
+[Renovate](https://github.com/apps/renovate) (`.github/renovate.json5`) opens a pull request for each new release of what SnapRAID UI builds on and lists what is open in the "Dependency Dashboard" issue. None of these merges itself:
 
 | Pull request | What it moves |
 |---|---|
@@ -283,7 +283,7 @@ The binary reads the same environment variables as the image ([Configuration](co
 | Deno | the Deno image of `docker/Dockerfile`, `deno-version` in the workflows (CI and the standalone binary) and `DENO_VERSION` of `dev/setup.sh` |
 | Node | the Node of the frontend build: the image's `frontend-builder` and `node-version` in the workflows |
 
-The npm and Deno packages and the actions are not tracked by Renovate.
+Everything else (the other packages, the actions, the images) comes with the shared settings of [firsttris/workflows](https://github.com/firsttris/workflows#renovate-in-every-project): minor and patch updates on the 1st of the month in one pull request that Renovate merges itself when CI is green, majors only when ticked in the Dependency Dashboard, security fixes at once.
 
 ### Updating SnapRAID
 
