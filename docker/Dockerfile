@@ -23,7 +23,7 @@ RUN deno install --entrypoint deno.json
 COPY backend/src/ ./src/
 RUN deno cache src/main.ts
 
-FROM docker.io/library/node:22-bookworm-slim AS frontend-builder
+FROM docker.io/library/node:26-bookworm-slim AS frontend-builder
 
 WORKDIR /app/frontend
 
