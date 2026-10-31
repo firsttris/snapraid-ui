@@ -158,7 +158,7 @@ jobs:
           path: e2e/.tools
           key: e2e-tools-${{ runner.os }}-${{ hashFiles('e2e/scripts/setup-tools.sh', 'backend/src/engine/REVIEWED_DAEMON_VERSION') }}
       # smartmontools: SnapRAID lists the disks on the SMART page with it, self-tests use a stand-in
-      - uses: firsttris/workflows/actions/apt-install@ccr-161f105b-9ns022
+      - uses: firsttris/workflows/actions/apt-install@v1
         with:
           packages: autoconf automake zlib1g-dev smartmontools
           recommends: "false"
@@ -179,7 +179,7 @@ jobs:
       # With the release's build cache: only the layers that changed are built again
       - name: Build the Docker image
         if: matrix.target == 'image'
-        uses: firsttris/workflows/actions/docker-build@ccr-161f105b-9ns022
+        uses: firsttris/workflows/actions/docker-build@v1
         with:
           dockerfile: docker/Dockerfile
           tags: ${{ env.E2E_IMAGE }}

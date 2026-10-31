@@ -1,0 +1,105 @@
+// Renovate (GitHub App, https://github.com/apps/renovate): a pull request for each new release of
+// what SnapRAID UI builds on, plus the "Dependency Dashboard" issue listing what is open.
+// Only those: SnapRAID itself (the parsers are tested against one release), Deno (backend, image
+// and standalone binary) and Node (frontend build). The npm and Deno packages and the actions are
+// not tracked here; snapraid-daemon stays an issue of upstream-release.yml, since its API has to be
+// compared by hand. Check with `npx --package renovate renovate-config-validator .github/renovate.json5`.
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended"],
+  enabledManagers: ["dockerfile", "custom.regex"],
+  timezone: "Europe/Berlin",
+  labels: ["dependencies"],
+  automerge: false,
+  customManagers: [
+    {
+      // SnapRAID: every place that names the pinned release, as the bump to 15.1 (#65) changed
+      // them. SNAPRAID15_REF (the SnapRAID the e2e tests build for snapraid-daemon) moves with it.
+      customType: "regex",
+      managerFilePatterns: [
+        "/^docker/(Dockerfile|README\\.md)$/",
+        "/^dev/setup\\.sh$/",
+        "/^e2e/scripts/setup-tools\\.sh$/",
+        "/^scripts/install\\.sh$/",
+        "/^\\.github/workflows/ci\\.yml$/",
+        "/^docs/(installation|architecture|development)\\.md$/",
+      ],
+      matchStrings: [
+        "SNAPRAID_VERSION=(?<currentValue>\\d+\\.\\d+)",
+        "SNAPRAID_VERSION:-(?<currentValue>\\d+\\.\\d+)",
+        "SNAPRAID15_REF:-v(?<currentValue>\\d+\\.\\d+)",
+        "SnapRAID CLI v(?<currentValue>\\d+\\.\\d+)",
+        "SnapRAID (?<currentValue>\\d+\\.\\d+), the version of the Docker image",
+        "builds SnapRAID (?<currentValue>\\d+\\.\\d+)",
+        "currently (?<currentValue>\\d+\\.\\d+), built from the official release",
+        "`SNAPRAID_VERSION`, default (?<currentValue>\\d+\\.\\d+)",
+      ],
+      depNameTemplate: "amadvance/snapraid",
+      datasourceTemplate: "github-releases",
+      extractVersionTemplate: "^v(?<version>.+)$",
+      // 15.1, 14.10; release candidates (15.0rc2) do not match and are left out
+      versioningTemplate: "regex:^(?<major>\\d+)\\.(?<minor>\\d+)$",
+    },
+    {
+      // The Deno of CI and the release's standalone binary (v2.5.x: the newest patch of a minor)
+      customType: "regex",
+      managerFilePatterns: ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      matchStrings: ["deno-version: v(?<currentValue>\\d+\\.\\d+)\\.x"],
+      depNameTemplate: "denoland/deno",
+      datasourceTemplate: "github-releases",
+      extractVersionTemplate: "^v(?<version>\\d+\\.\\d+)\\.\\d+$",
+      versioningTemplate: "regex:^(?<major>\\d+)\\.(?<minor>\\d+)$",
+    },
+    {
+      // The Deno dev/setup.sh downloads when none is installed
+      customType: "regex",
+      managerFilePatterns: ["/^dev/setup\\.sh$/", "/^docs/development\\.md$/"],
+      matchStrings: [
+        "DENO_VERSION:-(?<currentValue>\\d+\\.\\d+\\.\\d+)",
+        "`DENO_VERSION`, default (?<currentValue>\\d+\\.\\d+\\.\\d+)",
+      ],
+      depNameTemplate: "denoland/deno",
+      datasourceTemplate: "github-releases",
+      extractVersionTemplate: "^v(?<version>.+)$",
+    },
+    {
+      // The Node of CI's frontend jobs, the same major as the image's frontend-builder
+      customType: "regex",
+      managerFilePatterns: ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      matchStrings: ["node-version: (?<currentValue>\\d+)\\n"],
+      depNameTemplate: "node",
+      datasourceTemplate: "node-version",
+      versioningTemplate: "node",
+    },
+  ],
+  packageRules: [
+    {
+      // The builder's base, not shipped; and SnapRAID UI's own image
+      matchPackageNames: ["docker.io/library/debian", "tristanteu/snapraid-ui"],
+      enabled: false,
+    },
+    {
+      matchPackageNames: ["amadvance/snapraid"],
+      groupName: "SnapRAID",
+      sourceUrl: "https://github.com/amadvance/snapraid",
+      commitMessageTopic: "SnapRAID",
+      prBodyNotes: [
+        "The parsers are tested against this one release. Before merging: read SnapRAID's [HISTORY](https://github.com/amadvance/snapraid/blob/master/HISTORY) for changes to the structured log (`--log`); the end-to-end tests of this PR build and run the new release. Locally: `SNAPRAID_VERSION=<new> dev/setup.sh --reset`, then status, diff, sync, scrub, check, list, dup, touch and smart in the UI. A major version: compare the log tags with `backend/src/parsers/__tests__/fixtures/`, and the text \"SnapRAID 15\" in docs/installation.md. Check whether snapraid-daemon (`REVIEWED_DAEMON_VERSION`) needs this release; docs/automation.md names the versions the daemon mode was tested with.",
+      ],
+    },
+    {
+      // Deno of the image, CI, the binary and dev/setup.sh in one PR, so they do not drift apart
+      matchPackageNames: ["docker.io/denoland/deno", "denoland/deno"],
+      groupName: "Deno",
+      sourceUrl: "https://github.com/denoland/deno",
+      prBodyNotes: [
+        "The image, CI (`deno-version`), the standalone binary (`deno compile` in release.yml) and `dev/setup.sh` move together. Check `deno check` and the end-to-end tests against the image and the binary.",
+      ],
+    },
+    {
+      matchPackageNames: ["docker.io/library/node", "node"],
+      groupName: "Node",
+      sourceUrl: "https://github.com/nodejs/node",
+    },
+  ],
+}

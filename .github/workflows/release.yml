@@ -13,7 +13,7 @@ on:
 
 jobs:
   tested:
-    uses: firsttris/workflows/.github/workflows/tested-on-main.yml@ccr-161f105b-9ns022
+    uses: firsttris/workflows/.github/workflows/tested-on-main.yml@v1
     permissions:
       actions: read
       contents: read
