@@ -76,7 +76,7 @@ export const startBackend = (
   if (BINARY) return startProcess(name, resolve(E2E_DIR, BINARY), [], { ...options, cwd: RUN_DIR })
   return startProcess(name, findBun(), ['src/main.ts'], {
     ...options,
-    cwd: join(ROOT, 'backend'),
+    cwd: join(ROOT, 'apps', 'server'),
   })
 }
 
@@ -139,7 +139,7 @@ export default async function globalSetup() {
   )
 
   await mkdir(ARRAYS, { recursive: true })
-  const frontend = join(ROOT, 'frontend')
+  const frontend = join(ROOT, 'apps', 'web')
   if (!IMAGE && !BINARY && process.env.E2E_SKIP_BUILD !== '1') {
     execFileSync('bun', ['run', 'build'], { cwd: frontend, stdio: 'inherit' })
   }

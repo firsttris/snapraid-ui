@@ -18,7 +18,7 @@ jobs:
       - id: playwright
         uses: firsttris/workflows/actions/playwright-image@v1
         with:
-          lockfile: e2e/bun.lock
+          lockfile: bun.lock
 
   screenshots:
     needs: image
@@ -31,24 +31,22 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      # dev/setup.sh builds SnapRAID for the sandbox
+      # scripts/dev/setup.sh builds SnapRAID for the sandbox
       - name: Build tools
         run: apt-get update && apt-get install -y --no-install-recommends build-essential curl
       - name: Cache the SnapRAID build
         uses: actions/cache@v6
         with:
           path: |
-            dev/bin
-            dev/.cache
-          key: demo-snapraid-${{ hashFiles('dev/setup.sh') }}
+            scripts/dev/bin
+            scripts/dev/.cache
+          key: demo-snapraid-${{ hashFiles('scripts/dev/setup.sh') }}
       # The npm package brings Bun without curl or unzip; the version is packageManager in
-      # e2e/package.json, as setup-bun takes it in the other workflows
+      # package.json, as setup-bun takes it in the other workflows
       - name: Install
         run: |
-          npm install --global "bun@$(node -p "require('./e2e/package.json').packageManager.split('@')[1]")"
-          bun install --frozen-lockfile --cwd backend
-          bun install --frozen-lockfile --cwd frontend
-          bun install --frozen-lockfile --cwd e2e
+          npm install --global "bun@$(node -p "require('./package.json').packageManager.split('@')[1]")"
+          bun install --frozen-lockfile
       - name: Take the screenshots
         working-directory: e2e
         # The container runs as root: the disks go to /mnt, as on a server

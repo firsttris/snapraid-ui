@@ -1,11 +1,11 @@
-// Gives the demo sandbox a past, run by dev/setup.sh after its real SnapRAID jobs:
+// Gives the demo sandbox a past, run by scripts/dev/setup.sh after its real SnapRAID jobs:
 //   - the job logs (logs/run-<n>-<command>.log, in the order they ran) move back in time, so
 //     the dashboard shows the last sync and scrub, and the Logs page a history
 //   - usage-history.json: two months of disk usage, one disk filling up
 //   - schedules.json: a nightly sync with touch and scrub, a weekly scrub, a SMART check
 //   - maintenance.json: Docker pause and spindown, on the demo's own containers and disks
 //
-// bun scripts/seed-demo.ts <sandbox>   (in backend/, whose packages it uses)
+// bun scripts/seed-demo.ts <sandbox>   (in apps/server/, whose packages it uses)
 import { readdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Cron } from "croner";
@@ -123,7 +123,7 @@ const schedules: Schedule[] = [
 ];
 await writeFile(join(sandbox, "schedules.json"), JSON.stringify({ schedules }, null, 2));
 
-// The demo answers for Docker itself (backend/src/demo.ts), spindown watches the demo disks
+// The demo answers for Docker itself (apps/server/src/demo.ts), spindown watches the demo disks
 // The rest (metrics, MCP) takes its defaults when the backend loads the file
 const maintenance: Pick<MaintenanceSettings, "dockerPause" | "spindown"> = {
   dockerPause: {

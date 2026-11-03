@@ -1,11 +1,11 @@
-// Messages from the backend to the UI. The texts live in frontend/messages/*.json
+// Messages from the backend to the UI. The texts live in apps/web/messages/*.json
 // (Paraglide). The backend does not know the viewer's language, so it sends the
 // key and its inputs, marked as \u0002["key",{…}]\u0003, and the frontend renders
-// them in the language of the UI (frontend/src/lib/i18n.ts). Plain text, such as
+// them in the language of the UI (apps/web/src/lib/i18n.ts). Plain text, such as
 // SnapRAID's own output, passes through unchanged.
 //
 // Notifications are the exception: they leave the server by mail, ntfy or
-// webhook in the language set for them (backend/src/notification-events.ts).
+// webhook in the language set for them (apps/server/src/notification-events.ts).
 
 export type MsgInputs = Record<string, string | number>;
 

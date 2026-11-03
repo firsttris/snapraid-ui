@@ -7,8 +7,8 @@ import { appFile } from "./app-files.ts";
 
 export type FetchHandler = (request: Request) => Response | Promise<Response>;
 
-// Next to the backend as in the repository and the Docker image: frontend/.output/server/index.mjs
-export const FRONTEND_ENTRY = appFile("frontend/.output/server/index.mjs");
+// Next to the backend as in the repository and the Docker image: apps/web/.output/server/index.mjs
+export const FRONTEND_ENTRY = appFile("apps/web/.output/server/index.mjs");
 
 // The backend's own paths, never passed on to the frontend
 export const isBackendPath = (path: string): boolean => /^\/(api|ws)(\/|$)/.test(path);

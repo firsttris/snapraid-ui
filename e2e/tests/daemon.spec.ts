@@ -6,7 +6,7 @@ import { API_URL, DAEMON_ARRAY, DAEMON_URL, ROOT, SNAPRAID15 } from '../harness/
 import { expect, expectHealth, test } from '../harness/fixtures'
 
 // The version scripts/setup-tools.sh builds
-const DAEMON_VERSION = readFileSync(join(ROOT, 'backend/src/engine/REVIEWED_DAEMON_VERSION'), 'utf8').trim()
+const DAEMON_VERSION = readFileSync(join(ROOT, 'apps/server/src/engine/REVIEWED_DAEMON_VERSION'), 'utf8').trim()
 
 interface DaemonTask {
   command: string

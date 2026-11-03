@@ -1,0 +1,16 @@
+{
+  "name": "snapraid-ui-workspace",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "packageManager": "bun@1.4.4",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "e2e"
+  ],
+  "scripts": {
+    "dev": "fish scripts/start.sh",
+    "demo": "fish scripts/start.sh --demo"
+  }
+}

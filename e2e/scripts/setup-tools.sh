@@ -15,8 +15,8 @@ set -euo pipefail
 
 SNAPRAID_VERSION="${SNAPRAID_VERSION:-15.1}"
 SNAPRAID15_REF="${SNAPRAID15_REF:-v15.1}"
-# The version backend/src/engine/REVIEWED_DAEMON_VERSION names
-DAEMON_REF="${DAEMON_REF:-v$(cat "$(dirname "${BASH_SOURCE[0]}")/../../backend/src/engine/REVIEWED_DAEMON_VERSION")}"
+# The version apps/server/src/engine/REVIEWED_DAEMON_VERSION names
+DAEMON_REF="${DAEMON_REF:-v$(cat "$(dirname "${BASH_SOURCE[0]}")/../../apps/server/src/engine/REVIEWED_DAEMON_VERSION")}"
 
 E2E_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TOOLS="$E2E_DIR/.tools"

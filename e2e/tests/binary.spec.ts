@@ -15,7 +15,7 @@ test('the binary ignores a .env and a bunfig.toml in its working directory', asy
     await writeFile(join(dir, '.env'), 'SNAPRAID_UI_VERSION=from-dotenv\n')
     await writeFile(join(dir, 'preload.js'), 'console.log("preloaded")\n')
     await writeFile(join(dir, 'bunfig.toml'), 'preload = ["./preload.js"]\n')
-    const { version } = JSON.parse(await readFile(join(ROOT, 'frontend', 'package.json'), 'utf8'))
+    const { version } = JSON.parse(await readFile(join(ROOT, 'apps', 'web', 'package.json'), 'utf8'))
     const { SNAPRAID_UI_VERSION: _, ...env } = process.env
 
     const output = execFileSync(resolve(E2E_DIR, BINARY as string), ['--version'], {

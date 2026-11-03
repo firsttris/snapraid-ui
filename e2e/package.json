@@ -1,7 +1,6 @@
 {
   "name": "snapraid-ui-e2e",
   "private": true,
-  "packageManager": "bun@1.4.4",
   "type": "module",
   "scripts": {
     "setup": "bash scripts/setup-tools.sh",

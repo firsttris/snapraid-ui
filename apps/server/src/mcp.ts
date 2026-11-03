@@ -76,7 +76,7 @@ const ok = (data: Json | string): CallToolResult => ({
 
 const fail = (message: string): CallToolResult => ({ content: [{ type: "text", text: message }], isError: true });
 
-// Messages meant for the web UI arrive as keys, see shared/i18n.ts; an agent gets the key and inputs
+// Messages meant for the web UI arrive as keys, see packages/shared/src/i18n.ts; an agent gets the key and inputs
 const plain = (text: string) =>
   localize(text, (key, inputs) => Object.keys(inputs).length ? `${key} (${JSON.stringify(inputs)})` : key);
 

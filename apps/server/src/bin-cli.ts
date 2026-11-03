@@ -30,5 +30,5 @@ if (arg !== undefined) {
   process.exit(2);
 }
 
-// The repository's default (../snapraid next to backend/) means nothing for a binary
+// The repository's default (snapraid/ in the repository's root) means nothing for a binary
 if (!process.env.SNAPRAID_BASE_PATH) process.env.SNAPRAID_BASE_PATH = join(process.cwd(), "snapraid");

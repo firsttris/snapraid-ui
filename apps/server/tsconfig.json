@@ -1,19 +1,18 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ESNext",
     "module": "Preserve",
-    "moduleResolution": "bundler",
     "moduleDetection": "force",
     "lib": ["ESNext"],
     "types": ["bun"],
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,
-    "noEmit": true,
-    "strict": true,
-    "skipLibCheck": true,
+    // @shared/… is the workspace package @snapraid-ui/shared (packages/shared/src); Bun
+    // resolves these paths at runtime too
     "paths": {
-      "@shared/*": ["../shared/*"]
+      "@shared/*": ["./node_modules/@snapraid-ui/shared/src/*"]
     }
   },
-  "include": ["src", "scripts", "../shared"]
+  "include": ["src", "scripts", "../../packages/shared/src"]
 }

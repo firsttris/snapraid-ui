@@ -1,15 +1,16 @@
 #!/usr/bin/env fish
 
-# Usage: ./start.sh          -> uses ./snapraid and the system snapraid binary
-#        ./start.sh --demo   -> uses the dev sandbox (see dev/setup.sh)
+# Usage: scripts/start.sh          -> uses ./snapraid and the system snapraid binary
+#        scripts/start.sh --demo   -> uses the dev sandbox (see scripts/dev/setup.sh)
 
-set root (dirname (realpath (status filename)))
+# The repository's root, one level above scripts/
+set root (dirname (dirname (realpath (status filename))))
 
 if test "$argv[1]" = "--demo"
     # Build binary and sandbox on first run, no-op afterwards
-    bash $root/dev/setup.sh; or exit 1
-    set -x SNAPRAID_BASE_PATH $root/dev/sandbox
-    set -x SNAPRAID_BIN $root/dev/bin/snapraid
+    bash $root/scripts/dev/setup.sh; or exit 1
+    set -x SNAPRAID_BASE_PATH $root/scripts/dev/sandbox
+    set -x SNAPRAID_BIN $root/scripts/dev/bin/snapraid
     # All sandbox "disks" live on one filesystem, which snapraid rejects without this
     set -x SNAPRAID_EXTRA_ARGS --test-skip-device
     # Sandbox disks are directories without SMART, the backend fakes smart and probe
@@ -45,12 +46,12 @@ function on_interrupt --on-signal INT --on-signal TERM
 end
 
 # Starte Backend im Hintergrund
-cd $root/backend
+cd $root/apps/server
 bun run dev &
 set -g backend_pid $last_pid
 
 # Starte Frontend im Hintergrund
-cd $root/frontend
+cd $root/apps/web
 bun run dev &
 set -g frontend_pid $last_pid
 

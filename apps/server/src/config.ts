@@ -1,6 +1,7 @@
 import { isAbsolute, join, relative, resolve } from "node:path";
 
-export const BASE_PATH = process.env.SNAPRAID_BASE_PATH || join(process.cwd(), "..", "snapraid");
+// Without the variable: snapraid/ in the repository's root, two levels up from apps/server/
+export const BASE_PATH = process.env.SNAPRAID_BASE_PATH || join(process.cwd(), "..", "..", "snapraid");
 
 /**
  * Resolve a path against BASE_PATH; absolute paths (e.g. /mnt/parity/snapraid.conf) are kept as is

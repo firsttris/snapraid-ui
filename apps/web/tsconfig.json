@@ -1,4 +1,5 @@
 {
+  "extends": "../../tsconfig.base.json",
   "include": ["**/*.ts", "**/*.tsx", "**/*.js"],
   "compilerOptions": {
     "target": "ES2022",
@@ -8,22 +9,18 @@
     "types": ["vite/client"],
 
     /* Bundler mode */
-    "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "allowJs": true,
     "verbatimModuleSyntax": false,
-    "noEmit": true,
 
     /* Linting */
-    "skipLibCheck": true,
-    "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@shared/*": ["../shared/*"]
+      "@shared/*": ["./node_modules/@snapraid-ui/shared/src/*"]
     }
   }
 }

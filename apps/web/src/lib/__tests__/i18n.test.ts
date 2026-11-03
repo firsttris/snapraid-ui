@@ -50,7 +50,7 @@ describe('messages/*.json', () => {
 
   it('every message is used, every used key exists', () => {
     const frontend = files('src').map((f) => readFileSync(f, 'utf8'))
-    const backend = files('../backend/src').map((f) => readFileSync(f, 'utf8'))
+    const backend = files('../server/src').map((f) => readFileSync(f, 'utf8'))
     const code = [...frontend, ...backend].join('\n')
     // m.key() only counts in files that import the messages as m (elsewhere m is often a regex)
     const mCode = frontend
@@ -75,7 +75,7 @@ describe('messages/*.json', () => {
   })
 
   it('backend messages are server_ keys, the only ones the UI can render', () => {
-    const backend = files('../backend/src')
+    const backend = files('../server/src')
       .map((f) => readFileSync(f, 'utf8'))
       .join('\n')
     const keys = [...backend.matchAll(/\bmsg\(\s*["'](\w+)["']/g)].map(

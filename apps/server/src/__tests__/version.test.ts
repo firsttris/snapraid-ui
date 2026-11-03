@@ -17,7 +17,7 @@ const withEnv = async (value: string | undefined, run: () => Promise<void>) => {
   }
 };
 
-test("readVersion - the version of frontend/package.json", async () => {
+test("readVersion - the version of apps/web/package.json", async () => {
   const { version } = JSON.parse(await readFile(PACKAGE_JSON, "utf8"));
   await withEnv(undefined, async () => expect(await readVersion()).toEqual(version));
 });

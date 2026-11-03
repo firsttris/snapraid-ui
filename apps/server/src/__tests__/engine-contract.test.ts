@@ -21,7 +21,7 @@ engineContract("fake", () => {
 });
 
 // The test disks are directories on one filesystem, SnapRAID only accepts that with --test-skip-device.
-// Run it with: SNAPRAID_BIN=../dev/bin/snapraid SNAPRAID_EXTRA_ARGS=--test-skip-device bun test
+// Run it with: SNAPRAID_BIN=../../scripts/dev/bin/snapraid SNAPRAID_EXTRA_ARGS=--test-skip-device bun test
 const cliAvailable = await (async () => {
   if (!SNAPRAID_EXTRA_ARGS.includes("--test-skip-device")) return false;
   try {

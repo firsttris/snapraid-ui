@@ -5,7 +5,7 @@ import { classifyLogLine, parseLog } from '../log-parse'
 const fixture = (name: string) =>
   readFileSync(
     new URL(
-      `../../../../backend/src/parsers/__tests__/fixtures/${name}`,
+      `../../../../server/src/parsers/__tests__/fixtures/${name}`,
       import.meta.url,
     ),
     'utf8',
