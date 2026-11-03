@@ -138,7 +138,7 @@ jobs:
       E2E_BINARY: ${{ matrix.target == 'binary' && '../dist/snapraid-ui-linux-x86_64' || '' }}
     steps:
       - uses: actions/checkout@v7
-      # Bun installs, builds and runs the backend; Playwright's test runner runs on the runner's Node
+      # Bun installs, builds and runs the backend, and runs Playwright's test runner (bun --bun)
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: e2e/package.json
@@ -156,7 +156,7 @@ jobs:
         run: bun run setup
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
-      - run: bunx playwright install --with-deps chromium
+      - run: bun --bun playwright install --with-deps chromium
       - name: Install the frontend, the tests or the binary build it
         if: matrix.target != 'image'
         working-directory: frontend

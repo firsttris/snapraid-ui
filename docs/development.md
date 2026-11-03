@@ -6,8 +6,7 @@ This page gets you from a fresh clone to a running development setup, and covers
 
 | Tool | Version | Needed for |
 |---|---|---|
-| [Bun](https://bun.com/) | the version in `packageManager` of `backend/package.json` and `frontend/package.json` (1.4.4) | Everything JavaScript: runs the backend and its tests, installs the packages, runs Vite and Vitest, compiles the standalone binary (CI and the image use the same version) |
-| [Node.js](https://nodejs.org/) | 22 or newer | Only for the end-to-end tests: Playwright's test runner runs on Node |
+| [Bun](https://bun.com/) | the version in `packageManager` of `backend/package.json` and `frontend/package.json` (1.4.4) | Everything JavaScript: runs the backend and its tests, installs the packages, runs Vite and Vitest and Playwright's test runner (`bun --bun playwright test`), compiles the standalone binary (CI and the image use the same version) |
 | [fish](https://fishshell.com/) | | `start.sh` is a fish script |
 | `curl`, `tar`, `gcc`, `make` | | Building SnapRAID for the demo sandbox (`dev/setup.sh`) |
 | SnapRAID | 14.0 or newer | Only for running against a real array without `--demo`; it has to be on your `PATH` or set via `SNAPRAID_BIN` |
@@ -189,11 +188,11 @@ The test adds files to the array's first data disk. In `snapraidd.conf` set `net
 ```bash
 cd e2e
 bun install
-bunx playwright install chromium  # once
-bun run setup                     # builds the tools into e2e/.tools, needs autoconf, automake, zlib1g-dev
-bun run test                      # builds the frontend, starts everything, runs the tests (about 2 min);
-                                  # the backend runs with the packages of backend/ (bun install there first)
-bun run test:image                # the same tests against the Docker image built from docker/Dockerfile
+bun --bun playwright install chromium   # once
+bun run setup                           # builds the tools into e2e/.tools, needs autoconf, automake, zlib1g-dev
+bun run test                            # builds the frontend, starts everything, runs the tests (about 2 min);
+                                        # the backend runs with the packages of backend/ (bun install there first)
+bun run test:image                      # the same tests against the Docker image built from docker/Dockerfile
 E2E_BINARY=../dist/snapraid-ui-linux-x86_64 bun run test   # against the standalone binary, see below
 ```
 
@@ -201,7 +200,7 @@ E2E_BINARY=../dist/snapraid-ui-linux-x86_64 bun run test   # against the standal
 
 The global setup (`e2e/harness/global-setup.ts`) recreates `e2e/.run/` on every run: the backend's data directory, the arrays and a log per server. It starts snapraid-daemon on its own array, the backend (with `PORT`, `SNAPRAID_BASE_PATH` and `SNAPRAID_BIN` pointing into `e2e/`), which serves the production build of the frontend as in the image. Each test creates its own array, adds it through the API and opens it; the `app` fixture removes it, and the schedules, afterwards. Tests run one after the other, the backend runs one job at a time.
 
-With `E2E_IMAGE=<image>` the container takes the place of the backend: started as in `docker/docker-compose.yml`, with the data directory in `/app/snapraid`, the arrays at the same paths as on the host and the Docker socket mounted. It shares the host's network (the UI on port 80), so the backend reaches snapraid-daemon and the webhook receiver on `127.0.0.1`. With `E2E_BINARY=<path>` the standalone binary takes the place of the backend's sources, with the same environment; it carries its own frontend, so nothing is built. `E2E_SKIP_BUILD=1` skips the frontend build of a local run. A failed test leaves a trace (`bunx playwright show-trace e2e/test-results/…/trace.zip`) and the server logs in `e2e/.run/*.log`; CI uploads both.
+With `E2E_IMAGE=<image>` the container takes the place of the backend: started as in `docker/docker-compose.yml`, with the data directory in `/app/snapraid`, the arrays at the same paths as on the host and the Docker socket mounted. It shares the host's network (the UI on port 80), so the backend reaches snapraid-daemon and the webhook receiver on `127.0.0.1`. With `E2E_BINARY=<path>` the standalone binary takes the place of the backend's sources, with the same environment; it carries its own frontend, so nothing is built. `E2E_SKIP_BUILD=1` skips the frontend build of a local run. A failed test leaves a trace (`bun --bun playwright show-trace e2e/test-results/…/trace.zip`) and the server logs in `e2e/.run/*.log`; CI uploads both.
 
 ## Linting and type checking
 

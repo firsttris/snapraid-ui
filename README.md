@@ -245,7 +245,7 @@ December 23.
 ## 🛠️ Development
 
 Requires Bun (the version in `frontend/package.json`) and the fish shell for `start.sh`;
-Node.js 22+ only for the end-to-end tests.
+the end-to-end tests run on Bun too.
 
 ```bash
 git clone https://github.com/firsttris/snapraid-ui && cd snapraid-ui

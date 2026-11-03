@@ -14,4 +14,4 @@ if [[ -z "${E2E_IMAGE:-}" ]]; then
 fi
 
 cd "$E2E_DIR"
-bunx playwright test "$@"
+bun --bun playwright test "$@"
