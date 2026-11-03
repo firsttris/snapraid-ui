@@ -4,7 +4,7 @@ import { ROOT } from '../harness/env'
 
 /**
  * The pictures in the README and the documentation (docs/screenshot*.png, docs/screenshots/),
- * taken from the demo that harness/demo-setup.ts starts: npm run screenshots
+ * taken from the demo that harness/demo-setup.ts starts: bun run screenshots
  */
 
 const DOCS = join(ROOT, 'docs')

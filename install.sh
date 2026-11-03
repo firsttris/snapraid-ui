@@ -5,7 +5,7 @@
 
 echo "Installing frontend dependencies..."
 cd frontend
-npm install
+bun install
 
 echo "Installing backend dependencies..."
 cd ../backend

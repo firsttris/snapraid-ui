@@ -1,12 +1,12 @@
 // Renovate (GitHub App, https://github.com/apps/renovate): a pull request for each new release of
 // what SnapRAID UI builds on, plus the "Dependency Dashboard" issue listing what is open. Their own
 // pull requests: SnapRAID itself (the parsers are tested against one release), Deno (backend, image
-// and standalone binary) and Node (frontend build). snapraid-daemon stays an issue of
-// upstream-release.yml, since its API has to be compared by hand.
+// and standalone binary) and Bun (frontend and e2e packages, the image's frontend build).
+// snapraid-daemon stays an issue of upstream-release.yml, since its API has to be compared by hand.
 // Everything else (the other packages, the actions, the images) comes with the shared settings of
 // firsttris/workflows (renovate/default.json5): minor and patch updates once a month in one pull
 // request that merges itself when CI is green, majors on request in the dashboard.
-// Check with `npx --package renovate renovate-config-validator .github/renovate.json5`.
+// Check with `bunx --package renovate renovate-config-validator .github/renovate.json5`.
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["github>firsttris/workflows//renovate/default.json5"],
@@ -62,13 +62,14 @@
       extractVersionTemplate: "^v(?<version>.+)$",
     },
     {
-      // The Node of CI's frontend jobs, the same major as the image's frontend-builder
+      // "packageManager": "bun@x.y.z" in frontend/ and e2e/: the Bun of every CI job
+      // (bun-version-file, and the npm-installed Bun of the screenshots job in the Playwright image)
       customType: "regex",
-      managerFilePatterns: ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
-      matchStrings: ["node-version: (?<currentValue>\\d+)\\n"],
-      depNameTemplate: "node",
-      datasourceTemplate: "node-version",
-      versioningTemplate: "node",
+      managerFilePatterns: ["/^(frontend|e2e)/package\\.json$/"],
+      matchStrings: ['"packageManager": "bun@(?<currentValue>\\d+\\.\\d+\\.\\d+)"'],
+      depNameTemplate: "oven-sh/bun",
+      datasourceTemplate: "github-releases",
+      extractVersionTemplate: "^bun-v(?<version>.+)$",
     },
   ],
   packageRules: [
@@ -102,9 +103,14 @@
       dependencyDashboardApproval: false,
     },
     {
-      matchPackageNames: ["docker.io/library/node", "node"],
-      groupName: "Node",
-      sourceUrl: "https://github.com/nodejs/node",
+      // Bun of the image's frontend-builder (oven/bun) and packageManager in frontend/ and e2e/ in
+      // one PR, so CI tests the Bun the image builds with
+      matchPackageNames: ["docker.io/oven/bun", "oven/bun", "oven-sh/bun"],
+      groupName: "Bun",
+      sourceUrl: "https://github.com/oven-sh/bun",
+      prBodyNotes: [
+        "The image's `frontend-builder` (`oven/bun:<version>-slim` in docker/Dockerfile) and `packageManager` in `frontend/package.json` and `e2e/package.json` (CI's `bun-version-file` and the screenshots job's `npm install bun@…`) move together. Bun installs, runs Vite and Vitest (`bun --bun`); Playwright's test runner still runs on Node. Check the frontend job and the end-to-end tests against the image.",
+      ],
       schedule: ["at any time"],
       automerge: false,
       dependencyDashboardApproval: false,

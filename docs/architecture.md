@@ -35,7 +35,7 @@ The Docker image (`docker/Dockerfile`) is a multi-stage build:
 
 1. **snapraid-builder** (Debian bookworm-slim) downloads the pinned SnapRAID release (`ARG SNAPRAID_VERSION=15.1`) and compiles it.
 2. **backend-builder** (`denoland/deno:2.5.6`) installs the backend dependencies and warms the Deno module cache.
-3. **frontend-builder** (`node:22-bookworm-slim`) runs `npm ci` and `npm run build`, which produces `frontend/.output/`.
+3. **frontend-builder** (`oven/bun:1.4.4-slim`) runs `bun install --frozen-lockfile` and `bun run build`, which produces `frontend/.output/`.
 4. The **final image** is based on `denoland/deno:2.5.6`, adds `curl` and `smartmontools` (SnapRAID calls `smartctl` for `smart` and `probe`), and copies in the SnapRAID binary, the backend with its module cache and the built frontend.
 
 The container runs a single process, the backend, under [tini](https://github.com/krallin/tini) as PID 1, which passes `docker stop`'s `SIGTERM` on and reaps the processes the backend starts:

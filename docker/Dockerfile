@@ -23,16 +23,17 @@ RUN deno install --entrypoint deno.json
 COPY backend/src/ ./src/
 RUN deno cache src/main.ts
 
-FROM docker.io/library/node:26-bookworm-slim AS frontend-builder
+# The Bun of packageManager in frontend/package.json (Renovate moves both together)
+FROM docker.io/oven/bun:1.4.4-slim AS frontend-builder
 
 WORKDIR /app/frontend
 
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+COPY frontend/package.json frontend/bun.lock ./
+RUN bun install --frozen-lockfile
 
 COPY shared/ ../shared/
 COPY frontend/ ./
-RUN npm run build
+RUN bun run build
 
 # Final image: one Deno process serves the UI, the API and the WebSocket on port 80
 FROM docker.io/denoland/deno:2.9.8

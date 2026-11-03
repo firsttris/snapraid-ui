@@ -46,16 +46,14 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 26
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: npx biome check
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+          bun-version-file: frontend/package.json
+      - run: bun install --frozen-lockfile
+      - run: bunx biome check
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run build
 
   # scripts/install.sh on a host with systemd, as users run it: the binary built here and served
   # like the release, SnapRAID built from source (the runner has none), then update and uninstall
@@ -69,12 +67,10 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: 2.9.x
-      - uses: actions/setup-node@v7
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 26
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
+          bun-version-file: frontend/package.json
+      - run: bun install --frozen-lockfile
         working-directory: frontend
       - run: scripts/build-binary.sh
       - name: Serve the binary like a release
@@ -145,13 +141,10 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: 2.9.x
-      - uses: actions/setup-node@v7
+      # Bun installs and builds; Playwright's test runner runs on the runner's Node
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 26
-          cache: npm
-          cache-dependency-path: |
-            frontend/package-lock.json
-            e2e/package-lock.json
+          bun-version-file: e2e/package.json
       - name: Cache SnapRAID and snapraid-daemon builds
         uses: actions/cache@v6
         with:
@@ -163,14 +156,14 @@ jobs:
           packages: autoconf automake zlib1g-dev smartmontools
           recommends: "false"
       - name: Build SnapRAID and snapraid-daemon
-        run: npm run setup
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npx playwright install --with-deps chromium
+        run: bun run setup
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bunx playwright install --with-deps chromium
       - name: Install the frontend, the tests or the binary build it
         if: matrix.target != 'image'
         working-directory: frontend
-        run: npm ci
+        run: bun install --frozen-lockfile
       # The tests run the x86_64 one; arm64 is built too, so the release does not find a problem first
       - name: Build the binaries
         if: matrix.target == 'binary'
@@ -183,7 +176,7 @@ jobs:
         with:
           dockerfile: docker/Dockerfile
           tags: ${{ env.E2E_IMAGE }}
-      - run: npm test -- --shard=${{ matrix.shard }}/2
+      - run: bun run test --shard=${{ matrix.shard }}/2
       - name: Upload traces and server logs
         if: failure()
         uses: actions/upload-artifact@v7

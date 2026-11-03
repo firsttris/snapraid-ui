@@ -2,8 +2,8 @@
 # Builds the Docker image from docker/Dockerfile and runs the end-to-end tests against it,
 # instead of against the local backend and frontend. Extra arguments go to Playwright.
 #
-#   npm run test:image                  build, then test
-#   E2E_IMAGE=my/image:tag npm run test:image   test an image that is already there
+#   bun run test:image                  build, then test
+#   E2E_IMAGE=my/image:tag bun run test:image   test an image that is already there
 set -euo pipefail
 
 E2E_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -14,4 +14,4 @@ if [[ -z "${E2E_IMAGE:-}" ]]; then
 fi
 
 cd "$E2E_DIR"
-npx playwright test "$@"
+bunx playwright test "$@"

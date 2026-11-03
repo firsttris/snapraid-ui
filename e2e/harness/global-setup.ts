@@ -136,7 +136,7 @@ const startImage = async (image: string): Promise<Server> => {
 
 export default async function globalSetup() {
   for (const tool of [SNAPRAID, SNAPRAID15, SNAPRAID15_SKIP_DEVICE, SNAPRAIDD]) {
-    if (!existsSync(tool)) throw new Error(`${tool} is missing, run: npm run setup`)
+    if (!existsSync(tool)) throw new Error(`${tool} is missing, run: bun run setup`)
   }
 
   await rm(RUN_DIR, { recursive: true, force: true })
@@ -154,7 +154,7 @@ export default async function globalSetup() {
   await mkdir(ARRAYS, { recursive: true })
   const frontend = join(ROOT, 'frontend')
   if (!IMAGE && !BINARY && process.env.E2E_SKIP_BUILD !== '1') {
-    execFileSync('npm', ['run', 'build'], { cwd: frontend, stdio: 'inherit' })
+    execFileSync('bun', ['run', 'build'], { cwd: frontend, stdio: 'inherit' })
   }
 
   const servers: Server[] = []

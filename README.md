@@ -244,7 +244,8 @@ December 23.
 
 ## 🛠️ Development
 
-Requires Node.js 22+, Deno 2.5+ and the fish shell for `start.sh`.
+Requires Bun (the version in `frontend/package.json`), Deno 2.5+ and the fish shell for `start.sh`;
+Node.js 22+ only for the end-to-end tests.
 
 ```bash
 git clone https://github.com/firsttris/snapraid-ui && cd snapraid-ui
@@ -258,8 +259,8 @@ project layout, tests and translations.
 
 ## 🤝 Contributing
 
-Issues and pull requests are welcome. Please run `npx biome check`, `npm run typecheck` and the tests
-(`deno test --allow-all` in `backend/`, `npm test` in `frontend/`) before opening a pull request.
+Issues and pull requests are welcome. Please run `bunx biome check`, `bun run typecheck` and the tests
+(`deno test --allow-all` in `backend/`, `bun run test` in `frontend/`) before opening a pull request.
 Changes to jobs, schedules or the Docker image are also covered by the end-to-end tests in `e2e/`,
 which CI runs against the local build and the image; see [Development](https://firsttris.github.io/snapraid-ui/development.html#end-to-end-tests) to run them locally.
 

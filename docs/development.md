@@ -6,7 +6,8 @@ This page gets you from a fresh clone to a running development setup, and covers
 
 | Tool | Version | Needed for |
 |---|---|---|
-| [Node.js](https://nodejs.org/) | 22 or newer | Frontend (CI and the image use Node 22) |
+| [Bun](https://bun.com/) | the version in `packageManager` of `frontend/package.json` (1.4.4) | Frontend and end-to-end tests: installs the packages, runs Vite and Vitest (CI and the image use the same version) |
+| [Node.js](https://nodejs.org/) | 22 or newer | Only for the end-to-end tests: Playwright's test runner runs on Node |
 | [Deno](https://deno.com/) | 2.5 or newer | Backend (CI uses 2.5.x, the image 2.5.6). `./start.sh --demo` downloads Deno into `dev/tools/` if none is installed |
 | [fish](https://fishshell.com/) | | `start.sh` is a fish script |
 | `curl`, `tar`, `gcc`, `make` | | Building SnapRAID for the demo sandbox (`dev/setup.sh`); `unzip` too if Deno has to be downloaded |
@@ -18,7 +19,7 @@ This page gets you from a fresh clone to a running development setup, and covers
 ```bash
 git clone https://github.com/firsttris/snapraid-ui
 cd snapraid-ui
-./install.sh          # npm install in frontend/, deno cache in backend/
+./install.sh          # bun install in frontend/, deno cache in backend/
 ./start.sh --demo     # sandbox with fake disks, no real array needed
 ```
 
@@ -31,12 +32,12 @@ Open **http://localhost:3000**. The frontend dev server runs on port 3000, the b
 | `./start.sh` | `./snapraid/` (created on first start, ignored by git) | `snapraid` from your `PATH` | Works against your real configs |
 | `./start.sh --demo` | `dev/sandbox/` | `dev/bin/snapraid` | Sets `SNAPRAID_EXTRA_ARGS=--test-skip-device` and `SNAPRAID_DEMO=1` |
 
-Under the hood it starts `deno task dev` in `backend/` (with `--watch`, so the backend restarts on changes) and `npm run dev` in `frontend/` (Vite with hot reload). You can run these two commands yourself in separate terminals; set `SNAPRAID_BASE_PATH` and friends first (see [Configuration](configuration.md)), otherwise the backend uses `../snapraid` relative to `backend/`.
+Under the hood it starts `deno task dev` in `backend/` (with `--watch`, so the backend restarts on changes) and `bun run dev` in `frontend/` (Vite with hot reload). You can run these two commands yourself in separate terminals; set `SNAPRAID_BASE_PATH` and friends first (see [Configuration](configuration.md)), otherwise the backend uses `../snapraid` relative to `backend/`.
 
 > [!NOTE]
 > In development the frontend calls the backend directly at `http://localhost:8080` (`frontend/src/lib/api/constants.ts`), and the backend only accepts credentials from the same hostname. Open the dev frontend as `http://localhost:3000`, not via a LAN IP.
 
-To run the production build as the image does, build the frontend (`npm run build` in `frontend/`) and start the backend with `deno task start`: it finds `frontend/.output/` and serves the UI, the API and the WebSocket together on port 8080. Without a build it serves only the API.
+To run the production build as the image does, build the frontend (`bun run build` in `frontend/`) and start the backend with `deno task start`: it finds `frontend/.output/` and serves the UI, the API and the WebSocket together on port 8080. Without a build it serves only the API.
 
 <details>
 <summary>Stopping leftover processes</summary>
@@ -113,7 +114,7 @@ Both sides import shared code as `@shared/…`: the backend through the import m
 
 ## Scripts
 
-Frontend (`frontend/package.json`, run with `npm run <script>` in `frontend/`):
+Frontend (`frontend/package.json`, run with `bun run <script>` in `frontend/`; Vite and Vitest run on Bun's runtime, `bun --bun`):
 
 | Script | What it does |
 |---|---|
@@ -140,7 +141,7 @@ Both tasks use the same permissions as the container: `--allow-net --allow-read 
 
 ```bash
 cd backend && deno test --allow-all    # as in CI
-cd frontend && npm test
+cd frontend && bun run test
 
 # Also run the engine contract against the SnapRAID CLI, with the binary from dev/setup.sh
 cd backend && SNAPRAID_BIN=../dev/bin/snapraid SNAPRAID_EXTRA_ARGS=--test-skip-device deno test --allow-all
@@ -182,31 +183,31 @@ The test adds files to the array's first data disk. In `snapraidd.conf` set `net
 
 ```bash
 cd e2e
-npm ci
-npx playwright install chromium   # once
-npm run setup                     # builds the tools into e2e/.tools, needs autoconf, automake, zlib1g-dev
-npm test                          # builds the frontend, starts everything, runs the tests (about 2 min)
-npm run test:image                # the same tests against the Docker image built from docker/Dockerfile
-E2E_BINARY=../dist/snapraid-ui-linux-x86_64 npm test   # against the standalone binary, see below
+bun install
+bunx playwright install chromium  # once
+bun run setup                     # builds the tools into e2e/.tools, needs autoconf, automake, zlib1g-dev
+bun run test                      # builds the frontend, starts everything, runs the tests (about 2 min)
+bun run test:image                # the same tests against the Docker image built from docker/Dockerfile
+E2E_BINARY=../dist/snapraid-ui-linux-x86_64 bun run test   # against the standalone binary, see below
 ```
 
-`npm run setup` builds SnapRAID 15.1 (the version of the image) from the release tarball for the jobs SnapRAID UI runs itself, and SnapRAID from git (`SNAPRAID15_REF`) with snapraid-daemon at the version in `backend/src/engine/REVIEWED_DAEMON_VERSION`. The test disks are directories on one filesystem, so SnapRAID runs with `--test-skip-device`: the backend gets it through `SNAPRAID_EXTRA_ARGS`, the daemon through a small compiled wrapper as `sys_engine`.
+`bun run setup` builds SnapRAID 15.1 (the version of the image) from the release tarball for the jobs SnapRAID UI runs itself, and SnapRAID from git (`SNAPRAID15_REF`) with snapraid-daemon at the version in `backend/src/engine/REVIEWED_DAEMON_VERSION`. The test disks are directories on one filesystem, so SnapRAID runs with `--test-skip-device`: the backend gets it through `SNAPRAID_EXTRA_ARGS`, the daemon through a small compiled wrapper as `sys_engine`.
 
 The global setup (`e2e/harness/global-setup.ts`) recreates `e2e/.run/` on every run: the backend's data directory, the arrays and a log per server. It starts snapraid-daemon on its own array, the backend (with `PORT`, `SNAPRAID_BASE_PATH` and `SNAPRAID_BIN` pointing into `e2e/`), which serves the production build of the frontend as in the image. Each test creates its own array, adds it through the API and opens it; the `app` fixture removes it, and the schedules, afterwards. Tests run one after the other, the backend runs one job at a time.
 
-With `E2E_IMAGE=<image>` the container takes the place of the backend: started as in `docker/docker-compose.yml`, with the data directory in `/app/snapraid`, the arrays at the same paths as on the host and the Docker socket mounted. It shares the host's network (the UI on port 80), so the backend reaches snapraid-daemon and the webhook receiver on `127.0.0.1`. With `E2E_BINARY=<path>` the standalone binary takes the place of the backend's sources, with the same environment; it carries its own frontend, so nothing is built. `E2E_SKIP_BUILD=1` skips the frontend build of a local run. A failed test leaves a trace (`npx playwright show-trace e2e/test-results/…/trace.zip`) and the server logs in `e2e/.run/*.log`; CI uploads both.
+With `E2E_IMAGE=<image>` the container takes the place of the backend: started as in `docker/docker-compose.yml`, with the data directory in `/app/snapraid`, the arrays at the same paths as on the host and the Docker socket mounted. It shares the host's network (the UI on port 80), so the backend reaches snapraid-daemon and the webhook receiver on `127.0.0.1`. With `E2E_BINARY=<path>` the standalone binary takes the place of the backend's sources, with the same environment; it carries its own frontend, so nothing is built. `E2E_SKIP_BUILD=1` skips the frontend build of a local run. A failed test leaves a trace (`bunx playwright show-trace e2e/test-results/…/trace.zip`) and the server logs in `e2e/.run/*.log`; CI uploads both.
 
 ## Linting and type checking
 
 | | Command | Where |
 |---|---|---|
-| Frontend lint + format | `npx biome check` (add `--write` to fix) | `frontend/` |
-| Frontend types | `npm run typecheck` | `frontend/` |
+| Frontend lint + format | `bunx biome check` (add `--write` to fix) | `frontend/` |
+| Frontend types | `bun run typecheck` | `frontend/` |
 | Backend types | `deno check src/main.ts` | `backend/` |
 
 Biome (`frontend/biome.json`) uses the recommended rules, 2-space indentation, single quotes, double quotes in JSX, no semicolons, and organizes imports. It covers `frontend/src/` except the generated `routeTree.gen.ts`, `src/paraglide/` and `styles.css`. The backend has no linter configured; it follows the style of the existing code (double quotes, semicolons).
 
-`npm run typecheck` compiles the Paraglide messages first, because components import them from the generated `src/paraglide/`.
+`bun run typecheck` compiles the Paraglide messages first, because components import them from the generated `src/paraglide/`.
 
 ## Translations
 
@@ -239,7 +240,7 @@ The UI is built with [shadcn/ui](https://ui.shadcn.com/) on top of Radix UI and 
 The primitives in `frontend/src/components/ui/` are owned by the project and can be edited. To add another one, run the shadcn CLI in `frontend/`, for example:
 
 ```bash
-npx shadcn@latest add popover
+bunx shadcn@latest add popover
 ```
 
 Colors come from the CSS variables in `src/styles.css`, which define the light and dark theme. Use these tokens (`bg-background`, `text-muted-foreground`, …) instead of fixed colors so both themes keep working. Charts use Chart.js through `react-chartjs-2`; the command palette uses `cmdk`; toasts use `sonner`.
@@ -260,7 +261,7 @@ The build context is the whole repository; `.dockerignore` leaves out `node_modu
 
 ## Building the binary
 
-`scripts/build-binary.sh` builds SnapRAID UI as one executable with [`deno compile`](https://docs.deno.com/runtime/reference/cli/compile/): the backend, the built frontend, `frontend/package.json` (for the version) and the documentation pages (for the MCP endpoint) inside, nothing else to install but SnapRAID itself. It needs Deno and, for the frontend build, Node.js:
+`scripts/build-binary.sh` builds SnapRAID UI as one executable with [`deno compile`](https://docs.deno.com/runtime/reference/cli/compile/): the backend, the built frontend, `frontend/package.json` (for the version) and the documentation pages (for the MCP endpoint) inside, nothing else to install but SnapRAID itself. It needs Deno and, for the frontend build, Bun:
 
 ```bash
 scripts/build-binary.sh                              # the host's architecture: dist/snapraid-ui-linux-x86_64
@@ -281,7 +282,7 @@ The binary reads the same environment variables as the image ([Configuration](co
 |---|---|
 | SnapRAID | the pinned SnapRAID release, see [Updating SnapRAID](#updating-snapraid) |
 | Deno | the Deno image of `docker/Dockerfile`, `deno-version` in the workflows (CI and the standalone binary) and `DENO_VERSION` of `dev/setup.sh` |
-| Node | the Node of the frontend build: the image's `frontend-builder` and `node-version` in the workflows |
+| Bun | the Bun of the frontend and the end-to-end tests: `packageManager` in `frontend/package.json` and `e2e/package.json` (which the workflows read with `bun-version-file`) and the image's `frontend-builder` (`oven/bun`) |
 
 Everything else (the other packages, the actions, the images) comes with the shared settings of [firsttris/workflows](https://github.com/firsttris/workflows#renovate-in-every-project): minor and patch updates on the 1st of the month in one pull request that Renovate merges itself when CI is green, majors only when ticked in the Dependency Dashboard, security fixes at once.
 
@@ -303,7 +304,7 @@ GitHub Actions workflows in `.github/workflows/`:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | Push and pull request to `master`; called by the release workflow | Backend: `deno check src/main.ts src/bin.ts`, `deno test --allow-all`. Frontend: `npm ci`, `npx biome check`, `npm run typecheck`, `npm test`, `npm run build`. [End-to-end tests](#end-to-end-tests) three times: against the local build, against the Docker image (built with the release's registry cache) and against the standalone binary (built for x86_64 and arm64, the tests run the x86_64 one), each split into two shards that run side by side; the built tools and apt packages are cached, a failure uploads traces and server logs. Installer: `shellcheck`, then `scripts/install.sh` on a runner with systemd against the binary built there (SnapRAID built from source, login, update, uninstall) |
+| `ci.yml` | Push and pull request to `master`; called by the release workflow | Backend: `deno check src/main.ts src/bin.ts`, `deno test --allow-all`. Frontend: `bun install --frozen-lockfile`, `bunx biome check`, `bun run typecheck`, `bun run test`, `bun run build`. [End-to-end tests](#end-to-end-tests) three times: against the local build, against the Docker image (built with the release's registry cache) and against the standalone binary (built for x86_64 and arm64, the tests run the x86_64 one), each split into two shards that run side by side; the built tools and apt packages are cached, a failure uploads traces and server logs. Installer: `shellcheck`, then `scripts/install.sh` on a runner with systemd against the binary built there (SnapRAID built from source, login, update, uninstall) |
 | `release.yml` | Push of a `v*` tag; manual run | Runs CI unless `master`'s CI already passed for the same code (a *Bump version* commit only changes the version), then the shared Docker release workflow from `firsttris/workflows`. A tag `vX.Y.Z` publishes `tristanteu/snapraid-ui:X.Y.Z`, `:X.Y` and `:latest`, updates the Docker Hub description and creates the GitHub release, then the standalone binaries for x86_64 and arm64 are built and attached to it with their `SHA256SUMS` and `scripts/install.sh` as `install.sh`. A manual run on `master` runs the same checks and pushes `:edge`, without a release |
 | `bump.yml` | Manual run | Raises the version in `frontend/package.json` (patch, minor or major), commits it, tags the commit `vX.Y.Z` and starts `release.yml` on it (shared [`bump-version`](https://github.com/firsttris/workflows#bump-version)) |
 | `upstream-release.yml` | Mondays 06:00 UTC; manual run | Opens an issue with a checklist when snapraid-daemon has a tag newer than `backend/src/engine/REVIEWED_DAEMON_VERSION`, release candidates included |
@@ -314,7 +315,7 @@ that they match), and the sidebar shows it bottom left. To release, run *Bump ve
 Actions tab, or from `frontend/`:
 
 ```bash
-npm run release minor    # patch (default), minor, major or x.y.z: raises package.json, commits, tags vX.Y.Z and pushes
+bun run release minor    # patch (default), minor, major or x.y.z: raises package.json, commits, tags vX.Y.Z and pushes
 ```
 
 ## Screenshots
@@ -327,7 +328,7 @@ factor of 2. Run it as root with the disks at `/mnt`, or without `DISKS_DIR` wit
 
 ```bash
 cd e2e
-DISKS_DIR=/mnt npm run screenshots
+DISKS_DIR=/mnt bun run screenshots
 ```
 
 After a change to the look, run **Update screenshots** (Actions → Run workflow,
@@ -351,7 +352,7 @@ sh scripts/social-preview/render.sh
 Issues and pull requests are welcome at [github.com/firsttris/snapraid-ui](https://github.com/firsttris/snapraid-ui). Before opening a pull request, run what CI runs:
 
 ```bash
-cd frontend && npx biome check && npm run typecheck && npm test
+cd frontend && bunx biome check && bun run typecheck && bun run test
 cd backend && deno check src/main.ts && deno test --allow-all
 ```
 

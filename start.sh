@@ -55,7 +55,7 @@ set -g backend_pid $last_pid
 
 # Starte Frontend im Hintergrund
 cd $root/frontend
-npm run dev &
+bun run dev &
 set -g frontend_pid $last_pid
 
 # Warte auf beide Prozesse. Polling statt wait, weil fish wait nur bei SIGINT unterbricht;

@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test'
 import { APP_URL } from './harness/env'
 
-// The README and documentation pictures from the demo: npm run screenshots
+// The README and documentation pictures from the demo: bun run screenshots
 export default defineConfig({
   testDir: './screenshots',
   globalSetup: './harness/demo-setup.ts',

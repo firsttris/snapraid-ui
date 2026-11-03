@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds SnapRAID UI as one standalone binary with deno compile: the backend, the built frontend
-# and the documentation (for the MCP endpoint) inside, no Deno, Node or Docker needed to run it.
+# and the documentation (for the MCP endpoint) inside, no Deno, Bun or Docker needed to run it.
 #
 # Usage: scripts/build-binary.sh [target...]
 #   target: x86_64-unknown-linux-gnu (default: the host's), aarch64-unknown-linux-gnu
@@ -12,7 +12,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST="$ROOT/dist"
 
 if [[ "${SKIP_FRONTEND_BUILD:-}" != "1" ]]; then
-  (cd "$ROOT/frontend" && npm run build)
+  (cd "$ROOT/frontend" && bun run build)
 fi
 [[ -f "$ROOT/frontend/.output/server/index.mjs" ]] || { echo "frontend/.output is missing, build the frontend first" >&2; exit 1; }
 
