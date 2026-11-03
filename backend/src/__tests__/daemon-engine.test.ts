@@ -1,6 +1,7 @@
 // The daemon engine against a stand-in for snapraid-daemon 2.0. The responses follow
 // what a real daemon answered (fields trimmed); a task advances one step per poll.
-import { assert, assertEquals, assertRejects } from "@std/assert";
+import { expect, test } from "bun:test";
+import { assertRejects } from "./assert-error.ts";
 import type { JobProgress } from "@shared/types.ts";
 import { EngineBusyError } from "../engine/engine.ts";
 import {
@@ -175,7 +176,7 @@ const engineFor = (daemon = fakeDaemon(), extra: Partial<Parameters<typeof creat
     ...extra,
   });
 
-Deno.test("daemon engine - a sync is queued, followed and reported", async () => {
+test("daemon engine - a sync is queued, followed and reported", async () => {
   const daemon = fakeDaemon();
   const engine = engineFor(daemon);
   const progress: JobProgress[] = [];
@@ -188,17 +189,17 @@ Deno.test("daemon engine - a sync is queued, followed and reported", async () =>
     onOutput: (chunk) => output.push(chunk),
   });
 
-  assertEquals(outcome.report.result, "ok");
-  assertEquals(outcome.report.logFile, "5-sync.log");
-  assertEquals(outcome.output.exitCode, 0);
-  assertEquals(output.join(""), "Self-test...\nLoading state...\nEverything OK\n");
-  assertEquals(progress, [{ percent: 50, processedMB: 500, etaMinutes: 2 }]);
-  assertEquals(engine.currentJob(), null);
-  assertEquals(engine.lastJob()?.command, "sync");
-  assert(daemon.requests.includes("POST /v1/schedule"));
+  expect(outcome.report.result).toEqual("ok");
+  expect(outcome.report.logFile).toEqual("5-sync.log");
+  expect(outcome.output.exitCode).toEqual(0);
+  expect(output.join("")).toEqual("Self-test...\nLoading state...\nEverything OK\n");
+  expect(progress).toEqual([{ percent: 50, processedMB: 500, etaMinutes: 2 }]);
+  expect(engine.currentJob()).toEqual(null);
+  expect(engine.lastJob()?.command).toEqual("sync");
+  expect(daemon.requests.includes("POST /v1/schedule")).toBeTruthy();
 });
 
-Deno.test("daemon engine - scrub arguments go along with the task", async () => {
+test("daemon engine - scrub arguments go along with the task", async () => {
   const daemon = fakeDaemon();
   const requests: Array<{ path: string; body?: string }> = [];
   const engine = engineFor({
@@ -210,23 +211,23 @@ Deno.test("daemon engine - scrub arguments go along with the task", async () => 
   });
   await engine.runJob({ command: "scrub", configPath: "/etc/snapraid.conf", args: ["-p", "8", "-o", "10"] });
   const schedule = requests.find((request) => request.path.endsWith("/v1/schedule"));
-  assertEquals(JSON.parse(schedule!.body!), { tasks: [{ command: "scrub", args: ["-p", "8", "-o", "10"] }] });
+  expect(JSON.parse(schedule!.body!)).toEqual({ tasks: [{ command: "scrub", args: ["-p", "8", "-o", "10"] }] });
 });
 
-Deno.test("daemon engine - a failed sync is an error, its log is used when readable", async () => {
+test("daemon engine - a failed sync is an error, its log is used when readable", async () => {
   const failed = await engineFor(fakeDaemon({ exitCode: { sync: 1 } })).runJob({ command: "sync", configPath: "/c" });
-  assertEquals(failed.report.result, "error");
+  expect(failed.report.result).toEqual("error");
 
   // The daemon runs here: the task's SnapRAID log tells the details
   const withLog = await engineFor(fakeDaemon(), {
     readLog: () => Promise.resolve("summary:error_io:2\nsummary:error_data:1\nsummary:exit:warning\n"),
   }).runJob({ command: "sync", configPath: "/c" });
-  assertEquals(withLog.report.result, "warning");
-  assertEquals([withLog.report.ioErrors, withLog.report.dataErrors], [2, 1]);
-  assertEquals(withLog.output.logPath, "/var/log/snapraid/5-sync.log");
+  expect(withLog.report.result).toEqual("warning");
+  expect([withLog.report.ioErrors, withLog.report.dataErrors]).toEqual([2, 1]);
+  expect(withLog.output.logPath).toEqual("/var/log/snapraid/5-sync.log");
 });
 
-Deno.test("daemon engine - abort stops the daemon's task and counts as aborted", async () => {
+test("daemon engine - abort stops the daemon's task and counts as aborted", async () => {
   const daemon = fakeDaemon();
   const engine = engineFor(daemon);
   const outcome = await engine.runJob({
@@ -234,33 +235,33 @@ Deno.test("daemon engine - abort stops the daemon's task and counts as aborted",
     configPath: "/c",
     onOutput: () => {
       const job = engine.currentJob();
-      if (job && !job.aborting) assert(engine.abortJob(job.processId));
+      if (job && !job.aborting) expect(engine.abortJob(job.processId)).toBeTruthy();
     },
   });
-  assert(daemon.requests.includes("POST /v1/stop"));
-  assertEquals(outcome.report.result, "aborted");
-  assertEquals(outcome.output.aborted, true);
+  expect(daemon.requests.includes("POST /v1/stop")).toBeTruthy();
+  expect(outcome.report.result).toEqual("aborted");
+  expect(outcome.output.aborted).toEqual(true);
 });
 
-Deno.test("daemon engine - touch and status go to the fallback", async () => {
+test("daemon engine - touch and status go to the fallback", async () => {
   const fallback = createFakeEngine();
   const daemon = fakeDaemon();
   const engine = engineFor(daemon, { fallback });
   await engine.runJob({ command: "touch", configPath: "/c" });
   await engine.runJob({ command: "status", configPath: "/c" });
-  assertEquals(fallback.jobs, ["touch", "status"]);
-  assert(!daemon.requests.includes("POST /v1/schedule"));
+  expect(fallback.jobs).toEqual(["touch", "status"]);
+  expect(!daemon.requests.includes("POST /v1/schedule")).toBeTruthy();
 });
 
-Deno.test("daemon engine - smart job reports the disks of /v2/disks", async () => {
+test("daemon engine - smart job reports the disks of /v2/disks", async () => {
   const outcome = await engineFor().runJob({ command: "smart", configPath: "/c" });
-  assertEquals(outcome.smart?.map((disk) => [disk.name, disk.device, disk.status]), [
+  expect(outcome.smart?.map((disk) => [disk.name, disk.device, disk.status])).toEqual([
     ["d1", "/dev/sda", "OK"],
     ["parity", "/dev/sdd", "UNKNOWN"],
   ]);
 });
 
-Deno.test("daemon engine - status and diff refuse while a job runs", async () => {
+test("daemon engine - status and diff refuse while a job runs", async () => {
   const engine = engineFor();
   await engine.runJob({
     command: "sync",
@@ -272,50 +273,50 @@ Deno.test("daemon engine - status and diff refuse while a job runs", async () =>
   });
 });
 
-Deno.test("daemon engine - diff runs a diff task, then reads the changes", async () => {
+test("daemon engine - diff runs a diff task, then reads the changes", async () => {
   const daemon = fakeDaemon();
   const report = await engineFor(daemon).readDiff("/c");
-  assertEquals([report.newFiles, report.deletedFiles, report.movedFiles], [1, 1, 1]);
-  assertEquals(report.failed, false);
-  assert(daemon.requests.some((request) => request.startsWith("GET /v1/array?limit_diffs=")));
+  expect([report.newFiles, report.deletedFiles, report.movedFiles]).toEqual([1, 1, 1]);
+  expect(report.failed).toEqual(false);
+  expect(daemon.requests.some((request) => request.startsWith("GET /v1/array?limit_diffs="))).toBeTruthy();
 });
 
-Deno.test("daemon engine - basic auth and errors", async () => {
+test("daemon engine - basic auth and errors", async () => {
   const daemon = fakeDaemon({ auth: `Basic ${btoa("admin:secret")}` });
   const status = await engineFor(daemon, { username: "admin", password: "secret" }).readStatus("/c");
-  assertEquals(status.status.totalFiles, 1204);
+  expect(status.status.totalFiles).toEqual(1204);
 
   const denied = await assertRejects(() => engineFor(daemon, { username: "admin", password: "wrong" }).readStatus("/c"), DaemonError);
-  assertEquals(denied.status, 401);
+  expect(denied.status).toEqual(401);
 
-  const unreachable = engineFor(fakeDaemon(), { fetch: (() => Promise.reject(new TypeError("Connection refused"))) as typeof fetch });
+  const unreachable = engineFor(fakeDaemon(), { fetch: (() => Promise.reject(new TypeError("Connection refused"))) as unknown as typeof fetch });
   const error = await assertRejects(() => unreachable.readPowerStates("/c"), DaemonError);
-  assert(error.message.includes("not reachable at http://nas:7627"));
+  expect(error.message.includes("not reachable at http://nas:7627")).toBeTruthy();
 });
 
-Deno.test("daemon mapping - array and disks become the UI's status", () => {
+test("daemon mapping - array and disks become the UI's status", () => {
   const status = toStatus(ARRAY, DISKS);
-  assertEquals(status.scrubPercentage, 75);
-  assertEquals([status.totalUsedGB, status.totalFreeGB], [5000, 3000]);
-  assertEquals([status.oldestScrubDays, status.medianScrubDays], [42, 7]);
-  assertEquals(status.disks?.map((disk) => [disk.name, disk.usePercent]), [["d1", 75], ["d2", 50]]);
+  expect(status.scrubPercentage).toEqual(75);
+  expect([status.totalUsedGB, status.totalFreeGB]).toEqual([5000, 3000]);
+  expect([status.oldestScrubDays, status.medianScrubDays]).toEqual([42, 7]);
+  expect(status.disks?.map((disk) => [disk.name, disk.usePercent])).toEqual([["d1", 75], ["d2", 50]]);
   // A degraded disk is the daemon's "not what the content file recorded"
-  assertEquals(status.diskIssues, [{ disk: "d2", type: "data", kind: "missing", path: "/mnt/disk2/" }]);
-  assert(status.parityUpToDate && !status.hasErrors);
+  expect(status.diskIssues).toEqual([{ disk: "d2", type: "data", kind: "missing", path: "/mnt/disk2/" }]);
+  expect(status.parityUpToDate && !status.hasErrors).toBeTruthy();
 
   const broken = toStatus({ ...ARRAY, blocks_bad: 3, blocks_unsynced: 10 }, DISKS);
-  assertEquals([broken.hasErrors, broken.badBlocks, broken.syncIncomplete, broken.parityUpToDate], [true, 3, true, false]);
+  expect([broken.hasErrors, broken.badBlocks, broken.syncIncomplete, broken.parityUpToDate]).toEqual([true, 3, true, false]);
 });
 
-Deno.test("daemon mapping - SMART attributes get their ids back, the assessment works on them", () => {
+test("daemon mapping - SMART attributes get their ids back, the assessment works on them", () => {
   const [disk, parity] = toSmartDisks(DISKS);
-  assertEquals(disk.failureProbability, 4.46);
-  assertEquals(disk.attributes?.map((attribute) => [attribute.id, attribute.raw]), [[5, "16"], [9, "38411"]]);
-  assertEquals(assessSmart(disk).reasons, [{ kind: "sectors", attribute: "reallocated", count: 16 }]);
-  assertEquals([parity.standby, parity.status], [true, "UNKNOWN"]);
+  expect(disk.failureProbability).toEqual(4.46);
+  expect(disk.attributes?.map((attribute) => [attribute.id, attribute.raw])).toEqual([[5, "16"], [9, "38411"]]);
+  expect(assessSmart(disk).reasons).toEqual([{ kind: "sectors", attribute: "reallocated", count: 16 }]);
+  expect([parity.standby, parity.status]).toEqual([true, "UNKNOWN"]);
 
   const failing = toSmartDisks({ data_disks: [{ name: "d1", devices: [{ ...DEVICE, smart: { ...DEVICE.smart, failing: true } }] }] });
-  assertEquals(failing[0].status, "FAIL");
+  expect(failing[0].status).toEqual("FAIL");
 
   // Attributes the daemon's smartignore names are left out, like SnapRAID leaves out its own
   const ignored = toSmartDisks({
@@ -327,24 +328,24 @@ Deno.test("daemon mapping - SMART attributes get their ids back, the assessment 
       }],
     }],
   });
-  assertEquals(ignored[0].attributes?.map((attribute) => attribute.name), ["Power_On_Hours"]);
-  assertEquals(assessSmart(ignored[0]).reasons, []);
+  expect(ignored[0].attributes?.map((attribute) => attribute.name)).toEqual(["Power_On_Hours"]);
+  expect(assessSmart(ignored[0]).reasons).toEqual([]);
 });
 
-Deno.test("daemon mapping - power states, diff and run results", () => {
-  assertEquals(toPowerStates(DISKS).map((disk) => disk.status), ["Active", "Standby"]);
-  assertEquals(toDiffReport(ARRAY).files.map((file) => file.status), ["removed", "added", "moved"]);
-  assertEquals(diffSucceeded({ number: 1, command: "diff", status: "terminated", exit_code: 2 }), true);
-  assertEquals(diffSucceeded({ number: 1, command: "diff", status: "terminated", exit_code: 1 }), false);
+test("daemon mapping - power states, diff and run results", () => {
+  expect(toPowerStates(DISKS).map((disk) => disk.status)).toEqual(["Active", "Standby"]);
+  expect(toDiffReport(ARRAY).files.map((file) => file.status)).toEqual(["removed", "added", "moved"]);
+  expect(diffSucceeded({ number: 1, command: "diff", status: "terminated", exit_code: 2 })).toEqual(true);
+  expect(diffSucceeded({ number: 1, command: "diff", status: "terminated", exit_code: 1 })).toEqual(false);
 
   const task = { number: 1, command: "sync", status: "terminated" as const, exit_code: 0, error_io: 1 };
-  assertEquals(toRunReport("sync", task, false, "").result, "ok");
-  assertEquals(toRunReport("sync", task, false, "").ioErrors, 1);
-  assertEquals(toRunReport("sync", { ...task, status: "canceled" }, false, "").result, "error");
-  assertEquals(toRunReport("sync", task, true, "").result, "aborted");
+  expect(toRunReport("sync", task, false, "").result).toEqual("ok");
+  expect(toRunReport("sync", task, false, "").ioErrors).toEqual(1);
+  expect(toRunReport("sync", { ...task, status: "canceled" }, false, "").result).toEqual("error");
+  expect(toRunReport("sync", task, true, "").result).toEqual("aborted");
 });
 
-Deno.test("daemon mapping - the last sync and scrub come from the task history", () => {
+test("daemon mapping - the last sync and scrub come from the task history", () => {
   const history = [
     { number: 9, command: "sync", status: "terminated" as const, exit_code: 1, finished_at: "2026-10-09T03:10:00", log_file: "/var/log/snapraid/9-sync.log" },
     { number: 8, command: "scrub", status: "terminated" as const, exit_code: 0, finished_at: "2026-10-08T03:30:00", log_file: "/var/log/snapraid/8-scrub.log" },
@@ -352,13 +353,13 @@ Deno.test("daemon mapping - the last sync and scrub come from the task history",
     { number: 10, command: "sync", status: "queued" as const },
   ];
   const runs = toLastRuns(history);
-  assertEquals(runs.sync?.result, "error");
-  assertEquals(runs.sync?.logFile, "");
-  assertEquals(runs.scrub?.result, "ok");
-  assertEquals(toLastRuns([]), { sync: null, scrub: null });
+  expect(runs.sync?.result).toEqual("error");
+  expect(runs.sync?.logFile).toEqual("");
+  expect(runs.scrub?.result).toEqual("ok");
+  expect(toLastRuns([])).toEqual({ sync: null, scrub: null });
 });
 
-Deno.test("daemon engine - a task the daemon never runs does not hang the job", async () => {
+test("daemon engine - a task the daemon never runs does not hang the job", async () => {
   const daemon = fakeDaemon();
   const engine = engineFor({
     ...daemon,
@@ -366,10 +367,10 @@ Deno.test("daemon engine - a task the daemon never runs does not hang the job", 
     fetchFn: ((input: string, init?: RequestInit) =>
       new URL(input).pathname.endsWith("/v1/tasks")
         ? Promise.resolve(new Response(JSON.stringify({ pending: [], active: [], history: [] })))
-        : daemon.fetchFn(input, init)) as typeof fetch,
+        : daemon.fetchFn(input, init)) as unknown as typeof fetch,
   });
   const error = await assertRejects(() => engine.runJob({ command: "sync", configPath: "/c" }), DaemonError);
-  assert(error.message.includes("never ran it"));
-  assertEquals(engine.currentJob(), null);
-  assertEquals(engine.lastJob()?.error?.includes("never ran it"), true);
+  expect(error.message.includes("never ran it")).toBeTruthy();
+  expect(engine.currentJob()).toEqual(null);
+  expect(engine.lastJob()?.error?.includes("never ran it")).toEqual(true);
 });

@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { expect, test } from "bun:test";
 import type { RunResult, SnapRaidCommand } from "@shared/types.ts";
 import type { JobOutcome } from "../engine/engine.ts";
 import { heal } from "../routes/snapraid.ts";
@@ -18,22 +18,22 @@ const runner = (fixResult: RunResult | null) => {
   return { ran, run };
 };
 
-Deno.test("heal - repairs the bad blocks, then checks them again", async () => {
+test("heal - repairs the bad blocks, then checks them again", async () => {
   const { ran, run } = runner("ok");
-  assertEquals(await heal("/cfg", run, () => false), ["fix", "scrub"]);
-  assertEquals(ran, ["fix -e", "scrub -p bad"]);
+  expect(await heal("/cfg", run, () => false)).toEqual(["fix", "scrub"]);
+  expect(ran).toEqual(["fix -e", "scrub -p bad"]);
 });
 
-Deno.test("heal - no scrub after a failed fix, nor when another job started", async () => {
+test("heal - no scrub after a failed fix, nor when another job started", async () => {
   const failed = runner("error");
   await heal("/cfg", failed.run, () => false);
-  assertEquals(failed.ran, ["fix -e"]);
+  expect(failed.ran).toEqual(["fix -e"]);
 
   const notRun = runner(null);
   await heal("/cfg", notRun.run, () => false);
-  assertEquals(notRun.ran, ["fix -e"]);
+  expect(notRun.ran).toEqual(["fix -e"]);
 
   const busy = runner("ok");
   await heal("/cfg", busy.run, () => true);
-  assertEquals(busy.ran, ["fix -e"]);
+  expect(busy.ran).toEqual(["fix -e"]);
 });

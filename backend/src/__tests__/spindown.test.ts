@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { expect, test } from "bun:test";
 import type { DeviceInfo } from "@shared/types.ts";
 import { parseDiskstats, updateWatchedDisks, type WatchedDisk } from "../spindown.ts";
 
@@ -25,31 +25,31 @@ const IDLE = 30 * 60_000;
 const run = (previous: Map<string, WatchedDisk>, sda1: string, sdb: string, minutes: number) =>
   updateWatchedDisks(previous, devices, stats(sda1, sdb), at(minutes), IDLE);
 
-Deno.test("parseDiskstats - reads and writes completed by major:minor", () => {
-  assertEquals(stats("10/20", "30/40").get("8:1"), "10/20");
-  assertEquals(stats("10/20", "30/40").get("8:0"), "900/500");
+test("parseDiskstats - reads and writes completed by major:minor", () => {
+  expect(stats("10/20", "30/40").get("8:1")).toEqual("10/20");
+  expect(stats("10/20", "30/40").get("8:0")).toEqual("900/500");
 });
 
-Deno.test("updateWatchedDisks - spins a disk down once after the idle time", () => {
+test("updateWatchedDisks - spins a disk down once after the idle time", () => {
   const first = run(new Map(), "10/20", "30/40", 0);
-  assertEquals(first.idle, []);
+  expect(first.idle).toEqual([]);
 
   // The parity is written to, the data disk stays quiet
   const later = run(first.disks, "10/20", "31/40", 20);
-  assertEquals(later.idle, []);
+  expect(later.idle).toEqual([]);
 
   const idle = run(later.disks, "10/20", "31/40", 30);
-  assertEquals(idle.idle.map((disk) => disk.disk), ["d1"]);
+  expect(idle.idle.map((disk) => disk.disk)).toEqual(["d1"]);
 
   // Marked as spun down, it is not sent to sleep again every minute
   idle.disks.get("/c.conf|d1")!.spunDownAt = at(30).toISOString();
-  assertEquals(run(idle.disks, "10/20", "31/40", 31).idle, []);
+  expect(run(idle.disks, "10/20", "31/40", 31).idle).toEqual([]);
 
   // The parity reaches its idle time half an hour after its last write
-  assertEquals(run(idle.disks, "10/20", "31/40", 50).idle.map((disk) => disk.disk), ["parity"]);
+  expect(run(idle.disks, "10/20", "31/40", 50).idle.map((disk) => disk.disk)).toEqual(["parity"]);
 });
 
-Deno.test("updateWatchedDisks - activity on the partition wakes the disk, whole-disk I/O does not count", () => {
+test("updateWatchedDisks - activity on the partition wakes the disk, whole-disk I/O does not count", () => {
   const first = run(new Map(), "10/20", "30/40", 0);
   first.disks.get("/c.conf|d1")!.spunDownAt = at(0).toISOString();
 
@@ -61,14 +61,14 @@ Deno.test("updateWatchedDisks - activity on the partition wakes the disk, whole-
     at(5),
     IDLE,
   );
-  assertEquals(smart.disks.get("/c.conf|d1")?.spunDownAt, at(0).toISOString());
+  expect(smart.disks.get("/c.conf|d1")?.spunDownAt).toEqual(at(0).toISOString());
 
   const woken = run(smart.disks, "11/20", "30/40", 10);
-  assertEquals(woken.disks.get("/c.conf|d1")?.spunDownAt, undefined);
-  assertEquals(woken.disks.get("/c.conf|d1")?.lastActivity, at(10).toISOString());
+  expect(woken.disks.get("/c.conf|d1")?.spunDownAt).toEqual(undefined);
+  expect(woken.disks.get("/c.conf|d1")?.lastActivity).toEqual(at(10).toISOString());
 });
 
-Deno.test("updateWatchedDisks - disks without counters are not watched", () => {
+test("updateWatchedDisks - disks without counters are not watched", () => {
   const result = updateWatchedDisks(new Map(), devices, new Map(), at(0), IDLE);
-  assertEquals(result.disks.size, 0);
+  expect(result.disks.size).toEqual(0);
 });

@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import { expect, test } from "bun:test";
 import { type Schedule, SECRET_MASK, type SmartDiskInfo } from "@shared/types.ts";
 import {
   DEFAULT_NOTIFICATION_SETTINGS,
@@ -12,6 +12,7 @@ import { failedReport, parseRunReport } from "../run-report.ts";
 import { combineResults, scheduleSteps } from "../scheduler.ts";
 import { assessSmart, attributeLevel, smartHints } from "@shared/smart-health.ts";
 import { parseSmartOutput } from "../parsers/smart-parser.ts";
+import { readFileSync } from "node:fs";
 
 const SYNC_LOG = `summary:added:12
 summary:removed:1
@@ -32,39 +33,39 @@ const FATAL_LOG = `msg:fatal:Disk '/mnt/disk1/' with uuid 'x' not present`;
 
 const ok = { exitCode: 0 };
 
-Deno.test("parseRunReport - reads result, changes and errors from the structured log", () => {
+test("parseRunReport - reads result, changes and errors from the structured log", () => {
   const sync = parseRunReport("sync", SYNC_LOG, ok, 90);
-  assertEquals(sync.result, "ok");
-  assertEquals(sync.changes, { added: 12, removed: 1, updated: 3, moved: 3, copied: 0 });
+  expect(sync.result).toEqual("ok");
+  expect(sync.changes).toEqual({ added: 12, removed: 1, updated: 3, moved: 3, copied: 0 });
 
   const scrub = parseRunReport("scrub", SCRUB_BAD_LOG, { exitCode: 1 }, 10);
-  assertEquals([scrub.result, scrub.ioErrors, scrub.dataErrors], ["error", 1, 4]);
+  expect([scrub.result, scrub.ioErrors, scrub.dataErrors]).toEqual(["error", 1, 4]);
 
-  assertEquals(parseRunReport("sync", "", { exitCode: 1 }, 0).result, "error");
+  expect(parseRunReport("sync", "", { exitCode: 1 }, 0).result).toEqual("error");
   // A sync log without summary stopped early, touch never writes one
-  assertEquals(parseRunReport("sync", "command:sync", ok, 0).result, "incomplete");
-  assertEquals(parseRunReport("touch", "command:touch", ok, 0).result, "ok");
+  expect(parseRunReport("sync", "command:sync", ok, 0).result).toEqual("incomplete");
+  expect(parseRunReport("touch", "command:touch", ok, 0).result).toEqual("ok");
   // fix repaired everything it found
-  assertEquals(parseRunReport("fix", "summary:error_recovered:135\nsummary:exit:recovered", ok, 0).result, "ok");
-  assertEquals(parseRunReport("fix", "summary:exit:unrecoverable", { exitCode: 1 }, 0).result, "error");
-  assertEquals(parseRunReport("touch", `command:touch\n${FATAL_LOG}`, { exitCode: 1 }, 0).result, "error");
-  assertEquals(parseRunReport("sync", SYNC_LOG, { exitCode: 0, aborted: true }, 0).result, "aborted");
+  expect(parseRunReport("fix", "summary:error_recovered:135\nsummary:exit:recovered", ok, 0).result).toEqual("ok");
+  expect(parseRunReport("fix", "summary:exit:unrecoverable", { exitCode: 1 }, 0).result).toEqual("error");
+  expect(parseRunReport("touch", `command:touch\n${FATAL_LOG}`, { exitCode: 1 }, 0).result).toEqual("error");
+  expect(parseRunReport("sync", SYNC_LOG, { exitCode: 0, aborted: true }, 0).result).toEqual("aborted");
 });
 
-Deno.test("buildRunNotification - data errors win over success and failure", () => {
+test("buildRunNotification - data errors win over success and failure", () => {
   const notification = buildRunNotification("en", "Nightly", "/cfg/snapraid.conf", [
     parseRunReport("sync", SYNC_LOG, ok, 90),
     parseRunReport("scrub", SCRUB_BAD_LOG, { exitCode: 1 }, 3700),
   ]);
 
-  assertEquals(notification?.event, "data_errors");
-  assertEquals(notification?.title, "Data errors found: Nightly");
-  assertStringIncludes(notification!.message, "Sync: OK (2 min)\n  12 added, 3 updated, 1 removed, 3 moved");
-  assertStringIncludes(notification!.message, "Scrub: failed (1 h 2 min)\n  1 I/O errors, 4 data errors");
-  assertStringIncludes(notification!.message, "Config: snapraid.conf");
+  expect(notification?.event).toEqual("data_errors");
+  expect(notification?.title).toEqual("Data errors found: Nightly");
+  expect(notification!.message).toContain("Sync: OK (2 min)\n  12 added, 3 updated, 1 removed, 3 moved");
+  expect(notification!.message).toContain("Scrub: failed (1 h 2 min)\n  1 I/O errors, 4 data errors");
+  expect(notification!.message).toContain("Config: snapraid.conf");
 });
 
-Deno.test("buildRunNotification - reports failures with SnapRAID's reason and skipped steps", () => {
+test("buildRunNotification - reports failures with SnapRAID's reason and skipped steps", () => {
   const notification = buildRunNotification(
     "de",
     "Nacht",
@@ -73,29 +74,23 @@ Deno.test("buildRunNotification - reports failures with SnapRAID's reason and sk
     ["scrub"],
   );
 
-  assertEquals(notification?.event, "job_failed");
-  assertEquals(notification?.title, "Fehlgeschlagen: Nacht");
-  assertStringIncludes(notification!.message, "Disk '/mnt/disk1/' with uuid 'x' not present");
-  assertStringIncludes(notification!.message, "Scrub: nicht ausgeführt");
+  expect(notification?.event).toEqual("job_failed");
+  expect(notification?.title).toEqual("Fehlgeschlagen: Nacht");
+  expect(notification!.message).toContain("Disk '/mnt/disk1/' with uuid 'x' not present");
+  expect(notification!.message).toContain("Scrub: nicht ausgeführt");
 });
 
-Deno.test("buildRunNotification - success, commands that never started and aborted runs", () => {
-  assertEquals(
-    buildRunNotification("en", "x", "c", [parseRunReport("sync", SYNC_LOG, ok, 1)])?.event,
-    "job_succeeded",
-  );
+test("buildRunNotification - success, commands that never started and aborted runs", () => {
+  expect(buildRunNotification("en", "x", "c", [parseRunReport("sync", SYNC_LOG, ok, 1)])?.event).toEqual("job_succeeded");
 
   const failed = buildRunNotification("en", "x", "c", [failedReport("sync", "spawn failed")]);
-  assertEquals(failed?.event, "job_failed");
-  assertStringIncludes(failed!.message, "spawn failed");
+  expect(failed?.event).toEqual("job_failed");
+  expect(failed!.message).toContain("spawn failed");
 
-  assertEquals(
-    buildRunNotification("en", "x", "c", [parseRunReport("sync", SYNC_LOG, { exitCode: 0, aborted: true }, 1)]),
-    null,
-  );
+  expect(buildRunNotification("en", "x", "c", [parseRunReport("sync", SYNC_LOG, { exitCode: 0, aborted: true }, 1)])).toEqual(null);
 });
 
-Deno.test("buildSkipNotification - explains the sync guard", () => {
+test("buildSkipNotification - explains the sync guard", () => {
   const notification = buildSkipNotification("en", "Nightly", "/cfg/snapraid.conf", {
     timestamp: "",
     result: "skipped",
@@ -104,11 +99,11 @@ Deno.test("buildSkipNotification - explains the sync guard", () => {
     limit: 50,
   });
 
-  assertEquals(notification.event, "schedule_skipped");
-  assertStringIncludes(notification.message, "812 deleted files, more than the limit of 50");
+  expect(notification.event).toEqual("schedule_skipped");
+  expect(notification.message).toContain("812 deleted files, more than the limit of 50");
 });
 
-Deno.test("buildSkipNotification - warns about mass changes, as ransomware leaves them", () => {
+test("buildSkipNotification - warns about mass changes, as ransomware leaves them", () => {
   const notification = buildSkipNotification("en", "Nightly", "/cfg/snapraid.conf", {
     timestamp: "",
     result: "skipped",
@@ -117,11 +112,11 @@ Deno.test("buildSkipNotification - warns about mass changes, as ransomware leave
     limit: 100,
   });
 
-  assertStringIncludes(notification.message, "4210 changed files, more than the limit of 100");
-  assertStringIncludes(notification.message, "ransomware");
+  expect(notification.message).toContain("4210 changed files, more than the limit of 100");
+  expect(notification.message).toContain("ransomware");
 });
 
-Deno.test("buildSkipNotification - names the missing disks", () => {
+test("buildSkipNotification - names the missing disks", () => {
   const notification = buildSkipNotification("de", "Nightly", "/cfg/snapraid.conf", {
     timestamp: "",
     result: "skipped",
@@ -129,7 +124,7 @@ Deno.test("buildSkipNotification - names the missing disks", () => {
     disks: ["d2", "2-parity"],
   });
 
-  assertStringIncludes(notification.message, "Platte d2, 2-parity fehlt oder ist leer");
+  expect(notification.message).toContain("Platte d2, 2-parity fehlt oder ist leer");
 });
 
 const disk = (overrides: Partial<SmartDiskInfo>): SmartDiskInfo => ({
@@ -141,32 +136,32 @@ const disk = (overrides: Partial<SmartDiskInfo>): SmartDiskInfo => ({
   ...overrides,
 });
 
-Deno.test("diffSmartProblems - reports a disk once per problem and forgets it when healthy", () => {
+test("diffSmartProblems - reports a disk once per problem and forgets it when healthy", () => {
   const cfg = "/cfg/a.conf";
   const failing = disk({ status: "PREFAIL", failureProbability: 40 });
 
   const first = diffSmartProblems(cfg, [failing, disk({ name: "d2", serial: "S2" })], 25, {});
-  assertEquals(first.report.map((r) => r.disk.name), ["d1"]);
+  expect(first.report.map((r) => r.disk.name)).toEqual(["d1"]);
 
   const again = diffSmartProblems(cfg, [failing], 25, first.state);
-  assertEquals(again.report, []);
+  expect(again.report).toEqual([]);
 
   const worse = diffSmartProblems(cfg, [{ ...failing, status: "FAIL" }], 25, again.state);
-  assertEquals(worse.report.map((r) => r.disk.status), ["FAIL"]);
+  expect(worse.report.map((r) => r.disk.status)).toEqual(["FAIL"]);
 
   const healthy = diffSmartProblems(cfg, [disk({})], 25, worse.state);
-  assertEquals(healthy.state, {});
+  expect(healthy.state).toEqual({});
 });
 
-Deno.test("diffDegradedDisks - reports a degraded filesystem once, again after it was repaired", () => {
+test("diffDegradedDisks - reports a degraded filesystem once, again after it was repaired", () => {
   const cfg = "/cfg/a.conf";
   const first = diffDegradedDisks(cfg, ["d2"], { "/cfg/b.conf|degraded|d2": "degraded" });
-  assertEquals(first.report, ["d2"]);
-  assertEquals(first.state, { "/cfg/a.conf|degraded|d2": "degraded" });
-  assertEquals(diffDegradedDisks(cfg, ["d2"], first.state).report, []);
+  expect(first.report).toEqual(["d2"]);
+  expect(first.state).toEqual({ "/cfg/a.conf|degraded|d2": "degraded" });
+  expect(diffDegradedDisks(cfg, ["d2"], first.state).report).toEqual([]);
   const repaired = diffDegradedDisks(cfg, [], first.state);
-  assertEquals(repaired.state, {});
-  assertEquals(diffDegradedDisks(cfg, ["d2"], repaired.state).report, ["d2"]);
+  expect(repaired.state).toEqual({});
+  expect(diffDegradedDisks(cfg, ["d2"], repaired.state).report).toEqual(["d2"]);
 });
 
 const sectors = (reallocated: number) =>
@@ -176,24 +171,24 @@ const sectors = (reallocated: number) =>
     ],
   });
 
-Deno.test("diffSmartProblems - a growing sector count is reported again, a drifting temperature is not", () => {
+test("diffSmartProblems - a growing sector count is reported again, a drifting temperature is not", () => {
   const cfg = "/cfg/a.conf";
   const first = diffSmartProblems(cfg, [sectors(8)], 25, {});
-  assertEquals(first.report[0].assessment.reasons, [{ kind: "sectors", attribute: "reallocated", count: 8 }]);
-  assertEquals(diffSmartProblems(cfg, [sectors(8)], 25, first.state).report, []);
-  assertEquals(diffSmartProblems(cfg, [sectors(16)], 25, first.state).report.length, 1);
+  expect(first.report[0].assessment.reasons).toEqual([{ kind: "sectors", attribute: "reallocated", count: 8 }]);
+  expect(diffSmartProblems(cfg, [sectors(8)], 25, first.state).report).toEqual([]);
+  expect(diffSmartProblems(cfg, [sectors(16)], 25, first.state).report.length).toEqual(1);
 
   const hot = diffSmartProblems(cfg, [disk({ temperature: 52 })], 25, {});
-  assertEquals(diffSmartProblems(cfg, [disk({ temperature: 54 })], 25, hot.state).report, []);
+  expect(diffSmartProblems(cfg, [disk({ temperature: 54 })], 25, hot.state).report).toEqual([]);
 });
 
-Deno.test("diffSmartProblems - keeps the state of other configs", () => {
+test("diffSmartProblems - keeps the state of other configs", () => {
   const other = { "/cfg/b.conf|d1|S1": "FAIL|true" };
   const { state } = diffSmartProblems("/cfg/a.conf", [], 25, other);
-  assertEquals(state, other);
+  expect(state).toEqual(other);
 });
 
-Deno.test("secrets - masked on the way out, kept when the mask comes back", () => {
+test("secrets - masked on the way out, kept when the mask comes back", () => {
   const stored = {
     ...DEFAULT_NOTIFICATION_SETTINGS,
     email: { ...DEFAULT_NOTIFICATION_SETTINGS.email, password: "hunter2" },
@@ -201,25 +196,25 @@ Deno.test("secrets - masked on the way out, kept when the mask comes back", () =
   };
 
   const masked = maskSecrets(stored);
-  assertEquals([masked.email.password, masked.ntfy.token], [SECRET_MASK, SECRET_MASK]);
+  expect([masked.email.password, masked.ntfy.token]).toEqual([SECRET_MASK, SECRET_MASK]);
 
   const resolved = resolveSecrets(masked, stored);
-  assertEquals([resolved.email.password, resolved.ntfy.token], ["hunter2", "tk_1"]);
+  expect([resolved.email.password, resolved.ntfy.token]).toEqual(["hunter2", "tk_1"]);
 
   const cleared = resolveSecrets({ ...masked, ntfy: { ...masked.ntfy, token: "" } }, stored);
-  assertEquals(cleared.ntfy.token, "");
+  expect(cleared.ntfy.token).toEqual("");
 });
 
-Deno.test("validateNotificationSettings - enabled channels need their fields", () => {
-  assertEquals(validateNotificationSettings(DEFAULT_NOTIFICATION_SETTINGS), null);
-  assert(validateNotificationSettings({
+test("validateNotificationSettings - enabled channels need their fields", () => {
+  expect(validateNotificationSettings(DEFAULT_NOTIFICATION_SETTINGS)).toEqual(null);
+  expect(validateNotificationSettings({
     ...DEFAULT_NOTIFICATION_SETTINGS,
     ntfy: { ...DEFAULT_NOTIFICATION_SETTINGS.ntfy, enabled: true },
-  }));
-  assert(validateNotificationSettings({
+  })).toBeTruthy();
+  expect(validateNotificationSettings({
     ...DEFAULT_NOTIFICATION_SETTINGS,
     webhook: { enabled: true, url: "ftp://x" },
-  }));
+  })).toBeTruthy();
 });
 
 const schedule = (overrides: Partial<Schedule>): Schedule => ({
@@ -234,73 +229,67 @@ const schedule = (overrides: Partial<Schedule>): Schedule => ({
   ...overrides,
 });
 
-Deno.test("scheduleSteps - touch before and scrub after a sync", () => {
-  assertEquals(
-    scheduleSteps(schedule({ touchBefore: true, scrubAfter: ["-p", "8", "-o", "10"] })),
-    [
+test("scheduleSteps - touch before and scrub after a sync", () => {
+  expect(scheduleSteps(schedule({ touchBefore: true, scrubAfter: ["-p", "8", "-o", "10"] }))).toEqual([
       { command: "touch", args: [] },
       { command: "sync", args: [] },
       { command: "scrub", args: ["-p", "8", "-o", "10"] },
-    ],
-  );
+    ]);
   // Only sync schedules chain commands
-  assertEquals(
-    scheduleSteps(schedule({ command: "scrub", args: ["-p", "new"], touchBefore: true, scrubAfter: [] })),
-    [{ command: "scrub", args: ["-p", "new"] }],
-  );
-  assertEquals(scheduleSteps(schedule({ scrubAfter: null })).length, 1);
+  expect(scheduleSteps(schedule({ command: "scrub", args: ["-p", "new"], touchBefore: true, scrubAfter: [] }))).toEqual([{ command: "scrub", args: ["-p", "new"] }]);
+  expect(scheduleSteps(schedule({ scrubAfter: null })).length).toEqual(1);
 });
 
-Deno.test("combineResults - first failure, otherwise the worst of ok and warning", () => {
-  assertEquals(combineResults(["ok", "ok"]), "ok");
-  assertEquals(combineResults(["ok", "warning", "ok"]), "warning");
-  assertEquals(combineResults(["warning", "error"]), "error");
-  assertEquals(combineResults(["ok", "aborted"]), "aborted");
+test("combineResults - first failure, otherwise the worst of ok and warning", () => {
+  expect(combineResults(["ok", "ok"])).toEqual("ok");
+  expect(combineResults(["ok", "warning", "ok"])).toEqual("warning");
+  expect(combineResults(["warning", "error"])).toEqual("error");
+  expect(combineResults(["ok", "aborted"])).toEqual("aborted");
 });
 
-Deno.test("assessSmart - a few percent failure probability is normal, sectors and status are not", () => {
-  const disks = parseSmartOutput(Deno.readTextFileSync(new URL("../parsers/__tests__/fixtures/smart.log", import.meta.url)));
+test("assessSmart - a few percent failure probability is normal, sectors and status are not", () => {
+  const disks = parseSmartOutput(readFileSync(new URL("../parsers/__tests__/fixtures/smart.log", import.meta.url), "utf8"));
   const byName = Object.fromEntries(disks.map((d) => [d.name, assessSmart(d)]));
 
   // 4.46% per year, no errors
-  assertEquals(byName.d1, { level: "ok", reasons: [] });
+  expect(byName.d1).toEqual({ level: "ok", reasons: [] });
   // Failing prefail attribute, 1024 reallocated sectors and 40.5% per year
-  assertEquals(byName.d2.level, "critical");
-  assertEquals(byName.d2.reasons, [
+  expect(byName.d2.level).toEqual("critical");
+  expect(byName.d2.reasons).toEqual([
     { kind: "status", status: "FAIL" },
     { kind: "sectors", attribute: "reallocated", count: 1024 },
     { kind: "errors", attribute: "crc", count: 12 },
     { kind: "failure_probability", percent: 40.55 },
   ]);
   // Error log entries only, NVMe error log entries alone are no problem
-  assertEquals(byName.parity, { level: "warning", reasons: [{ kind: "status", status: "LOGERR" }] });
+  expect(byName.parity).toEqual({ level: "warning", reasons: [{ kind: "status", status: "LOGERR" }] });
   // smartctl could not open it, so it is not monitored
-  assertEquals(byName.d3, { level: "warning", reasons: [{ kind: "unreadable" }] });
+  expect(byName.d3).toEqual({ level: "warning", reasons: [{ kind: "unreadable" }] });
 
-  assertEquals(smartHints([byName.d2]), ["replace", "cable"]);
-  assertEquals(smartHints([byName.d3]), ["access"]);
+  expect(smartHints([byName.d2])).toEqual(["replace", "cable"]);
+  expect(smartHints([byName.d3])).toEqual(["access"]);
 });
 
-Deno.test("assessSmart - a sleeping disk is not unreadable, worn SSDs and media errors are problems", () => {
-  assertEquals(assessSmart(disk({ status: "UNKNOWN", standby: true })).level, "ok");
-  assertEquals(assessSmart(disk({ wearLevel: 79 })).level, "ok");
-  assertEquals(assessSmart(disk({ wearLevel: 85 })).reasons, [{ kind: "wear", percent: 85 }]);
-  assertEquals(assessSmart(disk({ wearLevel: 104 })).level, "critical");
-  assertEquals(assessSmart(disk({ errorMedium: 2, errorProtocol: 500 })).reasons, [
+test("assessSmart - a sleeping disk is not unreadable, worn SSDs and media errors are problems", () => {
+  expect(assessSmart(disk({ status: "UNKNOWN", standby: true })).level).toEqual("ok");
+  expect(assessSmart(disk({ wearLevel: 79 })).level).toEqual("ok");
+  expect(assessSmart(disk({ wearLevel: 85 })).reasons).toEqual([{ kind: "wear", percent: 85 }]);
+  expect(assessSmart(disk({ wearLevel: 104 })).level).toEqual("critical");
+  expect(assessSmart(disk({ errorMedium: 2, errorProtocol: 500 })).reasons).toEqual([
     { kind: "errors", attribute: "medium", count: 2 },
   ]);
 });
 
-Deno.test("attributeLevel - failed and watched attributes stand out", () => {
+test("attributeLevel - failed and watched attributes stand out", () => {
   const attribute = { id: 1, name: "Raw_Read_Error_Rate", value: 100, worst: 100, threshold: 6, raw: "123456", flag: "" };
-  assertEquals(attributeLevel(attribute), "ok");
-  assertEquals(attributeLevel({ ...attribute, whenFailed: "past" }), "warning");
-  assertEquals(attributeLevel({ ...attribute, whenFailed: "now" }), "critical");
-  assertEquals(attributeLevel({ ...attribute, id: 197, raw: "8" }), "warning");
-  assertEquals(attributeLevel({ ...attribute, id: 197, raw: "0" }), "ok");
+  expect(attributeLevel(attribute)).toEqual("ok");
+  expect(attributeLevel({ ...attribute, whenFailed: "past" })).toEqual("warning");
+  expect(attributeLevel({ ...attribute, whenFailed: "now" })).toEqual("critical");
+  expect(attributeLevel({ ...attribute, id: 197, raw: "8" })).toEqual("warning");
+  expect(attributeLevel({ ...attribute, id: 197, raw: "0" })).toEqual("ok");
 });
 
-Deno.test("heartbeat - pinged after a successful scheduled run only", async () => {
+test("heartbeat - pinged after a successful scheduled run only", async () => {
   const settings = { ...DEFAULT_NOTIFICATION_SETTINGS, heartbeat: { enabled: true, url: "http://hc/ping" } };
   let pings = 0;
   const run = (reports: Parameters<typeof heartbeatAfterRun>[0], notRun: string[] = [], enabled = true) =>
@@ -316,35 +305,38 @@ Deno.test("heartbeat - pinged after a successful scheduled run only", async () =
   const ok = parseRunReport("sync", SYNC_LOG, { exitCode: 0 }, 1);
 
   await run([ok]);
-  assertEquals(pings, 1);
+  expect(pings).toEqual(1);
   await run([ok, failedReport("scrub", "boom")]);
   await run([ok], ["scrub"]);
   await run([]);
   await run([ok], [], false);
-  assertEquals(pings, 1);
+  expect(pings).toEqual(1);
 });
 
-Deno.test("heartbeat - a plain GET, an error status is a failed ping", async () => {
+test("heartbeat - a plain GET, an error status is a failed ping", async () => {
   const requests: string[] = [];
-  const server = Deno.serve({ port: 0, onListen: () => {} }, (request) => {
-    requests.push(`${request.method} ${new URL(request.url).pathname}`);
-    return new Response(null, { status: new URL(request.url).pathname === "/down" ? 404 : 200 });
+  const server = Bun.serve({
+    port: 0,
+    fetch: (request) => {
+      requests.push(`${request.method} ${new URL(request.url).pathname}`);
+      return new Response(null, { status: new URL(request.url).pathname === "/down" ? 404 : 200 });
+    },
   });
-  const url = (path: string) => `http://127.0.0.1:${server.addr.port}${path}`;
+  const url = (path: string) => `http://127.0.0.1:${server.port}${path}`;
   try {
     await pingHeartbeat({ ...DEFAULT_NOTIFICATION_SETTINGS, heartbeat: { enabled: true, url: url("/ping/abc") } });
     let failed = false;
     await pingHeartbeat({ ...DEFAULT_NOTIFICATION_SETTINGS, heartbeat: { enabled: true, url: url("/down") } })
       .catch(() => (failed = true));
-    assertEquals(requests, ["GET /ping/abc", "GET /down"]);
-    assert(failed);
+    expect(requests).toEqual(["GET /ping/abc", "GET /down"]);
+    expect(failed).toBeTruthy();
   } finally {
-    await server.shutdown();
+    await server.stop();
   }
 });
 
-Deno.test("validateNotificationSettings - the heartbeat needs an http(s) URL", () => {
+test("validateNotificationSettings - the heartbeat needs an http(s) URL", () => {
   const heartbeat = (url: string) => ({ ...DEFAULT_NOTIFICATION_SETTINGS, heartbeat: { enabled: true, url } });
-  assertEquals(typeof validateNotificationSettings(heartbeat("hc-ping.com/abc")), "string");
-  assertEquals(validateNotificationSettings(heartbeat("https://hc-ping.com/abc")), null);
+  expect(typeof validateNotificationSettings(heartbeat("hc-ping.com/abc"))).toEqual("string");
+  expect(validateNotificationSettings(heartbeat("https://hc-ping.com/abc"))).toEqual(null);
 });

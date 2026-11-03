@@ -1,4 +1,5 @@
-import { assertEquals, assertThrows } from "@std/assert";
+import { expect, test } from "bun:test";
+import { assertThrows } from "./assert-error.ts";
 import { BackupError, planRestore } from "../backup.ts";
 
 const configJson = JSON.stringify({
@@ -10,7 +11,7 @@ const configJson = JSON.stringify({
   ],
 });
 
-Deno.test("planRestore - writes settings and configs inside the data folder", () => {
+test("planRestore - writes settings and configs inside the data folder", () => {
   const { write, skipped } = planRestore({
     app: "snapraid-ui",
     version: 1,
@@ -27,11 +28,11 @@ Deno.test("planRestore - writes settings and configs inside the data folder", ()
     },
   });
 
-  assertEquals(Object.keys(write).sort(), ["config.json", "schedules.json", "snapraid.conf"]);
-  assertEquals(skipped.sort(), ["../outside.conf", "/etc/snapraid.conf", "logs/sync.log", "notifications.json", "other.conf"]);
+  expect(Object.keys(write).sort()).toEqual(["config.json", "schedules.json", "snapraid.conf"]);
+  expect(skipped.sort()).toEqual(["../outside.conf", "/etc/snapraid.conf", "logs/sync.log", "notifications.json", "other.conf"]);
 });
 
-Deno.test("planRestore - rejects other files", () => {
+test("planRestore - rejects other files", () => {
   assertThrows(() => planRestore({ hello: "world" }), BackupError);
   assertThrows(() => planRestore(null), BackupError);
 });

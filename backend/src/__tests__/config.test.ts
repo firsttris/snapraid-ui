@@ -1,23 +1,23 @@
-import { assertEquals } from "@std/assert";
-import { join } from "@std/path";
+import { expect, test } from "bun:test";
+import { join } from "node:path";
 import { BASE_PATH, resolveFromBase, toStoredPath } from "../config.ts";
 
-Deno.test("resolveFromBase - relative paths are resolved against BASE_PATH", () => {
-  assertEquals(resolveFromBase("snapraid.conf"), join(BASE_PATH, "snapraid.conf"));
-  assertEquals(resolveFromBase("configs/media.conf"), join(BASE_PATH, "configs", "media.conf"));
+test("resolveFromBase - relative paths are resolved against BASE_PATH", () => {
+  expect(resolveFromBase("snapraid.conf")).toEqual(join(BASE_PATH, "snapraid.conf"));
+  expect(resolveFromBase("configs/media.conf")).toEqual(join(BASE_PATH, "configs", "media.conf"));
 });
 
-Deno.test("resolveFromBase - absolute paths are kept as is", () => {
-  assertEquals(resolveFromBase("/mnt/parity/snapraid-media.conf"), "/mnt/parity/snapraid-media.conf");
+test("resolveFromBase - absolute paths are kept as is", () => {
+  expect(resolveFromBase("/mnt/parity/snapraid-media.conf")).toEqual("/mnt/parity/snapraid-media.conf");
 });
 
-Deno.test("toStoredPath - files inside BASE_PATH are stored relative", () => {
-  assertEquals(toStoredPath(join(BASE_PATH, "snapraid.conf")), "snapraid.conf");
-  assertEquals(toStoredPath(join(BASE_PATH, "configs", "media.conf")), join("configs", "media.conf"));
-  assertEquals(toStoredPath("snapraid.conf"), "snapraid.conf");
+test("toStoredPath - files inside BASE_PATH are stored relative", () => {
+  expect(toStoredPath(join(BASE_PATH, "snapraid.conf"))).toEqual("snapraid.conf");
+  expect(toStoredPath(join(BASE_PATH, "configs", "media.conf"))).toEqual(join("configs", "media.conf"));
+  expect(toStoredPath("snapraid.conf")).toEqual("snapraid.conf");
 });
 
-Deno.test("toStoredPath - files outside BASE_PATH are stored absolute", () => {
-  assertEquals(toStoredPath("/etc/snapraid.conf"), "/etc/snapraid.conf");
-  assertEquals(toStoredPath("../outside.conf"), resolveFromBase("../outside.conf"));
+test("toStoredPath - files outside BASE_PATH are stored absolute", () => {
+  expect(toStoredPath("/etc/snapraid.conf")).toEqual("/etc/snapraid.conf");
+  expect(toStoredPath("../outside.conf")).toEqual(resolveFromBase("../outside.conf"));
 });

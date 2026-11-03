@@ -1,29 +1,32 @@
-import { assertEquals } from "@std/assert";
-import { join, toFileUrl } from "@std/path";
+import { expect, test } from "bun:test";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { isBackendPath, loadFrontend } from "../frontend.ts";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 
-Deno.test("frontend - backend paths stay with the backend", () => {
-  for (const path of ["/api", "/api/config", "/ws", "/ws/"]) assertEquals(isBackendPath(path), true, path);
-  for (const path of ["/", "/logs", "/apidocs", "/wsx", "/assets/api.js"]) assertEquals(isBackendPath(path), false, path);
+test("frontend - backend paths stay with the backend", () => {
+  for (const path of ["/api", "/api/config", "/ws", "/ws/"]) expect(isBackendPath(path), path).toEqual(true);
+  for (const path of ["/", "/logs", "/apidocs", "/wsx", "/assets/api.js"]) expect(isBackendPath(path), path).toEqual(false);
 });
 
-Deno.test("frontend - not built", async () => {
-  const dir = await Deno.makeTempDir();
+test("frontend - not built", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "snapraid-test-"));
   try {
-    assertEquals(await loadFrontend(toFileUrl(join(dir, "index.mjs"))), null);
+    expect(await loadFrontend(pathToFileURL(join(dir, "index.mjs")))).toEqual(null);
   } finally {
-    await Deno.remove(dir, { recursive: true });
+    await rm(dir, { recursive: true });
   }
 });
 
-Deno.test("frontend - loads the fetch handler of the build", async () => {
-  const dir = await Deno.makeTempDir();
+test("frontend - loads the fetch handler of the build", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "snapraid-test-"));
   try {
     const entry = join(dir, "index.mjs");
-    await Deno.writeTextFile(entry, 'export default { fetch: (req) => new Response("ui " + new URL(req.url).pathname) };');
-    const handler = await loadFrontend(toFileUrl(entry));
-    assertEquals(await (await handler!(new Request("http://localhost/logs"))).text(), "ui /logs");
+    await writeFile(entry, 'export default { fetch: (req) => new Response("ui " + new URL(req.url).pathname) };');
+    const handler = await loadFrontend(pathToFileURL(entry));
+    expect(await (await handler!(new Request("http://localhost/logs"))).text()).toEqual("ui /logs");
   } finally {
-    await Deno.remove(dir, { recursive: true });
+    await rm(dir, { recursive: true });
   }
 });

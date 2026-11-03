@@ -1,7 +1,9 @@
-import { assertEquals } from "@std/assert";
-import { join } from "@std/path";
+import { expect, test } from "bun:test";
+import { join } from "node:path";
 import type { DiffReport } from "@shared/types.ts";
 import { changedPaths, deleteDuplicates, insideDisk, markGone } from "../duplicates.ts";
+import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 
 const diff = (files: DiffReport["files"]): DiffReport => ({
   files,
@@ -17,33 +19,30 @@ const diff = (files: DiffReport["files"]): DiffReport => ({
   rawOutput: "",
 });
 
-Deno.test("changedPaths - every path the diff reports, both sides of a move", () => {
-  assertEquals(
-    changedPaths(diff([
+test("changedPaths - every path the diff reports, both sides of a move", () => {
+  expect(changedPaths(diff([
       { status: "updated", disk: "d1", name: "a/changed.mkv" },
       { status: "moved", disk: "d2", name: "old/b.mkv -> new/b.mkv" },
       { status: "added", disk: "d1", name: "/c.txt" },
-    ])),
-    new Set(["a/changed.mkv", "old/b.mkv", "new/b.mkv", "c.txt"]),
-  );
+    ]))).toEqual(new Set(["a/changed.mkv", "old/b.mkv", "new/b.mkv", "c.txt"]));
 });
 
-Deno.test("insideDisk - paths stay on their disk", () => {
-  assertEquals(insideDisk("/mnt/d1/", "movies/a.mkv"), "/mnt/d1/movies/a.mkv");
-  assertEquals(insideDisk("/mnt/d1", "/movies/a.mkv"), "/mnt/d1/movies/a.mkv");
-  assertEquals(insideDisk("/mnt/d1", "../d2/a.mkv"), null);
-  assertEquals(insideDisk("/mnt/d1", "movies/../../etc/passwd"), null);
-  assertEquals(insideDisk("/mnt/d1", ""), null);
+test("insideDisk - paths stay on their disk", () => {
+  expect(insideDisk("/mnt/d1/", "movies/a.mkv")).toEqual("/mnt/d1/movies/a.mkv");
+  expect(insideDisk("/mnt/d1", "/movies/a.mkv")).toEqual("/mnt/d1/movies/a.mkv");
+  expect(insideDisk("/mnt/d1", "../d2/a.mkv")).toEqual(null);
+  expect(insideDisk("/mnt/d1", "movies/../../etc/passwd")).toEqual(null);
+  expect(insideDisk("/mnt/d1", "")).toEqual(null);
 });
 
-Deno.test("deleteDuplicates - deletes safe copies, skips the rest with a reason", async () => {
-  const base = await Deno.makeTempDir();
+test("deleteDuplicates - deletes safe copies, skips the rest with a reason", async () => {
+  const base = await mkdtemp(join(tmpdir(), "snapraid-test-"));
   const d1 = join(base, "d1");
   const d2 = join(base, "d2");
   try {
-    await Deno.mkdir(join(d1, "movies"), { recursive: true });
-    await Deno.mkdir(join(d2, "backup"), { recursive: true });
-    const write = (path: string, text: string) => Deno.writeTextFile(path, text);
+    await mkdir(join(d1, "movies"), { recursive: true });
+    await mkdir(join(d2, "backup"), { recursive: true });
+    const write = (path: string, text: string) => writeFile(path, text);
     await write(join(d1, "movies", "a.mkv"), "aaaa");
     await write(join(d2, "backup", "a.mkv"), "aaaa");
     await write(join(d1, "movies", "b.mkv"), "bbbb");
@@ -69,8 +68,8 @@ Deno.test("deleteDuplicates - deletes safe copies, skips the rest with a reason"
       { dataDisks: { d1: `${d1}/`, d2 }, changed: new Set(["movies/c.mkv"]) },
     );
 
-    assertEquals(result.deleted.map((file) => file.path), ["backup/a.mkv"]);
-    assertEquals(result.skipped.map(({ path, reason }) => [path, reason]), [
+    expect(result.deleted.map((file) => file.path)).toEqual(["backup/a.mkv"]);
+    expect(result.skipped.map(({ path, reason }) => [path, reason])).toEqual([
       ["backup/b.mkv", "size_differs"],
       ["backup/c.mkv", "changed_since_sync"],
       ["backup/gone.mkv", "missing"],
@@ -81,18 +80,18 @@ Deno.test("deleteDuplicates - deletes safe copies, skips the rest with a reason"
     ]);
     // The copies that stay are all there
     for (const path of ["movies/a.mkv", "movies/b.mkv", "movies/c.mkv", "movies/e.mkv"]) {
-      assertEquals((await Deno.stat(join(d1, path))).isFile, true);
+      expect((await stat(join(d1, path))).isFile()).toEqual(true);
     }
-    assertEquals(await Deno.stat(join(d2, "backup", "a.mkv")).catch(() => null), null);
+    expect(await stat(join(d2, "backup", "a.mkv")).catch(() => null)).toEqual(null);
   } finally {
-    await Deno.remove(base, { recursive: true });
+    await rm(base, { recursive: true });
   }
 });
 
-Deno.test("markGone - copies no longer on their disk are marked, unknown disks stay", async () => {
-  const d1 = await Deno.makeTempDir();
+test("markGone - copies no longer on their disk are marked, unknown disks stay", async () => {
+  const d1 = await mkdtemp(join(tmpdir(), "snapraid-test-"));
   try {
-    await Deno.writeTextFile(join(d1, "a.mkv"), "aaaa");
+    await writeFile(join(d1, "a.mkv"), "aaaa");
     const dup = (name: string, originalName: string, disk = "d1") => ({
       disk,
       name,
@@ -110,12 +109,12 @@ Deno.test("markGone - copies no longer on their disk are marked, unknown disks s
       },
       { d1 },
     );
-    assertEquals(result.duplicates, [
+    expect(result.duplicates).toEqual([
       { ...dup("gone.mkv", "a.mkv"), gone: true },
       { ...dup("a.mkv", "deleted.mkv"), originalGone: true },
       dup("x.mkv", "a.mkv", "d9"),
     ]);
   } finally {
-    await Deno.remove(d1, { recursive: true });
+    await rm(d1, { recursive: true });
   }
 });

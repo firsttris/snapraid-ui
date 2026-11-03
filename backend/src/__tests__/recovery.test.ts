@@ -1,28 +1,25 @@
-import { assertEquals } from "@std/assert";
+import { expect, test } from "bun:test";
 import type { RunResult, SnapRaidCommand } from "@shared/types.ts";
 import type { JobOutcome } from "../engine/engine.ts";
 import { exactFilter, restoreFiles, restoreRuns } from "../recovery.ts";
 
-Deno.test("exactFilter - anchored at the disk root, wildcards taken literally", () => {
-  assertEquals(exactFilter("photos/2024/holiday.jpg"), "/photos/2024/holiday.jpg");
-  assertEquals(exactFilter("/already/rooted.txt"), "/already/rooted.txt");
-  assertEquals(exactFilter("x[1] *.bin"), "/x[[]1] [*].bin");
-  assertEquals(exactFilter("what?.txt"), "/what[?].txt");
+test("exactFilter - anchored at the disk root, wildcards taken literally", () => {
+  expect(exactFilter("photos/2024/holiday.jpg")).toEqual("/photos/2024/holiday.jpg");
+  expect(exactFilter("/already/rooted.txt")).toEqual("/already/rooted.txt");
+  expect(exactFilter("x[1] *.bin")).toEqual("/x[[]1] [*].bin");
+  expect(exactFilter("what?.txt")).toEqual("/what[?].txt");
 });
 
-Deno.test("restoreRuns - one fix per disk, each path once", () => {
-  assertEquals(
-    restoreRuns([
+test("restoreRuns - one fix per disk, each path once", () => {
+  expect(restoreRuns([
       { disk: "d1", path: "a.jpg" },
       { disk: "d2", path: "movies/b.mkv" },
       { disk: "d1", path: "docs/c.pdf" },
       { disk: "d1", path: "a.jpg" },
-    ]),
-    [
+    ])).toEqual([
       ["-d", "d1", "-f", "/a.jpg", "-f", "/docs/c.pdf"],
       ["-d", "d2", "-f", "/movies/b.mkv"],
-    ],
-  );
+    ]);
 });
 
 const outcome = (command: SnapRaidCommand, result: RunResult): JobOutcome => ({
@@ -30,7 +27,7 @@ const outcome = (command: SnapRaidCommand, result: RunResult): JobOutcome => ({
   report: { command, result, durationSec: 0, ioErrors: 0, dataErrors: 0, log: "" },
 });
 
-Deno.test("restoreFiles - stops after a failed fix and when another job started", async () => {
+test("restoreFiles - stops after a failed fix and when another job started", async () => {
   const files = [{ disk: "d1", path: "a" }, { disk: "d2", path: "b" }, { disk: "d3", path: "c" }];
   const runner = (results: RunResult[]) => {
     const ran: string[] = [];
@@ -44,14 +41,14 @@ Deno.test("restoreFiles - stops after a failed fix and when another job started"
   };
 
   const all = runner(["ok", "ok", "ok"]);
-  assertEquals(await restoreFiles(files, all.run, () => false), 3);
-  assertEquals(all.ran, ["d1", "d2", "d3"]);
+  expect(await restoreFiles(files, all.run, () => false)).toEqual(3);
+  expect(all.ran).toEqual(["d1", "d2", "d3"]);
 
   const failed = runner(["ok", "error"]);
-  assertEquals(await restoreFiles(files, failed.run, () => false), 1);
-  assertEquals(failed.ran, ["d1", "d2"]);
+  expect(await restoreFiles(files, failed.run, () => false)).toEqual(1);
+  expect(failed.ran).toEqual(["d1", "d2"]);
 
   const busy = runner([]);
-  assertEquals(await restoreFiles(files, busy.run, () => true), 1);
-  assertEquals(busy.ran, ["d1"]);
+  expect(await restoreFiles(files, busy.run, () => true)).toEqual(1);
+  expect(busy.ran).toEqual(["d1"]);
 });
