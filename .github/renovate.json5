@@ -75,7 +75,7 @@
       groupName: "Bun",
       sourceUrl: "https://github.com/oven-sh/bun",
       prBodyNotes: [
-        "The image (`oven/bun:<version>-slim` in docker/Dockerfile, the backend runs on it) and `packageManager` in `backend/package.json`, `frontend/package.json` and `e2e/package.json` (CI's `bun-version-file`, which also builds the standalone binary, and the screenshots job's `npm install bun@…`) move together. Bun runs the backend and its tests, installs, runs Vite and Vitest (`bun --bun`) and compiles the binary; Playwright's test runner still runs on Node. Check the backend and frontend jobs and the end-to-end tests against the local build, the image and the binary.",
+        "The image (`oven/bun:<version>-slim` in docker/Dockerfile, the backend runs on it) and `packageManager` in `backend/package.json`, `frontend/package.json` and `e2e/package.json` (CI's `bun-version-file`, which also builds the standalone binary, and the screenshots job's `npm install bun@…`) move together. Bun runs the backend and its tests, installs, runs Vite and Vitest (`bun --bun`) and compiles the binary, and runs Playwright's test runner (`bun --bun playwright test`). Check the backend and frontend jobs and the end-to-end tests against the local build, the image and the binary.",
       ],
       schedule: ["at any time"],
       automerge: false,

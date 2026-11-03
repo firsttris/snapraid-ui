@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "setup": "bash scripts/setup-tools.sh",
-    "test": "playwright test",
+    "test": "bun --bun playwright test",
     "test:image": "bash scripts/image-test.sh",
     "typecheck": "tsc -p .",
-    "screenshots": "playwright test -c playwright.screenshots.config.ts"
+    "screenshots": "bun --bun playwright test -c playwright.screenshots.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",
