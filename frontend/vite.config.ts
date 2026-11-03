@@ -26,7 +26,8 @@ const config = defineConfig({
     devtools(),
     nitro({
       // One fetch handler (.output/server/index.mjs) that the backend runs, no server of its own;
-      // it serves the static files too and bundles every dependency, Deno has no node_modules here
+      // it serves the static files too and bundles every dependency, the image and the binary
+      // carry no node_modules of the frontend
       preset: 'standard',
       serveStatic: true,
       noExternals: true,

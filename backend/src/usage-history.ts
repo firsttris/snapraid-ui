@@ -1,7 +1,8 @@
-import { existsSync } from "@std/fs";
+import { existsSync } from "./fs.ts";
 import type { SnapRaidStatus, UsagePoint } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
 import { writeTextFileAtomic } from "./atomic-write.ts";
+import { readFile } from "node:fs/promises";
 
 const STATE_FILE = "usage-history.json";
 // One point per day, two years show the growth of a slowly filling array
@@ -35,7 +36,7 @@ const loadState = async (): Promise<UsageHistoryState> => {
   const path = resolveFromBase(STATE_FILE);
   if (!existsSync(path)) return {};
   try {
-    return JSON.parse(await Deno.readTextFile(path));
+    return JSON.parse(await readFile(path, "utf8"));
   } catch {
     return {};
   }

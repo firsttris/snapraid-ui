@@ -1,8 +1,10 @@
-import { basename, join } from "@std/path";
+import { basename, join } from "node:path";
 import type { AppConfig, ParityLevel, ParsedSnapRaidConfig } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
 import { effectiveSmartIgnore, parseSmartIgnoreLine } from "./smart-ignore.ts";
 import { writeTextFileAtomic } from "./atomic-write.ts";
+import { readFile } from "node:fs/promises";
+import { isNotFound } from "./fs.ts";
 
 export const MAX_PARITY_LEVEL = 6;
 
@@ -42,7 +44,7 @@ export const parityKeyword = (level: number): string =>
 export const parseSnapRaidConfig = async (
   configPath: string
 ): Promise<ParsedSnapRaidConfig> => {
-  const content = await Deno.readTextFile(configPath);
+  const content = await readFile(configPath, "utf8");
   const lines = content.split("\n");
 
   const config = lines
@@ -129,11 +131,11 @@ export const loadAppConfig = async (): Promise<AppConfig> => {
   const configPath = resolveFromBase("config.json");
   
   try {
-    const content = await Deno.readTextFile(configPath);
+    const content = await readFile(configPath, "utf8");
     return JSON.parse(content);
   } catch (error) {
     // A missing file is the first start, the defaults saved below say so
-    if (!(error instanceof Deno.errors.NotFound)) {
+    if (!isNotFound(error)) {
       console.warn(`Failed to load config from ${configPath}, using defaults:`, error);
     }
     

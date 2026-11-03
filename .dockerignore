@@ -8,6 +8,7 @@ npm-debug.log*
 
 # Development files
 frontend/node_modules
+backend/node_modules
 backend/.cache
 
 # Test files

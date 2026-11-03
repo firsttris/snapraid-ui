@@ -3,7 +3,7 @@ import {
   minimal2023Preset as preset,
 } from '@vite-pwa/assets-generator/config'
 
-// Generates favicon.ico, the PWA and the Apple icons from public/favicon.svg: npm run generate-pwa-assets
+// Generates favicon.ico, the PWA and the Apple icons from public/favicon.svg: bun run generate-pwa-assets
 export default defineConfig({
   headLinkOptions: { preset: '2023' },
   preset: {

@@ -5,14 +5,15 @@
 //   - schedules.json: a nightly sync with touch and scrub, a weekly scrub, a SMART check
 //   - maintenance.json: Docker pause and spindown, on the demo's own containers and disks
 //
-// deno run --config backend/deno.json --allow-read --allow-write dev/seed-demo.ts <sandbox>
-import { Cron } from "@hexagon/croner";
-import { join } from "@std/path";
+// bun scripts/seed-demo.ts <sandbox>   (in backend/, whose packages it uses)
+import { readdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { Cron } from "croner";
 import type { MaintenanceSettings, Schedule, UsagePoint } from "@shared/types.ts";
-import { parseSnapRaidConfig } from "../backend/src/config-parser.ts";
-import { demoDataDiskUsage } from "../backend/src/demo.ts";
+import { parseSnapRaidConfig } from "../src/config-parser.ts";
+import { demoDataDiskUsage } from "../src/demo.ts";
 
-const sandbox = Deno.args[0];
+const sandbox = process.argv[2];
 if (!sandbox) throw new Error("Usage: seed-demo.ts <sandbox>");
 const confPath = join(sandbox, "snapraid.conf");
 const logs = join(sandbox, "logs");
@@ -36,7 +37,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 const stamp = (d: Date) =>
   `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}-${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}`;
 
-for await (const entry of Deno.readDir(logs)) {
+for (const entry of await readdir(logs, { withFileTypes: true })) {
   const run = entry.name.match(/^run-(\d-[a-z]+)\.log$/)?.[1];
   if (!run || !RUNS[run]) continue;
   const { ago, seconds } = RUNS[run];
@@ -44,14 +45,14 @@ for await (const entry of Deno.readDir(logs)) {
   const file = join(logs, `${run.slice(2)}-${stamp(start)}.log`);
   const unixtime = Math.floor(start.getTime() / 1000);
   const time = start.toISOString().slice(0, 19).replace("T", " ");
-  const log = (await Deno.readTextFile(join(logs, entry.name)))
+  const log = (await readFile(join(logs, entry.name), "utf8"))
     .replace(/^unixtime:\d+$/m, `unixtime:${unixtime}`)
     .replace(/^time:.*$/m, `time:${time}`);
-  await Deno.writeTextFile(file, log);
-  await Deno.remove(join(logs, entry.name));
+  await writeFile(file, log);
+  await rm(join(logs, entry.name));
   // The Logs page shows how long a job ran: from the name's start to the file's last change
   const end = new Date(start.getTime() + seconds * 1000);
-  await Deno.utime(file, end, end);
+  await utimes(file, end, end);
 }
 
 // Two months of usage: one disk fills up by about 7 GB a day, the others grow slowly.
@@ -73,7 +74,7 @@ for (let daysAgo = 60; daysAgo >= 1; daysAgo--) {
   });
 }
 // Keyed like the backend keys it: the config path resolved against SNAPRAID_BASE_PATH
-await Deno.writeTextFile(join(sandbox, "usage-history.json"), JSON.stringify({ [confPath]: history }));
+await writeFile(join(sandbox, "usage-history.json"), JSON.stringify({ [confPath]: history }));
 
 const iso = (ms: number) => new Date(ms).toISOString();
 const created = iso(now - 30 * DAY);
@@ -120,10 +121,11 @@ const schedules: Schedule[] = [
     enabled: true,
   }),
 ];
-await Deno.writeTextFile(join(sandbox, "schedules.json"), JSON.stringify({ schedules }, null, 2));
+await writeFile(join(sandbox, "schedules.json"), JSON.stringify({ schedules }, null, 2));
 
 // The demo answers for Docker itself (backend/src/demo.ts), spindown watches the demo disks
-const maintenance: MaintenanceSettings = {
+// The rest (metrics, MCP) takes its defaults when the backend loads the file
+const maintenance: Pick<MaintenanceSettings, "dockerPause" | "spindown"> = {
   dockerPause: {
     enabled: true,
     socketPath: "/var/run/docker.sock",
@@ -132,6 +134,6 @@ const maintenance: MaintenanceSettings = {
   },
   spindown: { enabled: true, idleMinutes: 30 },
 };
-await Deno.writeTextFile(join(sandbox, "maintenance.json"), JSON.stringify(maintenance, null, 2));
+await writeFile(join(sandbox, "maintenance.json"), JSON.stringify(maintenance, null, 2));
 
 console.log("Seeded the job history, disk usage, schedules and automation");

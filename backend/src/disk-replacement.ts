@@ -1,10 +1,11 @@
-import { dirname } from "@std/path";
-import { existsSync } from "@std/fs";
+import { dirname } from "node:path";
+import { existsSync } from "./fs.ts";
 import type { DiskReplacement, ReplacementStep, ReplacementStepResult } from "@shared/types.ts";
 import { parseParityLine } from "./config-parser.ts";
 import { resolveFromBase } from "./config.ts";
 import { msg } from "@shared/i18n.ts";
 import { writeTextFileAtomic } from "./atomic-write.ts";
+import { readFile } from "node:fs/promises";
 
 /**
  * Replacing a failed disk follows "Recovering" in the SnapRAID manual:
@@ -94,7 +95,7 @@ const statePath = () => resolveFromBase(STATE_FILE);
 const loadState = async (): Promise<ReplacementState> => {
   if (!existsSync(statePath())) return {};
   try {
-    return JSON.parse(await Deno.readTextFile(statePath()));
+    return JSON.parse(await readFile(statePath(), "utf8"));
   } catch {
     return {};
   }

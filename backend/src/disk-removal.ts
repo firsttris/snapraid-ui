@@ -1,6 +1,7 @@
-import { dirname, join } from "@std/path";
+import { dirname, join } from "node:path";
 import { isPendingRemoval, parseParityLine, REMOVAL_DIR } from "./config-parser.ts";
 import { msg } from "@shared/i18n.ts";
+import { mkdir, readdir } from "node:fs/promises";
 
 /**
  * Removing a data disk follows the SnapRAID FAQ:
@@ -76,8 +77,8 @@ export const finalizeDataDiskRemoval = (config: string, diskName: string): strin
  * Create the removal directory; SnapRAID would sync whatever it contains
  */
 export const ensureEmptyDir = async (path: string): Promise<void> => {
-  await Deno.mkdir(path, { recursive: true });
-  for await (const _ of Deno.readDir(path)) {
+  await mkdir(path, { recursive: true });
+  if ((await readdir(path)).length > 0) {
     throw new DiskRemovalError(msg("server_error_not_empty", { path }));
   }
 };

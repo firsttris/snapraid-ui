@@ -1,7 +1,8 @@
-import { existsSync } from "@std/fs";
+import { existsSync } from "./fs.ts";
 import type { SmartDiskInfo, SmartHistoryPoint } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
 import { writeTextFileAtomic } from "./atomic-write.ts";
+import { readFile } from "node:fs/promises";
 
 const STATE_FILE = "smart-history.json";
 // One point per disk and day is enough for slow trends, a year shows the long ones
@@ -59,7 +60,7 @@ const loadState = async (): Promise<SmartHistoryState> => {
   const path = resolveFromBase(STATE_FILE);
   if (!existsSync(path)) return {};
   try {
-    return JSON.parse(await Deno.readTextFile(path));
+    return JSON.parse(await readFile(path, "utf8"));
   } catch {
     return {};
   }

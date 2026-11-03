@@ -1,7 +1,8 @@
+import type { Server, ServerWebSocket, WebSocketHandler } from "bun";
 import { getEngine } from "./engine/engine.ts";
 
 // WebSocket connection management
-const wsClients = new Set<WebSocket>();
+const wsClients = new Set<ServerWebSocket<undefined>>();
 
 export const broadcast = (message: unknown): void => {
   const data = JSON.stringify(message);
@@ -21,14 +22,11 @@ export const closeAllClients = (): void => {
   wsClients.clear();
 };
 
-export const handleWebSocketUpgrade = (req: Request): Response => {
-  if (req.headers.get("upgrade") !== "websocket") {
-    return new Response("Expected WebSocket", { status: 400 });
-  }
-
-  const { socket, response } = Deno.upgradeWebSocket(req);
-
-  socket.onopen = () => {
+/**
+ * The connections' events, for Bun.serve's `websocket` next to the fetch handler
+ */
+export const websocket: WebSocketHandler<undefined> = {
+  open(socket) {
     wsClients.add(socket);
     // A client connecting mid-job (reload, reconnect) gets the output so far, before any new chunk
     const engine = getEngine();
@@ -41,16 +39,24 @@ export const handleWebSocketUpgrade = (req: Request): Response => {
         output: engine.currentOutput(),
       }));
     }
-  };
-
-  socket.onclose = () => {
+  },
+  // Clients only listen
+  message() {},
+  // Also after an error
+  close(socket) {
     wsClients.delete(socket);
-  };
+  },
+};
 
-  socket.onerror = (error: Event | ErrorEvent) => {
-    //console.error("WebSocket error:", error);
-    wsClients.delete(socket);
-  };
-
-  return response;
-}
+/**
+ * Upgrades the request to a WebSocket on the server that received it (the env of Hono's fetch)
+ */
+export const handleWebSocketUpgrade = (req: Request, server: Server<undefined>): Response => {
+  if (req.headers.get("upgrade") !== "websocket") {
+    return new Response("Expected WebSocket", { status: 400 });
+  }
+  // A request that is no valid upgrade fails
+  if (!server.upgrade(req, { data: undefined })) throw new TypeError("Invalid WebSocket upgrade request");
+  // Bun answers the upgrade itself and ignores this response
+  return new Response(null);
+};

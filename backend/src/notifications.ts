@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { existsSync } from "@std/fs";
+import { existsSync } from "./fs.ts";
 import {
   type NotificationChannel,
   type NotificationEvent,
@@ -9,6 +9,7 @@ import {
 } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
 import { writeTextFileAtomic } from "./atomic-write.ts";
+import { readFile } from "node:fs/promises";
 
 export type Severity = "info" | "warning" | "error";
 
@@ -79,7 +80,7 @@ export const loadNotificationSettings = async (): Promise<NotificationSettings> 
   const path = settingsPath();
   if (!existsSync(path)) return DEFAULT_NOTIFICATION_SETTINGS;
   try {
-    return withDefaults(JSON.parse(await Deno.readTextFile(path)));
+    return withDefaults(JSON.parse(await readFile(path, "utf8")));
   } catch (error) {
     console.error(`Failed to read ${path}, notifications are disabled:`, error);
     return DEFAULT_NOTIFICATION_SETTINGS;

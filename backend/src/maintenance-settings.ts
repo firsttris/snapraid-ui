@@ -1,7 +1,8 @@
-import { existsSync } from "@std/fs";
+import { existsSync } from "./fs.ts";
 import type { MaintenanceSettings, SnapRaidCommand } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
 import { writeTextFileAtomic } from "./atomic-write.ts";
+import { readFile } from "node:fs/promises";
 
 const SETTINGS_FILE = "maintenance.json";
 
@@ -46,7 +47,7 @@ export const loadMaintenanceSettings = async (): Promise<MaintenanceSettings> =>
   const path = settingsPath();
   if (!existsSync(path)) return DEFAULT_MAINTENANCE_SETTINGS;
   try {
-    return withDefaults(JSON.parse(await Deno.readTextFile(path)));
+    return withDefaults(JSON.parse(await readFile(path, "utf8")));
   } catch (error) {
     console.error(`Failed to read ${path}, using the defaults:`, error);
     return DEFAULT_MAINTENANCE_SETTINGS;

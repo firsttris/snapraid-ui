@@ -16,7 +16,7 @@ export default async function demoSetup() {
   await mkdir(RUN_DIR, { recursive: true })
 
   if (process.env.E2E_SKIP_BUILD !== '1') {
-    execFileSync('npm', ['run', 'build'], { cwd: join(ROOT, 'frontend'), stdio: 'inherit' })
+    execFileSync('bun', ['run', 'build'], { cwd: join(ROOT, 'frontend'), stdio: 'inherit' })
   }
 
   const servers: Server[] = []

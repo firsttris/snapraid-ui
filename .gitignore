@@ -7,7 +7,6 @@ dist/
 .vscode/
 .idea/
 config.json
-backend/.deno/
 frontend/.output/
 frontend/.vinxi/
 
@@ -15,7 +14,6 @@ frontend/.vinxi/
 dev/bin/
 dev/.cache/
 dev/sandbox/
-dev/tools/
 
 # Local data of ./start.sh (configs, schedules, logs)
 /snapraid/

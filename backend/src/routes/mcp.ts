@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-// @ts-types="@modelcontextprotocol/sdk/server/webStandardStreamableHttp"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { safeEqual } from "../auth.ts";
 import { snapshotConfigs } from "../array-snapshot.ts";

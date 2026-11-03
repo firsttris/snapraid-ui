@@ -1,33 +1,36 @@
-import { assertEquals } from "@std/assert";
-import { join, toFileUrl } from "@std/path";
+import { expect, test } from "bun:test";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { PACKAGE_JSON, readVersion } from "../version.ts";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 
 const withEnv = async (value: string | undefined, run: () => Promise<void>) => {
-  const before = Deno.env.get("SNAPRAID_UI_VERSION");
-  if (value === undefined) Deno.env.delete("SNAPRAID_UI_VERSION");
-  else Deno.env.set("SNAPRAID_UI_VERSION", value);
+  const before = process.env.SNAPRAID_UI_VERSION;
+  if (value === undefined) delete process.env.SNAPRAID_UI_VERSION;
+  else process.env.SNAPRAID_UI_VERSION = value;
   try {
     await run();
   } finally {
-    if (before === undefined) Deno.env.delete("SNAPRAID_UI_VERSION");
-    else Deno.env.set("SNAPRAID_UI_VERSION", before);
+    if (before === undefined) delete process.env.SNAPRAID_UI_VERSION;
+    else process.env.SNAPRAID_UI_VERSION = before;
   }
 };
 
-Deno.test("readVersion - the version of frontend/package.json", async () => {
-  const { version } = JSON.parse(await Deno.readTextFile(PACKAGE_JSON));
-  await withEnv(undefined, async () => assertEquals(await readVersion(), version));
+test("readVersion - the version of frontend/package.json", async () => {
+  const { version } = JSON.parse(await readFile(PACKAGE_JSON, "utf8"));
+  await withEnv(undefined, async () => expect(await readVersion()).toEqual(version));
 });
 
-Deno.test("readVersion - SNAPRAID_UI_VERSION overrides it", async () => {
-  await withEnv("9.9.9", async () => assertEquals(await readVersion(), "9.9.9"));
+test("readVersion - SNAPRAID_UI_VERSION overrides it", async () => {
+  await withEnv("9.9.9", async () => expect(await readVersion()).toEqual("9.9.9"));
 });
 
-Deno.test("readVersion - empty without package.json", async () => {
-  const dir = await Deno.makeTempDir();
+test("readVersion - empty without package.json", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "snapraid-test-"));
   try {
-    await withEnv(undefined, async () => assertEquals(await readVersion(toFileUrl(join(dir, "package.json"))), ""));
+    await withEnv(undefined, async () => expect(await readVersion(pathToFileURL(join(dir, "package.json")))).toEqual(""));
   } finally {
-    await Deno.remove(dir, { recursive: true });
+    await rm(dir, { recursive: true });
   }
 });

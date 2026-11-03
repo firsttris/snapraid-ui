@@ -29,6 +29,7 @@ import {
   type SmartReading,
   type StatusReading,
 } from "./engine.ts";
+import { readFile } from "node:fs/promises";
 
 // Jobs the daemon runs itself, see TaskSchedule in its snapraidd.yaml
 export const DAEMON_COMMANDS: SnapRaidCommand[] = ["sync", "scrub", "check", "fix", "diff", "smart", "probe"];
@@ -459,7 +460,7 @@ export const createDaemonEngine = (options: DaemonEngineOptions): SnapRaidEngine
   const client = createDaemonClient(options, options.fetch);
   const pollMs = options.pollMs ?? 1000;
   const sleep = options.sleep ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
-  const readLog = options.readLog ?? ((path: string) => Deno.readTextFile(path));
+  const readLog = options.readLog ?? ((path: string) => readFile(path, "utf8"));
   const { fallback } = options;
 
   const state = {

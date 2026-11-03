@@ -1,3 +1,4 @@
+import type { Server } from "bun";
 import { Hono } from "hono";
 import type { Context, MiddlewareHandler } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
@@ -8,6 +9,8 @@ import { msg } from "@shared/i18n.ts";
 import { BASE_PATH, resolveFromBase } from "./config.ts";
 import { type CredentialStore, hashPassword, verifyPassword } from "./credentials.ts";
 import { AuthError, createPasskeys } from "./passkeys.ts";
+import { mkdir, readFile } from "node:fs/promises";
+import { writeTextFile } from "./fs.ts";
 
 export const SESSION_COOKIE = "snapraid_session";
 
@@ -57,11 +60,11 @@ export const safeEqual = async (a: string, b: string): Promise<boolean> => {
   return diff === 0;
 };
 
-// The address the connection came from, which Deno.serve passes as the env; not a header,
+// The address the connection came from, which the Bun server (the env) knows; not a header,
 // which a client could set to escape the lockout. Behind a proxy that is the proxy's address
 const clientKey = (c: Context): string => {
-  const remote = (c.env as Partial<Deno.ServeHandlerInfo> | undefined)?.remoteAddr;
-  return remote && "hostname" in remote ? remote.hostname : "local";
+  const server = c.env as Partial<Pick<Server<undefined>, "requestIP">> | undefined;
+  return server?.requestIP?.(c.req.raw)?.address ?? "local";
 };
 
 const isHttps = (c: Context): boolean =>
@@ -325,21 +328,21 @@ export const disabledAuthRoutes = new Hono().get(
 export const loadSessionSecret = async (): Promise<string> => {
   const path = resolveFromBase(".session-secret");
   try {
-    return (await Deno.readTextFile(path)).trim();
+    return (await readFile(path, "utf8")).trim();
   } catch {
-    await Deno.mkdir(BASE_PATH, { recursive: true });
+    await mkdir(BASE_PATH, { recursive: true });
     const bytes = crypto.getRandomValues(new Uint8Array(32));
     const secret = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-    await Deno.writeTextFile(path, secret, { mode: 0o600 });
+    await writeTextFile(path, secret, { mode: 0o600 });
     return secret;
   }
 };
 
 export const readAuthEnv = (): { username: string; password: string; sessionTtlSeconds: number } | null => {
-  const username = Deno.env.get("SNAPRAID_UI_USERNAME") ?? "";
-  const password = Deno.env.get("SNAPRAID_UI_PASSWORD") ?? "";
+  const username = process.env.SNAPRAID_UI_USERNAME ?? "";
+  const password = process.env.SNAPRAID_UI_PASSWORD ?? "";
   if (!username || !password) return null;
-  const hours = Number(Deno.env.get("SNAPRAID_UI_SESSION_HOURS") ?? "168");
+  const hours = Number(process.env.SNAPRAID_UI_SESSION_HOURS ?? "168");
   return {
     username,
     password,

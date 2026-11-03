@@ -30,21 +30,8 @@ import {
 } from './env'
 import { answers, type Server, startProcess } from './servers'
 
-export const DENO_PERMISSIONS = [
-  '--allow-net',
-  '--allow-read',
-  '--allow-write',
-  '--allow-run',
-  '--allow-env',
-  '--allow-sys=networkInterfaces,hostname',
-]
-
-export const findDeno = () => {
-  if (process.env.DENO_BIN) return process.env.DENO_BIN
-  const local = join(ROOT, 'dev', 'tools', 'deno')
-  if (existsSync(local)) return local
-  return 'deno'
-}
+// The Bun that runs the backend: BUN_BIN, else the one on the PATH
+export const findBun = () => process.env.BUN_BIN || 'bun'
 
 const startDaemon = async (): Promise<Server> => {
   const array = await createArray(DAEMON_ARRAY, { snapraid: SNAPRAID15 })
@@ -87,7 +74,7 @@ export const startBackend = (
     ready: async () => (await answers(`${url}/api/config`)()) && (await fetch(`${url}/`)).ok,
   }
   if (BINARY) return startProcess(name, resolve(E2E_DIR, BINARY), [], { ...options, cwd: RUN_DIR })
-  return startProcess(name, findDeno(), ['run', ...DENO_PERMISSIONS, 'src/main.ts'], {
+  return startProcess(name, findBun(), ['src/main.ts'], {
     ...options,
     cwd: join(ROOT, 'backend'),
   })
@@ -136,7 +123,7 @@ const startImage = async (image: string): Promise<Server> => {
 
 export default async function globalSetup() {
   for (const tool of [SNAPRAID, SNAPRAID15, SNAPRAID15_SKIP_DEVICE, SNAPRAIDD]) {
-    if (!existsSync(tool)) throw new Error(`${tool} is missing, run: npm run setup`)
+    if (!existsSync(tool)) throw new Error(`${tool} is missing, run: bun run setup`)
   }
 
   await rm(RUN_DIR, { recursive: true, force: true })
@@ -154,7 +141,7 @@ export default async function globalSetup() {
   await mkdir(ARRAYS, { recursive: true })
   const frontend = join(ROOT, 'frontend')
   if (!IMAGE && !BINARY && process.env.E2E_SKIP_BUILD !== '1') {
-    execFileSync('npm', ['run', 'build'], { cwd: frontend, stdio: 'inherit' })
+    execFileSync('bun', ['run', 'build'], { cwd: frontend, stdio: 'inherit' })
   }
 
   const servers: Server[] = []

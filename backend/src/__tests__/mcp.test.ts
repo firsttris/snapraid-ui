@@ -1,7 +1,5 @@
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
-// @ts-types="@modelcontextprotocol/sdk/client/index"
+import { expect, test } from "bun:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-// @ts-types="@modelcontextprotocol/sdk/inMemory"
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { LogFile, MaintenanceSettings, Schedule, SnapRaidConfig } from "@shared/types.ts";
 import { DEFAULT_MAINTENANCE_SETTINGS } from "../maintenance-settings.ts";
@@ -112,102 +110,102 @@ const setup = async (overrides: Partial<McpDeps> = {}) => {
 
 const ACTIONS = ["start_job", "abort_job", "run_schedule", "skip_schedule_run", "create_array"];
 
-Deno.test("mcp - an agent can't turn a schedule off", async () => {
+test("mcp - an agent can't turn a schedule off", async () => {
   const { client, call, calls, close } = await setup();
   const skip = (await client.listTools()).tools.find((tool) => tool.name === "skip_schedule_run");
-  assertEquals(Object.keys(skip?.inputSchema.properties ?? {}).sort(), ["scheduleId", "skip"]);
+  expect(Object.keys(skip?.inputSchema.properties ?? {}).sort()).toEqual(["scheduleId", "skip"]);
   // Unknown arguments are dropped, the schedule is only skipped
   await call("skip_schedule_run", { scheduleId: "nightly", enabled: false });
-  assertEquals(calls, ['update nightly {"skipNext":true}']);
+  expect(calls).toEqual(['update nightly {"skipNext":true}']);
   await close();
 });
 
-Deno.test("mcp - the actions are only offered when allowed", async () => {
+test("mcp - the actions are only offered when allowed", async () => {
   const open = await setup();
   const names = (await open.client.listTools()).tools.map((tool) => tool.name);
-  for (const action of ACTIONS) assert(names.includes(action), action);
-  assert(names.includes("get_overview"));
+  for (const action of ACTIONS) expect(names.includes(action), action).toBeTruthy();
+  expect(names.includes("get_overview")).toBeTruthy();
   await open.close();
 
   const readOnly = await setup({ allowActions: false });
   const readOnlyNames = (await readOnly.client.listTools()).tools.map((tool) => tool.name);
-  assertEquals(readOnlyNames.filter((name) => ACTIONS.includes(name)), []);
-  assert(readOnlyNames.includes("get_overview"));
+  expect(readOnlyNames.filter((name) => ACTIONS.includes(name))).toEqual([]);
+  expect(readOnlyNames.includes("get_overview")).toBeTruthy();
   await readOnly.close();
 });
 
-Deno.test("mcp - get_overview reports health and usage without the raw output", async () => {
+test("mcp - get_overview reports health and usage without the raw output", async () => {
   const { call, close } = await setup();
   const { isError, text } = await call("get_overview");
-  assertEquals(isError, false);
+  expect(isError).toEqual(false);
   const overview = JSON.parse(text);
-  assertEquals(overview.arrays[0].name, "Media");
-  assertEquals(overview.arrays[0].health, "errors");
-  assertEquals(overview.arrays[0].bad_blocks, 2);
-  assertEquals(overview.arrays[0].disks.d1, { temperature: 38, used_percent: 25 });
-  assertEquals(overview.arrays[0].status.rawOutput, undefined);
-  assertEquals(overview.job.running, null);
+  expect(overview.arrays[0].name).toEqual("Media");
+  expect(overview.arrays[0].health).toEqual("errors");
+  expect(overview.arrays[0].bad_blocks).toEqual(2);
+  expect(overview.arrays[0].disks.d1).toEqual({ temperature: 38, used_percent: 25 });
+  expect(overview.arrays[0].status.rawOutput).toEqual(undefined);
+  expect(overview.job.running).toEqual(null);
   await close();
 });
 
-Deno.test("mcp - an array is picked by name, the only enabled one when left out", async () => {
+test("mcp - an array is picked by name, the only enabled one when left out", async () => {
   const { call, calls, close } = await setup();
-  assertEquals((await call("start_job", { command: "sync" })).isError, false);
-  assertEquals((await call("start_job", { array: "media", command: "scrub" })).isError, false);
-  assertEquals(calls, ["sync /data/media.conf", "scrub /data/media.conf"]);
+  expect((await call("start_job", { command: "sync" })).isError).toEqual(false);
+  expect((await call("start_job", { array: "media", command: "scrub" })).isError).toEqual(false);
+  expect(calls).toEqual(["sync /data/media.conf", "scrub /data/media.conf"]);
 
   const unknown = await call("start_job", { array: "Photos", command: "sync" });
-  assertEquals(unknown.isError, true);
-  assertStringIncludes(unknown.text, '"Media"');
+  expect(unknown.isError).toEqual(true);
+  expect(unknown.text).toContain('"Media"');
   await close();
 });
 
-Deno.test("mcp - start_job passes on why a job could not start", async () => {
+test("mcp - start_job passes on why a job could not start", async () => {
   const { call, close } = await setup({ runCommand: () => Promise.reject(new Error("Sync skipped: too many deleted")) });
   const result = await call("start_job", { command: "sync" });
-  assertEquals(result, { isError: true, text: "Sync skipped: too many deleted" });
+  expect(result).toEqual({ isError: true, text: "Sync skipped: too many deleted" });
   await close();
 });
 
-Deno.test("mcp - several arrays need a name", async () => {
+test("mcp - several arrays need a name", async () => {
   const both = ARRAYS.map((array) => ({ ...array, enabled: true }));
   const { call, close } = await setup({ arrays: () => Promise.resolve(both) });
   const result = await call("read_status");
-  assertEquals(result.isError, true);
-  assertStringIncludes(result.text, "several arrays");
+  expect(result.isError).toEqual(true);
+  expect(result.text).toContain("several arrays");
   await close();
 });
 
-Deno.test("mcp - logs are listed newest first and only known ones are read", async () => {
+test("mcp - logs are listed newest first and only known ones are read", async () => {
   const { call, close } = await setup();
   const logs = JSON.parse((await call("list_logs")).text);
-  assertEquals(logs.map((log: { filename: string }) => log.filename), ["scrub-1.log", "sync-1.log"]);
-  assertEquals(JSON.parse((await call("list_logs", { command: "sync" })).text).length, 1);
+  expect(logs.map((log: { filename: string }) => log.filename)).toEqual(["scrub-1.log", "sync-1.log"]);
+  expect(JSON.parse((await call("list_logs", { command: "sync" })).text).length).toEqual(1);
 
-  assertStringIncludes((await call("read_log", { filename: "sync-1.log" })).text, "end of sync-1.log");
-  assertEquals((await call("read_log", { filename: "../config.json" })).isError, true);
-  assertEquals((await call("read_log", { filename: "other.log" })).isError, true);
+  expect((await call("read_log", { filename: "sync-1.log" })).text).toContain("end of sync-1.log");
+  expect((await call("read_log", { filename: "../config.json" })).isError).toEqual(true);
+  expect((await call("read_log", { filename: "other.log" })).isError).toEqual(true);
   await close();
 });
 
-Deno.test("mcp - schedules come with their next run and can be skipped and run", async () => {
+test("mcp - schedules come with their next run and can be skipped and run", async () => {
   const { call, calls, close } = await setup();
   const [schedule] = JSON.parse((await call("list_schedules")).text);
-  assertEquals(schedule.array, "Media");
-  assertEquals(schedule.nextRun, "2026-10-20T02:00:00.000Z");
+  expect(schedule.array).toEqual("Media");
+  expect(schedule.nextRun).toEqual("2026-10-20T02:00:00.000Z");
 
   await call("skip_schedule_run", { scheduleId: "nightly" });
   await call("skip_schedule_run", { scheduleId: "nightly", skip: false });
   await call("run_schedule", { scheduleId: "nightly" });
-  assertEquals(calls, ['update nightly {"skipNext":true}', 'update nightly {"skipNext":false}', "run nightly"]);
+  expect(calls).toEqual(['update nightly {"skipNext":true}', 'update nightly {"skipNext":false}', "run nightly"]);
   await close();
 });
 
-Deno.test("mcp - check_array_setup shows problems or the config it would write", async () => {
+test("mcp - check_array_setup shows problems or the config it would write", async () => {
   const { call, close } = await setup();
   const invalid = JSON.parse((await call("check_array_setup", { dataDisks: [], parityPaths: ["/mnt/p"] })).text);
-  assertEquals(invalid.valid, false);
-  assertEquals(invalid.problems, ["no_data"]);
+  expect(invalid.valid).toEqual(false);
+  expect(invalid.problems).toEqual(["no_data"]);
 
   const valid = JSON.parse(
     (await call("check_array_setup", {
@@ -216,73 +214,73 @@ Deno.test("mcp - check_array_setup shows problems or the config it would write",
       parityPaths: ["/mnt/parity"],
     })).text,
   );
-  assertEquals(valid.valid, true);
-  assertStringIncludes(valid.config, "parity /mnt/parity/snapraid.parity");
-  assertStringIncludes(valid.config, "content /data/media.content");
+  expect(valid.valid).toEqual(true);
+  expect(valid.config).toContain("parity /mnt/parity/snapraid.parity");
+  expect(valid.config).toContain("content /data/media.content");
   await close();
 });
 
-Deno.test("mcp - create_array names the config after the array", async () => {
+test("mcp - create_array names the config after the array", async () => {
   const { call, calls, close } = await setup();
   const result = await call("create_array", {
     name: "Media Server",
     dataDisks: [{ name: "d1", path: "/mnt/d1" }],
     parityPaths: ["/mnt/parity"],
   });
-  assertEquals(result.isError, false);
-  assertEquals(calls, ["create Media Server media-server.conf"]);
-  assertEquals(fileNameOf("  Fotos & Videos "), "fotos-videos");
+  expect(result.isError).toEqual(false);
+  expect(calls).toEqual(["create Media Server media-server.conf"]);
+  expect(fileNameOf("  Fotos & Videos ")).toEqual("fotos-videos");
   await close();
 });
 
-Deno.test("mcp - create_array refuses a blank name, like the setup wizard", async () => {
+test("mcp - create_array refuses a blank name, like the setup wizard", async () => {
   const { call, calls, close } = await setup();
   const result = await call("create_array", {
     name: "   ",
     dataDisks: [{ name: "d1", path: "/mnt/d1" }],
     parityPaths: ["/mnt/parity"],
   });
-  assertEquals(result.isError, true);
-  assertEquals(calls, []);
+  expect(result.isError).toEqual(true);
+  expect(calls).toEqual([]);
   await close();
 });
 
-Deno.test("mcp - get_changes and read_status leave out the raw output and report a locked SnapRAID", async () => {
+test("mcp - get_changes and read_status leave out the raw output and report a locked SnapRAID", async () => {
   const { call, engine, close } = await setup();
   const changes = JSON.parse((await call("get_changes")).text);
-  assertEquals(changes.array, "Media");
-  assertEquals(changes.rawOutput, undefined);
+  expect(changes.array).toEqual("Media");
+  expect(changes.rawOutput).toEqual(undefined);
   const status = JSON.parse((await call("read_status")).text);
-  assertEquals(status.status.rawOutput, undefined);
+  expect(status.status.rawOutput).toEqual(undefined);
 
   engine.setBusy(true);
-  assertEquals(await call("read_status"), { isError: true, text: "SnapRAID is in use by another process" });
+  expect(await call("read_status")).toEqual({ isError: true, text: "SnapRAID is in use by another process" });
   await close();
 });
 
-Deno.test("mcp - get_changes waits for a running job", async () => {
+test("mcp - get_changes waits for a running job", async () => {
   const engine = createFakeEngine();
   const running = { command: "sync" as const, configPath: "/data/media.conf", startTime: "", processId: "1" };
   const { call, close } = await setup({ engine: () => ({ ...engine, currentJob: () => running }) });
-  assertEquals((await call("get_changes")).isError, true);
+  expect((await call("get_changes")).isError).toEqual(true);
   const job = JSON.parse((await call("get_job")).text);
-  assertEquals(job.running.array, "Media");
+  expect(job.running.array).toEqual("Media");
   await close();
 });
 
-Deno.test("mcp - the documentation is a tool and resources", async () => {
+test("mcp - the documentation is a tool and resources", async () => {
   const { client, call, close } = await setup();
   const pages = JSON.parse((await call("read_documentation")).text) as { page: string; title: string }[];
-  assertEquals(pages[0].page, "README");
-  assert(pages.some((page) => page.page === "disks"));
+  expect(pages[0].page).toEqual("README");
+  expect(pages.some((page) => page.page === "disks")).toBeTruthy();
 
-  assertStringIncludes((await call("read_documentation", { page: "security" })).text, "# Security");
-  assertEquals((await call("read_documentation", { page: "../README" })).isError, true);
+  expect((await call("read_documentation", { page: "security" })).text).toContain("# Security");
+  expect((await call("read_documentation", { page: "../README" })).isError).toEqual(true);
 
   const resources = (await client.listResources()).resources.map((resource) => resource.uri);
-  assert(resources.includes("docs://snapraid-ui/automation"));
+  expect(resources.includes("docs://snapraid-ui/automation")).toBeTruthy();
   const read = await client.readResource({ uri: "docs://snapraid-ui/automation" });
-  assertStringIncludes((read.contents[0] as { text: string }).text, "# Automation");
+  expect((read.contents[0] as { text: string }).text).toContain("# Automation");
   await close();
 });
 
@@ -307,25 +305,25 @@ const post = (routes: ReturnType<typeof createMcpRoutes>, token?: string) =>
     body: JSON.stringify(initialize),
   });
 
-Deno.test("mcp route - off by default and never without the token", async () => {
-  assertEquals((await post(createMcpRoutes(settingsWith({})), "x")).status, 404);
+test("mcp route - off by default and never without the token", async () => {
+  expect((await post(createMcpRoutes(settingsWith({})), "x")).status).toEqual(404);
 
   const routes = createMcpRoutes(settingsWith({ enabled: true, token: "a-long-enough-token" }));
   const missing = await post(routes);
-  assertEquals(missing.status, 401);
-  assertEquals(missing.headers.get("WWW-Authenticate"), 'Bearer realm="snapraid-ui"');
-  assertEquals((await post(routes, "wrong-token")).status, 401);
+  expect(missing.status).toEqual(401);
+  expect(missing.headers.get("WWW-Authenticate")).toEqual('Bearer realm="snapraid-ui"');
+  expect((await post(routes, "wrong-token")).status).toEqual(401);
 
   // An empty token never matches, even an empty header
-  assertEquals((await post(createMcpRoutes(settingsWith({ enabled: true, token: "" })), "")).status, 401);
+  expect((await post(createMcpRoutes(settingsWith({ enabled: true, token: "" })), "")).status).toEqual(401);
 });
 
-Deno.test("mcp route - answers MCP with the token", async () => {
+test("mcp route - answers MCP with the token", async () => {
   setMcpSources({} as LogManager, {} as Scheduler);
   const routes = createMcpRoutes(settingsWith({ enabled: true, token: "a-long-enough-token" }));
   const res = await post(routes, "a-long-enough-token");
-  assertEquals(res.status, 200);
-  const body = await res.json();
-  assertEquals(body.result.serverInfo.name, "snapraid-ui");
-  assertStringIncludes(body.result.instructions, "get_overview");
+  expect(res.status).toEqual(200);
+  const body: any = await res.json();
+  expect(body.result.serverInfo.name).toEqual("snapraid-ui");
+  expect(body.result.instructions).toContain("get_overview");
 });

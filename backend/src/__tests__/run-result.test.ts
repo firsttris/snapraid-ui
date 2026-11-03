@@ -1,16 +1,18 @@
-import { assertEquals } from "@std/assert";
+import { expect, test } from "bun:test";
 import { parseRunResult } from "@shared/run-result.ts";
+import type { RunResult } from "@shared/types.ts";
+import { readFileSync } from "node:fs";
 
 const fixture = (name: string) =>
-  Deno.readTextFileSync(new URL(`../parsers/__tests__/fixtures/${name}`, import.meta.url));
+  readFileSync(new URL(`../parsers/__tests__/fixtures/${name}`, import.meta.url), "utf8");
 
 const lines = (...tags: string[]) => tags.join("\n");
 
 // Everything up to (not including) the first line starting with `tag`
 const cutBefore = (log: string, tag: string) => log.slice(0, log.indexOf(`\n${tag}`) + 1);
 
-Deno.test("parseRunResult - every summary:exit value", () => {
-  const cases: Array<[string, string]> = [
+test("parseRunResult - every summary:exit value", () => {
+  const cases: Array<[string, RunResult]> = [
     ["ok", "ok"],
     ["warning", "warning"],
     ["equal", "ok"],
@@ -24,12 +26,12 @@ Deno.test("parseRunResult - every summary:exit value", () => {
     ["bad", "error"],
   ];
   for (const [exit, result] of cases) {
-    assertEquals(parseRunResult(lines("command:sync", `summary:exit:${exit}`)), result, exit);
+    expect(parseRunResult(lines("command:sync", `summary:exit:${exit}`)), exit).toEqual(result);
   }
 });
 
-Deno.test("parseRunResult - the real fixtures", () => {
-  const cases: Array<[string, string]> = [
+test("parseRunResult - the real fixtures", () => {
+  const cases: Array<[string, RunResult]> = [
     ["check-ok.log", "ok"],
     ["check.log", "warning"],
     ["diff.log", "ok"],
@@ -41,59 +43,55 @@ Deno.test("parseRunResult - the real fixtures", () => {
     ["touch.log", "ok"],
     ["smart.log", "ok"],
   ];
-  for (const [name, result] of cases) assertEquals(parseRunResult(fixture(name)), result, name);
+  for (const [name, result] of cases) expect(parseRunResult(fixture(name)), name).toEqual(result);
 });
 
-Deno.test("parseRunResult - a finished touch is ok although it writes no summary", () => {
+test("parseRunResult - a finished touch is ok although it writes no summary", () => {
   const touch = fixture("touch.log");
-  assertEquals(parseRunResult(touch), "ok");
+  expect(parseRunResult(touch)).toEqual("ok");
   // Windows line endings, e.g. a log copied off a share
-  assertEquals(parseRunResult(touch.replaceAll("\n", "\r\n")), "ok");
+  expect(parseRunResult(touch.replaceAll("\n", "\r\n"))).toEqual("ok");
 });
 
-Deno.test("parseRunResult - a touch that did not save the content file is incomplete", () => {
+test("parseRunResult - a touch that did not save the content file is incomplete", () => {
   const touch = fixture("touch.log");
   // Still touching, or killed before saving
-  assertEquals(parseRunResult(cutBefore(touch, "msg:status:     1750 touched files")), "incomplete");
-  assertEquals(parseRunResult(cutBefore(touch, "content_info:write_unixtime:")), "incomplete");
+  expect(parseRunResult(cutBefore(touch, "msg:status:     1750 touched files"))).toEqual("incomplete");
+  expect(parseRunResult(cutBefore(touch, "content_info:write_unixtime:"))).toEqual("incomplete");
   // The timestamp read at start is no sign of the end
-  assertEquals(parseRunResult(lines("command:touch", "content_info:read_unixtime:1791910373")), "incomplete");
+  expect(parseRunResult(lines("command:touch", "content_info:read_unixtime:1791910373"))).toEqual("incomplete");
 });
 
-Deno.test("parseRunResult - a finished smart is ok although it writes no summary:exit", () => {
-  assertEquals(parseRunResult(fixture("smart.log")), "ok");
+test("parseRunResult - a finished smart is ok although it writes no summary:exit", () => {
+  expect(parseRunResult(fixture("smart.log"))).toEqual("ok");
   // Nothing but the array line, e.g. no disk could be read
-  assertEquals(parseRunResult(lines("command:smart", "summary:array_failure:0:0")), "ok");
+  expect(parseRunResult(lines("command:smart", "summary:array_failure:0:0"))).toEqual("ok");
 });
 
-Deno.test("parseRunResult - a smart without the array failure line is incomplete", () => {
-  assertEquals(parseRunResult(cutBefore(fixture("smart.log"), "summary:array_failure:")), "incomplete");
-  assertEquals(parseRunResult("command:smart"), "incomplete");
+test("parseRunResult - a smart without the array failure line is incomplete", () => {
+  expect(parseRunResult(cutBefore(fixture("smart.log"), "summary:array_failure:"))).toEqual("incomplete");
+  expect(parseRunResult("command:smart")).toEqual("incomplete");
 });
 
-Deno.test("parseRunResult - fatal errors and Ctrl+C win over the end markers", () => {
+test("parseRunResult - fatal errors and Ctrl+C win over the end markers", () => {
   const touch = fixture("touch.log");
   const smart = fixture("smart.log");
-  assertEquals(parseRunResult(`${touch}\nmsg:fatal: Error writing the content file`), "error");
-  assertEquals(parseRunResult(`${smart}\nmsg:fatal: Failed to run smartctl`), "error");
-  assertEquals(parseRunResult(`${touch}\nsigint:`), "aborted");
-  assertEquals(parseRunResult(`${smart}\nsigint:`), "aborted");
+  expect(parseRunResult(`${touch}\nmsg:fatal: Error writing the content file`)).toEqual("error");
+  expect(parseRunResult(`${smart}\nmsg:fatal: Failed to run smartctl`)).toEqual("error");
+  expect(parseRunResult(`${touch}\nsigint:`)).toEqual("aborted");
+  expect(parseRunResult(`${smart}\nsigint:`)).toEqual("aborted");
   // Failing before the end marker
-  assertEquals(parseRunResult(lines("command:touch", "msg:fatal: No content file found")), "error");
+  expect(parseRunResult(lines("command:touch", "msg:fatal: No content file found"))).toEqual("error");
 });
 
-Deno.test("parseRunResult - end markers only count for the command they belong to", () => {
+test("parseRunResult - end markers only count for the command they belong to", () => {
   // sync and scrub save the content file while they run (autosave), they are done only with a summary
   for (const command of ["sync", "scrub", "fix", "check"]) {
-    assertEquals(
-      parseRunResult(lines(`command:${command}`, "content_info:write_unixtime:1791913041")),
-      "incomplete",
-      command,
-    );
+    expect(parseRunResult(lines(`command:${command}`, "content_info:write_unixtime:1791913041")), command).toEqual("incomplete");
   }
-  assertEquals(parseRunResult(lines("command:touch", "summary:array_failure:0.5:0.4")), "incomplete");
-  assertEquals(parseRunResult(lines("command:smart", "content_info:write_unixtime:1791913041")), "incomplete");
+  expect(parseRunResult(lines("command:touch", "summary:array_failure:0.5:0.4"))).toEqual("incomplete");
+  expect(parseRunResult(lines("command:smart", "content_info:write_unixtime:1791913041"))).toEqual("incomplete");
   // A log without its header can not be told apart from one that stopped early
-  assertEquals(parseRunResult("content_info:write_unixtime:1791913041"), "incomplete");
-  assertEquals(parseRunResult(""), "incomplete");
+  expect(parseRunResult("content_info:write_unixtime:1791913041")).toEqual("incomplete");
+  expect(parseRunResult("")).toEqual("incomplete");
 });

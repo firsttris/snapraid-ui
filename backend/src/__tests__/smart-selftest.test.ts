@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { expect, test } from "bun:test";
 import { parseSelfTest, selfTestRunning, type SmartctlJson } from "../smart-selftest.ts";
 
 // Shaped like `smartctl -j -c -l selftest` of smartmontools 7
@@ -12,7 +12,7 @@ const ata = (status: object, table: object[] = []): SmartctlJson => ({
   ata_smart_self_test_log: { standard: { revision: 1, table, count: table.length } },
 } as SmartctlJson);
 
-Deno.test("parseSelfTest - ATA: a test in progress, durations and the log, newest first", () => {
+test("parseSelfTest - ATA: a test in progress, durations and the log, newest first", () => {
   const result = parseSelfTest(ata(
     { value: 249, string: "in progress, 90% remaining", remaining_percent: 90 },
     [
@@ -21,7 +21,7 @@ Deno.test("parseSelfTest - ATA: a test in progress, durations and the log, newes
       { type: { value: 2, string: "Extended offline" }, status: { value: 16, string: "Aborted by host", passed: false }, lifetime_hours: 20_500 },
     ],
   ));
-  assertEquals(result, {
+  expect(result).toEqual({
     supported: true,
     running: { remainingPercent: 90 },
     durations: { short: 2, long: 1124 },
@@ -33,13 +33,13 @@ Deno.test("parseSelfTest - ATA: a test in progress, durations and the log, newes
   });
 });
 
-Deno.test("parseSelfTest - ATA: nothing running", () => {
+test("parseSelfTest - ATA: nothing running", () => {
   const result = parseSelfTest(ata({ value: 0, string: "completed without error", passed: true }));
-  assertEquals(result.running, undefined);
-  assertEquals(result.log, []);
+  expect(result.running).toEqual(undefined);
+  expect(result.log).toEqual([]);
 });
 
-Deno.test("parseSelfTest - NVMe: running test as completion, results by value", () => {
+test("parseSelfTest - NVMe: running test as completion, results by value", () => {
   const result = parseSelfTest({
     smartctl: { exit_status: 0 },
     nvme_self_test_log: {
@@ -51,7 +51,7 @@ Deno.test("parseSelfTest - NVMe: running test as completion, results by value", 
       ],
     },
   });
-  assertEquals(result, {
+  expect(result).toEqual({
     supported: true,
     running: { remainingPercent: 70 },
     log: [
@@ -61,21 +61,15 @@ Deno.test("parseSelfTest - NVMe: running test as completion, results by value", 
   });
 });
 
-Deno.test("parseSelfTest - a sleeping disk is reported, not read", () => {
-  assertEquals(
-    parseSelfTest({ smartctl: { exit_status: 2, messages: [{ string: "Device is in STANDBY mode, exit(2)", severity: "information" }] } }),
-    { supported: true, standby: true, log: [] },
-  );
+test("parseSelfTest - a sleeping disk is reported, not read", () => {
+  expect(parseSelfTest({ smartctl: { exit_status: 2, messages: [{ string: "Device is in STANDBY mode, exit(2)", severity: "information" }] } })).toEqual({ supported: true, standby: true, log: [] });
 });
 
-Deno.test("parseSelfTest - no SMART data: not supported, with smartctl's reason", () => {
-  assertEquals(
-    parseSelfTest({ smartctl: { exit_status: 2, messages: [{ string: "/dev/vda: Unable to detect device type", severity: "error" }] } }),
-    { supported: false, error: "/dev/vda: Unable to detect device type", log: [] },
-  );
-  assertEquals(parseSelfTest({}), { supported: false, error: undefined, log: [] });
+test("parseSelfTest - no SMART data: not supported, with smartctl's reason", () => {
+  expect(parseSelfTest({ smartctl: { exit_status: 2, messages: [{ string: "/dev/vda: Unable to detect device type", severity: "error" }] } })).toEqual({ supported: false, error: "/dev/vda: Unable to detect device type", log: [] });
+  expect(parseSelfTest({})).toEqual({ supported: false, error: undefined, log: [] });
 });
 
-Deno.test("selfTestRunning - only devices with a test this UI started", () => {
-  assertEquals(selfTestRunning("/dev/never-tested"), false);
+test("selfTestRunning - only devices with a test this UI started", () => {
+  expect(selfTestRunning("/dev/never-tested")).toEqual(false);
 });

@@ -1,5 +1,8 @@
-import { assertEquals } from "@std/assert";
+import { expect, test } from "bun:test";
 import { blockingIssues, findDiskIssues, inspectPath, type PathState, parseRecordedDisks } from "../disk-check.ts";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // Structured log of `status`, trimmed to the tags the check reads
 const LOG = [
@@ -25,9 +28,9 @@ const LOG = [
 
 const fakeFs = (states: Record<string, PathState>) => (path: string) => Promise.resolve(states[path] ?? "present");
 
-Deno.test("parseRecordedDisks - configured path and filesystem next to the recorded ones", () => {
+test("parseRecordedDisks - configured path and filesystem next to the recorded ones", () => {
   const disks = parseRecordedDisks(LOG);
-  assertEquals(disks.find((disk) => disk.name === "d2"), {
+  expect(disks.find((disk) => disk.name === "d2")).toEqual({
     name: "d2",
     type: "data",
     path: "/mnt/disk2/",
@@ -36,47 +39,47 @@ Deno.test("parseRecordedDisks - configured path and filesystem next to the recor
     files: 4,
     storedSize: 0,
   });
-  assertEquals(disks.find((disk) => disk.name === "d4")?.path, "/mnt/new:disk/");
-  assertEquals(disks.find((disk) => disk.name === "2-parity")?.storedSize, 8847360);
+  expect(disks.find((disk) => disk.name === "d4")?.path).toEqual("/mnt/new:disk/");
+  expect(disks.find((disk) => disk.name === "2-parity")?.storedSize).toEqual(8847360);
 });
 
-Deno.test("findDiskIssues - empty mount point, missing parity and a changed filesystem", async () => {
+test("findDiskIssues - empty mount point, missing parity and a changed filesystem", async () => {
   const issues = await findDiskIssues(
     LOG,
     fakeFs({ "/mnt/disk3/": "empty", "/mnt/parity2/snapraid.2-parity": "missing" }),
   );
-  assertEquals(issues, [
+  expect(issues).toEqual([
     { disk: "d2", type: "data", path: "/mnt/disk2/", kind: "uuid_changed" },
     { disk: "d3", type: "data", path: "/mnt/disk3/", kind: "empty", files: 2 },
     { disk: "2-parity", type: "parity", path: "/mnt/parity2/snapraid.2-parity", kind: "missing" },
   ]);
-  assertEquals(blockingIssues(issues).map((issue) => issue.disk), ["d3", "2-parity"]);
+  expect(blockingIssues(issues).map((issue) => issue.disk)).toEqual(["d3", "2-parity"]);
 });
 
-Deno.test("findDiskIssues - a disk without recorded files may be empty or missing", async () => {
+test("findDiskIssues - a disk without recorded files may be empty or missing", async () => {
   const issues = await findDiskIssues(
     "data:d4:/mnt/disk4/:\nsummary:disk_file_count:d4:0",
     fakeFs({ "/mnt/disk4/": "missing" }),
   );
-  assertEquals(issues, []);
+  expect(issues).toEqual([]);
 });
 
-Deno.test("findDiskIssues - unknown filesystems are not compared", async () => {
+test("findDiskIssues - unknown filesystems are not compared", async () => {
   const issues = await findDiskIssues("data:d1:/mnt/disk1/:\ncontent_data_split:d1:aaaa\nsummary:disk_file_count:d1:3");
-  assertEquals(issues.filter((issue) => issue.kind === "uuid_changed"), []);
+  expect(issues.filter((issue) => issue.kind === "uuid_changed")).toEqual([]);
 });
 
-Deno.test("inspectPath - missing, empty and lost+found only", async () => {
-  const dir = await Deno.makeTempDir();
+test("inspectPath - missing, empty and lost+found only", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "snapraid-test-"));
   try {
-    assertEquals(await inspectPath(`${dir}/nope`), "missing");
-    assertEquals(await inspectPath(dir), "empty");
-    await Deno.mkdir(`${dir}/lost+found`);
-    assertEquals(await inspectPath(dir), "empty");
-    await Deno.writeTextFile(`${dir}/file`, "x");
-    assertEquals(await inspectPath(dir), "present");
-    assertEquals(await inspectPath(`${dir}/file`), "present");
+    expect(await inspectPath(`${dir}/nope`)).toEqual("missing");
+    expect(await inspectPath(dir)).toEqual("empty");
+    await mkdir(`${dir}/lost+found`);
+    expect(await inspectPath(dir)).toEqual("empty");
+    await writeFile(`${dir}/file`, "x");
+    expect(await inspectPath(dir)).toEqual("present");
+    expect(await inspectPath(`${dir}/file`)).toEqual("present");
   } finally {
-    await Deno.remove(dir, { recursive: true });
+    await rm(dir, { recursive: true });
   }
 });

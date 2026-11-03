@@ -3,6 +3,8 @@
 // files as deleted, and a sync would drop them from parity.
 import type { DiskIssue } from "@shared/types.ts";
 import { parseLogTags, toInt, unescapeTagValue } from "./parsers/structured-log.ts";
+import { readdir, stat } from "node:fs/promises";
+import { isNotFound } from "./fs.ts";
 
 // Parity levels in the structured log, split parity files (`parity/1`) are not tag lines
 const PARITY_LEVEL = /^(?:[2-6]-)?parity(?:\/\d+)?$|^z-parity(?:\/\d+)?$/;
@@ -18,14 +20,14 @@ export type PathState = "missing" | "empty" | "present";
  */
 export const inspectPath = async (path: string): Promise<PathState> => {
   try {
-    const info = await Deno.stat(path);
-    if (!info.isDirectory) return "present";
-    for await (const entry of Deno.readDir(path)) {
+    const info = await stat(path);
+    if (!info.isDirectory()) return "present";
+    for (const entry of await readdir(path, { withFileTypes: true })) {
       if (!IGNORED_ENTRIES.has(entry.name)) return "present";
     }
     return "empty";
   } catch (error) {
-    return error instanceof Deno.errors.NotFound ? "missing" : "present";
+    return isNotFound(error) ? "missing" : "present";
   }
 };
 

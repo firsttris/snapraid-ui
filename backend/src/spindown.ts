@@ -10,6 +10,7 @@ import { parseDevicesOutput } from "./parsers/devices-parser.ts";
 import { loadMaintenanceSettings } from "./maintenance-settings.ts";
 import { DEMO_MODE, demoDevices, demoDiskstats } from "./demo.ts";
 import { selfTestRunning } from "./smart-selftest.ts";
+import { readFile } from "node:fs/promises";
 
 const TICK_MS = 60_000;
 // Disks rarely move between devices; read the mapping again now and then and after a failed spindown
@@ -138,7 +139,7 @@ export const createSpindownMonitor = (isBusy: () => boolean) => {
         stats = parseDiskstats(
           DEMO_MODE
             ? demoDiskstats(watchedDevices.flatMap((entry) => entry.devices))
-            : await Deno.readTextFile(DISKSTATS),
+            : await readFile(DISKSTATS, "utf8"),
         );
       } catch (readError) {
         error = `Cannot read ${DISKSTATS}: ${readError instanceof Error ? readError.message : readError}`;

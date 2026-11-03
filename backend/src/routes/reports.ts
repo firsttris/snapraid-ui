@@ -6,6 +6,7 @@ import { parseSnapRaidConfig } from "../config-parser.ts";
 import { changedPaths, deleteDuplicates, insideDisk, markGone, MAX_DUPLICATE_DELETIONS } from "../duplicates.ts";
 import type { DiffReport, DuplicateDeletion } from "@shared/types.ts";
 import { msg } from "@shared/i18n.ts";
+import { stat } from "node:fs/promises";
 
 // New and changed files get their size, for the totals per folder; a big diff is not stat'ed whole
 const MAX_SIZED_FILES = 50_000;
@@ -30,7 +31,7 @@ const withSizes = async (configPath: string, diff: DiffReport): Promise<DiffRepo
     }
     sized++;
     try {
-      files.push({ ...file, size: (await Deno.stat(path)).size });
+      files.push({ ...file, size: (await stat(path)).size });
     } catch {
       files.push(file);
     }

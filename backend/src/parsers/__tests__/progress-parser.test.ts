@@ -1,8 +1,11 @@
-import { assertEquals } from "@std/assert";
+import { expect, test } from "bun:test";
 import { parseRunPos } from "../progress-parser.ts";
 import { createLogTail } from "../../executors/log-tail.ts";
+import { appendFile, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-Deno.test("parseRunPos - reads the latest run:pos tag", () => {
+test("parseRunPos - reads the latest run:pos tag", () => {
   const log = [
     "run:begin:0:1000:1000",
     "run:pos:10:10:5000000:1::::2::",
@@ -10,7 +13,7 @@ Deno.test("parseRunPos - reads the latest run:pos tag", () => {
     "msg:progress: something else",
   ].join("\n");
 
-  assertEquals(parseRunPos(log), {
+  expect(parseRunPos(log)).toEqual({
     percent: 12,
     processedMB: 480,
     speedMBs: 150,
@@ -19,27 +22,29 @@ Deno.test("parseRunPos - reads the latest run:pos tag", () => {
   });
 });
 
-Deno.test("parseRunPos - leaves the estimates out until SnapRAID has them", () => {
-  assertEquals(parseRunPos("run:pos:0:0:0:0::::0::\n"), {
+test("parseRunPos - leaves the estimates out until SnapRAID has them", () => {
+  expect(parseRunPos("run:pos:0:0:0:0::::0::\n")).toEqual({
     percent: 0,
     processedMB: 0,
     speedMBs: undefined,
     etaMinutes: undefined,
     temperature: undefined,
   });
-  assertEquals(parseRunPos("run:begin:0:10:10\nrun:end\n"), null);
+  expect(parseRunPos("run:begin:0:10:10\nrun:end\n")).toEqual(null);
 });
 
-Deno.test("createLogTail - returns only new complete lines", async () => {
-  const path = await Deno.makeTempFile();
+test("createLogTail - returns only new complete lines", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "snapraid-test-"));
+  const path = join(dir, "progress.log");
+  await writeFile(path, "");
   try {
     const readNew = createLogTail(path);
-    await Deno.writeTextFile(path, "run:begin:0:10:10\nrun:pos:1:1:0:1");
-    assertEquals(await readNew(), "run:begin:0:10:10\n");
-    await Deno.writeTextFile(path, "0::::0::\nrun:end\n", { append: true });
-    assertEquals(await readNew(), "run:pos:1:1:0:10::::0::\nrun:end\n");
-    assertEquals(await readNew(), "");
+    await writeFile(path, "run:begin:0:10:10\nrun:pos:1:1:0:1");
+    expect(await readNew()).toEqual("run:begin:0:10:10\n");
+    await appendFile(path, "0::::0::\nrun:end\n");
+    expect(await readNew()).toEqual("run:pos:1:1:0:10::::0::\nrun:end\n");
+    expect(await readNew()).toEqual("");
   } finally {
-    await Deno.remove(path);
+    await rm(dir, { recursive: true });
   }
 });

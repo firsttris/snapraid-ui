@@ -1,7 +1,8 @@
 // What every engine (engine/engine.ts) has to do, run against each of them:
 // the fake one always, the CLI one when a SnapRAID binary is available.
 // A new engine, e.g. one on snapraid-daemon's REST API, gets the same tests.
-import { assert, assertEquals, assertRejects } from "@std/assert";
+import { expect, test } from "bun:test";
+import { assertRejects } from "./assert-error.ts";
 import { EngineBusyError, type SnapRaidEngine } from "../engine/engine.ts";
 
 export interface ContractSetup {
@@ -12,42 +13,47 @@ export interface ContractSetup {
   cleanup?: () => Promise<void>;
 }
 
+// The steps of one test run in order on the same engine; a failing step names itself
+const step = async (name: string, run: () => Promise<void> | void) => {
+  try {
+    await run();
+  } catch (error) {
+    throw new Error(`Step "${name}" failed`, { cause: error });
+  }
+};
+
 export const engineContract = (name: string, setup: () => Promise<ContractSetup>, ignore = false) =>
-  Deno.test({
-    name: `engine contract: ${name}`,
-    ignore,
-    // The CLI engine spawns SnapRAID and keeps timers for its progress
-    sanitizeResources: false,
-    sanitizeOps: false,
-    fn: async (t) => {
+  test.skipIf(ignore)(
+    `engine contract: ${name}`,
+    async () => {
       const { engine, configPath, dataDisks, addFile, cleanup } = await setup();
       try {
-        await t.step("a sync succeeds and the job is no longer current", async () => {
+        await step("a sync succeeds and the job is no longer current", async () => {
           const outcome = await engine.runJob({ command: "sync", configPath });
-          assertEquals(outcome.report.result, "ok");
-          assertEquals(outcome.output.exitCode, 0);
-          assertEquals(engine.currentJob(), null);
-          assertEquals(engine.lastJob()?.command, "sync");
+          expect(outcome.report.result).toEqual("ok");
+          expect(outcome.output.exitCode).toEqual(0);
+          expect(engine.currentJob()).toEqual(null);
+          expect(engine.lastJob()?.command).toEqual("sync");
         });
 
-        await t.step("the status describes the data disks", async () => {
+        await step("the status describes the data disks", async () => {
           const { status } = await engine.readStatus(configPath);
-          assertEquals(status.disks?.map((disk) => disk.name).sort(), [...dataDisks].sort());
-          assertEquals(status.diskIssues, []);
-          assert(!status.hasErrors);
+          expect(status.disks?.map((disk) => disk.name).sort()).toEqual([...dataDisks].sort());
+          expect(status.diskIssues).toEqual([]);
+          expect(!status.hasErrors).toBeTruthy();
         });
 
-        await t.step("the diff lists a new file, a sync records it", async () => {
+        await step("the diff lists a new file, a sync records it", async () => {
           await addFile("new-file.bin");
           const before = await engine.readDiff(configPath);
-          assertEquals(before.newFiles, 1);
-          assert(before.files.some((file) => file.name.endsWith("new-file.bin")));
+          expect(before.newFiles).toEqual(1);
+          expect(before.files.some((file) => file.name.endsWith("new-file.bin"))).toBeTruthy();
 
           await engine.runJob({ command: "sync", configPath });
-          assertEquals((await engine.readDiff(configPath)).newFiles, 0);
+          expect((await engine.readDiff(configPath)).newFiles).toEqual(0);
         });
 
-        await t.step("afterRun runs while the job is current, the status waits for it", async () => {
+        await step("afterRun runs while the job is current, the status waits for it", async () => {
           let current = null as ReturnType<SnapRaidEngine["currentJob"]>;
           await engine.runJob({
             command: "scrub",
@@ -56,23 +62,25 @@ export const engineContract = (name: string, setup: () => Promise<ContractSetup>
             afterRun: async () => {
               current = engine.currentJob();
               const error = await assertRejects(() => engine.readStatus(configPath), EngineBusyError);
-              assertEquals(error.reason, "job");
+              expect(error.reason).toEqual("job");
             },
           });
-          assertEquals(current?.command, "scrub");
+          expect(current?.command).toEqual("scrub");
         });
 
-        await t.step("output goes to onOutput", async () => {
+        await step("output goes to onOutput", async () => {
           const chunks: string[] = [];
           await engine.runJob({ command: "diff", configPath, onOutput: (chunk) => chunks.push(chunk) });
-          assert(chunks.join("").length > 0);
+          expect(chunks.join("").length > 0).toBeTruthy();
         });
 
-        await t.step("abort without a running job does nothing", () => {
-          assertEquals(engine.abortJob("nothing-1"), false);
+        await step("abort without a running job does nothing", () => {
+          expect(engine.abortJob("nothing-1")).toEqual(false);
         });
       } finally {
         await cleanup?.();
       }
     },
-  });
+    // The CLI engine runs SnapRAID, a daemon its tasks: more than a unit test's 5 s
+    60_000,
+  );

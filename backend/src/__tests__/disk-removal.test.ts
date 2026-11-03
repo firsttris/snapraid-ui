@@ -1,5 +1,6 @@
-import { assertEquals, assertRejects, assertThrows } from "@std/assert";
-import { join } from "@std/path";
+import { expect, test } from "bun:test";
+import { assertRejects, assertThrows } from "./assert-error.ts";
+import { join } from "node:path";
 import {
   DiskRemovalError,
   ensureEmptyDir,
@@ -7,6 +8,8 @@ import {
   prepareDataDiskRemoval,
 } from "../disk-removal.ts";
 import { parseSnapRaidConfig } from "../config-parser.ts";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 
 const CONFIG = `parity /mnt/parity1/snapraid.parity
 content /var/snapraid/snapraid.content
@@ -16,11 +19,11 @@ data d2 /mnt/disk2/
 content /mnt/disk2/.snapraid.content
 exclude *.tmp`;
 
-Deno.test("prepareDataDiskRemoval - points the disk to its empty directory and drops its content file", () => {
+test("prepareDataDiskRemoval - points the disk to its empty directory and drops its content file", () => {
   const { config, emptyDir } = prepareDataDiskRemoval(CONFIG, "d2");
 
-  assertEquals(emptyDir, "/mnt/disk2/.snapraid-removal");
-  assertEquals(config, `parity /mnt/parity1/snapraid.parity
+  expect(emptyDir).toEqual("/mnt/disk2/.snapraid-removal");
+  expect(config).toEqual(`parity /mnt/parity1/snapraid.parity
 content /var/snapraid/snapraid.content
 data d1 /mnt/disk1
 content /mnt/disk1/.snapraid.content
@@ -28,28 +31,28 @@ data d2 /mnt/disk2/.snapraid-removal
 exclude *.tmp`);
 });
 
-Deno.test("prepareDataDiskRemoval - retrying a pending removal keeps the same directory", () => {
+test("prepareDataDiskRemoval - retrying a pending removal keeps the same directory", () => {
   const first = prepareDataDiskRemoval(CONFIG, "d1");
   const second = prepareDataDiskRemoval(first.config, "d1");
 
-  assertEquals(second, first);
+  expect(second).toEqual(first);
 });
 
-Deno.test("prepareDataDiskRemoval - does not touch a disk whose path only shares a prefix", () => {
+test("prepareDataDiskRemoval - does not touch a disk whose path only shares a prefix", () => {
   const config = `${CONFIG}\ndata d10 /mnt/disk10\ncontent /mnt/disk10/.snapraid.content`;
   const { config: updated } = prepareDataDiskRemoval(config, "d1");
 
-  assertEquals(updated.includes("content /mnt/disk10/.snapraid.content"), true);
-  assertEquals(updated.includes("data d10 /mnt/disk10"), true);
+  expect(updated.includes("content /mnt/disk10/.snapraid.content")).toEqual(true);
+  expect(updated.includes("data d10 /mnt/disk10")).toEqual(true);
 });
 
-Deno.test("prepareDataDiskRemoval - refuses to leave too few content files", () => {
+test("prepareDataDiskRemoval - refuses to leave too few content files", () => {
   const config = `${CONFIG}\n2-parity /mnt/parity2/snapraid.2-parity`;
 
   assertThrows(() => prepareDataDiskRemoval(config, "d1"), DiskRemovalError, '"needed":3');
 });
 
-Deno.test("prepareDataDiskRemoval - refuses unknown and last data disks", () => {
+test("prepareDataDiskRemoval - refuses unknown and last data disks", () => {
   assertThrows(() => prepareDataDiskRemoval(CONFIG, "d9"), DiskRemovalError, "server_error_data_disk_not_found");
   assertThrows(
     () => prepareDataDiskRemoval("parity /p\ncontent /a\ncontent /b\ndata d1 /mnt/disk1", "d1"),
@@ -58,37 +61,37 @@ Deno.test("prepareDataDiskRemoval - refuses unknown and last data disks", () => 
   );
 });
 
-Deno.test("finalizeDataDiskRemoval - drops only a pending data line", () => {
+test("finalizeDataDiskRemoval - drops only a pending data line", () => {
   const { config } = prepareDataDiskRemoval(CONFIG, "d1");
 
-  assertEquals(finalizeDataDiskRemoval(config, "d1").includes("data d1 "), false);
-  assertEquals(finalizeDataDiskRemoval(CONFIG, "d1"), CONFIG);
+  expect(finalizeDataDiskRemoval(config, "d1").includes("data d1 ")).toEqual(false);
+  expect(finalizeDataDiskRemoval(CONFIG, "d1")).toEqual(CONFIG);
 });
 
-Deno.test("parseSnapRaidConfig - lists disks pending removal", async () => {
-  const dir = await Deno.makeTempDir();
+test("parseSnapRaidConfig - lists disks pending removal", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "snapraid-test-"));
   try {
     const path = join(dir, "snapraid.conf");
-    await Deno.writeTextFile(path, prepareDataDiskRemoval(CONFIG, "d1").config);
+    await writeFile(path, prepareDataDiskRemoval(CONFIG, "d1").config);
     const parsed = await parseSnapRaidConfig(path);
 
-    assertEquals(parsed.pendingRemoval, ["d1"]);
-    assertEquals(parsed.data.d1, "/mnt/disk1/.snapraid-removal");
+    expect(parsed.pendingRemoval).toEqual(["d1"]);
+    expect(parsed.data.d1).toEqual("/mnt/disk1/.snapraid-removal");
   } finally {
-    await Deno.remove(dir, { recursive: true });
+    await rm(dir, { recursive: true });
   }
 });
 
-Deno.test("ensureEmptyDir - creates the directory and rejects leftovers", async () => {
-  const dir = await Deno.makeTempDir();
+test("ensureEmptyDir - creates the directory and rejects leftovers", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "snapraid-test-"));
   try {
     const emptyDir = join(dir, ".snapraid-removal");
     await ensureEmptyDir(emptyDir);
     await ensureEmptyDir(emptyDir);
 
-    await Deno.writeTextFile(join(emptyDir, "file"), "x");
+    await writeFile(join(emptyDir, "file"), "x");
     await assertRejects(() => ensureEmptyDir(emptyDir), DiskRemovalError, "server_error_not_empty");
   } finally {
-    await Deno.remove(dir, { recursive: true });
+    await rm(dir, { recursive: true });
   }
 });

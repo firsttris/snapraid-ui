@@ -1,4 +1,4 @@
-import { dirname } from "@std/path";
+import { dirname } from "node:path";
 import type {
   DataDiskUsage,
   ParityFileUsage,
@@ -7,16 +7,16 @@ import type {
 } from "@shared/types.ts";
 import { type FsUsage, parseDfOutput } from "./parsers/df-parser.ts";
 import { DEMO_MODE, demoDataDiskUsage, demoParityUsage } from "./demo.ts";
+import { stat } from "node:fs/promises";
+import { runCommand } from "./command.ts";
 
 const toGB = (bytes: number): number => Math.round(bytes / 1e9 * 10) / 10;
 
 const getFsUsage = async (path: string): Promise<FsUsage | null> => {
   try {
-    const { code, stdout } = await new Deno.Command("df", {
-      args: ["-B1", "--output=size,avail,target", "--", path],
-      stdout: "piped",
-      stderr: "null",
-    }).output();
+    const { code, stdout } = await runCommand(["df", "-B1", "--output=size,avail,target", "--", path], {
+      stderr: "ignore",
+    });
     return code === 0 ? parseDfOutput(new TextDecoder().decode(stdout)) : null;
   } catch {
     return null;
@@ -25,7 +25,7 @@ const getFsUsage = async (path: string): Promise<FsUsage | null> => {
 
 const getFileSize = async (path: string): Promise<number | null> => {
   try {
-    return (await Deno.stat(path)).size;
+    return (await stat(path)).size;
   } catch {
     return null;
   }

@@ -1,6 +1,6 @@
-import { isAbsolute, join, relative, resolve } from "@std/path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 
-export const BASE_PATH = Deno.env.get("SNAPRAID_BASE_PATH") || join(Deno.cwd(), "..", "snapraid");
+export const BASE_PATH = process.env.SNAPRAID_BASE_PATH || join(process.cwd(), "..", "snapraid");
 
 /**
  * Resolve a path against BASE_PATH; absolute paths (e.g. /mnt/parity/snapraid.conf) are kept as is
@@ -17,14 +17,10 @@ export const toStoredPath = (path: string): string => {
 };
 
 // Binary to invoke, e.g. a locally built one for development
-export const SNAPRAID_BIN = Deno.env.get("SNAPRAID_BIN") || "snapraid";
+export const SNAPRAID_BIN = process.env.SNAPRAID_BIN || "snapraid";
 
 // Extra args prepended to every invocation, e.g. "--test-skip-device" for sandboxes on a single device
-export const SNAPRAID_EXTRA_ARGS = (Deno.env.get("SNAPRAID_EXTRA_ARGS") ?? "").split(/\s+/).filter(Boolean);
+export const SNAPRAID_EXTRA_ARGS = (process.env.SNAPRAID_EXTRA_ARGS ?? "").split(/\s+/).filter(Boolean);
 
-export const snapraidCommand = (args: string[]): Deno.Command =>
-  new Deno.Command(SNAPRAID_BIN, {
-    args: [...SNAPRAID_EXTRA_ARGS, ...args],
-    stdout: "piped",
-    stderr: "piped",
-  });
+// The command line of a SnapRAID invocation, for runCommand or Bun.spawn
+export const snapraidCommand = (args: string[]): string[] => [SNAPRAID_BIN, ...SNAPRAID_EXTRA_ARGS, ...args];

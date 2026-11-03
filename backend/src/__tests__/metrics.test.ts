@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes } from "@std/assert";
+import { expect, test } from "bun:test";
 import type { Schedule, SnapRaidStatus } from "@shared/types.ts";
 import { renderMetrics } from "../metrics.ts";
 
@@ -29,7 +29,7 @@ const schedule: Schedule = {
 
 const lines = (text: string) => text.split("\n").filter((line) => line && !line.startsWith("#"));
 
-Deno.test("renderMetrics - array, disks and schedules in Prometheus format", () => {
+test("renderMetrics - array, disks and schedules in Prometheus format", () => {
   const text = renderMetrics({
     job: null,
     schedules: [schedule],
@@ -54,7 +54,7 @@ Deno.test("renderMetrics - array, disks and schedules in Prometheus format", () 
     }],
   });
 
-  assertStringIncludes(text, "# TYPE snapraid_bad_blocks gauge");
+  expect(text).toContain("# TYPE snapraid_bad_blocks gauge");
   const samples = lines(text);
   const label = 'config="Media \\"main\\""';
   for (
@@ -77,18 +77,18 @@ Deno.test("renderMetrics - array, disks and schedules in Prometheus format", () 
       'snapraid_schedule_next_run_timestamp_seconds{schedule="Nightly",command="sync"} 1791601200',
     ]
   ) {
-    assertEquals(samples.includes(sample), true, `missing: ${sample}\n${text}`);
+    expect(samples.includes(sample), `missing: ${sample}\n${text}`).toEqual(true);
   }
   // Values SMART did not report are left out, not reported as 0
-  assertEquals(samples.some((sample) => sample.startsWith("snapraid_disk_pending_sectors")), false);
+  expect(samples.some((sample) => sample.startsWith("snapraid_disk_pending_sectors"))).toEqual(false);
 });
 
-Deno.test("renderMetrics - without a status read yet, only what the logs know", () => {
+test("renderMetrics - without a status read yet, only what the logs know", () => {
   const text = renderMetrics({
     job: { command: "scrub", configPath: "/cfg/media.conf", startTime: "", processId: "p" },
     schedules: [],
     configs: [{ name: "Media", path: "/cfg/media.conf", lastRuns: { sync: null, scrub: null }, smart: {} }],
   });
   const samples = lines(text);
-  assertEquals(samples, ["snapraid_ui_up 1", "snapraid_job_running 1", 'snapraid_job_info{command="scrub",config="Media"} 1']);
+  expect(samples).toEqual(["snapraid_ui_up 1", "snapraid_job_running 1", 'snapraid_job_info{command="scrub",config="Media"} 1']);
 });

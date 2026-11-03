@@ -7,7 +7,7 @@ import type { DataDiskUsage, DeviceInfo, ParityLevelUsage, ParsedSnapRaidConfig 
 import { parseSnapRaidConfig } from "./config-parser.ts";
 import type { DockerRequest } from "./docker.ts";
 
-export const DEMO_MODE = Deno.env.get("SNAPRAID_DEMO") === "1";
+export const DEMO_MODE = process.env.SNAPRAID_DEMO === "1";
 
 interface DemoDisk {
   serial: string;

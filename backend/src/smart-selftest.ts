@@ -5,10 +5,11 @@
 import type { DeviceInfo, DiskSelfTest, SelfTestLogEntry, SelfTestType } from "@shared/types.ts";
 import { executeSnapraidCommand } from "./executors/command-executor.ts";
 import { parseDevicesOutput } from "./parsers/devices-parser.ts";
+import { runCommand } from "./command.ts";
 import { DEMO_MODE, demoDevices, demoDisks } from "./demo.ts";
 
 // The image installs smartmontools; tests point it to a stand-in
-const smartctlBin = () => Deno.env.get("SMARTCTL_BIN") ?? "smartctl";
+const smartctlBin = () => process.env.SMARTCTL_BIN ?? "smartctl";
 
 // smartctl exit status: bit 0 command line, bit 1 device could not be opened (or is asleep
 // with -n standby), bit 2 a command to the disk failed
@@ -118,11 +119,7 @@ export const parseSelfTest = (json: SmartctlJson): Omit<DiskSelfTest, "disk" | "
 };
 
 const runSmartctl = async (args: string[]): Promise<{ json: SmartctlJson; exitCode: number }> => {
-  const { stdout, code } = await new Deno.Command(smartctlBin(), {
-    args: ["-j", ...args],
-    stdout: "piped",
-    stderr: "null",
-  }).output();
+  const { stdout, code } = await runCommand([smartctlBin(), "-j", ...args], { stderr: "ignore" });
   let json: SmartctlJson = {};
   try {
     json = JSON.parse(new TextDecoder().decode(stdout));

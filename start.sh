@@ -20,12 +20,8 @@ else
     mkdir -p $SNAPRAID_BASE_PATH
 end
 
-# Fall back to the Deno downloaded by dev/setup.sh
-if not command -q deno; and test -x $root/dev/tools/deno
-    set -x PATH $root/dev/tools $PATH
-end
-if not command -q deno
-    echo "Deno not found. Install it (https://deno.land) or run: ./start.sh --demo" >&2
+if not command -q bun
+    echo "Bun not found. Install it: https://bun.sh" >&2
     exit 1
 end
 
@@ -37,7 +33,7 @@ function kill_tree
     kill $argv[1] 2>/dev/null
 end
 
-# deno run --watch ignores the SIGINT of Ctrl+C, so stop both servers with SIGTERM
+# Stop both servers with SIGTERM, also on Ctrl+C
 function stop_servers --on-event fish_exit
     for pid in $backend_pid $frontend_pid
         kill_tree $pid
@@ -50,12 +46,12 @@ end
 
 # Starte Backend im Hintergrund
 cd $root/backend
-deno task dev &
+bun run dev &
 set -g backend_pid $last_pid
 
 # Starte Frontend im Hintergrund
 cd $root/frontend
-npm run dev &
+bun run dev &
 set -g frontend_pid $last_pid
 
 # Warte auf beide Prozesse. Polling statt wait, weil fish wait nur bei SIGINT unterbricht;

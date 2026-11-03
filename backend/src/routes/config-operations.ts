@@ -1,9 +1,10 @@
 import { Hono } from "hono";
-import { join } from "@std/path";
+import { join } from "node:path";
 import { parseSnapRaidConfig } from "../config-parser.ts";
 import { resolveFromBase } from "../config.ts";
 import { editSmartIgnore, isSmartIgnoreAttribute, SMART_IGNORE_MAX, SmartIgnoreFullError } from "../smart-ignore.ts";
 import { msg } from "@shared/i18n.ts";
+import { readFile, writeFile } from "node:fs/promises";
 
 const configOperations = new Hono();
 
@@ -19,7 +20,7 @@ configOperations.post("/add-exclude", async (c) => {
 
   try {
     // Read the config file
-    const content = await Deno.readTextFile(configPath);
+    const content = await readFile(configPath, "utf8");
     const lines = content.split("\n");
 
     // Check if pattern already exists
@@ -58,7 +59,7 @@ configOperations.post("/add-exclude", async (c) => {
     ];
 
     // Write back to file
-    await Deno.writeTextFile(configPath, updatedLines.join("\n"));
+    await writeFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
     const parsed = await parseSnapRaidConfig(configPath);
@@ -80,14 +81,14 @@ configOperations.post("/remove-exclude", async (c) => {
 
   try {
     // Read the config file
-    const content = await Deno.readTextFile(configPath);
+    const content = await readFile(configPath, "utf8");
     const lines = content.split("\n");
 
     // Remove the exclude line
     const updatedLines = lines.filter(line => line.trim() !== `exclude ${pattern}`);
 
     // Write back to file
-    await Deno.writeTextFile(configPath, updatedLines.join("\n"));
+    await writeFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
     const parsed = await parseSnapRaidConfig(configPath);
@@ -109,7 +110,7 @@ configOperations.post("/set-pool", async (c) => {
 
   try {
     // Read the config file
-    const content = await Deno.readTextFile(configPath);
+    const content = await readFile(configPath, "utf8");
     const lines = content.split("\n");
 
     // Remove existing pool line if present
@@ -148,7 +149,7 @@ configOperations.post("/set-pool", async (c) => {
     }
 
     // Write back to file
-    await Deno.writeTextFile(configPath, filteredLines.join("\n"));
+    await writeFile(configPath, filteredLines.join("\n"));
 
     // Parse and return updated config
     const parsed = await parseSnapRaidConfig(configPath);
@@ -185,14 +186,14 @@ configOperations.post("/add-content", async (c) => {
   const value = contentPath.trim();
 
   try {
-    const lines = (await Deno.readTextFile(configPath)).split("\n");
+    const lines = (await readFile(configPath, "utf8")).split("\n");
     if (lines.some((line) => line.trim() === `content ${value}`)) {
       return c.json({ error: msg("server_error_content_file_exists", { path: value }) }, 400);
     }
 
     const insertIndex = insertIndexAfter(lines, [CONTENT_LINE, PARITY_LINE]);
     lines.splice(insertIndex, 0, `content ${value}`);
-    await Deno.writeTextFile(configPath, lines.join("\n"));
+    await writeFile(configPath, lines.join("\n"));
 
     const parsed = await parseSnapRaidConfig(configPath);
     return c.json({ success: true, config: parsed });
@@ -212,9 +213,9 @@ configOperations.post("/remove-content", async (c) => {
   const configPath = resolveFromBase(relativePath);
 
   try {
-    const lines = (await Deno.readTextFile(configPath)).split("\n");
+    const lines = (await readFile(configPath, "utf8")).split("\n");
     const updatedLines = lines.filter((line) => line.trim() !== `content ${contentPath}`);
-    await Deno.writeTextFile(configPath, updatedLines.join("\n"));
+    await writeFile(configPath, updatedLines.join("\n"));
 
     const parsed = await parseSnapRaidConfig(configPath);
     return c.json({ success: true, config: parsed });
@@ -244,7 +245,7 @@ configOperations.post("/set-option", async (c) => {
   const pattern = OPTIONS[option];
 
   try {
-    const lines = (await Deno.readTextFile(configPath)).split("\n");
+    const lines = (await readFile(configPath, "utf8")).split("\n");
     const existing = lines.findIndex((line) => pattern.test(line.trim()));
 
     if (value === null) {
@@ -256,7 +257,7 @@ configOperations.post("/set-option", async (c) => {
       lines.splice(insertIndex, 0, `${option} ${value}`);
     }
 
-    await Deno.writeTextFile(configPath, lines.join("\n"));
+    await writeFile(configPath, lines.join("\n"));
 
     const parsed = await parseSnapRaidConfig(configPath);
     return c.json({ success: true, config: parsed });
@@ -292,8 +293,8 @@ configOperations.post("/smartignore", async (c) => {
       return c.json({ error: `Unknown disk: ${disk}` }, 400);
     }
 
-    const lines = (await Deno.readTextFile(configPath)).split("\n");
-    await Deno.writeTextFile(configPath, editSmartIgnore(lines, disk, attribute, ignore).join("\n"));
+    const lines = (await readFile(configPath, "utf8")).split("\n");
+    await writeFile(configPath, editSmartIgnore(lines, disk, attribute, ignore).join("\n"));
 
     const parsed = await parseSnapRaidConfig(configPath);
     return c.json({ success: true, config: parsed });

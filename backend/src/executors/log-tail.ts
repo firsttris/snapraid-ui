@@ -1,3 +1,6 @@
+import { open } from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
+
 /**
  * Reads the lines a running process appends to its log file, from where the last read stopped.
  * A line still being written is kept until it is complete.
@@ -8,28 +11,27 @@ export const createLogTail = (path: string) => {
   const decoder = new TextDecoder();
 
   return async (): Promise<string> => {
-    let file: Deno.FsFile;
+    let file: FileHandle;
     try {
-      file = await Deno.open(path, { read: true });
+      file = await open(path, "r");
     } catch {
       return ""; // Not created yet
     }
     try {
-      await file.seek(offset, Deno.SeekMode.Start);
       const chunks: string[] = [];
       const buffer = new Uint8Array(64 * 1024);
       while (true) {
-        const read = await file.read(buffer);
-        if (read === null || read === 0) break;
-        offset += read;
-        chunks.push(decoder.decode(buffer.subarray(0, read), { stream: true }));
+        const { bytesRead } = await file.read(buffer, 0, buffer.length, offset);
+        if (bytesRead === 0) break;
+        offset += bytesRead;
+        chunks.push(decoder.decode(buffer.subarray(0, bytesRead), { stream: true }));
       }
       const text = partial + chunks.join("");
       const end = text.lastIndexOf("\n") + 1;
       partial = text.slice(end);
       return text.slice(0, end);
     } finally {
-      file.close();
+      await file.close();
     }
   };
 };
