@@ -23,7 +23,7 @@ SnapRAID UI has three parts:
 
 | Part | Technology | Location |
 |---|---|---|
-| Backend | [Deno](https://deno.com/) + [Hono](https://hono.dev/), REST API and WebSocket; serves the built frontend on the same port | `backend/src/` |
+| Backend | [Bun](https://bun.sh/) + [Hono](https://hono.dev/), REST API and WebSocket; serves the built frontend on the same port | `backend/src/` |
 | Frontend | React 19, TanStack Start / Router / Query, Tailwind CSS, shadcn/ui, Paraglide JS; server-rendered by Nitro, which builds one fetch handler that the backend runs | `frontend/src/` |
 | Shared code | Types and logic used by both sides (types, i18n markers, SMART assessment, fill-up forecast, `--force-*` detection) | `shared/` |
 
@@ -34,21 +34,21 @@ There is no database. All state lives in JSON files and log files in the data di
 The Docker image (`docker/Dockerfile`) is a multi-stage build:
 
 1. **snapraid-builder** (Debian bookworm-slim) downloads the pinned SnapRAID release (`ARG SNAPRAID_VERSION=15.1`) and compiles it.
-2. **backend-builder** (`denoland/deno:2.5.6`) installs the backend dependencies and warms the Deno module cache.
+2. **backend-builder** (`oven/bun:1.4.4-slim`) installs the backend's packages with `bun install --frozen-lockfile --production`.
 3. **frontend-builder** (`oven/bun:1.4.4-slim`) runs `bun install --frozen-lockfile` and `bun run build`, which produces `frontend/.output/`.
-4. The **final image** is based on `denoland/deno:2.5.6`, adds `curl` and `smartmontools` (SnapRAID calls `smartctl` for `smart` and `probe`), and copies in the SnapRAID binary, the backend with its module cache and the built frontend.
+4. The **final image** is based on `oven/bun:1.4.4-slim`, adds `curl`, `smartmontools` (SnapRAID calls `smartctl` for `smart` and `probe`) and `tini`, and copies in the SnapRAID binary, the backend with its packages, `shared/` and the built frontend.
 
 The container runs a single process, the backend, under [tini](https://github.com/krallin/tini) as PID 1, which passes `docker stop`'s `SIGTERM` on and reaps the processes the backend starts:
 
 ```
-deno run --allow-net --allow-read --allow-write --allow-run --allow-env --allow-sys=networkInterfaces,hostname src/main.ts
+bun src/main.ts
 ```
 
 It listens on port 80 (`PORT=80`) and answers `/api` and `/ws` itself. Every other path goes to the frontend: Nitro builds the server-side rendering and the static files (`frontend/.output/`) with its `standard` preset into one fetch handler, which `backend/src/frontend.ts` loads from `../frontend/.output/server/index.mjs`.
 
 ```mermaid
 flowchart LR
-  B[Browser] -->|":80"| A["backend (Deno + Hono)"]
+  B[Browser] -->|":80"| A["backend (Bun + Hono)"]
   A -->|"/api, /ws"| R[routes]
   A -->|"everything else"| F["frontend (SSR, static files)"]
   R -->|child process| S[snapraid]
@@ -62,7 +62,7 @@ The image sets `SNAPRAID_BASE_PATH=/app/snapraid`, `SNAPRAID_BIN=/usr/local/bin/
 
 ## Standalone binary
 
-`scripts/build-binary.sh` compiles `backend/src/bin.ts` with `deno compile` into one executable per architecture (`snapraid-ui-linux-x86_64`, `snapraid-ui-linux-aarch64`), which the release attaches to the GitHub release. The binary embeds the Deno runtime, the backend with its npm and JSR dependencies, and with `--include` the built frontend (`frontend/.output/`), `frontend/package.json` and `docs/*.md`. Inside the binary these files keep their place relative to the backend's sources, so the code that finds them in the repository and in the image finds them there too:
+`scripts/build-binary.sh` compiles `backend/src/bin.ts` with `bun build --compile` into one executable per architecture (`snapraid-ui-linux-x86_64`, `snapraid-ui-linux-aarch64`), which the release attaches to the GitHub release. The binary embeds the Bun runtime, the backend bundled with its packages, and with `--asset` the built frontend (`frontend/.output/`), `frontend/package.json` and `docs/*.md`. Inside the binary these files lie under `/$bunfs/root/` at their paths in the repository (`frontend/…`, `docs/…`); `backend/src/app-files.ts` finds them there, and next to `backend/` in the repository and the image:
 
 | File | Read by | For |
 |---|---|---|
@@ -70,11 +70,11 @@ The image sets `SNAPRAID_BASE_PATH=/app/snapraid`, `SNAPRAID_BIN=/usr/local/bin/
 | `frontend/package.json` | `backend/src/version.ts` | The version, for `--version`, Home Assistant and the MCP endpoint; `SNAPRAID_UI_VERSION` overrides it |
 | `docs/*.md` | `backend/src/mcp.ts` | The documentation the MCP endpoint offers |
 
-`bin.ts` answers `--version` and `--help`, sets the data directory to `./snapraid` when `SNAPRAID_BASE_PATH` is not set, and then loads `main.ts`. SnapRAID and `smartctl` are not inside: the binary runs the ones installed on the host.
+`bin.ts` first imports `bin-cli.ts`, which answers `--version` and `--help` and sets the data directory to `./snapraid` when `SNAPRAID_BASE_PATH` is not set, and then `main.ts`. SnapRAID and `smartctl` are not inside: the binary runs the ones installed on the host.
 
 ## Backend
 
-`backend/src/main.ts` builds the Hono app, wires the modules together and starts `Deno.serve` on `SNAPRAID_UI_HOST` (`0.0.0.0` when unset) at `PORT` (8080 when unset, 80 in the image). On start it loads `config.json` (creating a default one if it is missing), creates the log directory, loads the schedules and runs one log rotation.
+`backend/src/main.ts` builds the Hono app, wires the modules together and starts `Bun.serve` (with its `websocket` handler for `/ws`) on `SNAPRAID_UI_HOST` (`0.0.0.0` when unset) at `PORT` (8080 when unset, 80 in the image). On start it loads `config.json` (creating a default one if it is missing), creates the log directory, loads the schedules and runs one log rotation.
 
 Middleware, in order:
 
@@ -249,7 +249,7 @@ Everything lives in the data directory, `SNAPRAID_BASE_PATH`. In the image that 
 | `auth.json` | Password changed in the UI (hash) and passkeys (only with login enabled) |
 | `logs/*.log` | One structured log per job (directory set in `config.json`) |
 
-Writes are plain `Deno.writeTextFile` calls. Most files are read again whenever they are needed. Two things are read only at startup: the log directory and retention settings from `config.json`, and the cron timers, which are rebuilt from `schedules.json` on start, on changes through the API and after a restore. See [Configuration](configuration.md) for details on each file.
+Writes go through `node:fs`: the JSON state files through `writeTextFileAtomic` (`backend/src/atomic-write.ts`, a temporary file renamed over the old one), other writes (the SnapRAID configs among them) are plain `writeFile` calls. Most files are read again whenever they are needed. Two things are read only at startup: the log directory and retention settings from `config.json`, and the cron timers, which are rebuilt from `schedules.json` on start, on changes through the API and after a restore. See [Configuration](configuration.md) for details on each file.
 
 ## Frontend
 
