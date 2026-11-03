@@ -21,6 +21,9 @@ import { MAX_RESTORE_FILES, restoreFiles } from "../recovery.ts";
 import { findDiskIssues } from "../disk-check.ts";
 import { msg } from "@shared/i18n.ts";
 import { EngineBusyError, getEngine, type JobOutcome } from "../engine/engine.ts";
+import { readFile, writeFile } from "node:fs/promises";
+import { remove } from "../fs.ts";
+import { runCommand } from "../command.ts";
 
 const snapraid = new Hono();
 
@@ -336,16 +339,16 @@ snapraid.post("/remove-data-disk", async (c) => {
   const configPath = resolveFromBase(relativePath);
 
   try {
-    const { config, emptyDir } = prepareDataDiskRemoval(await Deno.readTextFile(configPath), diskName);
+    const { config, emptyDir } = prepareDataDiskRemoval(await readFile(configPath, "utf8"), diskName);
     await ensureEmptyDir(emptyDir);
-    await Deno.writeTextFile(configPath, config);
+    await writeFile(configPath, config);
 
     // A failed or aborted sync leaves the disk pending, the wizard can retry it
     startJob("sync", configPath, ["-E"], async ({ output }) => {
       if (output.exitCode !== 0 || output.aborted) return;
-      const current = await Deno.readTextFile(configPath);
-      await Deno.writeTextFile(configPath, finalizeDataDiskRemoval(current, diskName));
-      await Deno.remove(emptyDir).catch(() => {});
+      const current = await readFile(configPath, "utf8");
+      await writeFile(configPath, finalizeDataDiskRemoval(current, diskName));
+      await remove(emptyDir).catch(() => {});
     });
 
     return c.json({ success: true, config: await parseSnapRaidConfig(configPath) });
@@ -433,9 +436,7 @@ snapraid.post("/validate", async (c) => {
     const configPath = resolveFromBase(relativePath);
     // Run snapraid status to validate the config
     // We only care about whether it succeeds or fails, not the actual status output
-    const command = snapraidCommand(["-c", configPath, "status"]);
-
-    const { code, stderr } = await command.output();
+    const { code, stderr } = await runCommand(snapraidCommand(["-c", configPath, "status"]));
     const errorOutput = new TextDecoder().decode(stderr);
 
     return c.json({

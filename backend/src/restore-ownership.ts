@@ -3,7 +3,9 @@
 // for it. They take the owner, group and permissions of the folder they are restored into
 // instead: the closest folder that existed before, or, on a new disk, the same folder on another
 // data disk of the array. Files fixed in place keep theirs, SnapRAID doesn't touch those.
-import { dirname, join } from "@std/path";
+import type { Stats } from "node:fs";
+import { chmod, chown, lstat } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { msg } from "@shared/i18n.ts";
 import { parseSnapRaidConfig } from "./config-parser.ts";
 import { type SnapRaidEngine, wrapJobs } from "./engine/engine.ts";
@@ -50,16 +52,15 @@ export const fileMode = (folderMode: number): number => folderMode & 0o666;
  */
 export const folderMode = (folderMode: number): number => folderMode & 0o3777;
 
-const statOrNull = async (path: string): Promise<Deno.FileInfo | null> => {
+const statOrNull = async (path: string): Promise<Stats | null> => {
   try {
-    return await Deno.lstat(path);
+    return await lstat(path);
   } catch {
     return null;
   }
 };
 
-const ownershipOf = (info: Deno.FileInfo): Ownership | null =>
-  info.uid === null || info.gid === null || info.mode === null ? null : { uid: info.uid, gid: info.gid, mode: info.mode & 0o7777 };
+const ownershipOf = (info: Stats): Ownership => ({ uid: info.uid, gid: info.gid, mode: info.mode & 0o7777 });
 
 export interface AdoptOptions {
   dataDisks: Record<string, string>; // Name -> mount path, from the config
@@ -76,12 +77,13 @@ export interface AdoptResult {
  * Whether a folder was made by the run: its birth time where the filesystem has one,
  * else its change time (a folder that existed but got a file also changes then)
  */
-const createdDuringRun = (info: Deno.FileInfo, creator: number | null, options: AdoptOptions): boolean => {
+const createdDuringRun = (info: Stats, creator: number | null, options: AdoptOptions): boolean => {
   if (info.uid !== creator) return false;
   // Times may lack the milliseconds, compare by the second
   const since = Math.floor(options.startedAt.getTime() / 1000) * 1000;
-  const made = info.birthtime ?? info.ctime;
-  return made !== null && made.getTime() >= since;
+  // A filesystem without birth times reports 0
+  const made = info.birthtimeMs > 0 ? info.birthtime : info.ctime;
+  return made.getTime() >= since;
 };
 
 /**
@@ -92,7 +94,7 @@ const sameFolderElsewhere = async (relativeDir: string, disk: string, options: A
     for (const [name, root] of Object.entries(options.dataDisks)) {
       if (name === disk) continue;
       const info = await statOrNull(join(root, dir));
-      if (info?.isDirectory) return ownershipOf(info);
+      if (info?.isDirectory()) return ownershipOf(info);
     }
   }
   return null;
@@ -108,13 +110,13 @@ export const adoptFolderOwnership = async (files: RestoredFile[], options: Adopt
   const done = new Set<string>();
   const elsewhere = new Map<string, Ownership | null>();
 
-  const apply = async (path: string, wanted: Ownership, mode: number, info: Deno.FileInfo) => {
+  const apply = async (path: string, wanted: Ownership, mode: number, info: Stats) => {
     if (done.has(path)) return false;
     done.add(path);
-    if (info.uid === wanted.uid && info.gid === wanted.gid && ((info.mode ?? 0) & 0o7777) === mode) return false;
+    if (info.uid === wanted.uid && info.gid === wanted.gid && (info.mode & 0o7777) === mode) return false;
     try {
-      await Deno.chown(path, wanted.uid, wanted.gid);
-      await Deno.chmod(path, mode);
+      await chown(path, wanted.uid, wanted.gid);
+      await chmod(path, mode);
       return true;
     } catch {
       result.failed++;
@@ -127,12 +129,12 @@ export const adoptFolderOwnership = async (files: RestoredFile[], options: Adopt
     if (!root) continue;
     const target = join(root, file.path);
     const info = await statOrNull(target);
-    if (!info?.isFile) continue;
+    if (!info?.isFile()) continue;
     // Whoever ran SnapRAID: the folders it made belong to them too
     const creator = info.uid;
 
     // Walk up to the first folder that was there before, collecting the ones the fix made
-    const created: { path: string; info: Deno.FileInfo }[] = [];
+    const created: { path: string; info: Stats }[] = [];
     let source: Ownership | null = null;
     let dir = dirname(target);
     const rootDir = join(root, ".");

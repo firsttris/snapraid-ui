@@ -1,17 +1,22 @@
 import type { SnapRaidCommand, CommandOutput, RunningJob, FinishedJob, JobProgress } from "@shared/types.ts";
 import { detectForceOption } from "@shared/force-option.ts";
 import type { LogManager } from "../log-manager.ts";
-import { basename } from "@std/path";
+import { basename } from "node:path";
+import type { Subprocess } from "bun";
 import { snapraidCommand } from "../config.ts";
+import { runCommand } from "../command.ts";
 import { parseRunPos } from "../parsers/progress-parser.ts";
 import { createLogTail } from "./log-tail.ts";
 import { holdContainers } from "../container-pause.ts";
+
+// A running SnapRAID with its output piped
+type SnapraidProcess = Subprocess<"inherit", "pipe", "pipe">;
 
 /**
  * Global state for command executor
  */
 const state = {
-  processes: new Map<string, Deno.ChildProcess>(),
+  processes: new Map<string, SnapraidProcess>(),
   abortRequested: new Set<string>(),
   currentJob: null as RunningJob | null,
   // Tail of the running job's output, replayed to clients that connect while it runs
@@ -86,27 +91,16 @@ const buildCommandArgs = (
 };
 
 /**
- * Async generator for reading stream chunks
- */
-async function* readStream(reader: ReadableStreamDefaultReader<Uint8Array>): AsyncGenerator<Uint8Array> {
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    yield value;
-  }
-}
-
-/**
  * Create stream reader
  */
 const createStreamReader = (
-  reader: ReadableStreamDefaultReader<Uint8Array>,
+  stream: AsyncIterable<Uint8Array>,
   onOutput: (chunk: string) => void
 ) => async (): Promise<string> => {
   // One decoder per stream, in streaming mode, so characters split across chunks stay intact
   const decoder = new TextDecoder();
   const chunks: string[] = [];
-  for await (const value of readStream(reader)) {
+  for await (const value of stream) {
     const chunk = decoder.decode(value, { stream: true });
     chunks.push(chunk);
     onOutput(chunk);
@@ -123,12 +117,12 @@ const createStreamReader = (
  * Read both stdout and stderr streams
  */
 const readProcessStreams = async (
-  process: Deno.ChildProcess,
+  process: SnapraidProcess,
   onOutput: (chunk: string) => void
 ): Promise<string> => {
   const [stdoutContent, stderrContent] = await Promise.all([
-    createStreamReader(process.stdout.getReader(), onOutput)(),
-    createStreamReader(process.stderr.getReader(), onOutput)(),
+    createStreamReader(process.stdout, onOutput)(),
+    createStreamReader(process.stderr, onOutput)(),
   ]);
   return stdoutContent + stderrContent;
 };
@@ -182,14 +176,14 @@ export const executeCommand = async (
 
     const { fullOutput, status } = await (async () => {
       try {
-        const process = snapraidCommand(args).spawn();
+        const process = Bun.spawn(snapraidCommand(args), { stdin: "inherit", stdout: "pipe", stderr: "pipe" });
         state.processes.set(processId, process);
         const stopWatching = logPath && PROGRESS_COMMANDS.includes(command)
           ? watchProgress(processId, logPath)
           : async () => {};
 
         const fullOutput = await readProcessStreams(process, emit).finally(stopWatching);
-        return { fullOutput, status: await process.status };
+        return { fullOutput, status: { code: await process.exited } };
       } finally {
         await releaseContainers();
       }
@@ -276,9 +270,7 @@ export const deviceCommandSucceeded = (code: number): boolean => code === 0 || c
 export const executeSnapraidCommand = async (
   args: string[],
 ): Promise<{ stdout: string; stderr: string; code: number }> => {
-  const cmd = snapraidCommand(args);
-
-  const { stdout, stderr, code } = await cmd.output();
+  const { stdout, stderr, code } = await runCommand(snapraidCommand(args));
   const decoder = new TextDecoder();
 
   return {

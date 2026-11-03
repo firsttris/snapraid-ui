@@ -1,7 +1,8 @@
-import { basename } from "@std/path";
+import { basename } from "node:path";
 import type { CommandOutput, RunResult, SnapRaidCommand } from "@shared/types.ts";
 import { parseRunResult } from "./log-manager.ts";
 import { collectKeyValues, parseLogTags, toInt } from "./parsers/structured-log.ts";
+import { readFile } from "node:fs/promises";
 
 /**
  * What a finished run did, read from its structured log
@@ -80,7 +81,7 @@ export const parseRunReport = (
 export const readRunReport = async (command: SnapRaidCommand, output: CommandOutput): Promise<RunReport> => {
   let log = "";
   try {
-    if (output.logPath) log = await Deno.readTextFile(output.logPath);
+    if (output.logPath) log = await readFile(output.logPath, "utf8");
   } catch {
     // Fall back to the exit code
   }

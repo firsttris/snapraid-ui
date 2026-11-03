@@ -2,8 +2,10 @@
 // of the last sync. A copy is only deleted when it and the copy that stays are both exactly as
 // at that sync (not in the diff) and have the size dup reported, so their content is still the
 // same. Until the next sync, parity still holds every deleted copy and Recover files brings it back.
-import { join, normalize, SEPARATOR } from "@std/path";
+import { join, normalize, sep } from "node:path";
 import type { DiffReport, DuplicateDeletion, DuplicateSkip, DupReport } from "@shared/types.ts";
+import { lstat } from "node:fs/promises";
+import { remove as removeFile } from "./fs.ts";
 
 // One request cleans up this many copies at most
 export const MAX_DUPLICATE_DELETIONS = 5000;
@@ -26,13 +28,13 @@ export const changedPaths = (diff: DiffReport): Set<string> =>
 export const insideDisk = (root: string, path: string): string | null => {
   const base = normalize(root).replace(/[\\/]+$/, "");
   const full = normalize(join(base, path));
-  return full.startsWith(base + SEPARATOR) ? full : null;
+  return full.startsWith(base + sep) ? full : null;
 };
 
 const fileSize = async (path: string): Promise<number | null> => {
   try {
-    const info = await Deno.lstat(path);
-    return info.isFile ? info.size : null;
+    const info = await lstat(path);
+    return info.isFile() ? info.size : null;
   } catch {
     return null;
   }
@@ -72,7 +74,7 @@ export interface DeleteOptions {
  */
 export const deleteDuplicates = async (
   files: DuplicateDeletion[],
-  { dataDisks, changed, remove = (path) => Deno.remove(path) }: DeleteOptions,
+  { dataDisks, changed, remove = removeFile }: DeleteOptions,
 ): Promise<{ deleted: DuplicateDeletion[]; skipped: DuplicateSkip[] }> => {
   const deleted: DuplicateDeletion[] = [];
   const skipped: DuplicateSkip[] = [];

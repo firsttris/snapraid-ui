@@ -1,5 +1,5 @@
-import { basename } from "@std/path";
-import { existsSync } from "@std/fs";
+import { basename } from "node:path";
+import { existsSync } from "./fs.ts";
 import type {
   NotificationSettings,
   ScheduleOutcome,
@@ -12,6 +12,7 @@ import { loadNotificationSettings, type Notification, notify, pingHeartbeat } fr
 import { isSuccessful, type RunReport } from "./run-report.ts";
 import { parseLogTags, restOf, unescapeTagValue } from "./parsers/structured-log.ts";
 import { writeTextFileAtomic } from "./atomic-write.ts";
+import { readFile } from "node:fs/promises";
 
 type Language = NotificationSettings["language"];
 
@@ -395,7 +396,7 @@ const loadState = async (): Promise<NotificationState> => {
   const path = resolveFromBase(STATE_FILE);
   if (!existsSync(path)) return { smart: {} };
   try {
-    return { smart: {}, ...JSON.parse(await Deno.readTextFile(path)) };
+    return { smart: {}, ...JSON.parse(await readFile(path, "utf8")) };
   } catch {
     return { smart: {} };
   }

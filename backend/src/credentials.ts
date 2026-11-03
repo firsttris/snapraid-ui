@@ -6,6 +6,8 @@
 //   password from the environment applies again and the passkeys are gone. That is the way back
 //   in after a forgotten password, and it removes a passkey someone else added.
 import { writeTextFileAtomic } from "./atomic-write.ts";
+import { readFile } from "node:fs/promises";
+import { isNotFound, remove } from "./fs.ts";
 
 export interface StoredPasskey {
   id: string;
@@ -93,9 +95,9 @@ export const loadCredentials = async (
   if (path) {
     let text: string | null = null;
     try {
-      text = await Deno.readTextFile(path);
+      text = await readFile(path, "utf8");
     } catch (error) {
-      if (!(error instanceof Deno.errors.NotFound)) throw error;
+      if (!isNotFound(error)) throw error;
     }
     if (text !== null) {
       let parsed: unknown = null;
@@ -107,7 +109,7 @@ export const loadCredentials = async (
       if (isCredentialFile(parsed) && await verifyPassword(environmentSecret(username, envPassword), parsed.environment)) {
         file = parsed;
       } else {
-        await Deno.remove(path);
+        await remove(path);
         console.log(
           "🔑 auth.json does not belong to SNAPRAID_UI_USERNAME and SNAPRAID_UI_PASSWORD: the password from the environment applies again, passkeys were removed",
         );

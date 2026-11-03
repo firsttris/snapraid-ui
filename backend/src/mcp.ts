@@ -2,11 +2,9 @@
 // logs and the schedules, and, unless turned off, start and stop jobs, change schedules and
 // create arrays; the documentation of SnapRAID UI as resources, so an agent answers "how do I"
 // questions from it. Built fresh for every request (stateless), see routes/mcp.ts.
-import { basename, fromFileUrl, join } from "@std/path";
-// The SDK's exports map `./*.js` to types it doesn't have; @ts-types points Deno at the right ones
-// @ts-types="@modelcontextprotocol/sdk/server/mcp"
+import { basename, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-// @ts-types="@modelcontextprotocol/sdk/types"
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { type ArraySetup, buildSnapraidConf, setupProblems } from "@shared/array-setup.ts";
@@ -26,8 +24,10 @@ import { EngineBusyError, type SnapRaidEngine } from "./engine/engine.ts";
 import type { LogManager } from "./log-manager.ts";
 import type { Scheduler } from "./scheduler.ts";
 import type { CreateArrayResult } from "./setup.ts";
+import { readdir, readFile } from "node:fs/promises";
+import { appFile } from "./app-files.ts";
 
-export const DOCS_DIR = fromFileUrl(new URL("../../docs/", import.meta.url));
+export const DOCS_DIR = fileURLToPath(appFile("docs/"));
 
 export interface McpDeps {
   version: string;
@@ -98,9 +98,9 @@ const compactStatus = (status: SnapRaidStatus) => {
 const docPages = async (docsDir: string) => {
   const pages: { page: string; title: string }[] = [];
   try {
-    for await (const entry of Deno.readDir(docsDir)) {
-      if (!entry.isFile || !entry.name.endsWith(".md")) continue;
-      const text = await Deno.readTextFile(join(docsDir, entry.name));
+    for (const entry of await readdir(docsDir, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
+      const text = await readFile(join(docsDir, entry.name), "utf8");
       const title = text.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? entry.name;
       pages.push({ page: entry.name.replace(/\.md$/, ""), title });
     }
@@ -114,7 +114,7 @@ const readDocPage = async (docsDir: string, page: string): Promise<string | null
   const name = page.replace(/\.md$/, "");
   if (!/^[\w-]+$/.test(name)) return null;
   try {
-    return await Deno.readTextFile(join(docsDir, `${name}.md`));
+    return await readFile(join(docsDir, `${name}.md`), "utf8");
   } catch {
     return null;
   }

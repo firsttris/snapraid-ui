@@ -1,7 +1,8 @@
+import type { Server } from "bun";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { loadAppConfig } from "./config-parser.ts";
-import { broadcast, closeAllClients, handleWebSocketUpgrade } from "./websocket.ts";
+import { broadcast, closeAllClients, handleWebSocketUpgrade, websocket } from "./websocket.ts";
 import { setBroadcast, setSnapraidLogManager } from "./routes/snapraid.ts";
 import { activeEngine, type SnapRaidEngine, setEngine, wrapJobs } from "./engine/engine.ts";
 import { createCliEngine } from "./engine/cli-engine.ts";
@@ -34,7 +35,8 @@ import { loadCredentials } from "./credentials.ts";
 import { APP_VERSION } from "./version.ts";
 import { type FetchHandler, isBackendPath, loadFrontend } from "./frontend.ts";
 
-const app = new Hono();
+// The env of each request is the Bun server that received it (Bun.serve passes it to fetch)
+const app = new Hono<{ Bindings: Server<undefined> }>();
 
 // Middleware
 // Credentials (the session cookie) are only accepted from the same host, e.g. the dev frontend on :3000
@@ -70,7 +72,7 @@ if (authEnv) {
 
 // WebSocket endpoint (must be handled before Hono routes)
 app.get("/ws", (c) => {
-  return handleWebSocketUpgrade(c.req.raw);
+  return handleWebSocketUpgrade(c.req.raw, c.env);
 });
 
 // API Routes
@@ -104,8 +106,8 @@ const main = async (): Promise<void> => {
 
   // Use environment variables with config fallback
   // All interfaces; 127.0.0.1 when only a reverse proxy on the same host may reach it
-  const host = Deno.env.get("SNAPRAID_UI_HOST") || "0.0.0.0";
-  const port = Number(Deno.env.get("PORT") ?? 8080);
+  const host = process.env.SNAPRAID_UI_HOST || "0.0.0.0";
+  const port = Number(process.env.PORT ?? 8080);
 
   // Initialize log manager
   const logManager = createLogManager(resolveFromBase(config.logs.directory));
@@ -222,10 +224,13 @@ const main = async (): Promise<void> => {
   console.log(`🚀 Starting SnapRAID UI ${APP_VERSION} on http://${host}:${port}`);
   console.log(`📝 Logs directory: ${config.logs.directory}`);
 
-  Deno.serve({
+  Bun.serve({
     hostname: host,
     port,
-    handler: app.fetch,
+    fetch: app.fetch,
+    websocket,
+    // No limit on idle connections (Bun closes them after 10 s): a request can wait for SnapRAID
+    idleTimeout: 0,
   });
 };
 

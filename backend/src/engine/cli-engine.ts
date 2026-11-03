@@ -2,6 +2,7 @@
 import type { CommandOutput, SnapRaidCommand } from "@shared/types.ts";
 import { msg } from "@shared/i18n.ts";
 import { snapraidCommand } from "../config.ts";
+import { runCommand } from "../command.ts";
 import {
   abortCommand,
   deviceCommandSucceeded,
@@ -36,7 +37,7 @@ const decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
  * Run a SnapRAID command with the structured log on stderr; the log and the human readable output
  */
 const runStructured = async (args: string[]): Promise<{ code: number; log: string; stdout: string; text: string }> => {
-  const { code, stdout, stderr } = await snapraidCommand([...STRUCTURED_LOG_ARGS, ...args]).output();
+  const { code, stdout, stderr } = await runCommand(snapraidCommand([...STRUCTURED_LOG_ARGS, ...args]));
   const { log, text } = splitStructuredOutput(decode(stderr));
   return { code, log, stdout: decode(stdout), text };
 };

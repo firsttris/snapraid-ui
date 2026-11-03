@@ -5,6 +5,9 @@ import { msg } from "@shared/i18n.ts";
 import type { MountCandidate } from "@shared/types.ts";
 import { loadAppConfig, saveAppConfig } from "./config-parser.ts";
 import { BASE_PATH, resolveFromBase } from "./config.ts";
+import { readdir, stat, writeFile } from "node:fs/promises";
+import { isAlreadyExists } from "./fs.ts";
+import { runCommand } from "./command.ts";
 
 // Filesystems that never hold data disks
 const VIRTUAL_FS = new Set([
@@ -59,13 +62,13 @@ const SNAPRAID_FILE = /\.(parity|content)$|^snapraid\.\d?-?parity$/;
  */
 export const inspectMount = async (mount: DfMount): Promise<MountCandidate | null> => {
   try {
-    if (!(await Deno.stat(mount.path)).isDirectory) return null;
+    if (!(await stat(mount.path)).isDirectory()) return null;
     let entries = 0;
     const snapraidFiles: string[] = [];
-    for await (const entry of Deno.readDir(mount.path)) {
+    for (const entry of await readdir(mount.path, { withFileTypes: true })) {
       if (entry.name === "lost+found") continue;
       entries++;
-      if (entry.isFile && SNAPRAID_FILE.test(entry.name)) snapraidFiles.push(entry.name);
+      if (entry.isFile() && SNAPRAID_FILE.test(entry.name)) snapraidFiles.push(entry.name);
     }
     return { ...mount, empty: entries === 0, snapraidFiles };
   } catch {
@@ -74,11 +77,9 @@ export const inspectMount = async (mount: DfMount): Promise<MountCandidate | nul
 };
 
 export const listMountCandidates = async (): Promise<MountCandidate[]> => {
-  const { code, stdout } = await new Deno.Command("df", {
-    args: ["-B1", "--output=source,fstype,size,used,avail,target"],
-    stdout: "piped",
-    stderr: "null",
-  }).output();
+  const { code, stdout } = await runCommand(["df", "-B1", "--output=source,fstype,size,used,avail,target"], {
+    stderr: "ignore",
+  });
   if (code !== 0 && stdout.length === 0) return [];
   const candidates = await Promise.all(candidateMounts(parseDfMounts(new TextDecoder().decode(stdout))).map(inspectMount));
   return candidates.filter((candidate) => candidate !== null);
@@ -86,7 +87,7 @@ export const listMountCandidates = async (): Promise<MountCandidate[]> => {
 
 const isFile = async (path: string) => {
   try {
-    return (await Deno.stat(path)).isFile;
+    return (await stat(path)).isFile();
   } catch {
     return false;
   }
@@ -94,7 +95,7 @@ const isFile = async (path: string) => {
 
 const isDirectory = async (path: string) => {
   try {
-    return (await Deno.stat(path)).isDirectory;
+    return (await stat(path)).isDirectory();
   } catch {
     return false;
   }
@@ -131,11 +132,11 @@ export const createArray = async (name: string, fileName: string, arraySetup: Ar
   const storedPath = fileName.endsWith(".conf") ? fileName : `${fileName}.conf`;
   const configName = storedPath.replace(/\.conf$/, "");
   try {
-    await Deno.writeTextFile(resolveFromBase(storedPath), buildSnapraidConf(arraySetup, BASE_PATH, configName), {
-      createNew: true,
+    await writeFile(resolveFromBase(storedPath), buildSnapraidConf(arraySetup, BASE_PATH, configName), {
+      flag: "wx",
     });
   } catch (error) {
-    if (error instanceof Deno.errors.AlreadyExists) {
+    if (isAlreadyExists(error)) {
       return {
         ok: false,
         status: 409,

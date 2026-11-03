@@ -5,6 +5,8 @@ import { BASE_PATH, resolveFromBase, toStoredPath } from "../config.ts";
 import { msg } from "@shared/i18n.ts";
 import { BackupError, createBackup, restoreBackup } from "../backup.ts";
 import { reloadSchedules } from "./schedules.ts";
+import { stat, writeFile } from "node:fs/promises";
+import { isAlreadyExists } from "../fs.ts";
 
 const config = new Hono();
 
@@ -22,7 +24,7 @@ exclude /lost+found/
 
 const isFile = async (path: string): Promise<boolean> => {
   try {
-    return (await Deno.stat(path)).isFile;
+    return (await stat(path)).isFile();
   } catch {
     return false;
   }
@@ -103,9 +105,9 @@ config.post("/create", async (c) => {
   const absolute = resolveFromBase(storedPath);
 
   try {
-    await Deno.writeTextFile(absolute, CONFIG_TEMPLATE, { createNew: true });
+    await writeFile(absolute, CONFIG_TEMPLATE, { flag: "wx" });
   } catch (error) {
-    if (error instanceof Deno.errors.AlreadyExists) {
+    if (isAlreadyExists(error)) {
       return c.json({ error: msg("server_error_file_exists", { path: absolute }) }, 409);
     }
     return c.json({ error: String(error) }, 500);

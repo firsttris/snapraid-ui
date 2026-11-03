@@ -1,7 +1,7 @@
 // Pauses Docker containers while SnapRAID reads the array, so their files do not change under
 // a sync or scrub. A schedule holds them across its steps (touch, sync, scrub); the executor
 // holds them per job, the count makes sure they are paused once and resumed once.
-import { existsSync } from "@std/fs";
+import { existsSync, remove } from "./fs.ts";
 import type { SnapRaidCommand } from "@shared/types.ts";
 import { msg } from "@shared/i18n.ts";
 import { resolveFromBase } from "./config.ts";
@@ -15,6 +15,7 @@ import {
 } from "./docker.ts";
 import { loadMaintenanceSettings } from "./maintenance-settings.ts";
 import { writeTextFileAtomic } from "./atomic-write.ts";
+import { readFile } from "node:fs/promises";
 
 // Containers paused here, to resume them after a crash or restart of the backend
 const STATE_FILE = "paused-containers.json";
@@ -49,7 +50,7 @@ const savePaused = async (paused: PausedState | null): Promise<void> => {
   if (paused && paused.containers.length > 0) {
     await writeTextFileAtomic(statePath(), JSON.stringify(paused, null, 2));
   } else if (existsSync(statePath())) {
-    await Deno.remove(statePath());
+    await remove(statePath());
   }
 };
 
@@ -140,7 +141,7 @@ export const holdContainers = async (commands: SnapRaidCommand[], report: Report
 export const resumeLeftoverContainers = async (): Promise<void> => {
   if (!existsSync(statePath())) return;
   try {
-    const leftover = JSON.parse(await Deno.readTextFile(statePath())) as PausedState;
+    const leftover = JSON.parse(await readFile(statePath(), "utf8")) as PausedState;
     console.warn(`Resuming containers paused before the restart: ${leftover.containers.join(", ")}`);
     await resumeContainers(state.request(leftover.socketPath), leftover.containers, (line) => console.error(line));
     await savePaused(null);

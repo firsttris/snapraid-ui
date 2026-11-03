@@ -1,8 +1,9 @@
-import { existsSync } from "@std/fs";
+import { existsSync } from "./fs.ts";
 import type { SmartDiskInfo } from "@shared/types.ts";
 import { CRC_ATTRIBUTE_ID } from "@shared/smart-health.ts";
 import { resolveFromBase } from "./config.ts";
 import { writeTextFileAtomic } from "./atomic-write.ts";
+import { readFile } from "node:fs/promises";
 
 const STATE_FILE = "smart-baseline.json";
 
@@ -66,7 +67,7 @@ const loadState = async (): Promise<CrcState> => {
   const path = resolveFromBase(STATE_FILE);
   if (!existsSync(path)) return {};
   try {
-    return JSON.parse(await Deno.readTextFile(path));
+    return JSON.parse(await readFile(path, "utf8"));
   } catch {
     return {};
   }

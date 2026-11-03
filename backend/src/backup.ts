@@ -1,9 +1,10 @@
-import { existsSync } from "@std/fs";
-import { dirname, isAbsolute, normalize } from "@std/path";
+import { existsSync } from "./fs.ts";
+import { dirname, isAbsolute, normalize } from "node:path";
 import type { AppConfig, SettingsBackup } from "@shared/types.ts";
 import { msg } from "@shared/i18n.ts";
 import { resolveFromBase } from "./config.ts";
 import { writeTextFileAtomic } from "./atomic-write.ts";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 // Settings and history next to config.json; logs and replacement runs stay behind
 const STATE_FILES = [
@@ -27,7 +28,7 @@ const isRestorableConfig = (path: string) =>
 
 const readIfPresent = async (path: string): Promise<string | undefined> => {
   try {
-    return await Deno.readTextFile(path);
+    return await readFile(path, "utf8");
   } catch {
     return undefined;
   }
@@ -98,12 +99,12 @@ export const restoreBackup = async (backup: unknown): Promise<{ restored: string
   const { write, skipped } = planRestore(backup);
   for (const [path, content] of Object.entries(write)) {
     const target = resolveFromBase(path);
-    if (!existsSync(dirname(target))) await Deno.mkdir(dirname(target), { recursive: true });
+    if (!existsSync(dirname(target))) await mkdir(dirname(target), { recursive: true });
     if (STATE_FILES.includes(path)) {
       // In one step like every other save of these files, the UI keeps reading them meanwhile
       await writeTextFileAtomic(target, content, SECRET_FILES.has(path) ? { mode: 0o600 } : {});
     } else {
-      await Deno.writeTextFile(target, content);
+      await writeFile(target, content);
     }
   }
   return { restored: Object.keys(write), skipped };

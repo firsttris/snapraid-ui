@@ -1,6 +1,7 @@
 import { Hono } from "hono";
-import { join } from "@std/path";
+import { join } from "node:path";
 import { BASE_PATH, resolveFromBase } from "../config.ts";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 
 const filesystem = new Hono();
 
@@ -12,15 +13,15 @@ filesystem.get("/browse", async (c) => {
 
   try {
     const entries = [];
-    for await (const entry of Deno.readDir(dirPath)) {
+    for (const entry of await readdir(dirPath, { withFileTypes: true })) {
       const shouldInclude = filterType === "directories"
-        ? entry.isDirectory
-        : entry.isDirectory || entry.name.endsWith(".conf");
+        ? entry.isDirectory()
+        : entry.isDirectory() || entry.name.endsWith(".conf");
       
       if (shouldInclude) {
         entries.push({
           name: entry.name,
-          isDirectory: entry.isDirectory,
+          isDirectory: entry.isDirectory(),
           path: join(dirPath, entry.name),
         });
       }
@@ -43,7 +44,7 @@ filesystem.get("/read", async (c) => {
   const filePath = resolveFromBase(relativePath);
 
   try {
-    const content = await Deno.readTextFile(filePath);
+    const content = await readFile(filePath, "utf8");
     return c.json({ content });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
@@ -61,7 +62,7 @@ filesystem.post("/write", async (c) => {
   const filePath = resolveFromBase(path);
 
   try {
-    await Deno.writeTextFile(filePath, content);
+    await writeFile(filePath, content);
     return c.json({ success: true });
   } catch (error) {
     return c.json({ error: String(error) }, 500);

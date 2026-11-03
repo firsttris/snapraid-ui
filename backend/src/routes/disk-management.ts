@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { join } from "@std/path";
+import { join } from "node:path";
 import {
   MAX_PARITY_LEVEL,
   parityKeyword,
@@ -8,6 +8,7 @@ import {
 } from "../config-parser.ts";
 import { resolveFromBase } from "../config.ts";
 import { msg } from "@shared/i18n.ts";
+import { readFile, writeFile } from "node:fs/promises";
 
 const diskManagement = new Hono();
 
@@ -25,7 +26,7 @@ diskManagement.post("/add-data-disk", async (c) => {
 
   try {
     // Read the config file
-    const content = await Deno.readTextFile(configPath);
+    const content = await readFile(configPath, "utf8");
     
     // Check if disk name already exists
     const lines = content.split("\n");
@@ -78,7 +79,7 @@ diskManagement.post("/add-data-disk", async (c) => {
     ];
 
     // Write back to file
-    await Deno.writeTextFile(configPath, updatedLines.join("\n"));
+    await writeFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
     const parsed = await parseSnapRaidConfig(configPath);
@@ -105,7 +106,7 @@ diskManagement.post("/add-parity-disk", async (c) => {
 
   try {
     // Read the config file
-    const content = await Deno.readTextFile(configPath);
+    const content = await readFile(configPath, "utf8");
     const lines = content.split("\n");
 
     // New parity always becomes the next level above the existing ones
@@ -138,7 +139,7 @@ diskManagement.post("/add-parity-disk", async (c) => {
     ];
 
     // Write back to file
-    await Deno.writeTextFile(configPath, updatedLines.join("\n"));
+    await writeFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
     const parsed = await parseSnapRaidConfig(configPath);
@@ -164,7 +165,7 @@ diskManagement.post("/remove-disk", async (c) => {
 
   try {
     // Read the config file
-    const content = await Deno.readTextFile(configPath);
+    const content = await readFile(configPath, "utf8");
     const lines = content.split("\n");
 
     // Only the highest level can go, SnapRAID needs the levels without gaps
@@ -185,7 +186,7 @@ diskManagement.post("/remove-disk", async (c) => {
       : lines;
 
     // Write back to file
-    await Deno.writeTextFile(configPath, updatedLines.join("\n"));
+    await writeFile(configPath, updatedLines.join("\n"));
 
     // Parse and return updated config
     const parsed = await parseSnapRaidConfig(configPath);

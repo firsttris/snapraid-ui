@@ -1,4 +1,4 @@
-import { Cron } from "@hexagon/croner";
+import { Cron } from "croner";
 import type {
   RunResult,
   Schedule,
@@ -8,7 +8,7 @@ import type {
   SnapRaidCommand,
 } from "@shared/types.ts";
 import type { SnapRaidEngine } from "./engine/engine.ts";
-import { existsSync } from "@std/fs";
+import { existsSync } from "./fs.ts";
 import { resolveFromBase } from "./config.ts";
 import { failedReport, isSuccessful, type RunReport } from "./run-report.ts";
 import { isReplacementInProgress } from "./disk-replacement.ts";
@@ -20,6 +20,7 @@ import { blockingIssues } from "./disk-check.ts";
 import { holdContainers } from "./container-pause.ts";
 import { rememberStatus } from "./status-cache.ts";
 import { writeTextFileAtomic } from "./atomic-write.ts";
+import { readFile } from "node:fs/promises";
 
 // Module-level storage for active jobs
 const activeJobs = new Map<string, Cron>();
@@ -75,7 +76,7 @@ const loadSchedulesFromFile = async (path: string): Promise<Schedule[]> => {
     return [];
   }
 
-  const content = await Deno.readTextFile(path);
+  const content = await readFile(path, "utf8");
   const config = JSON.parse(content) as ScheduleConfig;
   return config.schedules;
 };

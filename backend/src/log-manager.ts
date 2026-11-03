@@ -1,8 +1,10 @@
-import { join } from "@std/path";
-import { expandGlob } from "@std/fs";
+import type { Stats } from "node:fs";
+import { mkdir, readdir, readFile, stat as statFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import type { SnapRaidCommand, LogFile, LastRun, RunResult } from "@shared/types.ts";
 import { detectForceOption } from "@shared/force-option.ts";
 import { parseRunResult } from "@shared/run-result.ts";
+import { isAlreadyExists, isNotFound, remove } from "./fs.ts";
 
 export interface LogManager {
   ensureLogDirectory(): Promise<void>;
@@ -34,12 +36,12 @@ export const createLogManager = (logDirectory: string): LogManager => {
   // Outcome and config of each log, read once per file version; the list is reloaded often
   const summaryCache = new Map<string, { key: string; result: RunResult; configPath?: string }>();
 
-  const readLogSummary = async (path: string, stat: Deno.FileInfo) => {
-    const key = `${stat.mtime?.getTime()}:${stat.size}`;
+  const readLogSummary = async (path: string, stat: Stats) => {
+    const key = `${stat.mtime.getTime()}:${stat.size}`;
     const cached = summaryCache.get(path);
     if (cached?.key === key) return cached;
     try {
-      const content = await Deno.readTextFile(path);
+      const content = await readFile(path, "utf8");
       const summary = {
         key,
         result: parseRunResult(content),
@@ -57,9 +59,9 @@ export const createLogManager = (logDirectory: string): LogManager => {
    */
   const ensureLogDirectory = async (): Promise<void> => {
     try {
-      await Deno.mkdir(logDirectory, { recursive: true });
+      await mkdir(logDirectory, { recursive: true });
     } catch (error) {
-      if (!(error instanceof Deno.errors.AlreadyExists)) {
+      if (!isAlreadyExists(error)) {
         throw error;
       }
     }
@@ -83,15 +85,15 @@ export const createLogManager = (logDirectory: string): LogManager => {
   const listLogs = async (): Promise<LogFile[]> => {
     try {
       const entries: Array<{ name: string; path: string }> = [];
-      for await (const entry of expandGlob(`${logDirectory}/*.log`)) {
-        if (entry.isFile) {
-          entries.push({ name: entry.name, path: entry.path });
+      for (const entry of await readdir(logDirectory, { withFileTypes: true })) {
+        if (entry.isFile() && entry.name.endsWith(".log")) {
+          entries.push({ name: entry.name, path: resolve(logDirectory, entry.name) });
         }
       }
 
       const logs = await Promise.all(
         entries.map(async ({ name: filename, path }): Promise<LogFile | null> => {
-          const stat = await Deno.stat(path);
+          const stat = await statFile(path);
           const match = filename.match(/^([\w-]+)-(\d{8})-(\d{6})\.log$/);
           
           if (!match) return null;
@@ -106,7 +108,7 @@ export const createLogManager = (logDirectory: string): LogManager => {
             command: command as SnapRaidCommand,
             timestamp,
             size: stat.size,
-            modified: stat.mtime?.toISOString(),
+            modified: stat.mtime.toISOString(),
             result: summary?.result,
             configPath: summary?.configPath,
           };
@@ -122,7 +124,7 @@ export const createLogManager = (logDirectory: string): LogManager => {
         .filter((log): log is LogFile => log !== null)
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     } catch (error) {
-      if (error instanceof Deno.errors.NotFound) {
+      if (isNotFound(error)) {
         return [];
       }
       throw error;
@@ -143,7 +145,7 @@ export const createLogManager = (logDirectory: string): LogManager => {
     for (const log of logs) {
       let content: string;
       try {
-        content = await Deno.readTextFile(log.path);
+        content = await readFile(log.path, "utf8");
       } catch {
         continue;
       }
@@ -167,9 +169,9 @@ export const createLogManager = (logDirectory: string): LogManager => {
   const readLog = async (filename: string): Promise<string> => {
     const logPath = join(logDirectory, filename);
     try {
-      return await Deno.readTextFile(logPath);
+      return await readFile(logPath, "utf8");
     } catch (error) {
-      if (error instanceof Deno.errors.NotFound) {
+      if (isNotFound(error)) {
         throw new Error(`Log file not found: ${filename}`);
       }
       throw error;
@@ -192,7 +194,7 @@ export const createLogManager = (logDirectory: string): LogManager => {
     const deleteResults = await Promise.all(
       logsToDelete.map(async (log) => {
         try {
-          await Deno.remove(log.path);
+          await remove(log.path);
           return true;
         } catch (error) {
           console.error(`Failed to delete log file ${log.filename}:`, error);
@@ -210,9 +212,9 @@ export const createLogManager = (logDirectory: string): LogManager => {
   const deleteLog = async (filename: string): Promise<void> => {
     const logPath = join(logDirectory, filename);
     try {
-      await Deno.remove(logPath);
+      await remove(logPath);
     } catch (error) {
-      if (error instanceof Deno.errors.NotFound) {
+      if (isNotFound(error)) {
         throw new Error(`Log file not found: ${filename}`);
       }
       throw error;

@@ -1,5 +1,7 @@
 // Minimal client for the Docker Engine API over its unix socket.
 // HTTP/1.0 keeps the responses simple: no chunked encoding, the connection closes after each.
+import { readFile } from "node:fs/promises";
+import { createConnection } from "node:net";
 import type { DockerContainer } from "@shared/types.ts";
 import { DEMO_MODE, demoDocker } from "./demo.ts";
 
@@ -12,22 +14,22 @@ export interface DockerResponse {
 
 export type DockerRequest = (method: "GET" | "POST", path: string) => Promise<DockerResponse>;
 
-const readAll = async (conn: Deno.Conn): Promise<Uint8Array> => {
-  const chunks: Uint8Array[] = [];
-  const buffer = new Uint8Array(16 * 1024);
-  while (true) {
-    const read = await conn.read(buffer);
-    if (read === null) break;
-    chunks.push(buffer.slice(0, read));
-  }
-  const total = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.length, 0));
-  let offset = 0;
-  chunks.forEach((chunk) => {
-    total.set(chunk, offset);
-    offset += chunk.length;
+// Everything the socket sends until it closes; the timeout destroys it, which fails the request
+const exchange = (socketPath: string, request: string): Promise<Uint8Array> =>
+  new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    const socket = createConnection(socketPath, () => socket.write(request));
+    const timer = setTimeout(
+      () => socket.destroy(new Error(`The Docker socket did not answer within ${TIMEOUT_MS / 1000} s`)),
+      TIMEOUT_MS,
+    );
+    socket.on("data", (chunk: Buffer) => chunks.push(chunk));
+    socket.on("error", reject);
+    socket.on("close", (hadError) => {
+      clearTimeout(timer);
+      if (!hadError) resolve(new Uint8Array(Buffer.concat(chunks)));
+    });
   });
-  return total;
-};
 
 /**
  * Status and body of a raw HTTP/1.x response
@@ -46,20 +48,8 @@ export const parseHttpResponse = (raw: string): DockerResponse => {
 export const dockerSocket = (socketPath: string): DockerRequest => DEMO_MODE ? demoDocker : unixSocket(socketPath);
 
 const unixSocket = (socketPath: string): DockerRequest => async (method, path) => {
-  const conn = await Deno.connect({ transport: "unix", path: socketPath });
-  const timer = setTimeout(() => conn.close(), TIMEOUT_MS);
-  try {
-    const request = `${method} ${path} HTTP/1.0\r\nHost: docker\r\nContent-Length: 0\r\n\r\n`;
-    await conn.write(new TextEncoder().encode(request));
-    return parseHttpResponse(new TextDecoder().decode(await readAll(conn)));
-  } finally {
-    clearTimeout(timer);
-    try {
-      conn.close();
-    } catch {
-      // Closed by the timeout
-    }
-  }
+  const request = `${method} ${path} HTTP/1.0\r\nHost: docker\r\nContent-Length: 0\r\n\r\n`;
+  return parseHttpResponse(new TextDecoder().decode(await exchange(socketPath, request)));
 };
 
 const errorOf = ({ status, body }: DockerResponse): Error => {
@@ -100,7 +90,7 @@ export const containerIdFromMountinfo = (mountinfo: string): string | null => {
  */
 export const ownContainerId = async (): Promise<string | null> => {
   try {
-    return containerIdFromMountinfo(await Deno.readTextFile("/proc/self/mountinfo"));
+    return containerIdFromMountinfo(await readFile("/proc/self/mountinfo", "utf8"));
   } catch {
     return null;
   }

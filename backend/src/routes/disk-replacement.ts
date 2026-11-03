@@ -12,6 +12,7 @@ import {
 } from "../disk-replacement.ts";
 import type { JobOutcome } from "../engine/engine.ts";
 import { msg } from "@shared/i18n.ts";
+import { readFile, stat, writeFile } from "node:fs/promises";
 
 type StartJob = (
   command: SnapRaidCommand,
@@ -22,7 +23,7 @@ type StartJob = (
 
 const isDirectory = async (path: string): Promise<boolean> => {
   try {
-    return (await Deno.stat(path)).isDirectory;
+    return (await stat(path)).isDirectory();
   } catch {
     return false;
   }
@@ -79,7 +80,7 @@ export const createDiskReplacementRoutes = ({ startJob, isBusy }: { startJob: St
     try {
       const path = resolveFromBase(configPath);
       const { config, diskType, oldPath } = applyReplacementPath(
-        await Deno.readTextFile(path),
+        await readFile(path, "utf8"),
         diskName,
         newPath.trim(),
       );
@@ -87,7 +88,7 @@ export const createDiskReplacementRoutes = ({ startJob, isBusy }: { startJob: St
       if (!(await isDirectory(directory))) {
         return c.json({ error: msg("server_error_not_a_directory", { path: directory }) }, 400);
       }
-      await Deno.writeTextFile(path, config);
+      await writeFile(path, config);
 
       // Restarting the same disk keeps its original path, the config already points to the new one
       const resumed = existing && existing.diskName === diskName && !existing.completedAt ? existing : null;

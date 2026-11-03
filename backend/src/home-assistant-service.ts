@@ -1,6 +1,6 @@
 // The MQTT connection to Home Assistant: publishes discovery and state, runs the buttons' commands
 import mqtt, { type MqttClient } from "mqtt";
-import { existsSync } from "@std/fs";
+import { existsSync } from "./fs.ts";
 import { type HomeAssistantSettings, type HomeAssistantStatus, SECRET_MASK } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
 import type { ConfigMetrics } from "./metrics.ts";
@@ -14,6 +14,7 @@ import {
   parseCommand,
 } from "./home-assistant.ts";
 import { writeTextFileAtomic } from "./atomic-write.ts";
+import { readFile } from "node:fs/promises";
 
 const SETTINGS_FILE = "home-assistant.json";
 // State is checked this often and published when it changed, and at least every few minutes
@@ -41,7 +42,7 @@ const withDefaults = (stored: Partial<HomeAssistantSettings>): HomeAssistantSett
 export const loadHomeAssistantSettings = async (): Promise<HomeAssistantSettings> => {
   if (!existsSync(settingsPath())) return DEFAULT_HOME_ASSISTANT_SETTINGS;
   try {
-    return withDefaults(JSON.parse(await Deno.readTextFile(settingsPath())));
+    return withDefaults(JSON.parse(await readFile(settingsPath(), "utf8")));
   } catch (error) {
     console.error(`Failed to read ${settingsPath()}, Home Assistant is off:`, error);
     return DEFAULT_HOME_ASSISTANT_SETTINGS;
