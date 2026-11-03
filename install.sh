@@ -9,7 +9,6 @@ bun install
 
 echo "Installing backend dependencies..."
 cd ../backend
-# Deno loads dependencies on demand, but we can cache them
-deno cache src/main.ts
+bun install
 
 echo "Installation complete."

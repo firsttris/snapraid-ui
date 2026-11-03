@@ -1,7 +1,7 @@
 // Renovate (GitHub App, https://github.com/apps/renovate): a pull request for each new release of
 // what SnapRAID UI builds on, plus the "Dependency Dashboard" issue listing what is open. Their own
-// pull requests: SnapRAID itself (the parsers are tested against one release), Deno (backend, image
-// and standalone binary) and Bun (frontend and e2e packages, the image's frontend build).
+// pull requests: SnapRAID itself (the parsers are tested against one release) and Bun (the backend,
+// frontend and e2e packages, the image and the standalone binary).
 // snapraid-daemon stays an issue of upstream-release.yml, since its API has to be compared by hand.
 // Everything else (the other packages, the actions, the images) comes with the shared settings of
 // firsttris/workflows (renovate/default.json5): minor and patch updates once a month in one pull
@@ -40,32 +40,10 @@
       versioningTemplate: "regex:^(?<major>\\d+)\\.(?<minor>\\d+)$",
     },
     {
-      // The Deno of CI and the release's standalone binary (v2.5.x: the newest patch of a minor)
-      customType: "regex",
-      managerFilePatterns: ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
-      matchStrings: ["deno-version: v(?<currentValue>\\d+\\.\\d+)\\.x"],
-      depNameTemplate: "denoland/deno",
-      datasourceTemplate: "github-releases",
-      extractVersionTemplate: "^v(?<version>\\d+\\.\\d+)\\.\\d+$",
-      versioningTemplate: "regex:^(?<major>\\d+)\\.(?<minor>\\d+)$",
-    },
-    {
-      // The Deno dev/setup.sh downloads when none is installed
-      customType: "regex",
-      managerFilePatterns: ["/^dev/setup\\.sh$/", "/^docs/development\\.md$/"],
-      matchStrings: [
-        "DENO_VERSION:-(?<currentValue>\\d+\\.\\d+\\.\\d+)",
-        "`DENO_VERSION`, default (?<currentValue>\\d+\\.\\d+\\.\\d+)",
-      ],
-      depNameTemplate: "denoland/deno",
-      datasourceTemplate: "github-releases",
-      extractVersionTemplate: "^v(?<version>.+)$",
-    },
-    {
-      // "packageManager": "bun@x.y.z" in frontend/ and e2e/: the Bun of every CI job
+      // "packageManager": "bun@x.y.z" in backend/, frontend/ and e2e/: the Bun of every CI job
       // (bun-version-file, and the npm-installed Bun of the screenshots job in the Playwright image)
       customType: "regex",
-      managerFilePatterns: ["/^(frontend|e2e)/package\\.json$/"],
+      managerFilePatterns: ["/^(backend|frontend|e2e)/package\\.json$/"],
       matchStrings: ['"packageManager": "bun@(?<currentValue>\\d+\\.\\d+\\.\\d+)"'],
       depNameTemplate: "oven-sh/bun",
       datasourceTemplate: "github-releases",
@@ -91,25 +69,13 @@
       dependencyDashboardApproval: false,
     },
     {
-      // Deno of the image, CI, the binary and dev/setup.sh in one PR, so they do not drift apart
-      matchPackageNames: ["docker.io/denoland/deno", "denoland/deno"],
-      groupName: "Deno",
-      sourceUrl: "https://github.com/denoland/deno",
-      prBodyNotes: [
-        "The image, CI (`deno-version`), the standalone binary (`deno compile` in release.yml) and `dev/setup.sh` move together. Check `deno check` and the end-to-end tests against the image and the binary.",
-      ],
-      schedule: ["at any time"],
-      automerge: false,
-      dependencyDashboardApproval: false,
-    },
-    {
-      // Bun of the image's frontend-builder (oven/bun) and packageManager in frontend/ and e2e/ in
-      // one PR, so CI tests the Bun the image builds with
+      // Bun of the image (oven/bun) and packageManager in backend/, frontend/ and e2e/ in one PR,
+      // so CI tests the Bun the image runs on
       matchPackageNames: ["docker.io/oven/bun", "oven/bun", "oven-sh/bun"],
       groupName: "Bun",
       sourceUrl: "https://github.com/oven-sh/bun",
       prBodyNotes: [
-        "The image's `frontend-builder` (`oven/bun:<version>-slim` in docker/Dockerfile) and `packageManager` in `frontend/package.json` and `e2e/package.json` (CI's `bun-version-file` and the screenshots job's `npm install bun@…`) move together. Bun installs, runs Vite and Vitest (`bun --bun`); Playwright's test runner still runs on Node. Check the frontend job and the end-to-end tests against the image.",
+        "The image (`oven/bun:<version>-slim` in docker/Dockerfile, the backend runs on it) and `packageManager` in `backend/package.json`, `frontend/package.json` and `e2e/package.json` (CI's `bun-version-file`, which also builds the standalone binary, and the screenshots job's `npm install bun@…`) move together. Bun runs the backend and its tests, installs, runs Vite and Vitest (`bun --bun`) and compiles the binary; Playwright's test runner still runs on Node. Check the backend and frontend jobs and the end-to-end tests against the local build, the image and the binary.",
       ],
       schedule: ["at any time"],
       automerge: false,

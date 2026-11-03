@@ -3,8 +3,8 @@ import handler from '@tanstack/react-start/server-entry'
 import { overwriteServerAsyncLocalStorage } from './paraglide/runtime'
 import { paraglideMiddleware } from './paraglide/server'
 
-// Paraglide would import the bare "async_hooks" on the first request, which Deno (the backend
-// that runs this server) does not resolve without the node: prefix
+// Paraglide would import the bare "async_hooks" on the first request; given node:async_hooks up
+// front, the server does not depend on the runtime that runs it resolving the bare name
 overwriteServerAsyncLocalStorage(new AsyncLocalStorage())
 
 // Resolve the locale from the request (cookie, else Accept-Language) during SSR, so the server renders

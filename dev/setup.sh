@@ -62,19 +62,13 @@ if [[ ! -x "$SNAPRAID" ]] || ! "$SNAPRAID" --version 2>/dev/null | grep -q "v$SN
 fi
 echo "Using $("$SNAPRAID" --version | head -1)"
 
-# --- Deno (only if not installed) -------------------------------------------
+# --- The backend's packages -----------------------------------------------
 
-DENO_VERSION="${DENO_VERSION:-2.9.8}"
-TOOLS_DIR="$DEV_DIR/tools"
-
-if ! command -v deno >/dev/null && [[ ! -x "$TOOLS_DIR/deno" ]]; then
-  echo "Deno not found, downloading Deno $DENO_VERSION..."
-  command -v unzip >/dev/null || { echo "Missing required tool: unzip" >&2; exit 1; }
-  mkdir -p "$CACHE_DIR" "$TOOLS_DIR"
-  zip="$CACHE_DIR/deno-$DENO_VERSION.zip"
-  curl -fsSL -o "$zip" \
-    "https://github.com/denoland/deno/releases/download/v$DENO_VERSION/deno-$(uname -m)-unknown-linux-gnu.zip"
-  unzip -oq "$zip" -d "$TOOLS_DIR"
+command -v bun >/dev/null || { echo "Bun not found, install it: https://bun.sh" >&2; exit 1; }
+BACKEND_DIR="$DEV_DIR/../backend"
+if [[ ! -d "$BACKEND_DIR/node_modules" ]]; then
+  echo "Installing the backend's packages..."
+  (cd "$BACKEND_DIR" && bun install --frozen-lockfile)
 fi
 
 # --- Sandbox ---------------------------------------------------------------
@@ -164,7 +158,7 @@ cat > "$SANDBOX/config.json" <<'EOF'
 }
 EOF
 
-# Real jobs with their logs, in order; dev/seed-demo.ts moves them back in time
+# Real jobs with their logs, in order; backend/scripts/seed-demo.ts moves them back in time
 run=0
 snapraid_logged() {
   run=$((run + 1))
@@ -190,9 +184,7 @@ snapraid_logged diff || true
 snapraid_logged status
 
 # The jobs' history, disk usage, schedules and automation of a few weeks of use
-DENO="$(command -v deno || echo "$TOOLS_DIR/deno")"
-"$DENO" run --config "$DEV_DIR/../backend/deno.json" --allow-read --allow-write --allow-env \
-  "$DEV_DIR/seed-demo.ts" "$SANDBOX"
+(cd "$BACKEND_DIR" && bun scripts/seed-demo.ts "$SANDBOX")
 
 echo
 echo "Sandbox ready. Start the app with: ./start.sh --demo"

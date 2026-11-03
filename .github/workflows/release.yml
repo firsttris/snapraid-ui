@@ -51,15 +51,14 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: 2.9.x
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: frontend/package.json
       - run: bun install --frozen-lockfile
         working-directory: frontend
-      - run: scripts/build-binary.sh x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
+      - run: bun install --frozen-lockfile
+        working-directory: backend
+      - run: scripts/build-binary.sh bun-linux-x64 bun-linux-arm64
       - name: Checksums
         working-directory: dist
         run: sha256sum snapraid-ui-linux-* > SHA256SUMS

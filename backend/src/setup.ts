@@ -18,7 +18,7 @@ const VIRTUAL_FS = new Set([
 
 // System and app directories, and in Docker the files bind-mounted into the container
 const SYSTEM_PREFIXES = ["/proc", "/sys", "/dev", "/run", "/etc", "/usr", "/bin", "/sbin", "/lib", "/lib64",
-  "/boot", "/var", "/tmp", "/app", "/snap", "/deno-dir", "/root", "/home"];
+  "/boot", "/var", "/tmp", "/app", "/snap", "/root", "/home"];
 
 const isSystemPath = (target: string) =>
   target === "/" || SYSTEM_PREFIXES.some((prefix) => target === prefix || target.startsWith(`${prefix}/`));

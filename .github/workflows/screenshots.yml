@@ -31,13 +31,9 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      # dev/setup.sh builds SnapRAID for the sandbox; setup-deno unpacks Deno with unzip,
-      # which the Playwright image lacks
+      # dev/setup.sh builds SnapRAID for the sandbox
       - name: Build tools
-        run: apt-get update && apt-get install -y --no-install-recommends build-essential curl unzip
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: 2.9.x
+        run: apt-get update && apt-get install -y --no-install-recommends build-essential curl
       - name: Cache the SnapRAID build
         uses: actions/cache@v6
         with:
@@ -50,6 +46,7 @@ jobs:
       - name: Install
         run: |
           npm install --global "bun@$(node -p "require('./e2e/package.json').packageManager.split('@')[1]")"
+          bun install --frozen-lockfile --cwd backend
           bun install --frozen-lockfile --cwd frontend
           bun install --frozen-lockfile --cwd e2e
       - name: Take the screenshots

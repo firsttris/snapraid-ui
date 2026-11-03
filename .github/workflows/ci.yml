@@ -32,11 +32,12 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v7
-      - uses: denoland/setup-deno@v2
+      - uses: oven-sh/setup-bun@v2
         with:
-          deno-version: 2.9.x
-      - run: deno check src/main.ts src/bin.ts
-      - run: deno test --allow-all
+          bun-version-file: backend/package.json
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
 
   frontend:
     if: ${{ !github.event.pull_request.draft }}
@@ -64,14 +65,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: shellcheck -s sh scripts/install.sh
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: 2.9.x
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: frontend/package.json
       - run: bun install --frozen-lockfile
         working-directory: frontend
+      - run: bun install --frozen-lockfile
+        working-directory: backend
       - run: scripts/build-binary.sh
       - name: Serve the binary like a release
         working-directory: dist
@@ -138,10 +138,7 @@ jobs:
       E2E_BINARY: ${{ matrix.target == 'binary' && '../dist/snapraid-ui-linux-x86_64' || '' }}
     steps:
       - uses: actions/checkout@v7
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: 2.9.x
-      # Bun installs and builds; Playwright's test runner runs on the runner's Node
+      # Bun installs, builds and runs the backend; Playwright's test runner runs on the runner's Node
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: e2e/package.json
@@ -164,11 +161,15 @@ jobs:
         if: matrix.target != 'image'
         working-directory: frontend
         run: bun install --frozen-lockfile
+      - name: Install the backend, the tests run it or the binary build it
+        if: matrix.target != 'image'
+        working-directory: backend
+        run: bun install --frozen-lockfile
       # The tests run the x86_64 one; arm64 is built too, so the release does not find a problem first
       - name: Build the binaries
         if: matrix.target == 'binary'
         working-directory: .
-        run: scripts/build-binary.sh x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
+        run: scripts/build-binary.sh bun-linux-x64 bun-linux-arm64
       # With the release's build cache: only the layers that changed are built again
       - name: Build the Docker image
         if: matrix.target == 'image'

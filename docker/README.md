@@ -6,7 +6,7 @@ Published image: [`tristanteu/snapraid-ui`](https://hub.docker.com/r/tristanteu/
 
 | File | Purpose |
 |---|---|
-| `Dockerfile` | Multi-stage build: SnapRAID from source, Deno backend, TanStack Start frontend; one Deno process serves all of it on port 80 |
+| `Dockerfile` | Multi-stage build: SnapRAID from source, the backend's packages, TanStack Start frontend; one Bun process serves all of it on port 80 |
 | `docker-compose.yml` | Compose setup using the published image (or `--build` to build from source) |
 | `snapraid-app.container` | Podman Quadlet unit |
 | `snapraid-net.network` | Podman Quadlet network |
