@@ -45,8 +45,11 @@ for target in "${targets[@]}"; do
     *) echo "Unknown target $target (bun-linux-x64, bun-linux-arm64)" >&2; exit 1 ;;
   esac
   out="$DIST/snapraid-ui-linux-$arch"
-  # The CI checks the backend's types (bun run typecheck); bun build only bundles
+  # The CI checks the backend's types (bun run typecheck); bun build only bundles. Configured by
+  # the environment only: no .env or bunfig.toml from the directory it runs in (the data directory)
   bun build --compile \
+    --no-compile-autoload-dotenv \
+    --no-compile-autoload-bunfig \
     --target "$target" \
     --asset "$stage/frontend" \
     --asset "$stage/docs" \
