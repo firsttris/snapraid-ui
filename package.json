@@ -10,8 +10,8 @@
     "e2e"
   ],
   "scripts": {
-    "dev": "mkdir -p snapraid && SNAPRAID_BASE_PATH=$PWD/snapraid bun run --parallel dev:server dev:web",
-    "demo": "bash scripts/dev/setup.sh && SNAPRAID_BASE_PATH=$PWD/scripts/dev/sandbox SNAPRAID_BIN=$PWD/scripts/dev/bin/snapraid SNAPRAID_EXTRA_ARGS=--test-skip-device SNAPRAID_DEMO=1 bun run --parallel dev:server dev:web",
+    "dev": "mkdir -p snapraid && if [ -t 1 ]; then export FORCE_COLOR=1; fi && SNAPRAID_BASE_PATH=$PWD/snapraid bun run --parallel dev:server dev:web",
+    "demo": "bash scripts/dev/setup.sh && if [ -t 1 ]; then export FORCE_COLOR=1; fi && SNAPRAID_BASE_PATH=$PWD/scripts/dev/sandbox SNAPRAID_BIN=$PWD/scripts/dev/bin/snapraid SNAPRAID_EXTRA_ARGS=--test-skip-device SNAPRAID_DEMO=1 bun run --parallel dev:server dev:web",
     "dev:server": "bun run --cwd apps/server dev",
     "dev:web": "bun run --cwd apps/web dev"
   }

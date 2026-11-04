@@ -29,7 +29,7 @@ There are two ways to start, both scripts in the root `package.json`:
 | `bun run dev` | `./snapraid/` (created on first start, ignored by git) | `snapraid` from your `PATH` | Works against your real configs |
 | `bun run demo` | `scripts/dev/sandbox/` | `scripts/dev/bin/snapraid` | Runs `scripts/dev/setup.sh` first (stops if it fails), sets `SNAPRAID_EXTRA_ARGS=--test-skip-device` and `SNAPRAID_DEMO=1` |
 
-Both set the environment and then start the scripts `dev:server` (`bun run dev` in `apps/server/`: `bun --watch`, so the backend restarts on changes) and `dev:web` (`bun run dev` in `apps/web/`: Vite with hot reload) side by side with `bun run --parallel`, which prefixes each line with the script's name and stops the other script when one fails.
+Both set the environment and then start the scripts `dev:server` (`bun run dev` in `apps/server/`: `bun --watch`, so the backend restarts on changes) and `dev:web` (`bun run dev` in `apps/web/`: Vite with hot reload) side by side with `bun run --parallel`, which prefixes each line with the script's name and stops the other script when one fails. `--parallel` passes the output through a pipe, so both scripts set `FORCE_COLOR=1` when you start them in a terminal to keep the colours (not when the output goes into a file or a pipe).
 
 There is no start script of its own: the terminal sends `Ctrl+C` to the whole foreground process group, so it stops both servers; `Ctrl+Z` suspends both and gives you the shell back, `fg` resumes them.
 
