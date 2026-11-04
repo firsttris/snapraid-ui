@@ -39,16 +39,6 @@
       // 15.1, 14.10; release candidates (15.0rc2) do not match and are left out
       versioningTemplate: "regex:^(?<major>\\d+)\\.(?<minor>\\d+)$",
     },
-    {
-      // "packageManager": "bun@x.y.z" in the root package.json: the Bun of every CI job
-      // (bun-version-file, and the npm-installed Bun of the screenshots job in the Playwright image)
-      customType: "regex",
-      managerFilePatterns: ["/^package\\.json$/"],
-      matchStrings: ['"packageManager": "bun@(?<currentValue>\\d+\\.\\d+\\.\\d+)"'],
-      depNameTemplate: "oven-sh/bun",
-      datasourceTemplate: "github-releases",
-      extractVersionTemplate: "^bun-v(?<version>.+)$",
-    },
   ],
   packageRules: [
     {
@@ -70,8 +60,9 @@
     },
     {
       // Bun of the image (oven/bun) and packageManager in package.json in one PR,
-      // so CI tests the Bun the image runs on
-      matchPackageNames: ["docker.io/oven/bun", "oven/bun", "oven-sh/bun"],
+      // so CI tests the Bun the image runs on. Renovate's bun manager reads "packageManager":
+      // "bun@x.y.z" itself, as the npm package `bun` (no regex manager needed).
+      matchPackageNames: ["docker.io/oven/bun", "oven/bun", "bun"],
       groupName: "Bun",
       sourceUrl: "https://github.com/oven-sh/bun",
       prBodyNotes: [
