@@ -35,7 +35,7 @@ Inside the container the UI listens on port 80. Change the port on the host side
 
 ## Data directory
 
-All state lives in one directory, `/app/snapraid` in the container. Mount it as a volume so it survives updates. The [installer](installation.md#without-docker) uses `/var/lib/snapraid-ui`. When you run the backend from the repository without `SNAPRAID_BASE_PATH`, it is `../snapraid` relative to the backend's working directory, which is `snapraid/` in the repository root; the standalone binary uses `snapraid/` in its working directory.
+All state lives in one directory, `/app/snapraid` in the container. Mount it as a volume so it survives updates. The [installer](installation.md#without-docker) uses `/var/lib/snapraid-ui`. When you run the backend from the repository without `SNAPRAID_BASE_PATH`, it is `../../snapraid` relative to the backend's working directory (`apps/server/`), which is `snapraid/` in the repository root; the standalone binary uses `snapraid/` in its working directory.
 
 | Path | Contents |
 |---|---|

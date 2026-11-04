@@ -7,21 +7,21 @@ dist/
 .vscode/
 .idea/
 config.json
-frontend/.output/
-frontend/.vinxi/
+apps/web/.output/
+apps/web/.vinxi/
 
-# Dev sandbox (dev/setup.sh)
-dev/bin/
-dev/.cache/
-dev/sandbox/
+# Dev sandbox (scripts/dev/setup.sh)
+scripts/dev/bin/
+scripts/dev/.cache/
+scripts/dev/sandbox/
 
-# Local data of ./start.sh (configs, schedules, logs)
+# Local data of scripts/start.sh (configs, schedules, logs)
 /snapraid/
-!backend/src/parsers/__tests__/fixtures/*.log
+!apps/server/src/parsers/__tests__/fixtures/*.log
 
-# Paraglide (generated from frontend/messages/*.json) and the inlang cache
-frontend/src/paraglide/
-frontend/project.inlang/cache/
+# Paraglide (generated from apps/web/messages/*.json) and the inlang cache
+apps/web/src/paraglide/
+apps/web/project.inlang/cache/
 
 # MkDocs build (mkdocs build)
 site/

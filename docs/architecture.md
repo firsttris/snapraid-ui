@@ -23,9 +23,9 @@ SnapRAID UI has three parts:
 
 | Part | Technology | Location |
 |---|---|---|
-| Backend | [Bun](https://bun.sh/) + [Hono](https://hono.dev/), REST API and WebSocket; serves the built frontend on the same port | `backend/src/` |
-| Frontend | React 19, TanStack Start / Router / Query, Tailwind CSS, shadcn/ui, Paraglide JS; server-rendered by Nitro, which builds one fetch handler that the backend runs | `frontend/src/` |
-| Shared code | Types and logic used by both sides (types, i18n markers, SMART assessment, fill-up forecast, `--force-*` detection) | `shared/` |
+| Backend | [Bun](https://bun.sh/) + [Hono](https://hono.dev/), REST API and WebSocket; serves the built frontend on the same port | `apps/server/src/` |
+| Frontend | React 19, TanStack Start / Router / Query, Tailwind CSS, shadcn/ui, Paraglide JS; server-rendered by Nitro, which builds one fetch handler that the backend runs | `apps/web/src/` |
+| Shared code | Types and logic used by both sides (types, i18n markers, SMART assessment, fill-up forecast, `--force-*` detection), the workspace package `@snapraid-ui/shared` | `packages/shared/src/` |
 
 There is no database. All state lives in JSON files and log files in the data directory (`SNAPRAID_BASE_PATH`), next to your `snapraid.conf` files. The backend runs the `snapraid` binary as a child process and reads its **structured log** (available since SnapRAID 14.0) instead of scraping the human-readable console output.
 
@@ -34,17 +34,18 @@ There is no database. All state lives in JSON files and log files in the data di
 The Docker image (`docker/Dockerfile`) is a multi-stage build:
 
 1. **snapraid-builder** (Debian bookworm-slim) downloads the pinned SnapRAID release (`ARG SNAPRAID_VERSION=15.1`) and compiles it.
-2. **backend-builder** (`oven/bun:1.4.4-slim`) installs the backend's packages with `bun install --frozen-lockfile --production`.
-3. **frontend-builder** (`oven/bun:1.4.4-slim`) runs `bun install --frozen-lockfile` and `bun run build`, which produces `frontend/.output/`.
-4. The **final image** is based on `oven/bun:1.4.4-slim`, adds `curl`, `smartmontools` (SnapRAID calls `smartctl` for `smart` and `probe`) and `tini`, and copies in the SnapRAID binary, the backend with its packages, `shared/` and the built frontend.
+2. **workspace** (`oven/bun:1.4.4-slim`) holds the workspace's `package.json` files, `bun.lock` and `bunfig.toml`, which the next two stages install from.
+3. **backend-builder** installs the backend's packages with `bun install --frozen-lockfile --production --filter ./apps/server`.
+4. **frontend-builder** runs `bun install --frozen-lockfile --filter ./apps/web` and `bun run build` in `apps/web/`, which produces `apps/web/.output/`.
+5. The **final image** is based on `oven/bun:1.4.4-slim`, adds `curl`, `smartmontools` (SnapRAID calls `smartctl` for `smart` and `probe`) and `tini`, and copies in the SnapRAID binary, the backend with its packages (`/app/apps/server`, `/app/node_modules`), `packages/shared/` and the built frontend, at their paths in the repository under `/app`.
 
-The container runs a single process, the backend, under [tini](https://github.com/krallin/tini) as PID 1, which passes `docker stop`'s `SIGTERM` on and reaps the processes the backend starts:
+The container runs a single process, the backend (in `/app/apps/server`), under [tini](https://github.com/krallin/tini) as PID 1, which passes `docker stop`'s `SIGTERM` on and reaps the processes the backend starts:
 
 ```
 bun src/main.ts
 ```
 
-It listens on port 80 (`PORT=80`) and answers `/api` and `/ws` itself. Every other path goes to the frontend: Nitro builds the server-side rendering and the static files (`frontend/.output/`) with its `standard` preset into one fetch handler, which `backend/src/frontend.ts` loads from `../frontend/.output/server/index.mjs`.
+It listens on port 80 (`PORT=80`) and answers `/api` and `/ws` itself. Every other path goes to the frontend: Nitro builds the server-side rendering and the static files (`apps/web/.output/`) with its `standard` preset into one fetch handler, which `apps/server/src/frontend.ts` loads from `apps/web/.output/server/index.mjs`.
 
 ```mermaid
 flowchart LR
@@ -62,19 +63,19 @@ The image sets `SNAPRAID_BASE_PATH=/app/snapraid`, `SNAPRAID_BIN=/usr/local/bin/
 
 ## Standalone binary
 
-`scripts/build-binary.sh` compiles `backend/src/bin.ts` with `bun build --compile` into one executable per architecture (`snapraid-ui-linux-x86_64`, `snapraid-ui-linux-aarch64`), which the release attaches to the GitHub release. The binary embeds the Bun runtime, the backend bundled with its packages, and with `--asset` the built frontend (`frontend/.output/`), `frontend/package.json` and `docs/*.md`. Inside the binary these files lie under `/$bunfs/root/` at their paths in the repository (`frontend/…`, `docs/…`); `backend/src/app-files.ts` finds them there, and next to `backend/` in the repository and the image:
+`scripts/build-binary.sh` compiles `apps/server/src/bin.ts` with `bun build --compile` into one executable per architecture (`snapraid-ui-linux-x86_64`, `snapraid-ui-linux-aarch64`), which the release attaches to the GitHub release. The binary embeds the Bun runtime, the backend bundled with its packages, and with `--asset` the built frontend (`apps/web/.output/`), `apps/web/package.json` and `docs/*.md`. Inside the binary these files lie under `/$bunfs/root/` at their paths in the repository (`apps/web/…`, `docs/…`); `apps/server/src/app-files.ts` finds them there, and at the same paths from the root in the repository and the image:
 
 | File | Read by | For |
 |---|---|---|
-| `frontend/.output/server/index.mjs` | `backend/src/frontend.ts` | The UI |
-| `frontend/package.json` | `backend/src/version.ts` | The version, for `--version`, Home Assistant and the MCP endpoint; `SNAPRAID_UI_VERSION` overrides it |
-| `docs/*.md` | `backend/src/mcp.ts` | The documentation the MCP endpoint offers |
+| `apps/web/.output/server/index.mjs` | `apps/server/src/frontend.ts` | The UI |
+| `apps/web/package.json` | `apps/server/src/version.ts` | The version, for `--version`, Home Assistant and the MCP endpoint; `SNAPRAID_UI_VERSION` overrides it |
+| `docs/*.md` | `apps/server/src/mcp.ts` | The documentation the MCP endpoint offers |
 
 `bin.ts` first imports `bin-cli.ts`, which answers `--version` and `--help` and sets the data directory to `./snapraid` when `SNAPRAID_BASE_PATH` is not set, and then `main.ts`. SnapRAID and `smartctl` are not inside: the binary runs the ones installed on the host.
 
 ## Backend
 
-`backend/src/main.ts` builds the Hono app, wires the modules together and starts `Bun.serve` (with its `websocket` handler for `/ws`) on `SNAPRAID_UI_HOST` (`0.0.0.0` when unset) at `PORT` (8080 when unset, 80 in the image). On start it loads `config.json` (creating a default one if it is missing), creates the log directory, loads the schedules and runs one log rotation.
+`apps/server/src/main.ts` builds the Hono app, wires the modules together and starts `Bun.serve` (with its `websocket` handler for `/ws`) on `SNAPRAID_UI_HOST` (`0.0.0.0` when unset) at `PORT` (8080 when unset, 80 in the image). On start it loads `config.json` (creating a default one if it is missing), creates the log directory, loads the schedules and runs one log rotation.
 
 Middleware, in order:
 
@@ -125,11 +126,11 @@ Every SnapRAID call goes through `snapraidCommand()` in `config.ts`: it runs `SN
 
 Aborting sends `SIGINT`, which SnapRAID treats like Ctrl+C: it stops at the next block and saves its state. The job stays current until the process has exited.
 
-When a job fails, the executor checks its output for SnapRAID's suggestion `'snapraid --force-zero|empty|uuid …'` (`shared/force-option.ts`) and reports it as `forceOption`, so the UI can offer a confirmed retry. See [Usage](usage.md) for the user side.
+When a job fails, the executor checks its output for SnapRAID's suggestion `'snapraid --force-zero|empty|uuid …'` (`packages/shared/src/force-option.ts`) and reports it as `forceOption`, so the UI can offer a confirmed retry. See [Usage](usage.md) for the user side.
 
 ## SnapRAID engine
 
-Everything the UI could get from [snapraid-daemon](https://github.com/amadvance/snapraid-daemon)'s REST API instead of calling the CLI itself sits behind one interface, `SnapRaidEngine` in `backend/src/engine/engine.ts`. Routes, WebSocket and `main.ts` call `getEngine()`; scheduler and spindown keep `activeEngine`, which always passes on to the engine in place, so the engine can be switched while the backend runs.
+Everything the UI could get from [snapraid-daemon](https://github.com/amadvance/snapraid-daemon)'s REST API instead of calling the CLI itself sits behind one interface, `SnapRaidEngine` in `apps/server/src/engine/engine.ts`. Routes, WebSocket and `main.ts` call `getEngine()`; scheduler and spindown keep `activeEngine`, which always passes on to the engine in place, so the engine can be switched while the backend runs.
 
 There are two implementations:
 
@@ -164,7 +165,7 @@ Known gaps of the daemon engine:
 
 ### Keeping the engine in line with snapraid-daemon
 
-The API was last compared with snapraid-daemon **`v2.1`**; the version is in `backend/src/engine/REVIEWED_DAEMON_VERSION`. A weekly workflow (job `snapraid-daemon` in `upstream-release.yml`) opens an issue when a newer tag is out. For each new version:
+The API was last compared with snapraid-daemon **`v2.1`**; the version is in `apps/server/src/engine/REVIEWED_DAEMON_VERSION`. A weekly workflow (job `snapraid-daemon` in `upstream-release.yml`) opens an issue when a newer tag is out. For each new version:
 
 1. Compare `snapraidd.yaml` (the OpenAPI spec) between the reviewed and the new tag.
 2. If the daemon gained an endpoint for something in the "stays with the UI" list (for example `dup` or `list`), add a method to `SnapRaidEngine`, implement it in the CLI engine, move the callers to it and add a step to the contract tests.
@@ -173,7 +174,7 @@ The API was last compared with snapraid-daemon **`v2.1`**; the version is in `ba
 
 ### Tests
 
-`backend/src/__tests__/engine-contract.ts` holds what every engine has to do: a sync succeeds, the status lists the disks, the diff finds a new file, `afterRun` runs while the job is still current, and so on. `engine-contract.test.ts` runs it against the fake engine (`__tests__/fake-engine.ts`) always, against the CLI engine with a real SnapRAID binary, and against the daemon engine with a running snapraid-daemon (see [Development](development.md#tests)).
+`apps/server/src/__tests__/engine-contract.ts` holds what every engine has to do: a sync succeeds, the status lists the disks, the diff finds a new file, `afterRun` runs while the job is still current, and so on. `engine-contract.test.ts` runs it against the fake engine (`__tests__/fake-engine.ts`) always, against the CLI engine with a real SnapRAID binary, and against the daemon engine with a running snapraid-daemon (see [Development](development.md#tests)).
 
 Without a daemon, `daemon-engine.test.ts` runs the daemon engine against a stand-in that answers like snapraid-daemon 2.0: queuing and following a task, progress, abort, the fallback, auth and errors, and the mapping of its JSON to the UI's types. `engine-settings.test.ts` covers the settings and which engine runs which config, `scheduler.test.ts` the scheduler against the fake engine.
 
@@ -189,7 +190,7 @@ The outcome of a run (`RunResult`: `ok`, `warning`, `error`, `aborted`, `incompl
 - `summary:exit:ok` / `warning` map directly; `equal`, `diff`, `nodup`, `dup` and `recovered` count as `ok`; `recoverable` as `warning`; anything else as `error`;
 - no `summary:exit` at all means `error` if there is a `msg:fatal:` line, otherwise `incomplete` (still running or killed).
 
-Each log's `conf:file` tag links it to a config, which is how the dashboard finds the last sync and scrub of the selected config. The frontend has its own reader for the log viewer (`frontend/src/lib/log-parse.ts`). Parser tests use real SnapRAID output in `backend/src/parsers/__tests__/fixtures/`.
+Each log's `conf:file` tag links it to a config, which is how the dashboard finds the last sync and scrub of the selected config. The frontend has its own reader for the log viewer (`apps/web/src/lib/log-parse.ts`). Parser tests use real SnapRAID output in `apps/server/src/parsers/__tests__/fixtures/`.
 
 ## Job runner and live output
 
@@ -217,7 +218,7 @@ sequenceDiagram
 - A job can carry an `afterRun` step that runs before the job is released, e.g. removing the data disk from the config after a successful `sync -E`, or recording a replacement step. Nothing else can start in between.
 - After a manual `sync`, `scrub`, `fix` or `check`, a notification is sent if the settings ask for manual jobs. After `status` or `diff` via `/execute`, a `status` message with the parsed status is broadcast.
 
-The frontend (`frontend/src/hooks/useJob.tsx`) combines the WebSocket with polling `GET /api/snapraid/current-job` every 5 seconds, so it picks up jobs started elsewhere (another tab, a schedule) and notices jobs that ended while it was disconnected. `frontend/src/lib/job-tracker.ts` makes sure the end of a job is handled exactly once. The WebSocket client reconnects 3 seconds after the connection drops.
+The frontend (`apps/web/src/hooks/useJob.tsx`) combines the WebSocket with polling `GET /api/snapraid/current-job` every 5 seconds, so it picks up jobs started elsewhere (another tab, a schedule) and notices jobs that ended while it was disconnected. `apps/web/src/lib/job-tracker.ts` makes sure the end of a job is handled exactly once. The WebSocket client reconnects 3 seconds after the connection drops.
 
 ## Scheduler
 
@@ -232,7 +233,7 @@ Scheduled jobs run through the same executor as manual ones, so their output, pr
 
 ## Storage
 
-Everything lives in the data directory, `SNAPRAID_BASE_PATH`. In the image that is `/app/snapraid`; without the variable the backend uses `../snapraid` relative to its working directory. Relative paths in API requests (e.g. `configPath: "snapraid.conf"`) are resolved against it; absolute paths are used as they are.
+Everything lives in the data directory, `SNAPRAID_BASE_PATH`. In the image that is `/app/snapraid`; without the variable the backend uses `../../snapraid` relative to its working directory (`snapraid/` in the repository's root). Relative paths in API requests (e.g. `configPath: "snapraid.conf"`) are resolved against it; absolute paths are used as they are.
 
 | File | Written by |
 |---|---|
@@ -249,11 +250,11 @@ Everything lives in the data directory, `SNAPRAID_BASE_PATH`. In the image that 
 | `auth.json` | Password changed in the UI (hash) and passkeys (only with login enabled) |
 | `logs/*.log` | One structured log per job (directory set in `config.json`) |
 
-Writes go through `node:fs`: the JSON state files through `writeTextFileAtomic` (`backend/src/atomic-write.ts`, a temporary file renamed over the old one), other writes (the SnapRAID configs among them) are plain `writeFile` calls. Most files are read again whenever they are needed. Two things are read only at startup: the log directory and retention settings from `config.json`, and the cron timers, which are rebuilt from `schedules.json` on start, on changes through the API and after a restore. See [Configuration](configuration.md) for details on each file.
+Writes go through `node:fs`: the JSON state files through `writeTextFileAtomic` (`apps/server/src/atomic-write.ts`, a temporary file renamed over the old one), other writes (the SnapRAID configs among them) are plain `writeFile` calls. Most files are read again whenever they are needed. Two things are read only at startup: the log directory and retention settings from `config.json`, and the cron timers, which are rebuilt from `schedules.json` on start, on changes through the API and after a restore. See [Configuration](configuration.md) for details on each file.
 
 ## Frontend
 
-The frontend is a [TanStack Start](https://tanstack.com/start) app with file-based routing. Nitro builds it into `frontend/.output/`, one fetch handler that the backend loads to render pages on the server and serve the client bundle (see [Container layout](#container-layout)).
+The frontend is a [TanStack Start](https://tanstack.com/start) app with file-based routing. Nitro builds it into `apps/web/.output/`, one fetch handler that the backend loads to render pages on the server and serve the client bundle (see [Container layout](#container-layout)).
 
 | Path | Content |
 |---|---|
@@ -270,11 +271,11 @@ Server state is managed with TanStack Query. Only the array status is persisted 
 
 ## Internationalization
 
-UI texts live in `frontend/messages/{en,de,it}.json` and are compiled by [Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJs) into `frontend/src/paraglide/` (generated, not committed). Components call `m.key()`. The language is resolved in this order: an explicit choice (cookie), the browser language, English.
+UI texts live in `apps/web/messages/{en,de,it}.json` and are compiled by [Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJs) into `apps/web/src/paraglide/` (generated, not committed). Components call `m.key()`. The language is resolved in this order: an explicit choice (cookie), the browser language, English.
 
-The backend does not know the viewer's language. For errors a user can run into, it sends a marked key instead of text: `msg("server_error_job_running")` from `shared/i18n.ts` produces `\u0002["server_error_job_running",{}]\u0003`. The frontend (`frontend/src/lib/i18n.ts`, `localizeServer()`) replaces such markers with the translated message; plain text, such as SnapRAID's own output, passes through unchanged. Some validation errors for malformed requests are plain English strings.
+The backend does not know the viewer's language. For errors a user can run into, it sends a marked key instead of text: `msg("server_error_job_running")` from `packages/shared/src/i18n.ts` produces `\u0002["server_error_job_running",{}]\u0003`. The frontend (`apps/web/src/lib/i18n.ts`, `localizeServer()`) replaces such markers with the translated message; plain text, such as SnapRAID's own output, passes through unchanged. Some validation errors for malformed requests are plain English strings.
 
-Notifications are the exception: they leave the server by e-mail, ntfy or webhook in the language set in the notification settings (`backend/src/notification-events.ts`).
+Notifications are the exception: they leave the server by e-mail, ntfy or webhook in the language set in the notification settings (`apps/server/src/notification-events.ts`).
 
 See [Development](development.md#translations) for how to add or change texts.
 
@@ -282,7 +283,7 @@ See [Development](development.md#translations) for how to add or change texts.
 
 All endpoints are under `/api` and exchange JSON unless noted otherwise. With the login enabled, every endpoint except `/api/auth/*` requires the session cookie. Errors come back as `{"error": "…"}` with a 4xx or 5xx status; the message may be a marked i18n key (see [above](#internationalization)).
 
-Most endpoints that work on a SnapRAID config take its path: as the `path` query parameter for `GET`/`DELETE`, or as `configPath` in the JSON body for `POST`. The path is the one stored in `config.json` (relative to the data directory, or absolute). Response types refer to the interfaces in `shared/types.ts`.
+Most endpoints that work on a SnapRAID config take its path: as the `path` query parameter for `GET`/`DELETE`, or as `configPath` in the JSON body for `POST`. The path is the one stored in `config.json` (relative to the data directory, or absolute). Response types refer to the interfaces in `packages/shared/src/types.ts`.
 
 > [!NOTE]
 > The API is the internal interface between the frontend and the backend, not a versioned public API. It can change between releases.

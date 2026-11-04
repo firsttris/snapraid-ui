@@ -1,4 +1,4 @@
-/* App colors: dark tile of the logo, cyan to indigo tint (frontend/public/favicon.svg) */
+/* App colors: dark tile of the logo, cyan to indigo tint (apps/web/public/favicon.svg) */
 :root {
   --md-primary-fg-color: #101828;
   --md-primary-fg-color--light: #1e293b;

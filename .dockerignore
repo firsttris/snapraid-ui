@@ -1,4 +1,4 @@
-node_modules
+**/node_modules
 dist
 .git
 .vscode
@@ -7,9 +7,7 @@ npm-debug.log*
 .DS_Store
 
 # Development files
-frontend/node_modules
-backend/node_modules
-backend/.cache
+apps/server/.cache
 
 # Test files
 **/*.test.ts
@@ -19,9 +17,10 @@ backend/.cache
 
 # Local data and dev sandbox
 snapraid/
-dev/
-frontend/.output
-frontend/.vinxi
+scripts/dev/
+apps/web/.output
+apps/web/.vinxi
 
-# End-to-end tests: built tools, test data
+# End-to-end tests: built tools, test data (only e2e/package.json goes in, for the workspace)
 e2e/
+!e2e/package.json

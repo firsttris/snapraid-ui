@@ -244,13 +244,13 @@ December 23.
 
 ## 🛠️ Development
 
-Requires Bun (the version in `frontend/package.json`) and the fish shell for `start.sh`;
+Requires Bun (the version in `package.json`) and the fish shell for `scripts/start.sh`;
 the end-to-end tests run on Bun too.
 
 ```bash
 git clone https://github.com/firsttris/snapraid-ui && cd snapraid-ui
-./install.sh
-./start.sh --demo   # sandbox with fake disks, no real array needed
+bun install
+bun run demo   # sandbox with fake disks, no real array needed
 ```
 
 The frontend runs on http://localhost:3000, the API on http://localhost:8080. Built with Bun + Hono,
@@ -260,7 +260,7 @@ project layout, tests and translations.
 ## 🤝 Contributing
 
 Issues and pull requests are welcome. Please run `bunx biome check`, `bun run typecheck` and the tests
-(`bun test` in `backend/`, `bun run test` in `frontend/`) before opening a pull request.
+(`bun test` in `apps/server/`, `bun run test` in `apps/web/`) before opening a pull request.
 Changes to jobs, schedules or the Docker image are also covered by the end-to-end tests in `e2e/`,
 which CI runs against the local build and the image; see [Development](https://firsttris.github.io/snapraid-ui/development.html#end-to-end-tests) to run them locally.
 

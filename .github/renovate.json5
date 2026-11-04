@@ -17,7 +17,7 @@
       customType: "regex",
       managerFilePatterns: [
         "/^docker/(Dockerfile|README\\.md)$/",
-        "/^dev/setup\\.sh$/",
+        "/^scripts/dev/setup\\.sh$/",
         "/^e2e/scripts/setup-tools\\.sh$/",
         "/^scripts/install\\.sh$/",
         "/^\\.github/workflows/ci\\.yml$/",
@@ -40,10 +40,10 @@
       versioningTemplate: "regex:^(?<major>\\d+)\\.(?<minor>\\d+)$",
     },
     {
-      // "packageManager": "bun@x.y.z" in backend/, frontend/ and e2e/: the Bun of every CI job
+      // "packageManager": "bun@x.y.z" in the root package.json: the Bun of every CI job
       // (bun-version-file, and the npm-installed Bun of the screenshots job in the Playwright image)
       customType: "regex",
-      managerFilePatterns: ["/^(backend|frontend|e2e)/package\\.json$/"],
+      managerFilePatterns: ["/^package\\.json$/"],
       matchStrings: ['"packageManager": "bun@(?<currentValue>\\d+\\.\\d+\\.\\d+)"'],
       depNameTemplate: "oven-sh/bun",
       datasourceTemplate: "github-releases",
@@ -62,20 +62,20 @@
       sourceUrl: "https://github.com/amadvance/snapraid",
       commitMessageTopic: "SnapRAID",
       prBodyNotes: [
-        "The parsers are tested against this one release. Before merging: read SnapRAID's [HISTORY](https://github.com/amadvance/snapraid/blob/master/HISTORY) for changes to the structured log (`--log`); the end-to-end tests of this PR build and run the new release. Locally: `SNAPRAID_VERSION=<new> dev/setup.sh --reset`, then status, diff, sync, scrub, check, list, dup, touch and smart in the UI. A major version: compare the log tags with `backend/src/parsers/__tests__/fixtures/`, and the text \"SnapRAID 15\" in docs/installation.md. Check whether snapraid-daemon (`REVIEWED_DAEMON_VERSION`) needs this release; docs/automation.md names the versions the daemon mode was tested with.",
+        "The parsers are tested against this one release. Before merging: read SnapRAID's [HISTORY](https://github.com/amadvance/snapraid/blob/master/HISTORY) for changes to the structured log (`--log`); the end-to-end tests of this PR build and run the new release. Locally: `SNAPRAID_VERSION=<new> scripts/dev/setup.sh --reset`, then status, diff, sync, scrub, check, list, dup, touch and smart in the UI. A major version: compare the log tags with `apps/server/src/parsers/__tests__/fixtures/`, and the text \"SnapRAID 15\" in docs/installation.md. Check whether snapraid-daemon (`REVIEWED_DAEMON_VERSION`) needs this release; docs/automation.md names the versions the daemon mode was tested with.",
       ],
       schedule: ["at any time"],
       automerge: false,
       dependencyDashboardApproval: false,
     },
     {
-      // Bun of the image (oven/bun) and packageManager in backend/, frontend/ and e2e/ in one PR,
+      // Bun of the image (oven/bun) and packageManager in package.json in one PR,
       // so CI tests the Bun the image runs on
       matchPackageNames: ["docker.io/oven/bun", "oven/bun", "oven-sh/bun"],
       groupName: "Bun",
       sourceUrl: "https://github.com/oven-sh/bun",
       prBodyNotes: [
-        "The image (`oven/bun:<version>-slim` in docker/Dockerfile, the backend runs on it) and `packageManager` in `backend/package.json`, `frontend/package.json` and `e2e/package.json` (CI's `bun-version-file`, which also builds the standalone binary, and the screenshots job's `npm install bun@…`) move together. Bun runs the backend and its tests, installs, runs Vite and Vitest (`bun --bun`) and compiles the binary, and runs Playwright's test runner (`bun --bun playwright test`). Check the backend and frontend jobs and the end-to-end tests against the local build, the image and the binary.",
+        "The image (`oven/bun:<version>-slim` in docker/Dockerfile, the backend runs on it) and `packageManager` in the root `package.json` (CI's `bun-version-file`, which also builds the standalone binary, and the screenshots job's `npm install bun@…`) move together. Bun runs the backend and its tests, installs, runs Vite and Vitest (`bun --bun`) and compiles the binary, and runs Playwright's test runner (`bun --bun playwright test`). Check the backend and frontend jobs and the end-to-end tests against the local build, the image and the binary.",
       ],
       schedule: ["at any time"],
       automerge: false,

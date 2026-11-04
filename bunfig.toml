@@ -1,0 +1,4 @@
+[install]
+# Each package sees only its own dependencies (node_modules/.bun), not whatever another
+# workspace brings: the frontend's inlang settings load ./node_modules/@inlang/... from apps/web
+linker = "isolated"

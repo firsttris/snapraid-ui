@@ -1,9 +1,9 @@
 name: Upstream Release Check
 
 # Opens an issue when snapraid-daemon has a newer version, so it is looked at on purpose: jobs,
-# status, diff, SMART and the power state go through the SnapRAID engine (backend/src/engine/engine.ts),
+# status, diff, SMART and the power state go through the SnapRAID engine (apps/server/src/engine/engine.ts),
 # so they could also run on snapraid-daemon's REST API. Its API was last compared with
-# backend/src/engine/REVIEWED_DAEMON_VERSION. A new SnapRAID release comes as a Renovate pull
+# apps/server/src/engine/REVIEWED_DAEMON_VERSION. A new SnapRAID release comes as a Renovate pull
 # request instead (.github/renovate.json5).
 
 on:
@@ -26,7 +26,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          reviewed=$(tr -d '[:space:]' < backend/src/engine/REVIEWED_DAEMON_VERSION)
+          reviewed=$(tr -d '[:space:]' < apps/server/src/engine/REVIEWED_DAEMON_VERSION)
           # Tags like v1.15, v2.0rc2 and v2.0. Release candidates count, the API changes in them.
           # Sort key: 2.0rc2 -> 2.0.2, 2.0 -> 2.0.999, so a release sorts after its candidates
           newest=$(git ls-remote --tags https://github.com/amadvance/snapraid-daemon.git \
@@ -48,9 +48,9 @@ jobs:
           snapraid-daemon [v$newest](https://github.com/amadvance/snapraid-daemon/tree/v$newest) is out, the SnapRAID engine was last compared with v$reviewed.
 
           - [ ] Compare the API: [snapraidd.yaml v$reviewed...v$newest](https://github.com/amadvance/snapraid-daemon/compare/v$reviewed...v$newest) and the [HISTORY](https://github.com/amadvance/snapraid-daemon/blob/v$newest/HISTORY)
-          - [ ] An endpoint for something CLI-only today (\`dup\`, \`list\`, \`devices\`, config, ...)? Add a method to \`SnapRaidEngine\` in \`backend/src/engine/engine.ts\`, implement it in \`cli-engine.ts\`, move the callers and extend \`backend/src/__tests__/engine-contract.ts\`
+          - [ ] An endpoint for something CLI-only today (\`dup\`, \`list\`, \`devices\`, config, ...)? Add a method to \`SnapRaidEngine\` in \`apps/server/src/engine/engine.ts\`, implement it in \`cli-engine.ts\`, move the callers and extend \`apps/server/src/__tests__/engine-contract.ts\`
           - [ ] Update the tables in [docs/architecture.md](https://github.com/${{ github.repository }}/blob/master/docs/architecture.md#snapraid-engine)
-          - [ ] Put $newest into \`backend/src/engine/REVIEWED_DAEMON_VERSION\`
+          - [ ] Put $newest into \`apps/server/src/engine/REVIEWED_DAEMON_VERSION\`
           - [ ] The end-to-end tests build and run against that version; if it needs a newer SnapRAID, raise \`SNAPRAID15_REF\` in \`e2e/scripts/setup-tools.sh\`
           BODY
           )"

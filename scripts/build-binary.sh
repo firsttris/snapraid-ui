@@ -4,7 +4,7 @@
 #
 # Usage: scripts/build-binary.sh [target...]
 #   target: bun-linux-x64 (default: the host's), bun-linux-arm64
-#   SKIP_FRONTEND_BUILD=1 uses frontend/.output as it is
+#   SKIP_FRONTEND_BUILD=1 uses apps/web/.output as it is
 # Writes dist/snapraid-ui-linux-<arch> per target (x86_64, aarch64).
 set -euo pipefail
 
@@ -12,9 +12,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST="$ROOT/dist"
 
 if [[ "${SKIP_FRONTEND_BUILD:-}" != "1" ]]; then
-  (cd "$ROOT/frontend" && bun run build)
+  (cd "$ROOT/apps/web" && bun run build)
 fi
-[[ -f "$ROOT/frontend/.output/server/index.mjs" ]] || { echo "frontend/.output is missing, build the frontend first" >&2; exit 1; }
+[[ -f "$ROOT/apps/web/.output/server/index.mjs" ]] || { echo "apps/web/.output is missing, build the frontend first" >&2; exit 1; }
 
 targets=("$@")
 if [[ ${#targets[@]} -eq 0 ]]; then
@@ -26,18 +26,18 @@ if [[ ${#targets[@]} -eq 0 ]]; then
 fi
 
 # The files the backend reads at runtime, laid out as in the repository: --asset embeds a
-# directory under its own name, so the binary has them at /$bunfs/root/frontend/ and
-# /$bunfs/root/docs/ (backend/src/app-files.ts). The documentation as the MCP endpoint offers
+# directory under its own name, so the binary has them at /$bunfs/root/apps/web/ and
+# /$bunfs/root/docs/ (apps/server/src/app-files.ts). The documentation as the MCP endpoint offers
 # it: the Markdown pages without the pictures.
 stage="$(mktemp -d)"
 trap 'rm -rf "$stage"' EXIT
-mkdir -p "$stage/frontend" "$stage/docs"
-cp -R "$ROOT/frontend/.output" "$stage/frontend/.output"
-cp "$ROOT/frontend/package.json" "$stage/frontend/package.json"
+mkdir -p "$stage/apps/web" "$stage/docs"
+cp -R "$ROOT/apps/web/.output" "$stage/apps/web/.output"
+cp "$ROOT/apps/web/package.json" "$stage/apps/web/package.json"
 cp "$ROOT"/docs/*.md "$stage/docs/"
 
 mkdir -p "$DIST"
-cd "$ROOT/backend"
+cd "$ROOT/apps/server"
 for target in "${targets[@]}"; do
   case "$target" in
     bun-linux-x64) arch=x86_64 ;;
@@ -51,7 +51,7 @@ for target in "${targets[@]}"; do
     --no-compile-autoload-dotenv \
     --no-compile-autoload-bunfig \
     --target "$target" \
-    --asset "$stage/frontend" \
+    --asset "$stage/apps" \
     --asset "$stage/docs" \
     --outfile "$out" \
     src/bin.ts

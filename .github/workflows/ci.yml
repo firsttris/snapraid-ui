@@ -29,13 +29,15 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: apps/server
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: backend/package.json
+          bun-version-file: package.json
+      # The workspace's one bun.lock, installed from the root
       - run: bun install --frozen-lockfile
+        working-directory: .
       - run: bun run typecheck
       - run: bun test
 
@@ -44,13 +46,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend
+        working-directory: apps/web
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: frontend/package.json
+          bun-version-file: package.json
       - run: bun install --frozen-lockfile
+        working-directory: .
       - run: bunx biome check
       - run: bun run typecheck
       - run: bun run test
@@ -67,11 +70,8 @@ jobs:
       - run: shellcheck -s sh scripts/install.sh
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: frontend/package.json
+          bun-version-file: package.json
       - run: bun install --frozen-lockfile
-        working-directory: frontend
-      - run: bun install --frozen-lockfile
-        working-directory: backend
       - run: scripts/build-binary.sh
       - name: Serve the binary like a release
         working-directory: dist
@@ -141,12 +141,12 @@ jobs:
       # Bun installs, builds and runs the backend, and runs Playwright's test runner (bun --bun)
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: e2e/package.json
+          bun-version-file: package.json
       - name: Cache SnapRAID and snapraid-daemon builds
         uses: actions/cache@v6
         with:
           path: e2e/.tools
-          key: e2e-tools-${{ runner.os }}-${{ hashFiles('e2e/scripts/setup-tools.sh', 'backend/src/engine/REVIEWED_DAEMON_VERSION') }}
+          key: e2e-tools-${{ runner.os }}-${{ hashFiles('e2e/scripts/setup-tools.sh', 'apps/server/src/engine/REVIEWED_DAEMON_VERSION') }}
       # smartmontools: SnapRAID lists the disks on the SMART page with it, self-tests use a stand-in
       - uses: firsttris/workflows/actions/apt-install@v1
         with:
@@ -154,17 +154,12 @@ jobs:
           recommends: "false"
       - name: Build SnapRAID and snapraid-daemon
         run: bun run setup
+      # All packages of the workspace: the tests', and the backend and frontend the tests run or
+      # the binary build is made of
       - run: bun install --frozen-lockfile
+        working-directory: .
       - run: bun run typecheck
       - run: bun --bun playwright install --with-deps chromium
-      - name: Install the frontend, the tests or the binary build it
-        if: matrix.target != 'image'
-        working-directory: frontend
-        run: bun install --frozen-lockfile
-      - name: Install the backend, the tests run it or the binary build it
-        if: matrix.target != 'image'
-        working-directory: backend
-        run: bun install --frozen-lockfile
       # The tests run the x86_64 one; arm64 is built too, so the release does not find a problem first
       - name: Build the binaries
         if: matrix.target == 'binary'

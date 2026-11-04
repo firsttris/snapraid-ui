@@ -4,7 +4,7 @@ name: Release
 # the code, see https://github.com/firsttris/workflows#tested-on-main), then the shared Docker release from
 # firsttris/workflows, which pushes the image as :x.y.z, :x.y and :latest, updates the Docker Hub
 # description and creates the GitHub release; the standalone binaries are attached to it after.
-# The tag must match the version in frontend/package.json.
+# The tag must match the version in apps/web/package.json.
 # Run by hand on master: the same checks, then the image as :edge, nothing is released.
 on:
   push:
@@ -34,7 +34,7 @@ jobs:
     with:
       image: tristanteu/snapraid-ui
       description: Web UI for SnapRAID — run sync/scrub, schedule jobs, monitor disks and SMART health
-      version-file: frontend/package.json
+      version-file: apps/web/package.json
     secrets: inherit
     permissions:
       contents: write
@@ -53,11 +53,8 @@ jobs:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: frontend/package.json
+          bun-version-file: package.json
       - run: bun install --frozen-lockfile
-        working-directory: frontend
-      - run: bun install --frozen-lockfile
-        working-directory: backend
       - run: scripts/build-binary.sh bun-linux-x64 bun-linux-arm64
       - name: Checksums
         working-directory: dist
