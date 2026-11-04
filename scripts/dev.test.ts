@@ -37,16 +37,20 @@ afterEach(() => {
  * The layout dev.ts expects. Each app's dev script records `bun run`'s pid ($PPID), its own and
  * the one of a grandchild that sleeps, and the environment; `exit` makes the server's script
  * exit with that code once the test writes server.exit; `stubborn` makes the web app's grandchild
- * ignore SIGTERM. `setup` is scripts/dev/setup.sh's body.
+ * ignore SIGTERM, `heavy` additionally makes it a Bun process that holds 1.5 GiB, which takes
+ * the kernel a while to tear down after SIGKILL (it writes web.heavy when it holds them).
+ * `setup` is scripts/dev/setup.sh's body.
  */
 function sandbox({
   setup = 'exit 0',
   exit,
   stubborn = false,
+  heavy = false,
 }: {
   setup?: string
   exit?: number
   stubborn?: boolean
+  heavy?: boolean
 } = {}) {
   root = realpathSync(mkdtempSync(join(tmpdir(), 'snapraid-ui-dev-')))
   mkdirSync(join(root, 'scripts/dev'), { recursive: true })
@@ -54,6 +58,10 @@ function sandbox({
   writeFileSync(
     join(root, 'scripts/dev/setup.sh'),
     `echo ran > "${root}/setup.ran"\n${setup}\n`,
+  )
+  writeFileSync(
+    join(root, 'heavy.js'),
+    `const memory = Buffer.alloc(1536 * 1024 * 1024, 1)\nrequire('node:fs').writeFileSync(${JSON.stringify(join(root, 'web.heavy'))}, String(memory.length))\nsetInterval(() => memory[0]++, 1000)\n`,
   )
   for (const app of APPS) {
     const dir = join(root, 'apps', app)
@@ -65,7 +73,7 @@ function sandbox({
     const body =
       app === 'server' && exit !== undefined
         ? `while [ ! -e "${root}/server.exit" ]; do sleep 0.05; done\nexit ${exit}`
-        : `sh -c '${stubborn && app === 'web' ? 'trap "" TERM; ' : ''}echo $$ > "${root}/${app}.grandchild.tmp"; mv "${root}/${app}.grandchild.tmp" "${root}/${app}.grandchild"; exec sleep 600'`
+        : `sh -c '${(stubborn || heavy) && app === 'web' ? 'trap "" TERM; ' : ''}echo $$ > "${root}/${app}.grandchild.tmp"; mv "${root}/${app}.grandchild.tmp" "${root}/${app}.grandchild"; exec ${heavy && app === 'web' ? `"${process.execPath}" "${root}/heavy.js"` : 'sleep 600'}'`
     writeFileSync(
       join(dir, 'dev.sh'),
       `env > "${root}/${app}.env"\necho $PPID $$ > "${root}/${app}.pids"\n${body}\n`,
@@ -156,6 +164,19 @@ test('a process that ignores SIGTERM gets SIGKILL after the grace time', async (
   sandbox({ stubborn: true })
   const dev = start()
   const started = await running()
+
+  dev.kill('SIGTERM')
+  expect(await dev.exited).toBe(143)
+
+  expect(started.filter(alive)).toEqual([])
+}, 20_000)
+
+test('after SIGKILL it waits until the group is gone before it exits', async () => {
+  // A process that holds a lot of memory is still running for some ms after SIGKILL
+  sandbox({ heavy: true })
+  const dev = start()
+  const started = await running()
+  await until(() => existsSync(join(root, 'web.heavy')))
 
   dev.kill('SIGTERM')
   expect(await dev.exited).toBe(143)
