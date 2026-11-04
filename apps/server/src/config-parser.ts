@@ -1,9 +1,9 @@
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import type { AppConfig, ParityLevel, ParsedSnapRaidConfig } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
 import { effectiveSmartIgnore, parseSmartIgnoreLine } from "./smart-ignore.ts";
 import { writeTextFileAtomic } from "./atomic-write.ts";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { isNotFound } from "./fs.ts";
 
 export const MAX_PARITY_LEVEL = 6;
@@ -174,5 +174,7 @@ export const loadAppConfig = async (): Promise<AppConfig> => {
  */
 export const saveAppConfig = async (config: AppConfig): Promise<void> => {
   const configPath = resolveFromBase("config.json");
+  // On the first start the data directory is not there yet; made as the log directory is
+  await mkdir(dirname(configPath), { recursive: true });
   await writeTextFileAtomic(configPath, JSON.stringify(config, null, 2));
 };
