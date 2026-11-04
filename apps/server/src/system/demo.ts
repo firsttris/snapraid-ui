@@ -1,4 +1,4 @@
-// Stand-ins for `snapraid smart` and `probe` in the demo sandbox (scripts/start.sh --demo).
+// Stand-ins for `snapraid smart` and `probe` in the demo sandbox (scripts/dev.ts --demo).
 // Its disks are directories, so SnapRAID finds no device to query. The output below has
 // the structured log format of the real commands and goes through the same parsers.
 // The sandbox disks also hold only a few KiB on the host's filesystem: `status` and the

@@ -40,6 +40,9 @@ jobs:
         working-directory: .
       - run: bun run typecheck
       - run: bun test
+      # scripts/dev.ts (bun run dev, bun run demo), with stand-ins for both apps
+      - run: bun test ./scripts
+        working-directory: .
 
   frontend:
     if: ${{ !github.event.pull_request.draft }}

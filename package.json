@@ -10,7 +10,7 @@
     "e2e"
   ],
   "scripts": {
-    "dev": "fish scripts/start.sh",
-    "demo": "fish scripts/start.sh --demo"
+    "dev": "bun scripts/dev.ts",
+    "demo": "bun scripts/dev.ts --demo"
   }
 }

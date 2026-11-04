@@ -7,7 +7,6 @@ This page gets you from a fresh clone to a running development setup, and covers
 | Tool | Version | Needed for |
 |---|---|---|
 | [Bun](https://bun.com/) | the version in `packageManager` of the root `package.json` (1.4.4) | Everything JavaScript: runs the backend and its tests, installs the packages, runs Vite and Vitest and Playwright's test runner (`bun --bun playwright test`), compiles the standalone binary (CI and the image use the same version) |
-| [fish](https://fishshell.com/) | | `scripts/start.sh` is a fish script |
 | `curl`, `tar`, `gcc`, `make` | | Building SnapRAID for the demo sandbox (`scripts/dev/setup.sh`) |
 | SnapRAID | 14.0 or newer | Only for running against a real array without `--demo`; it has to be on your `PATH` or set via `SNAPRAID_BIN` |
 | Docker or Podman | | Only for building the image |
@@ -18,19 +17,19 @@ This page gets you from a fresh clone to a running development setup, and covers
 git clone https://github.com/firsttris/snapraid-ui
 cd snapraid-ui
 bun install           # all packages of the workspace, from the one bun.lock
-bun run demo          # scripts/start.sh --demo: sandbox with fake disks, no real array needed
+bun run demo          # scripts/dev.ts --demo: sandbox with fake disks, no real array needed
 ```
 
 Open **http://localhost:3000**. The frontend dev server runs on port 3000, the backend API and WebSocket on port 8080. `Ctrl+C` stops both.
 
-`scripts/start.sh` (`bun run dev`, `bun run demo`) has two modes:
+`scripts/dev.ts` (`bun run dev`, `bun run demo`) has two modes:
 
 | Command | Data directory | SnapRAID binary | Extra |
 |---|---|---|---|
-| `bun run dev` (`scripts/start.sh`) | `./snapraid/` (created on first start, ignored by git) | `snapraid` from your `PATH` | Works against your real configs |
-| `bun run demo` (`scripts/start.sh --demo`) | `scripts/dev/sandbox/` | `scripts/dev/bin/snapraid` | Sets `SNAPRAID_EXTRA_ARGS=--test-skip-device` and `SNAPRAID_DEMO=1` |
+| `bun run dev` (`bun scripts/dev.ts`) | `./snapraid/` (created on first start, ignored by git) | `snapraid` from your `PATH` | Works against your real configs |
+| `bun run demo` (`bun scripts/dev.ts --demo`) | `scripts/dev/sandbox/` | `scripts/dev/bin/snapraid` | Sets `SNAPRAID_EXTRA_ARGS=--test-skip-device` and `SNAPRAID_DEMO=1` |
 
-Under the hood it starts `bun run dev` in `apps/server/` (`bun --watch`, so the backend restarts on changes) and `bun run dev` in `apps/web/` (Vite with hot reload). You can run these two commands yourself in separate terminals; set `SNAPRAID_BASE_PATH` and friends first (see [Configuration](configuration.md)), otherwise the backend uses `snapraid/` in the repository's root (`../../snapraid` relative to `apps/server/`).
+Under the hood it starts `bun run dev` in `apps/server/` (`bun --watch`, so the backend restarts on changes) and `bun run dev` in `apps/web/` (Vite with hot reload), each in a process group of its own. `Ctrl+C`, closing the terminal or a `kill` (SIGINT, SIGHUP, SIGTERM) goes on to both groups, so everything they started stops too (whatever is still running after 5 seconds gets SIGKILL), and the script exits with 128 + the signal's number. When one of the two exits, the other is stopped and the script exits with the first one's code. You can run these two commands yourself in separate terminals; set `SNAPRAID_BASE_PATH` and friends first (see [Configuration](configuration.md)), otherwise the backend uses `snapraid/` in the repository's root (`../../snapraid` relative to `apps/server/`).
 
 > [!NOTE]
 > In development the frontend calls the backend directly at `http://localhost:8080` (`apps/web/src/lib/api/constants.ts`), and the backend only accepts credentials from the same hostname. Open the dev frontend as `http://localhost:3000`, not via a LAN IP.
@@ -121,7 +120,7 @@ packages/shared/       @snapraid-ui/shared: types and logic used by backend and 
 docker/                Dockerfile, Compose file, Quadlet units
 scripts/build-binary.sh  the standalone binary (bun build --compile)
 scripts/install.sh     installer of the binary with a systemd service, attached to each release
-scripts/start.sh       local start (bun run dev, bun run demo)
+scripts/dev.ts         local start (bun run dev, bun run demo), tested by scripts/dev.test.ts
 scripts/dev/setup.sh   demo sandbox
 scripts/social-preview/  the social preview image
 e2e/                   end-to-end tests (Playwright) against real SnapRAID and snapraid-daemon
@@ -151,7 +150,7 @@ Backend (`apps/server/package.json`, run with `bun run <script>` in `apps/server
 |---|---|
 | `dev` | Run `src/main.ts` with `bun --watch` |
 | `start` | Run `src/main.ts`, as the image does |
-| `typecheck` | `tsc --noEmit` over `src/`, `scripts/` and `packages/shared/src/` |
+| `typecheck` | `tsc --noEmit` over `src/`, `scripts/`, `packages/shared/src/` and the root's `scripts/*.ts` |
 | `test` | `bun test` |
 
 Bun has no permission flags: the backend has the rights of the user that runs it, in the container as on the host.
@@ -160,6 +159,7 @@ Bun has no permission flags: the backend has the rights of the user that runs it
 
 ```bash
 cd apps/server && bun test             # as in CI
+bun test ./scripts                     # scripts/dev.ts (bun run dev/demo), as in CI
 cd apps/web && bun run test
 
 # Also run the engine contract against the SnapRAID CLI, with the binary from scripts/dev/setup.sh
@@ -176,6 +176,7 @@ cd apps/server && SNAPRAID_TEST_DAEMON_URL=http://127.0.0.1:7627 SNAPRAID_TEST_D
 The test adds files to the array's first data disk. In `snapraidd.conf` set `net_port = 127.0.0.1:7627` and leave `maintenance_schedule` empty. The daemon only runs a real binary as `sys_engine`, no script; for disks that share one filesystem, point it at a small compiled wrapper that adds `--test-skip-device`.
 
 - **Backend** tests use `bun:test` (`test`, `expect`; `assertThrows`/`assertRejects` from `__tests__/assert-error.ts` where a test needs the error). Parser tests in `apps/server/src/parsers/__tests__/` run against real SnapRAID logs in `fixtures/`; when SnapRAID's log format changes, add or update a fixture from a real run. The [engine contract](architecture.md#snapraid-engine) runs against the fake engine always and against the CLI engine when `SNAPRAID_BIN` and `--test-skip-device` are set (otherwise it shows as *skipped*); the scheduler is tested against the fake engine. Other tests cover auth, backup/restore, config paths, the disk wizards, `--force-*` detection, the log manager, notifications, the SMART baseline and history, and the usage history.
+- **Dev script** tests (`scripts/dev.test.ts`, `bun:test`) run `scripts/dev.ts` in a copy of the repository's layout with stand-ins for the two apps' `bun run dev` and for `scripts/dev/setup.sh`: SIGINT, SIGTERM and SIGHUP stop both process trees (grandchildren too, SIGKILL for one that ignores SIGTERM), one app exiting stops the other and passes on its exit code, the environment and base path with and without `--demo`, and a failing setup aborts. CI runs them in the backend job; the backend's `bun run typecheck` covers `scripts/*.ts`.
 - **Frontend** tests use Vitest and live in `apps/web/src/lib/__tests__/`: log parsing, progress, the job tracker, the changes, duplicates and protected files pages' logic and the i18n checks described [below](#translations). Run them from `apps/web/`, they read `messages/` and `../server/src` by relative path.
 
 ### End-to-end tests
@@ -323,7 +324,7 @@ GitHub Actions workflows in `.github/workflows/`:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | Push and pull request to `master`; called by the release workflow | Backend: `bun install --frozen-lockfile` (the workspace, in the root), `bun run typecheck`, `bun test`. Frontend: `bun install --frozen-lockfile`, `bunx biome check`, `bun run typecheck`, `bun run test`, `bun run build`. [End-to-end tests](#end-to-end-tests) three times: against the local build, against the Docker image (built with the release's registry cache) and against the standalone binary (built for x86_64 and arm64, the tests run the x86_64 one), each split into two shards that run side by side; the built tools and apt packages are cached, a failure uploads traces and server logs. Installer: `shellcheck`, then `scripts/install.sh` on a runner with systemd against the binary built there (SnapRAID built from source, login, update, uninstall) |
+| `ci.yml` | Push and pull request to `master`; called by the release workflow | Backend: `bun install --frozen-lockfile` (the workspace, in the root), `bun run typecheck`, `bun test`, `bun test ./scripts` (in the root). Frontend: `bun install --frozen-lockfile`, `bunx biome check`, `bun run typecheck`, `bun run test`, `bun run build`. [End-to-end tests](#end-to-end-tests) three times: against the local build, against the Docker image (built with the release's registry cache) and against the standalone binary (built for x86_64 and arm64, the tests run the x86_64 one), each split into two shards that run side by side; the built tools and apt packages are cached, a failure uploads traces and server logs. Installer: `shellcheck`, then `scripts/install.sh` on a runner with systemd against the binary built there (SnapRAID built from source, login, update, uninstall) |
 | `release.yml` | Push of a `v*` tag; manual run | Runs CI unless `master`'s CI already passed for the same code (a *Bump version* commit only changes the version), then the shared Docker release workflow from `firsttris/workflows`. A tag `vX.Y.Z` publishes `tristanteu/snapraid-ui:X.Y.Z`, `:X.Y` and `:latest`, updates the Docker Hub description and creates the GitHub release, then the standalone binaries for x86_64 and arm64 are built and attached to it with their `SHA256SUMS` and `scripts/install.sh` as `install.sh`. A manual run on `master` runs the same checks and pushes `:edge`, without a release |
 | `bump.yml` | Manual run | Raises the version in `apps/web/package.json` (patch, minor or major), commits it, tags the commit `vX.Y.Z` and starts `release.yml` on it (shared [`bump-version`](https://github.com/firsttris/workflows#bump-version)) |
 | `upstream-release.yml` | Mondays 06:00 UTC; manual run | Opens an issue with a checklist when snapraid-daemon has a tag newer than `apps/server/src/engine/REVIEWED_DAEMON_VERSION`, release candidates included |
@@ -373,6 +374,7 @@ Issues and pull requests are welcome at [github.com/firsttris/snapraid-ui](https
 ```bash
 cd apps/web && bunx biome check && bun run typecheck && bun run test
 cd apps/server && bun run typecheck && bun test
+bun test ./scripts
 ```
 
 A few conventions that keep the code base consistent:

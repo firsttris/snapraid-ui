@@ -14,5 +14,5 @@
       "@shared/*": ["./node_modules/@snapraid-ui/shared/src/*"]
     }
   },
-  "include": ["src", "scripts", "../../packages/shared/src"]
+  "include": ["src", "scripts", "../../packages/shared/src", "../../scripts/*.ts"]
 }

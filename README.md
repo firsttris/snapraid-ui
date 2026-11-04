@@ -244,8 +244,7 @@ December 23.
 
 ## 🛠️ Development
 
-Requires Bun (the version in `package.json`) and the fish shell for `scripts/start.sh`;
-the end-to-end tests run on Bun too.
+Requires Bun (the version in `package.json`), nothing else; the end-to-end tests run on Bun too.
 
 ```bash
 git clone https://github.com/firsttris/snapraid-ui && cd snapraid-ui
