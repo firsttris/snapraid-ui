@@ -9,6 +9,7 @@
 // one of the two exits, the other is stopped and this script exits with the first one's code.
 // SIGINT (Ctrl+C), SIGTERM (kill, an IDE) and SIGHUP (closing the terminal) go on to both
 // groups; once they are gone the script exits with 128 + the signal's number (130 for Ctrl+C).
+// Ctrl+Z stops both groups with the script, `fg` resumes them.
 import { mkdirSync } from 'node:fs'
 import { constants } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -93,6 +94,17 @@ for (const signal of SIGNALS) {
     signalled.resolve(stopping)
   })
 }
+
+// Ctrl+Z (SIGTSTP) reaches only this script, the children's sessions are out of the terminal's
+// reach: stop their groups too, with SIGSTOP as the kernel drops SIGTSTP sent to an orphaned group
+// (a session of its own is one), then this script; `fg` (SIGCONT) resumes them (as in haul's dev.ts)
+process.on('SIGTSTP', () => {
+  for (const child of children) signalGroup(child, 'SIGSTOP')
+  process.kill(process.pid, 'SIGSTOP')
+})
+process.on('SIGCONT', () => {
+  for (const child of children) signalGroup(child, 'SIGCONT')
+})
 
 const exitIfSignalled = async () => {
   if (stopping !== undefined) process.exit(await signalled.promise)
