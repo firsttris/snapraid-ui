@@ -60,11 +60,23 @@ const groupAlive = (child: Child) => {
   }
 }
 
+/** How long a group may take to go after SIGKILL; an orphan stays in it as a zombie until init reaps it */
+const KILL_MS = 1_000
+
+/** Polls until a child's group is gone, at most `ms` */
+const groupGone = async (child: Child, ms: number) => {
+  const end = Date.now() + ms
+  while (groupAlive(child) && Date.now() < end) await Bun.sleep(50)
+}
+
 /** Waits until a child and everything in its group has exited, with SIGKILL after the grace time */
 const reap = async (child: Child) => {
-  const end = Date.now() + GRACE_MS
-  while (groupAlive(child) && Date.now() < end) await Bun.sleep(50)
-  if (groupAlive(child)) signalGroup(child, 'SIGKILL')
+  await groupGone(child, GRACE_MS)
+  if (groupAlive(child)) {
+    signalGroup(child, 'SIGKILL')
+    // SIGKILL is not instant: the kernel still has to tear the processes down
+    await groupGone(child, KILL_MS)
+  }
   await child.exited
 }
 
