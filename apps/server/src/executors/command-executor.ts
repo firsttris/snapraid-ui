@@ -1,13 +1,13 @@
 import type { SnapRaidCommand, CommandOutput, RunningJob, FinishedJob, JobProgress } from "@shared/types.ts";
 import { detectForceOption } from "@shared/force-option.ts";
-import type { LogManager } from "../log-manager.ts";
+import type { LogManager } from "../snapraid/log-manager.ts";
 import { basename } from "node:path";
 import type { Subprocess } from "bun";
-import { snapraidCommand } from "../config.ts";
-import { runCommand } from "../command.ts";
+import { snapraidCommand } from "../config/config.ts";
+import { runCommand } from "../system/command.ts";
 import { parseRunPos } from "../parsers/progress-parser.ts";
 import { createLogTail } from "./log-tail.ts";
-import { holdContainers } from "../container-pause.ts";
+import { holdContainers } from "../system/container-pause.ts";
 
 // A running SnapRAID with its output piped
 type SnapraidProcess = Subprocess<"inherit", "pipe", "pipe">;

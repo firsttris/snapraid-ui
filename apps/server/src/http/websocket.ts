@@ -1,5 +1,5 @@
 import type { Server, ServerWebSocket, WebSocketHandler } from "bun";
-import { getEngine } from "./engine/engine.ts";
+import { getEngine } from "../engine/engine.ts";
 
 // WebSocket connection management
 const wsClients = new Set<ServerWebSocket<undefined>>();

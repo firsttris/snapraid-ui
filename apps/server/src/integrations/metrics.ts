@@ -2,9 +2,9 @@
 // runs in the logs, the last status read, the usage and SMART histories and the schedules.
 // Nothing here runs SnapRAID or smartctl, a scrape never wakes a disk.
 import type { LastRuns, RunningJob, Schedule, SmartHistoryPoint, UsagePoint } from "@shared/types.ts";
-import { isSuccessful } from "./run-report.ts";
-import { blockingIssues } from "./disk-check.ts";
-import type { CachedStatus } from "./status-cache.ts";
+import { isSuccessful } from "../snapraid/run-report.ts";
+import { blockingIssues } from "../disks/disk-check.ts";
+import type { CachedStatus } from "../snapraid/status-cache.ts";
 
 export interface ConfigMetrics {
   name: string;

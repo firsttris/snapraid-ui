@@ -7,19 +7,19 @@ import type {
   ScheduleStepOutcome,
   SnapRaidCommand,
 } from "@shared/types.ts";
-import type { SnapRaidEngine } from "./engine/engine.ts";
-import { existsSync } from "./fs.ts";
-import { resolveFromBase } from "./config.ts";
-import { failedReport, isSuccessful, type RunReport } from "./run-report.ts";
-import { isReplacementInProgress } from "./disk-replacement.ts";
-import { withCrcBaseline } from "./smart-baseline.ts";
-import { recordSmartHistory } from "./smart-history.ts";
-import { heartbeatAfterRun, notifyRun, notifySkipped, notifySmart } from "./notification-events.ts";
+import type { SnapRaidEngine } from "../engine/engine.ts";
+import { existsSync } from "../system/fs.ts";
+import { resolveFromBase } from "../config/config.ts";
+import { failedReport, isSuccessful, type RunReport } from "../snapraid/run-report.ts";
+import { isReplacementInProgress } from "../disks/disk-replacement.ts";
+import { withCrcBaseline } from "../smart/smart-baseline.ts";
+import { recordSmartHistory } from "../smart/smart-history.ts";
+import { heartbeatAfterRun, notifyRun, notifySkipped, notifySmart } from "../notifications/notification-events.ts";
 import { msg } from "@shared/i18n.ts";
-import { blockingIssues } from "./disk-check.ts";
-import { holdContainers } from "./container-pause.ts";
-import { rememberStatus } from "./status-cache.ts";
-import { writeTextFileAtomic } from "./atomic-write.ts";
+import { blockingIssues } from "../disks/disk-check.ts";
+import { holdContainers } from "../system/container-pause.ts";
+import { rememberStatus } from "../snapraid/status-cache.ts";
+import { writeTextFileAtomic } from "../system/atomic-write.ts";
 import { readFile } from "node:fs/promises";
 
 // Module-level storage for active jobs

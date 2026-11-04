@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { join } from "node:path";
-import { diskManagementRoutes } from "../routes/disk-management.ts";
+import { diskManagementRoutes } from "../disk-management.ts";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 

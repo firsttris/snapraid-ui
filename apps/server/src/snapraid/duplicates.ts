@@ -5,7 +5,7 @@
 import { join, normalize, sep } from "node:path";
 import type { DiffReport, DuplicateDeletion, DuplicateSkip, DupReport } from "@shared/types.ts";
 import { lstat } from "node:fs/promises";
-import { remove as removeFile } from "./fs.ts";
+import { remove as removeFile } from "../system/fs.ts";
 
 // One request cleans up this many copies at most
 export const MAX_DUPLICATE_DELETIONS = 5000;

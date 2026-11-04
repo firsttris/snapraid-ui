@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { join } from "node:path";
-import { BASE_PATH, resolveFromBase } from "../config.ts";
+import { BASE_PATH, resolveFromBase } from "../config/config.ts";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 
 const filesystem = new Hono();

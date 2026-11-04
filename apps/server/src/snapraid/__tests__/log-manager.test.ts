@@ -55,7 +55,7 @@ test("parseRunResult - diff and dup that found something succeeded", () => {
 
 
 const fixture = (name: string) =>
-  readFileSync(new URL(`../parsers/__tests__/fixtures/${name}`, import.meta.url), "utf8");
+  readFileSync(new URL(`../../parsers/__tests__/fixtures/${name}`, import.meta.url), "utf8");
 
 // The touch log of issue #48 ends with the saved content file, the smart log with the array failure probability
 const TOUCH_LOG = fixture("touch.log");

@@ -1,12 +1,12 @@
 import { Hono } from "hono";
-import { resolveFromBase } from "../config.ts";
-import { parseSnapRaidConfig } from "../config-parser.ts";
-import { getDataDiskUsage, getParityUsage } from "../parity-usage.ts";
-import { withCrcBaseline } from "../smart-baseline.ts";
-import { getSmartHistory, recordSmartHistory } from "../smart-history.ts";
+import { resolveFromBase } from "../config/config.ts";
+import { parseSnapRaidConfig } from "../config/config-parser.ts";
+import { getDataDiskUsage, getParityUsage } from "../disks/parity-usage.ts";
+import { withCrcBaseline } from "../smart/smart-baseline.ts";
+import { getSmartHistory, recordSmartHistory } from "../smart/smart-history.ts";
 import { EngineCommandError, EngineUnsupportedError, getEngine } from "../engine/engine.ts";
-import { type PowerAction, setDiskPower } from "../disk-power.ts";
-import { controlSelfTests, readSelfTests } from "../smart-selftest.ts";
+import { type PowerAction, setDiskPower } from "../disks/disk-power.ts";
+import { controlSelfTests, readSelfTests } from "../smart/smart-selftest.ts";
 import { msg } from "@shared/i18n.ts";
 
 const hardware = new Hono();

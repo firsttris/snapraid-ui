@@ -2,14 +2,14 @@
 // the last runs from the logs (or the daemon), the last status read, the usage and SMART
 // histories. The Prometheus metrics and Home Assistant are built from it.
 import type { Schedule } from "@shared/types.ts";
-import { loadAppConfig } from "./config-parser.ts";
-import { resolveFromBase } from "./config.ts";
-import { getEngine } from "./engine/engine.ts";
-import type { LogManager } from "./log-manager.ts";
+import { loadAppConfig } from "../config/config-parser.ts";
+import { resolveFromBase } from "../config/config.ts";
+import { getEngine } from "../engine/engine.ts";
+import type { LogManager } from "../snapraid/log-manager.ts";
 import type { ConfigMetrics } from "./metrics.ts";
-import { getSmartHistory } from "./smart-history.ts";
-import { lastStatus } from "./status-cache.ts";
-import { getUsageHistory } from "./usage-history.ts";
+import { getSmartHistory } from "../smart/smart-history.ts";
+import { lastStatus } from "../snapraid/status-cache.ts";
+import { getUsageHistory } from "../snapraid/usage-history.ts";
 
 const sources = {
   logManager: null as LogManager | null,

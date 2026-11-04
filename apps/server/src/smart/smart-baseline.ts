@@ -1,8 +1,8 @@
-import { existsSync } from "./fs.ts";
+import { existsSync } from "../system/fs.ts";
 import type { SmartDiskInfo } from "@shared/types.ts";
 import { CRC_ATTRIBUTE_ID } from "@shared/smart-health.ts";
-import { resolveFromBase } from "./config.ts";
-import { writeTextFileAtomic } from "./atomic-write.ts";
+import { resolveFromBase } from "../config/config.ts";
+import { writeTextFileAtomic } from "../system/atomic-write.ts";
 import { readFile } from "node:fs/promises";
 
 const STATE_FILE = "smart-baseline.json";

@@ -4,7 +4,7 @@ import type { RunResult } from "@shared/types.ts";
 import { readFileSync } from "node:fs";
 
 const fixture = (name: string) =>
-  readFileSync(new URL(`../parsers/__tests__/fixtures/${name}`, import.meta.url), "utf8");
+  readFileSync(new URL(`../../parsers/__tests__/fixtures/${name}`, import.meta.url), "utf8");
 
 const lines = (...tags: string[]) => tags.join("\n");
 

@@ -2,13 +2,13 @@ import { expect, test } from "bun:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { LogFile, MaintenanceSettings, Schedule, SnapRaidConfig } from "@shared/types.ts";
-import { DEFAULT_MAINTENANCE_SETTINGS } from "../maintenance-settings.ts";
+import { DEFAULT_MAINTENANCE_SETTINGS } from "../../config/maintenance-settings.ts";
 import { createMcpServer, DOCS_DIR, fileNameOf, type McpDeps } from "../mcp.ts";
 import type { ConfigMetrics } from "../metrics.ts";
-import type { LogManager } from "../log-manager.ts";
-import { createMcpRoutes, setMcpSources } from "../routes/mcp.ts";
-import type { Scheduler } from "../scheduler.ts";
-import { createFakeEngine } from "./fake-engine.ts";
+import type { LogManager } from "../../snapraid/log-manager.ts";
+import { createMcpRoutes, setMcpSources } from "../../routes/mcp.ts";
+import type { Scheduler } from "../../schedule/scheduler.ts";
+import { createFakeEngine } from "../../engine/__tests__/fake-engine.ts";
 
 const ARRAYS: SnapRaidConfig[] = [
   { name: "Media", path: "media.conf", enabled: true },

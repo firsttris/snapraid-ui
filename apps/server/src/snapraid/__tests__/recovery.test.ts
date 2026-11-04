@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { RunResult, SnapRaidCommand } from "@shared/types.ts";
-import type { JobOutcome } from "../engine/engine.ts";
+import type { JobOutcome } from "../../engine/engine.ts";
 import { exactFilter, restoreFiles, restoreRuns } from "../recovery.ts";
 
 test("exactFilter - anchored at the disk root, wildcards taken literally", () => {

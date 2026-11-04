@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { adoptFolderOwnership, fileMode, folderMode, recreatedFiles } from "../restore-ownership.ts";
 import { chmod, chown, mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { writeTextFile } from "../fs.ts";
+import { writeTextFile } from "../../system/fs.ts";
 
 // From a real `snapraid fix`: a/two was changed (fixed in place), a/one and a/we:ird were deleted
 const FIX_LOG = [

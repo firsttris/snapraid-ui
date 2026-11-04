@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { assertThrows } from "./assert-error.ts";
+import { assertThrows } from "../../__tests__/assert-error.ts";
 import { join } from "node:path";
 import {
   editSmartIgnore,
@@ -8,7 +8,7 @@ import {
   parseSmartIgnoreLine,
   SmartIgnoreFullError,
 } from "../smart-ignore.ts";
-import { parseSnapRaidConfig } from "../config-parser.ts";
+import { parseSnapRaidConfig } from "../../config/config-parser.ts";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 

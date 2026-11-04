@@ -1,18 +1,18 @@
 import { Hono } from "hono";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { safeEqual } from "../auth.ts";
-import { snapshotConfigs } from "../array-snapshot.ts";
-import { loadAppConfig, parseSnapRaidConfig } from "../config-parser.ts";
-import { BASE_PATH, resolveFromBase } from "../config.ts";
-import { APP_VERSION } from "../version.ts";
+import { safeEqual } from "../auth/auth.ts";
+import { snapshotConfigs } from "../integrations/array-snapshot.ts";
+import { loadAppConfig, parseSnapRaidConfig } from "../config/config-parser.ts";
+import { BASE_PATH, resolveFromBase } from "../config/config.ts";
+import { APP_VERSION } from "../system/version.ts";
 import { getEngine } from "../engine/engine.ts";
-import type { LogManager } from "../log-manager.ts";
-import { loadMaintenanceSettings } from "../maintenance-settings.ts";
-import { createMcpServer, DOCS_DIR } from "../mcp.ts";
-import type { Scheduler } from "../scheduler.ts";
-import { createArray, listMountCandidates, missingSetupPaths } from "../setup.ts";
-import { rememberStatus } from "../status-cache.ts";
-import { getUsageHistory, recordUsage } from "../usage-history.ts";
+import type { LogManager } from "../snapraid/log-manager.ts";
+import { loadMaintenanceSettings } from "../config/maintenance-settings.ts";
+import { createMcpServer, DOCS_DIR } from "../integrations/mcp.ts";
+import type { Scheduler } from "../schedule/scheduler.ts";
+import { createArray, listMountCandidates, missingSetupPaths } from "../config/setup.ts";
+import { rememberStatus } from "../snapraid/status-cache.ts";
+import { getUsageHistory, recordUsage } from "../snapraid/usage-history.ts";
 import { startExternalJob } from "./snapraid.ts";
 
 // Log manager and scheduler will be injected

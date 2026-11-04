@@ -1,9 +1,9 @@
 // The daemon engine against a stand-in for snapraid-daemon 2.0. The responses follow
 // what a real daemon answered (fields trimmed); a task advances one step per poll.
 import { expect, test } from "bun:test";
-import { assertRejects } from "./assert-error.ts";
+import { assertRejects } from "../../__tests__/assert-error.ts";
 import type { JobProgress } from "@shared/types.ts";
-import { EngineBusyError } from "../engine/engine.ts";
+import { EngineBusyError } from "../engine.ts";
 import {
   createDaemonEngine,
   type DaemonArray,
@@ -17,7 +17,7 @@ import {
   toRunReport,
   toSmartDisks,
   toStatus,
-} from "../engine/daemon-engine.ts";
+} from "../daemon-engine.ts";
 import { assessSmart } from "@shared/smart-health.ts";
 import { createFakeEngine } from "./fake-engine.ts";
 

@@ -1,10 +1,10 @@
 import { basename, dirname, join } from "node:path";
 import type { AppConfig, ParityLevel, ParsedSnapRaidConfig } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
-import { effectiveSmartIgnore, parseSmartIgnoreLine } from "./smart-ignore.ts";
-import { writeTextFileAtomic } from "./atomic-write.ts";
+import { effectiveSmartIgnore, parseSmartIgnoreLine } from "../smart/smart-ignore.ts";
+import { writeTextFileAtomic } from "../system/atomic-write.ts";
 import { mkdir, readFile } from "node:fs/promises";
-import { isNotFound } from "./fs.ts";
+import { isNotFound } from "../system/fs.ts";
 
 export const MAX_PARITY_LEVEL = 6;
 

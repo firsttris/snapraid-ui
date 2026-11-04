@@ -7,7 +7,7 @@ import {
   normalizeHomeAssistantSettings,
   saveHomeAssistantSettings,
   testHomeAssistantConnection,
-} from "../home-assistant-service.ts";
+} from "../integrations/home-assistant-service.ts";
 
 const homeAssistant = new Hono();
 

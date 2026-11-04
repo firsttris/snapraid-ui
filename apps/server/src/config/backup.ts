@@ -1,9 +1,9 @@
-import { existsSync } from "./fs.ts";
+import { existsSync } from "../system/fs.ts";
 import { dirname, isAbsolute, normalize } from "node:path";
 import type { AppConfig, SettingsBackup } from "@shared/types.ts";
 import { msg } from "@shared/i18n.ts";
 import { resolveFromBase } from "./config.ts";
-import { writeTextFileAtomic } from "./atomic-write.ts";
+import { writeTextFileAtomic } from "../system/atomic-write.ts";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 // Settings and history next to config.json; logs and replacement runs stay behind

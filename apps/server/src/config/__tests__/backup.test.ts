@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { assertThrows } from "./assert-error.ts";
+import { assertThrows } from "../../__tests__/assert-error.ts";
 import { BackupError, planRestore } from "../backup.ts";
 
 const configJson = JSON.stringify({

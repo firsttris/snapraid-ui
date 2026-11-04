@@ -3,7 +3,7 @@
 // both, until the next sync records the new state.
 import type { RestoreFile, SnapRaidCommand } from "@shared/types.ts";
 import { isSuccessful } from "./run-report.ts";
-import type { JobOutcome } from "./engine/engine.ts";
+import type { JobOutcome } from "../engine/engine.ts";
 
 // More filters make the command line long and gain little, "all missing" (-m) covers the rest
 export const MAX_RESTORE_FILES = 1000;

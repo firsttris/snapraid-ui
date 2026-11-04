@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
-import { assertRejects } from "./assert-error.ts";
+import { assertRejects } from "../../__tests__/assert-error.ts";
 import { join } from "node:path";
 import type { Schedule, ScheduleConfig } from "@shared/types.ts";
 import { createScheduler, executeScheduledCommand } from "../scheduler.ts";
-import { createFakeEngine, type FakeEngineOptions } from "./fake-engine.ts";
+import { createFakeEngine, type FakeEngineOptions } from "../../engine/__tests__/fake-engine.ts";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 

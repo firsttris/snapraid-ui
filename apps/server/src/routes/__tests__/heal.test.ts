@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { RunResult, SnapRaidCommand } from "@shared/types.ts";
-import type { JobOutcome } from "../engine/engine.ts";
-import { heal } from "../routes/snapraid.ts";
+import type { JobOutcome } from "../../engine/engine.ts";
+import { heal } from "../snapraid.ts";
 
 const outcome = (command: SnapRaidCommand, result: RunResult): JobOutcome => ({
   output: { command, output: "", timestamp: "", exitCode: result === "ok" ? 0 : 1 },

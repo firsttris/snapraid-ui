@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { assertRejects } from "./assert-error.ts";
+import { assertRejects } from "../../__tests__/assert-error.ts";
 import { containerIdFromMountinfo, type DockerRequest, listContainers, parseHttpResponse } from "../docker.ts";
 import { pauseContainers, resumeContainers } from "../container-pause.ts";
 

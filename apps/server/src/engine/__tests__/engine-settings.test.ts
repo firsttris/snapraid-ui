@@ -6,7 +6,7 @@ import {
   DEFAULT_ENGINE_SETTINGS,
   maskEngineSecrets,
   normalizeEngineSettings,
-} from "../engine/engine-settings.ts";
+} from "../engine-settings.ts";
 import { createFakeEngine } from "./fake-engine.ts";
 
 const target = (changes = {}) => ({

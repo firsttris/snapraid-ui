@@ -6,8 +6,8 @@ import type { MountCandidate } from "@shared/types.ts";
 import { loadAppConfig, saveAppConfig } from "./config-parser.ts";
 import { BASE_PATH, resolveFromBase } from "./config.ts";
 import { readdir, stat, writeFile } from "node:fs/promises";
-import { isAlreadyExists } from "./fs.ts";
-import { runCommand } from "./command.ts";
+import { isAlreadyExists } from "../system/fs.ts";
+import { runCommand } from "../system/command.ts";
 
 // Filesystems that never hold data disks
 const VIRTUAL_FS = new Set([

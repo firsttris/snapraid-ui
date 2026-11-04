@@ -4,7 +4,7 @@
 // The sandbox disks also hold only a few KiB on the host's filesystem: `status` and the
 // disk usage get the sizes of the demo disks, so the dashboard looks like a real array.
 import type { DataDiskUsage, DeviceInfo, ParityLevelUsage, ParsedSnapRaidConfig } from "@shared/types.ts";
-import { parseSnapRaidConfig } from "./config-parser.ts";
+import { parseSnapRaidConfig } from "../config/config-parser.ts";
 import type { DockerRequest } from "./docker.ts";
 
 export const DEMO_MODE = process.env.SNAPRAID_DEMO === "1";

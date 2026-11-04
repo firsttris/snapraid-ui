@@ -4,9 +4,9 @@ import {
   loadMaintenanceSettings,
   normalizeMaintenanceSettings,
   saveMaintenanceSettings,
-} from "../maintenance-settings.ts";
-import { dockerSocket, listContainers, ownContainerId } from "../docker.ts";
-import type { SpindownMonitor } from "../spindown.ts";
+} from "../config/maintenance-settings.ts";
+import { dockerSocket, listContainers, ownContainerId } from "../system/docker.ts";
+import type { SpindownMonitor } from "../disks/spindown.ts";
 
 const maintenance = new Hono();
 

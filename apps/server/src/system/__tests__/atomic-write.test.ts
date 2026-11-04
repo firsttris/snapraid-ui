@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { assertRejects } from "./assert-error.ts";
+import { assertRejects } from "../../__tests__/assert-error.ts";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { writeTextFileAtomic } from "../atomic-write.ts";

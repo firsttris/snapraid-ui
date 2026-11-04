@@ -4,7 +4,7 @@
 import { existsSync, remove } from "./fs.ts";
 import type { SnapRaidCommand } from "@shared/types.ts";
 import { msg } from "@shared/i18n.ts";
-import { resolveFromBase } from "./config.ts";
+import { resolveFromBase } from "../config/config.ts";
 import {
   dockerSocket,
   type DockerRequest,
@@ -13,7 +13,7 @@ import {
   pauseContainer,
   unpauseContainer,
 } from "./docker.ts";
-import { loadMaintenanceSettings } from "./maintenance-settings.ts";
+import { loadMaintenanceSettings } from "../config/maintenance-settings.ts";
 import { writeTextFileAtomic } from "./atomic-write.ts";
 import { readFile } from "node:fs/promises";
 

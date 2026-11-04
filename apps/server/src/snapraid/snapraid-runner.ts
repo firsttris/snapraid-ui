@@ -1,11 +1,11 @@
 // Reports only the SnapRAID CLI gives, whatever engine runs the jobs (engine/engine.ts):
 // they read the content file or the devices, snapraid-daemon has no API for them
 import type { DevicesReport, DupReport, ListReport } from "@shared/types.ts";
-import { executeSnapraidCommand } from "./executors/command-executor.ts";
-import { parseDevicesOutput } from "./parsers/devices-parser.ts";
-import { LIST_ARGS, parseListOutput } from "./parsers/list-parser.ts";
-import { parseDupOutput } from "./parsers/dup-parser.ts";
-import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "./parsers/structured-log.ts";
+import { executeSnapraidCommand } from "../executors/command-executor.ts";
+import { parseDevicesOutput } from "../parsers/devices-parser.ts";
+import { LIST_ARGS, parseListOutput } from "../parsers/list-parser.ts";
+import { parseDupOutput } from "../parsers/dup-parser.ts";
+import { STRUCTURED_LOG_ARGS, splitStructuredOutput } from "../parsers/structured-log.ts";
 
 /**
  * Run a SnapRAID command with the structured log on stderr.

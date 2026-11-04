@@ -6,11 +6,11 @@ import { sign, verify } from "hono/jwt";
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simplewebauthn/server";
 import type { AuthSession, PasskeyInfo } from "@shared/types.ts";
 import { msg } from "@shared/i18n.ts";
-import { BASE_PATH, resolveFromBase } from "./config.ts";
+import { BASE_PATH, resolveFromBase } from "../config/config.ts";
 import { type CredentialStore, hashPassword, verifyPassword } from "./credentials.ts";
 import { AuthError, createPasskeys } from "./passkeys.ts";
 import { mkdir, readFile } from "node:fs/promises";
-import { writeTextFile } from "./fs.ts";
+import { writeTextFile } from "../system/fs.ts";
 
 export const SESSION_COOKIE = "snapraid_session";
 

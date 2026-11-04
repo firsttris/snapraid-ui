@@ -1,7 +1,7 @@
 // The command line of the standalone binary (bin.ts): --version and --help, and the data directory
 // when none is set, before main.ts's modules read the environment
 import { join } from "node:path";
-import { APP_VERSION } from "./version.ts";
+import { APP_VERSION } from "./system/version.ts";
 
 const HELP = `SnapRAID UI ${APP_VERSION}, web interface for SnapRAID
 

@@ -3,8 +3,8 @@
 // disks, binary sensors for problems and a running job, and buttons for sync and scrub.
 // The values come from the array snapshot, publishing never wakes a disk.
 import type { ConfigMetrics } from "./metrics.ts";
-import { blockingIssues } from "./disk-check.ts";
-import { isSuccessful } from "./run-report.ts";
+import { blockingIssues } from "../disks/disk-check.ts";
+import { isSuccessful } from "../snapraid/run-report.ts";
 
 export type ArrayHealth = "ok" | "errors" | "disk_missing" | "sync_incomplete" | "unknown";
 

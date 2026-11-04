@@ -7,9 +7,9 @@ import type { Stats } from "node:fs";
 import { chmod, chown, lstat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { msg } from "@shared/i18n.ts";
-import { parseSnapRaidConfig } from "./config-parser.ts";
-import { type SnapRaidEngine, wrapJobs } from "./engine/engine.ts";
-import { parseLogTags, unescapeTagValue } from "./parsers/structured-log.ts";
+import { parseSnapRaidConfig } from "../config/config-parser.ts";
+import { type SnapRaidEngine, wrapJobs } from "../engine/engine.ts";
+import { parseLogTags, unescapeTagValue } from "../parsers/structured-log.ts";
 
 export interface RestoredFile {
   disk: string;

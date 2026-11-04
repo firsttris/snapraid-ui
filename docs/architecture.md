@@ -45,7 +45,7 @@ The container runs a single process, the backend (in `/app/apps/server`), under 
 bun src/main.ts
 ```
 
-It listens on port 80 (`PORT=80`) and answers `/api` and `/ws` itself. Every other path goes to the frontend: Nitro builds the server-side rendering and the static files (`apps/web/.output/`) with its `standard` preset into one fetch handler, which `apps/server/src/frontend.ts` loads from `apps/web/.output/server/index.mjs`.
+It listens on port 80 (`PORT=80`) and answers `/api` and `/ws` itself. Every other path goes to the frontend: Nitro builds the server-side rendering and the static files (`apps/web/.output/`) with its `standard` preset into one fetch handler, which `apps/server/src/http/frontend.ts` loads from `apps/web/.output/server/index.mjs`.
 
 ```mermaid
 flowchart LR
@@ -63,13 +63,13 @@ The image sets `SNAPRAID_BASE_PATH=/app/snapraid`, `SNAPRAID_BIN=/usr/local/bin/
 
 ## Standalone binary
 
-`scripts/build-binary.sh` compiles `apps/server/src/bin.ts` with `bun build --compile` into one executable per architecture (`snapraid-ui-linux-x86_64`, `snapraid-ui-linux-aarch64`), which the release attaches to the GitHub release. The binary embeds the Bun runtime, the backend bundled with its packages, and with `--asset` the built frontend (`apps/web/.output/`), `apps/web/package.json` and `docs/*.md`. Inside the binary these files lie under `/$bunfs/root/` at their paths in the repository (`apps/web/…`, `docs/…`); `apps/server/src/app-files.ts` finds them there, and at the same paths from the root in the repository and the image:
+`scripts/build-binary.sh` compiles `apps/server/src/bin.ts` with `bun build --compile` into one executable per architecture (`snapraid-ui-linux-x86_64`, `snapraid-ui-linux-aarch64`), which the release attaches to the GitHub release. The binary embeds the Bun runtime, the backend bundled with its packages, and with `--asset` the built frontend (`apps/web/.output/`), `apps/web/package.json` and `docs/*.md`. Inside the binary these files lie under `/$bunfs/root/` at their paths in the repository (`apps/web/…`, `docs/…`); `apps/server/src/system/app-files.ts` finds them there, and at the same paths from the root in the repository and the image:
 
 | File | Read by | For |
 |---|---|---|
-| `apps/web/.output/server/index.mjs` | `apps/server/src/frontend.ts` | The UI |
-| `apps/web/package.json` | `apps/server/src/version.ts` | The version, for `--version`, Home Assistant and the MCP endpoint; `SNAPRAID_UI_VERSION` overrides it |
-| `docs/*.md` | `apps/server/src/mcp.ts` | The documentation the MCP endpoint offers |
+| `apps/web/.output/server/index.mjs` | `apps/server/src/http/frontend.ts` | The UI |
+| `apps/web/package.json` | `apps/server/src/system/version.ts` | The version, for `--version`, Home Assistant and the MCP endpoint; `SNAPRAID_UI_VERSION` overrides it |
+| `docs/*.md` | `apps/server/src/integrations/mcp.ts` | The documentation the MCP endpoint offers |
 
 `bin.ts` first imports `bin-cli.ts`, which answers `--version` and `--help` and sets the data directory to `./snapraid` when `SNAPRAID_BASE_PATH` is not set, and then `main.ts`. SnapRAID and `smartctl` are not inside: the binary runs the ones installed on the host.
 
@@ -87,34 +87,34 @@ Module map:
 | Module | Responsibility |
 |---|---|
 | `main.ts` | App setup, middleware, route mounting, dependency injection, startup |
-| `config.ts` | `SNAPRAID_BASE_PATH`, `SNAPRAID_BIN`, `SNAPRAID_EXTRA_ARGS`; `resolveFromBase()` (relative paths resolve against the data directory, absolute ones stay as they are); `snapraidCommand()` |
-| `config-parser.ts` | Parses `snapraid.conf` (parity levels incl. split parity, content, data, exclude, pool, `autosave`, `blocksize`); loads and saves `config.json` |
-| `auth.ts` | Login, logout, password change, passkey routes, session cookie, lockout, session secret |
-| `credentials.ts` | `auth.json`: the password changed in the UI (PBKDF2) and the passkeys, dropped when the environment credentials change |
-| `passkeys.ts` | WebAuthn registration and login (`@simplewebauthn/server`): relying party from the Origin, one-time challenges |
-| `websocket.ts` | WebSocket client set, `broadcast()`, replay of the running job on connect |
+| `config/config.ts` | `SNAPRAID_BASE_PATH`, `SNAPRAID_BIN`, `SNAPRAID_EXTRA_ARGS`; `resolveFromBase()` (relative paths resolve against the data directory, absolute ones stay as they are); `snapraidCommand()` |
+| `config/config-parser.ts` | Parses `snapraid.conf` (parity levels incl. split parity, content, data, exclude, pool, `autosave`, `blocksize`); loads and saves `config.json` |
+| `auth/auth.ts` | Login, logout, password change, passkey routes, session cookie, lockout, session secret |
+| `auth/credentials.ts` | `auth.json`: the password changed in the UI (PBKDF2) and the passkeys, dropped when the environment credentials change |
+| `auth/passkeys.ts` | WebAuthn registration and login (`@simplewebauthn/server`): relying party from the Origin, one-time challenges |
+| `http/websocket.ts` | WebSocket client set, `broadcast()`, replay of the running job on connect |
 | `executors/command-executor.ts` | Spawns long-running SnapRAID jobs, streams output, tracks the current and last job, follows progress, handles abort |
 | `executors/log-tail.ts` | Reads new lines that a running process appends to its log file |
 | `engine/engine.ts`, `engine/cli-engine.ts` | The [SnapRAID engine](#snapraid-engine) interface and its CLI implementation: jobs, status, diff, SMART, power state |
-| `snapraid-runner.ts` | Reports only the CLI gives (`devices`, `list`, `dup`) |
+| `snapraid/snapraid-runner.ts` | Reports only the CLI gives (`devices`, `list`, `dup`) |
 | `parsers/*` | Parsers for SnapRAID's structured log: `status`, `diff`, `check`, `list`, `dup`, `smart`, `probe`, `devices`, progress (`run:pos`) |
-| `run-report.ts` | Summarizes a finished run (result, duration, error counts, sync changes) from its log |
-| `log-manager.ts` | Log file naming, listing, outcome detection, last run per config, rotation, deletion |
-| `scheduler.ts` | Cron schedules (via [Croner](https://github.com/hexagon/croner)), multi-step sync routine, sync guard, skip logic |
-| `notifications.ts` | Notification settings, secret masking, delivery via SMTP ([Nodemailer](https://nodemailer.com/)), ntfy and webhook |
-| `notification-events.ts` | Builds notifications for runs, skipped schedules and SMART changes, in the configured language |
-| `smart-baseline.ts`, `smart-history.ts` | CRC error baseline per disk; daily SMART history |
-| `usage-history.ts`, `parity-usage.ts` | Daily array usage history; size and free space of data and parity disks |
-| `disk-replacement.ts`, `disk-removal.ts` | Config rewriting and state for the replace-disk and remove-data-disk wizards |
-| `backup.ts` | Export and restore of settings, histories and SnapRAID configs |
-| `smart-selftest.ts` | SMART self-tests through `smartctl -j` (ATA and NVMe): start, stop, status and log per disk; keeps the spindown away from disks with a running test |
-| `recovery.ts`, `restore-ownership.ts` | Restoring files from parity, one `fix` per disk; after every `fix`, files it recreated (from its log) and the folders made for them take the owner and permissions of their folder |
-| `duplicates.ts` | Deleting duplicates safely: a copy goes only while it and the copy that stays are as at the last sync (not in the diff, the size `dup` reported); marks copies no longer on their disk |
-| `disk-check.ts` | Disks that are missing, empty or on another filesystem than the content file recorded, from the `status` log |
-| `maintenance-settings.ts` | Docker pause and spindown settings |
-| `docker.ts`, `container-pause.ts` | Docker Engine API over the unix socket; pausing containers for the duration of jobs, resuming leftovers after a restart |
-| `spindown.ts` | Watches `/proc/diskstats` and spins idle disks down with `snapraid down` |
-| `demo.ts` | The demo sandbox (`SNAPRAID_DEMO=1`): fake `smart`, `probe` and device output, demo disk sizes in `status` and the disk usage, a Docker API with demo containers |
+| `snapraid/run-report.ts` | Summarizes a finished run (result, duration, error counts, sync changes) from its log |
+| `snapraid/log-manager.ts` | Log file naming, listing, outcome detection, last run per config, rotation, deletion |
+| `schedule/scheduler.ts` | Cron schedules (via [Croner](https://github.com/hexagon/croner)), multi-step sync routine, sync guard, skip logic |
+| `notifications/notifications.ts` | Notification settings, secret masking, delivery via SMTP ([Nodemailer](https://nodemailer.com/)), ntfy and webhook |
+| `notifications/notification-events.ts` | Builds notifications for runs, skipped schedules and SMART changes, in the configured language |
+| `smart/smart-baseline.ts`, `smart/smart-history.ts` | CRC error baseline per disk; daily SMART history |
+| `snapraid/usage-history.ts`, `disks/parity-usage.ts` | Daily array usage history; size and free space of data and parity disks |
+| `disks/disk-replacement.ts`, `disks/disk-removal.ts` | Config rewriting and state for the replace-disk and remove-data-disk wizards |
+| `config/backup.ts` | Export and restore of settings, histories and SnapRAID configs |
+| `smart/smart-selftest.ts` | SMART self-tests through `smartctl -j` (ATA and NVMe): start, stop, status and log per disk; keeps the spindown away from disks with a running test |
+| `snapraid/recovery.ts`, `snapraid/restore-ownership.ts` | Restoring files from parity, one `fix` per disk; after every `fix`, files it recreated (from its log) and the folders made for them take the owner and permissions of their folder |
+| `snapraid/duplicates.ts` | Deleting duplicates safely: a copy goes only while it and the copy that stays are as at the last sync (not in the diff, the size `dup` reported); marks copies no longer on their disk |
+| `disks/disk-check.ts` | Disks that are missing, empty or on another filesystem than the content file recorded, from the `status` log |
+| `config/maintenance-settings.ts` | Docker pause and spindown settings |
+| `system/docker.ts`, `system/container-pause.ts` | Docker Engine API over the unix socket; pausing containers for the duration of jobs, resuming leftovers after a restart |
+| `disks/spindown.ts` | Watches `/proc/diskstats` and spins idle disks down with `snapraid down` |
+| `system/demo.ts` | The demo sandbox (`SNAPRAID_DEMO=1`): fake `smart`, `probe` and device output, demo disk sizes in `status` and the disk usage, a Docker API with demo containers |
 | `routes/*` | HTTP routes, see the [API reference](#api-reference) |
 
 ## Running SnapRAID
@@ -174,7 +174,7 @@ The API was last compared with snapraid-daemon **`v2.1`**; the version is in `ap
 
 ### Tests
 
-`apps/server/src/__tests__/engine-contract.ts` holds what every engine has to do: a sync succeeds, the status lists the disks, the diff finds a new file, `afterRun` runs while the job is still current, and so on. `engine-contract.test.ts` runs it against the fake engine (`__tests__/fake-engine.ts`) always, against the CLI engine with a real SnapRAID binary, and against the daemon engine with a running snapraid-daemon (see [Development](development.md#tests)).
+`apps/server/src/engine/__tests__/engine-contract.ts` holds what every engine has to do: a sync succeeds, the status lists the disks, the diff finds a new file, `afterRun` runs while the job is still current, and so on. `engine-contract.test.ts` runs it against the fake engine (`__tests__/fake-engine.ts`) always, against the CLI engine with a real SnapRAID binary, and against the daemon engine with a running snapraid-daemon (see [Development](development.md#tests)).
 
 Without a daemon, `daemon-engine.test.ts` runs the daemon engine against a stand-in that answers like snapraid-daemon 2.0: queuing and following a task, progress, abort, the fallback, auth and errors, and the mapping of its JSON to the UI's types. `engine-settings.test.ts` covers the settings and which engine runs which config, `scheduler.test.ts` the scheduler against the fake engine.
 
@@ -250,7 +250,7 @@ Everything lives in the data directory, `SNAPRAID_BASE_PATH`. In the image that 
 | `auth.json` | Password changed in the UI (hash) and passkeys (only with login enabled) |
 | `logs/*.log` | One structured log per job (directory set in `config.json`) |
 
-Writes go through `node:fs`: the JSON state files through `writeTextFileAtomic` (`apps/server/src/atomic-write.ts`, a temporary file renamed over the old one), other writes (the SnapRAID configs among them) are plain `writeFile` calls. Most files are read again whenever they are needed. Two things are read only at startup: the log directory and retention settings from `config.json`, and the cron timers, which are rebuilt from `schedules.json` on start, on changes through the API and after a restore. See [Configuration](configuration.md) for details on each file.
+Writes go through `node:fs`: the JSON state files through `writeTextFileAtomic` (`apps/server/src/system/atomic-write.ts`, a temporary file renamed over the old one), other writes (the SnapRAID configs among them) are plain `writeFile` calls. Most files are read again whenever they are needed. Two things are read only at startup: the log directory and retention settings from `config.json`, and the cron timers, which are rebuilt from `schedules.json` on start, on changes through the API and after a restore. See [Configuration](configuration.md) for details on each file.
 
 ## Frontend
 
@@ -275,7 +275,7 @@ UI texts live in `apps/web/messages/{en,de,it}.json` and are compiled by [Paragl
 
 The backend does not know the viewer's language. For errors a user can run into, it sends a marked key instead of text: `msg("server_error_job_running")` from `packages/shared/src/i18n.ts` produces `\u0002["server_error_job_running",{}]\u0003`. The frontend (`apps/web/src/lib/i18n.ts`, `localizeServer()`) replaces such markers with the translated message; plain text, such as SnapRAID's own output, passes through unchanged. Some validation errors for malformed requests are plain English strings.
 
-Notifications are the exception: they leave the server by e-mail, ntfy or webhook in the language set in the notification settings (`apps/server/src/notification-events.ts`).
+Notifications are the exception: they leave the server by e-mail, ntfy or webhook in the language set in the notification settings (`apps/server/src/notifications/notification-events.ts`).
 
 See [Development](development.md#translations) for how to add or change texts.
 

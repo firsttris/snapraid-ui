@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { existsSync } from "./fs.ts";
+import { existsSync } from "../system/fs.ts";
 import type {
   NotificationSettings,
   ScheduleOutcome,
@@ -7,11 +7,11 @@ import type {
   SnapRaidCommand,
 } from "@shared/types.ts";
 import { assessSmart, type SmartAssessment, type SmartReason, smartHints, smartSignature } from "@shared/smart-health.ts";
-import { resolveFromBase } from "./config.ts";
+import { resolveFromBase } from "../config/config.ts";
 import { loadNotificationSettings, type Notification, notify, pingHeartbeat } from "./notifications.ts";
-import { isSuccessful, type RunReport } from "./run-report.ts";
-import { parseLogTags, restOf, unescapeTagValue } from "./parsers/structured-log.ts";
-import { writeTextFileAtomic } from "./atomic-write.ts";
+import { isSuccessful, type RunReport } from "../snapraid/run-report.ts";
+import { parseLogTags, restOf, unescapeTagValue } from "../parsers/structured-log.ts";
+import { writeTextFileAtomic } from "../system/atomic-write.ts";
 import { readFile } from "node:fs/promises";
 
 type Language = NotificationSettings["language"];

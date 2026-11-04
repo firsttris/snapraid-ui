@@ -1,5 +1,5 @@
 import { dirname, join } from "node:path";
-import { isPendingRemoval, parseParityLine, REMOVAL_DIR } from "./config-parser.ts";
+import { isPendingRemoval, parseParityLine, REMOVAL_DIR } from "../config/config-parser.ts";
 import { msg } from "@shared/i18n.ts";
 import { mkdir, readdir } from "node:fs/promises";
 

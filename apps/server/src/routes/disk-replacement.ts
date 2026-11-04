@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { ReplacementStep, SnapRaidCommand } from "@shared/types.ts";
-import { resolveFromBase } from "../config.ts";
+import { resolveFromBase } from "../config/config.ts";
 import {
   applyReplacementPath,
   clearReplacement,
@@ -9,7 +9,7 @@ import {
   recordReplacementStep,
   requiredDirectory,
   saveReplacement,
-} from "../disk-replacement.ts";
+} from "../disks/disk-replacement.ts";
 import type { JobOutcome } from "../engine/engine.ts";
 import { msg } from "@shared/i18n.ts";
 import { readFile, stat, writeFile } from "node:fs/promises";

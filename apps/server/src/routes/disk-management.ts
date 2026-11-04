@@ -5,8 +5,8 @@ import {
   parityKeyword,
   parseParityLine,
   parseSnapRaidConfig,
-} from "../config-parser.ts";
-import { resolveFromBase } from "../config.ts";
+} from "../config/config-parser.ts";
+import { resolveFromBase } from "../config/config.ts";
 import { msg } from "@shared/i18n.ts";
 import { readFile, writeFile } from "node:fs/promises";
 

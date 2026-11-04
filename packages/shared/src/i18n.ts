@@ -5,7 +5,7 @@
 // SnapRAID's own output, passes through unchanged.
 //
 // Notifications are the exception: they leave the server by mail, ntfy or
-// webhook in the language set for them (apps/server/src/notification-events.ts).
+// webhook in the language set for them (apps/server/src/notifications/notification-events.ts).
 
 export type MsgInputs = Record<string, string | number>;
 

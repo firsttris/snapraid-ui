@@ -1,13 +1,13 @@
 import { expect, test } from "bun:test";
-import { assertThrows } from "./assert-error.ts";
+import { assertThrows } from "../../__tests__/assert-error.ts";
 import { join } from "node:path";
 import type { Server } from "bun";
 import { Hono } from "hono";
 import { createAuth, SESSION_COOKIE } from "../auth.ts";
 import { type CredentialStore, hashPassword, loadCredentials, verifyPassword } from "../credentials.ts";
 import { AuthError, createPasskeys, relyingParty } from "../passkeys.ts";
-import { broadcast, closeAllClients, handleWebSocketUpgrade, websocket } from "../websocket.ts";
-import { setEngine } from "../engine/engine.ts";
+import { broadcast, closeAllClients, handleWebSocketUpgrade, websocket } from "../../http/websocket.ts";
+import { setEngine } from "../../engine/engine.ts";
 import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 

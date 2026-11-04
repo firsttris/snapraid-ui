@@ -1,7 +1,7 @@
 import { basename } from "node:path";
 import type { CommandOutput, RunResult, SnapRaidCommand } from "@shared/types.ts";
 import { parseRunResult } from "./log-manager.ts";
-import { collectKeyValues, parseLogTags, toInt } from "./parsers/structured-log.ts";
+import { collectKeyValues, parseLogTags, toInt } from "../parsers/structured-log.ts";
 import { readFile } from "node:fs/promises";
 
 /**

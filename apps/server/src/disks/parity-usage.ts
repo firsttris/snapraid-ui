@@ -5,10 +5,10 @@ import type {
   ParityLevelUsage,
   ParsedSnapRaidConfig,
 } from "@shared/types.ts";
-import { type FsUsage, parseDfOutput } from "./parsers/df-parser.ts";
-import { DEMO_MODE, demoDataDiskUsage, demoParityUsage } from "./demo.ts";
+import { type FsUsage, parseDfOutput } from "../parsers/df-parser.ts";
+import { DEMO_MODE, demoDataDiskUsage, demoParityUsage } from "../system/demo.ts";
 import { stat } from "node:fs/promises";
-import { runCommand } from "./command.ts";
+import { runCommand } from "../system/command.ts";
 
 const toGB = (bytes: number): number => Math.round(bytes / 1e9 * 10) / 10;
 

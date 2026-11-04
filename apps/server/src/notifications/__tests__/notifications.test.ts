@@ -8,10 +8,10 @@ import {
   validateNotificationSettings,
 } from "../notifications.ts";
 import { buildRunNotification, buildSkipNotification, diffDegradedDisks, diffSmartProblems, heartbeatAfterRun } from "../notification-events.ts";
-import { failedReport, parseRunReport } from "../run-report.ts";
-import { combineResults, scheduleSteps } from "../scheduler.ts";
+import { failedReport, parseRunReport } from "../../snapraid/run-report.ts";
+import { combineResults, scheduleSteps } from "../../schedule/scheduler.ts";
 import { assessSmart, attributeLevel, smartHints } from "@shared/smart-health.ts";
-import { parseSmartOutput } from "../parsers/smart-parser.ts";
+import { parseSmartOutput } from "../../parsers/smart-parser.ts";
 import { readFileSync } from "node:fs";
 
 const SYNC_LOG = `summary:added:12
@@ -248,7 +248,7 @@ test("combineResults - first failure, otherwise the worst of ok and warning", ()
 });
 
 test("assessSmart - a few percent failure probability is normal, sectors and status are not", () => {
-  const disks = parseSmartOutput(readFileSync(new URL("../parsers/__tests__/fixtures/smart.log", import.meta.url), "utf8"));
+  const disks = parseSmartOutput(readFileSync(new URL("../../parsers/__tests__/fixtures/smart.log", import.meta.url), "utf8"));
   const byName = Object.fromEntries(disks.map((d) => [d.name, assessSmart(d)]));
 
   // 4.46% per year, no errors

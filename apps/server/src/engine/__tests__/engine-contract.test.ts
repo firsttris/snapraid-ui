@@ -1,10 +1,10 @@
 import { join } from "node:path";
-import { runCommand } from "../command.ts";
-import { SNAPRAID_BIN, SNAPRAID_EXTRA_ARGS } from "../config.ts";
-import { createCliEngine } from "../engine/cli-engine.ts";
-import { createDaemonEngine } from "../engine/daemon-engine.ts";
-import { parseSnapRaidConfig } from "../config-parser.ts";
-import { createLogManager } from "../log-manager.ts";
+import { runCommand } from "../../system/command.ts";
+import { SNAPRAID_BIN, SNAPRAID_EXTRA_ARGS } from "../../config/config.ts";
+import { createCliEngine } from "../cli-engine.ts";
+import { createDaemonEngine } from "../daemon-engine.ts";
+import { parseSnapRaidConfig } from "../../config/config-parser.ts";
+import { createLogManager } from "../../snapraid/log-manager.ts";
 import { engineContract } from "./engine-contract.ts";
 import { createFakeEngine } from "./fake-engine.ts";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";

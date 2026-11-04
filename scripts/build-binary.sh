@@ -27,7 +27,7 @@ fi
 
 # The files the backend reads at runtime, laid out as in the repository: --asset embeds a
 # directory under its own name, so the binary has them at /$bunfs/root/apps/web/ and
-# /$bunfs/root/docs/ (apps/server/src/app-files.ts). The documentation as the MCP endpoint offers
+# /$bunfs/root/docs/ (apps/server/src/system/app-files.ts). The documentation as the MCP endpoint offers
 # it: the Markdown pages without the pictures.
 stage="$(mktemp -d)"
 trap 'rm -rf "$stage"' EXIT

@@ -2,8 +2,8 @@
 // the fake one always, the CLI one when a SnapRAID binary is available.
 // A new engine, e.g. one on snapraid-daemon's REST API, gets the same tests.
 import { expect, test } from "bun:test";
-import { assertRejects } from "./assert-error.ts";
-import { EngineBusyError, type SnapRaidEngine } from "../engine/engine.ts";
+import { assertRejects } from "../../__tests__/assert-error.ts";
+import { EngineBusyError, type SnapRaidEngine } from "../engine.ts";
 
 export interface ContractSetup {
   engine: SnapRaidEngine;

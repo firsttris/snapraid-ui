@@ -5,9 +5,9 @@
 //   SNAPRAID_UI_USERNAME or SNAPRAID_UI_PASSWORD change, the file is dropped at startup: the
 //   password from the environment applies again and the passkeys are gone. That is the way back
 //   in after a forgotten password, and it removes a passkey someone else added.
-import { writeTextFileAtomic } from "./atomic-write.ts";
+import { writeTextFileAtomic } from "../system/atomic-write.ts";
 import { readFile } from "node:fs/promises";
-import { isNotFound, remove } from "./fs.ts";
+import { isNotFound, remove } from "../system/fs.ts";
 
 export interface StoredPasskey {
   id: string;

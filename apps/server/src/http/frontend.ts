@@ -3,7 +3,7 @@
 // port next to /api and /ws, so the UI runs as a single process without a proxy in front.
 
 import { stat } from "node:fs/promises";
-import { appFile } from "./app-files.ts";
+import { appFile } from "../system/app-files.ts";
 
 export type FetchHandler = (request: Request) => Response | Promise<Response>;
 

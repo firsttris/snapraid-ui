@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { assertThrows } from "./assert-error.ts";
+import { assertThrows } from "../../__tests__/assert-error.ts";
 import { applyReplacementPath, DiskReplacementError, requiredDirectory } from "../disk-replacement.ts";
 
 const CONFIG = `parity /mnt/parity1/snapraid.parity

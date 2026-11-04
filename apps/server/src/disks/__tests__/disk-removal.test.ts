@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { assertRejects, assertThrows } from "./assert-error.ts";
+import { assertRejects, assertThrows } from "../../__tests__/assert-error.ts";
 import { join } from "node:path";
 import {
   DiskRemovalError,
@@ -7,7 +7,7 @@ import {
   finalizeDataDiskRemoval,
   prepareDataDiskRemoval,
 } from "../disk-removal.ts";
-import { parseSnapRaidConfig } from "../config-parser.ts";
+import { parseSnapRaidConfig } from "../../config/config-parser.ts";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 

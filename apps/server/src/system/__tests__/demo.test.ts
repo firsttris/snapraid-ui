@@ -2,10 +2,10 @@ import { expect, test } from "bun:test";
 import type { ParsedSnapRaidConfig } from "@shared/types.ts";
 import { demoDataDiskUsage, demoDocker, demoParityUsage, demoStatusLog } from "../demo.ts";
 import { inspectContainer, listContainers, pauseContainer, unpauseContainer } from "../docker.ts";
-import { parseStatusOutput } from "../parsers/status-parser.ts";
+import { parseStatusOutput } from "../../parsers/status-parser.ts";
 import { readFile } from "node:fs/promises";
 
-const STATUS_LOG = await readFile(new URL("../parsers/__tests__/fixtures/status.log", import.meta.url), "utf8");
+const STATUS_LOG = await readFile(new URL("../../parsers/__tests__/fixtures/status.log", import.meta.url), "utf8");
 
 // The fixture's array: two data disks and one parity
 const CONFIG = {

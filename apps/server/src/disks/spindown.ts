@@ -3,13 +3,13 @@
 // are preferred: SMART reads and power state probes count as I/O of the whole disk only,
 // they would otherwise keep it awake forever.
 import type { DeviceInfo, SpindownDisk, SpindownStatus } from "@shared/types.ts";
-import { loadAppConfig } from "./config-parser.ts";
-import { resolveFromBase } from "./config.ts";
-import { executeSnapraidCommand } from "./executors/command-executor.ts";
-import { parseDevicesOutput } from "./parsers/devices-parser.ts";
-import { loadMaintenanceSettings } from "./maintenance-settings.ts";
-import { DEMO_MODE, demoDevices, demoDiskstats } from "./demo.ts";
-import { selfTestRunning } from "./smart-selftest.ts";
+import { loadAppConfig } from "../config/config-parser.ts";
+import { resolveFromBase } from "../config/config.ts";
+import { executeSnapraidCommand } from "../executors/command-executor.ts";
+import { parseDevicesOutput } from "../parsers/devices-parser.ts";
+import { loadMaintenanceSettings } from "../config/maintenance-settings.ts";
+import { DEMO_MODE, demoDevices, demoDiskstats } from "../system/demo.ts";
+import { selfTestRunning } from "../smart/smart-selftest.ts";
 import { readFile } from "node:fs/promises";
 
 const TICK_MS = 60_000;

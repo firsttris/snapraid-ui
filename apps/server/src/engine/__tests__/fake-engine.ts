@@ -9,7 +9,7 @@ import type {
   SnapRaidCommand,
   SnapRaidStatus,
 } from "@shared/types.ts";
-import { EngineBusyError, type JobOutcome, type SnapRaidEngine } from "../engine/engine.ts";
+import { EngineBusyError, type JobOutcome, type SnapRaidEngine } from "../engine.ts";
 
 export interface FakeEngineOptions {
   disks?: string[];

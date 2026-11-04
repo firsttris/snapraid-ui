@@ -31,7 +31,7 @@ import {
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 
-// The backend's minimum (MIN_PASSWORD_LENGTH in apps/server/src/auth.ts)
+// The backend's minimum (MIN_PASSWORD_LENGTH in apps/server/src/auth/auth.ts)
 const MIN_PASSWORD_LENGTH = 12
 const MAX_NAME_LENGTH = 64
 

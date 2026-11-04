@@ -3,10 +3,10 @@
 // runs it on its own; its status and the log of the last tests come from `smartctl -c -l selftest`.
 // smartctl's JSON output (-j) covers ATA and NVMe disks alike.
 import type { DeviceInfo, DiskSelfTest, SelfTestLogEntry, SelfTestType } from "@shared/types.ts";
-import { executeSnapraidCommand } from "./executors/command-executor.ts";
-import { parseDevicesOutput } from "./parsers/devices-parser.ts";
-import { runCommand } from "./command.ts";
-import { DEMO_MODE, demoDevices, demoDisks } from "./demo.ts";
+import { executeSnapraidCommand } from "../executors/command-executor.ts";
+import { parseDevicesOutput } from "../parsers/devices-parser.ts";
+import { runCommand } from "../system/command.ts";
+import { DEMO_MODE, demoDevices, demoDisks } from "../system/demo.ts";
 
 // The image installs smartmontools; tests point it to a stand-in
 const smartctlBin = () => process.env.SMARTCTL_BIN ?? "smartctl";

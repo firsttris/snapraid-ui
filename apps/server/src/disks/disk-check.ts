@@ -2,9 +2,9 @@
 // An unmounted disk leaves an empty mount point behind; SnapRAID then sees all its
 // files as deleted, and a sync would drop them from parity.
 import type { DiskIssue } from "@shared/types.ts";
-import { parseLogTags, toInt, unescapeTagValue } from "./parsers/structured-log.ts";
+import { parseLogTags, toInt, unescapeTagValue } from "../parsers/structured-log.ts";
 import { readdir, stat } from "node:fs/promises";
-import { isNotFound } from "./fs.ts";
+import { isNotFound } from "../system/fs.ts";
 
 // Parity levels in the structured log, split parity files (`parity/1`) are not tag lines
 const PARITY_LEVEL = /^(?:[2-6]-)?parity(?:\/\d+)?$|^z-parity(?:\/\d+)?$/;

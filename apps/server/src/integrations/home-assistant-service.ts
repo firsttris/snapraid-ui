@@ -1,8 +1,8 @@
 // The MQTT connection to Home Assistant: publishes discovery and state, runs the buttons' commands
 import mqtt, { type MqttClient } from "mqtt";
-import { existsSync } from "./fs.ts";
+import { existsSync } from "../system/fs.ts";
 import { type HomeAssistantSettings, type HomeAssistantStatus, SECRET_MASK } from "@shared/types.ts";
-import { resolveFromBase } from "./config.ts";
+import { resolveFromBase } from "../config/config.ts";
 import type { ConfigMetrics } from "./metrics.ts";
 import {
   arraySlugs,
@@ -13,7 +13,7 @@ import {
   type MqttMessage,
   parseCommand,
 } from "./home-assistant.ts";
-import { writeTextFileAtomic } from "./atomic-write.ts";
+import { writeTextFileAtomic } from "../system/atomic-write.ts";
 import { readFile } from "node:fs/promises";
 
 const SETTINGS_FILE = "home-assistant.json";

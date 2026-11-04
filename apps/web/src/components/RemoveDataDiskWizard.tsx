@@ -26,7 +26,7 @@ import {
   DialogTitle,
 } from './ui/dialog'
 
-// Must match REMOVAL_DIR in apps/server/src/config-parser.ts
+// Must match REMOVAL_DIR in apps/server/src/config/config-parser.ts
 const REMOVAL_DIR = '.snapraid-removal'
 
 const JOB_POLL_MS = 2000

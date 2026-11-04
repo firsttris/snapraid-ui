@@ -1,7 +1,7 @@
-import { existsSync } from "./fs.ts";
+import { existsSync } from "../system/fs.ts";
 import type { MaintenanceSettings, SnapRaidCommand } from "@shared/types.ts";
 import { resolveFromBase } from "./config.ts";
-import { writeTextFileAtomic } from "./atomic-write.ts";
+import { writeTextFileAtomic } from "../system/atomic-write.ts";
 import { readFile } from "node:fs/promises";
 
 const SETTINGS_FILE = "maintenance.json";

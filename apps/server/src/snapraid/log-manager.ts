@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import type { SnapRaidCommand, LogFile, LastRun, RunResult } from "@shared/types.ts";
 import { detectForceOption } from "@shared/force-option.ts";
 import { parseRunResult } from "@shared/run-result.ts";
-import { isAlreadyExists, isNotFound, remove } from "./fs.ts";
+import { isAlreadyExists, isNotFound, remove } from "../system/fs.ts";
 
 export interface LogManager {
   ensureLogDirectory(): Promise<void>;

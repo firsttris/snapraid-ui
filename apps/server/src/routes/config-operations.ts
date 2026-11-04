@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { join } from "node:path";
-import { parseSnapRaidConfig } from "../config-parser.ts";
-import { resolveFromBase } from "../config.ts";
-import { editSmartIgnore, isSmartIgnoreAttribute, SMART_IGNORE_MAX, SmartIgnoreFullError } from "../smart-ignore.ts";
+import { parseSnapRaidConfig } from "../config/config-parser.ts";
+import { resolveFromBase } from "../config/config.ts";
+import { editSmartIgnore, isSmartIgnoreAttribute, SMART_IGNORE_MAX, SmartIgnoreFullError } from "../smart/smart-ignore.ts";
 import { msg } from "@shared/i18n.ts";
 import { readFile, writeFile } from "node:fs/promises";
 

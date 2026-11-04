@@ -1,7 +1,7 @@
 // Spin disks up or down by hand, with SnapRAID's `up` and `down` (smartctl and hdparm under the
 // hood). Like the automatic spindown this calls SnapRAID directly, also in daemon mode.
-import { deviceCommandSucceeded, executeSnapraidCommand } from "./executors/command-executor.ts";
-import { DEMO_MODE } from "./demo.ts";
+import { deviceCommandSucceeded, executeSnapraidCommand } from "../executors/command-executor.ts";
+import { DEMO_MODE } from "../system/demo.ts";
 
 export type PowerAction = "up" | "down";
 

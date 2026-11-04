@@ -20,12 +20,12 @@ import type {
 import { diskFreeSeries, forecastFill } from "@shared/usage-forecast.ts";
 import { arrayState } from "./home-assistant.ts";
 import type { ConfigMetrics } from "./metrics.ts";
-import { EngineBusyError, type SnapRaidEngine } from "./engine/engine.ts";
-import type { LogManager } from "./log-manager.ts";
-import type { Scheduler } from "./scheduler.ts";
-import type { CreateArrayResult } from "./setup.ts";
+import { EngineBusyError, type SnapRaidEngine } from "../engine/engine.ts";
+import type { LogManager } from "../snapraid/log-manager.ts";
+import type { Scheduler } from "../schedule/scheduler.ts";
+import type { CreateArrayResult } from "../config/setup.ts";
 import { readdir, readFile } from "node:fs/promises";
-import { appFile } from "./app-files.ts";
+import { appFile } from "../system/app-files.ts";
 
 export const DOCS_DIR = fileURLToPath(appFile("docs/"));
 
