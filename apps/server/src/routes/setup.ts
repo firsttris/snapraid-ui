@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { ArraySetup } from "@shared/array-setup.ts";
 import { msg } from "@shared/i18n.ts";
-import { createArray, listMountCandidates } from "../setup.ts";
+import { createArray, listMountCandidates } from "../config/setup.ts";
 
 const setup = new Hono();
 

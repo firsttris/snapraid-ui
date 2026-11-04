@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { Scheduler } from "../scheduler.ts";
+import type { Scheduler } from "../schedule/scheduler.ts";
 import { msg } from "@shared/i18n.ts";
 
 const schedules = new Hono();

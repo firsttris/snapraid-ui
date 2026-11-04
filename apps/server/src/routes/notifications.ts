@@ -8,7 +8,7 @@ import {
   resolveSecrets,
   saveNotificationSettings,
   validateNotificationSettings,
-} from "../notifications.ts";
+} from "../notifications/notifications.ts";
 import { msg } from "@shared/i18n.ts";
 
 const notifications = new Hono();

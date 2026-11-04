@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import type { ConfigFileCheck } from "@shared/types.ts";
-import { loadAppConfig, parseSnapRaidConfig, saveAppConfig } from "../config-parser.ts";
-import { BASE_PATH, resolveFromBase, toStoredPath } from "../config.ts";
+import { loadAppConfig, parseSnapRaidConfig, saveAppConfig } from "../config/config-parser.ts";
+import { BASE_PATH, resolveFromBase, toStoredPath } from "../config/config.ts";
 import { msg } from "@shared/i18n.ts";
-import { BackupError, createBackup, restoreBackup } from "../backup.ts";
+import { BackupError, createBackup, restoreBackup } from "../config/backup.ts";
 import { reloadSchedules } from "./schedules.ts";
 import { stat, writeFile } from "node:fs/promises";
-import { isAlreadyExists } from "../fs.ts";
+import { isAlreadyExists } from "../system/fs.ts";
 
 const config = new Hono();
 

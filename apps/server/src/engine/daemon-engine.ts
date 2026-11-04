@@ -20,7 +20,7 @@ import type {
   SnapRaidCommand,
   SnapRaidStatus,
 } from "@shared/types.ts";
-import { parseRunReport, type RunReport } from "../run-report.ts";
+import { parseRunReport, type RunReport } from "../snapraid/run-report.ts";
 import {
   EngineBusyError,
   type JobOutcome,

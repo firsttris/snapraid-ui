@@ -1,10 +1,10 @@
 // Which engine runs SnapRAID (engine.json), and the engine built from it
-import { existsSync } from "../fs.ts";
+import { existsSync } from "../system/fs.ts";
 import { type DaemonCheck, type DaemonTarget, type DaemonWarning, type EngineSettings, SECRET_MASK } from "@shared/types.ts";
-import { resolveFromBase } from "../config.ts";
+import { resolveFromBase } from "../config/config.ts";
 import { createDaemonClient, createDaemonEngine, type DaemonArray, DaemonError } from "./daemon-engine.ts";
 import type { SnapRaidEngine } from "./engine.ts";
-import { writeTextFileAtomic } from "../atomic-write.ts";
+import { writeTextFileAtomic } from "../system/atomic-write.ts";
 import { readFile } from "node:fs/promises";
 
 const SETTINGS_FILE = "engine.json";

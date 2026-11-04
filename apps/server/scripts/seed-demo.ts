@@ -10,8 +10,8 @@ import { readdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Cron } from "croner";
 import type { MaintenanceSettings, Schedule, UsagePoint } from "@shared/types.ts";
-import { parseSnapRaidConfig } from "../src/config-parser.ts";
-import { demoDataDiskUsage } from "../src/demo.ts";
+import { parseSnapRaidConfig } from "../src/config/config-parser.ts";
+import { demoDataDiskUsage } from "../src/system/demo.ts";
 
 const sandbox = process.argv[2];
 if (!sandbox) throw new Error("Usage: seed-demo.ts <sandbox>");
@@ -123,7 +123,7 @@ const schedules: Schedule[] = [
 ];
 await writeFile(join(sandbox, "schedules.json"), JSON.stringify({ schedules }, null, 2));
 
-// The demo answers for Docker itself (apps/server/src/demo.ts), spindown watches the demo disks
+// The demo answers for Docker itself (apps/server/src/system/demo.ts), spindown watches the demo disks
 // The rest (metrics, MCP) takes its defaults when the backend loads the file
 const maintenance: Pick<MaintenanceSettings, "dockerPause" | "spindown"> = {
   dockerPause: {

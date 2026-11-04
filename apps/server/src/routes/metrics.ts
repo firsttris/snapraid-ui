@@ -1,8 +1,8 @@
 import { Hono } from "hono";
-import { snapshotConfigs, snapshotSchedules } from "../array-snapshot.ts";
+import { snapshotConfigs, snapshotSchedules } from "../integrations/array-snapshot.ts";
 import { getEngine } from "../engine/engine.ts";
-import { loadMaintenanceSettings } from "../maintenance-settings.ts";
-import { renderMetrics } from "../metrics.ts";
+import { loadMaintenanceSettings } from "../config/maintenance-settings.ts";
+import { renderMetrics } from "../integrations/metrics.ts";
 
 const metrics = new Hono();
 

@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import type { SnapRaidRunner } from "../snapraid-runner.ts";
-import { resolveFromBase } from "../config.ts";
+import type { SnapRaidRunner } from "../snapraid/snapraid-runner.ts";
+import { resolveFromBase } from "../config/config.ts";
 import { getEngine } from "../engine/engine.ts";
-import { parseSnapRaidConfig } from "../config-parser.ts";
-import { changedPaths, deleteDuplicates, insideDisk, markGone, MAX_DUPLICATE_DELETIONS } from "../duplicates.ts";
+import { parseSnapRaidConfig } from "../config/config-parser.ts";
+import { changedPaths, deleteDuplicates, insideDisk, markGone, MAX_DUPLICATE_DELETIONS } from "../snapraid/duplicates.ts";
 import type { DiffReport, DuplicateDeletion } from "@shared/types.ts";
 import { msg } from "@shared/i18n.ts";
 import { stat } from "node:fs/promises";

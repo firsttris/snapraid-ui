@@ -1,8 +1,8 @@
 // The engine that runs the SnapRAID CLI itself and reads its structured log
 import type { CommandOutput, SnapRaidCommand } from "@shared/types.ts";
 import { msg } from "@shared/i18n.ts";
-import { snapraidCommand } from "../config.ts";
-import { runCommand } from "../command.ts";
+import { snapraidCommand } from "../config/config.ts";
+import { runCommand } from "../system/command.ts";
 import {
   abortCommand,
   deviceCommandSucceeded,
@@ -13,11 +13,11 @@ import {
   setLogManager,
   setProgressListener,
 } from "../executors/command-executor.ts";
-import type { LogManager } from "../log-manager.ts";
-import { readRunReport } from "../run-report.ts";
-import { findDiskIssues } from "../disk-check.ts";
-import { DEMO_MODE, demoProbeLog, demoSmartLog, demoStatusLog } from "../demo.ts";
-import { parseSnapRaidConfig } from "../config-parser.ts";
+import type { LogManager } from "../snapraid/log-manager.ts";
+import { readRunReport } from "../snapraid/run-report.ts";
+import { findDiskIssues } from "../disks/disk-check.ts";
+import { DEMO_MODE, demoProbeLog, demoSmartLog, demoStatusLog } from "../system/demo.ts";
+import { parseSnapRaidConfig } from "../config/config-parser.ts";
 import { parseDiffOutput } from "../parsers/diff-parser.ts";
 import { parseDegradedDisks, parseProbeOutput } from "../parsers/probe-parser.ts";
 import { parseSmartArrayFailure, parseSmartOutput } from "../parsers/smart-parser.ts";

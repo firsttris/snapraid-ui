@@ -48,7 +48,7 @@ jobs:
           snapraid-daemon [v$newest](https://github.com/amadvance/snapraid-daemon/tree/v$newest) is out, the SnapRAID engine was last compared with v$reviewed.
 
           - [ ] Compare the API: [snapraidd.yaml v$reviewed...v$newest](https://github.com/amadvance/snapraid-daemon/compare/v$reviewed...v$newest) and the [HISTORY](https://github.com/amadvance/snapraid-daemon/blob/v$newest/HISTORY)
-          - [ ] An endpoint for something CLI-only today (\`dup\`, \`list\`, \`devices\`, config, ...)? Add a method to \`SnapRaidEngine\` in \`apps/server/src/engine/engine.ts\`, implement it in \`cli-engine.ts\`, move the callers and extend \`apps/server/src/__tests__/engine-contract.ts\`
+          - [ ] An endpoint for something CLI-only today (\`dup\`, \`list\`, \`devices\`, config, ...)? Add a method to \`SnapRaidEngine\` in \`apps/server/src/engine/engine.ts\`, implement it in \`cli-engine.ts\`, move the callers and extend \`apps/server/src/engine/__tests__/engine-contract.ts\`
           - [ ] Update the tables in [docs/architecture.md](https://github.com/${{ github.repository }}/blob/master/docs/architecture.md#snapraid-engine)
           - [ ] Put $newest into \`apps/server/src/engine/REVIEWED_DAEMON_VERSION\`
           - [ ] The end-to-end tests build and run against that version; if it needs a newer SnapRAID, raise \`SNAPRAID15_REF\` in \`e2e/scripts/setup-tools.sh\`

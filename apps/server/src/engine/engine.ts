@@ -14,7 +14,7 @@ import type {
   SnapRaidCommand,
   SnapRaidStatus,
 } from "@shared/types.ts";
-import type { RunReport } from "../run-report.ts";
+import type { RunReport } from "../snapraid/run-report.ts";
 
 export interface JobRequest {
   command: SnapRaidCommand;

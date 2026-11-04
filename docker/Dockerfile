@@ -58,9 +58,9 @@ COPY --from=backend-builder /app/tsconfig.base.json /app/tsconfig.base.json
 COPY --from=backend-builder /app/node_modules /app/node_modules
 COPY --from=backend-builder /app/apps/server /app/apps/server
 COPY packages/shared/ /app/packages/shared/
-# The backend loads the frontend's server from here (apps/server/src/frontend.ts)
+# The backend loads the frontend's server from here (apps/server/src/http/frontend.ts)
 COPY --from=frontend-builder /app/apps/web/.output /app/apps/web/.output
-# The version, which the backend reads from it (apps/server/src/version.ts)
+# The version, which the backend reads from it (apps/server/src/system/version.ts)
 COPY apps/web/package.json /app/apps/web/package.json
 # The documentation, which the MCP endpoint offers to AI agents
 COPY docs/*.md /app/docs/

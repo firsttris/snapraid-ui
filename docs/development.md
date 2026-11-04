@@ -59,7 +59,7 @@ pkill -f "vite dev"
 - runs sync, scrub, touch and sync again with their logs, then adds, changes, moves and deletes files and runs `diff` and `status`, so that every page has something to show;
 - gives the sandbox a past with `apps/server/scripts/seed-demo.ts` (run with Bun in `apps/server/`, whose packages it uses): the job logs move back in time (last sync 10 hours ago, scrub yesterday), `usage-history.json` gets two months of disk usage with one disk filling up, `schedules.json` a nightly sync with touch and scrub, a weekly scrub and a SMART check, and `maintenance.json` Docker pause and spindown.
 
-All sandbox disks are directories on one filesystem, which SnapRAID only accepts with `--test-skip-device`. They hold a few KiB and have no SMART data, power state or Docker next to them, so `SNAPRAID_DEMO=1` makes the backend answer like a real home server (`apps/server/src/demo.ts`):
+All sandbox disks are directories on one filesystem, which SnapRAID only accepts with `--test-skip-device`. They hold a few KiB and have no SMART data, power state or Docker next to them, so `SNAPRAID_DEMO=1` makes the backend answer like a real home server (`apps/server/src/system/demo.ts`):
 
 - `smart` and `probe`: generated results in the real structured log format: a healthy HDD, an SSD, an HDD with growing reallocated sectors, a sleeping 16 TB disk and an 18 TB parity disk;
 - `status`: the real log of the sandbox, with the sizes, file counts and fragmentation of those disks and a scrub that keeps up (64 % verified, the oldest block 17 days old) instead of the sandbox's figures;
@@ -88,14 +88,24 @@ apps/server/           the backend
   src/
     main.ts            app setup, middleware, startup
     bin.ts             entry point of the standalone binary; bin-cli.ts: --version, --help
-    app-files.ts       where the frontend, its package.json and docs/ are (repository, image, binary)
-    fs.ts, command.ts  file and process helpers (node:fs, Bun.spawn)
-    frontend.ts        loads the built frontend, which the backend serves
-    routes/            HTTP routes per area
+    auth/              login, passkeys, the credentials in auth.json
+    config/            data directory and SnapRAID binary, config.json and snapraid.conf, setup
+                       wizard, backup/restore, maintenance settings
+    disks/             disk check, power, spindown, removal and replacement wizards, disk usage
+    engine/            the SnapRAID engine: CLI and snapraid-daemon
     executors/         job runner (spawn, stream, progress, abort)
-    parsers/           structured log parsers, tests and real SnapRAID fixtures
-    __tests__/         backend unit tests
-    *.ts               auth, scheduler, notifications, log manager, histories, wizards, backup, demo
+    http/              the built frontend the backend serves, the WebSocket
+    integrations/      array snapshot, Prometheus metrics, MCP server, Home Assistant over MQTT
+    notifications/     channels (SMTP, ntfy, webhook) and the notifications for runs and SMART
+    parsers/           structured log parsers
+    routes/            HTTP routes per area
+    schedule/          cron schedules and the sync routine
+    smart/             SMART baseline, history, smartignore, self-tests
+    snapraid/          run reports, logs, status cache, usage history, recovery, duplicates,
+                       reports only the CLI gives
+    system/            file and process helpers, atomic writes, app files, version, Docker and
+                       the container pause, the demo stand-ins
+    */__tests__/       unit tests next to the folder they test; __tests__/ holds assert-error.ts
 apps/web/              the frontend
   messages/            UI texts: en.json, de.json, it.json
   project.inlang/      Paraglide/inlang project settings
@@ -224,7 +234,7 @@ Biome (`apps/web/biome.json`) uses the recommended rules, 2-space indentation, s
 The UI is available in English, German and Italian. All texts are in `apps/web/messages/{en,de,it}.json` in the inlang message format (`@inlang/plugin-message-format`); `en` is the base locale (`apps/web/project.inlang/settings.json`). Placeholders are written as `{name}`.
 
 - **Frontend:** import the messages as `import * as m from '../paraglide/messages'` (relative path) and call `m.key({ … })`.
-- **Backend:** for errors a user can see, return `msg("server_error_…", { … })` from `@shared/i18n.ts` (`packages/shared/src/i18n.ts`) instead of text. The frontend renders the key in the UI language with `localizeServer()`. Notification texts are not in the message files; they are in `apps/server/src/notification-events.ts` and `apps/server/src/routes/notifications.ts`, one block per language.
+- **Backend:** for errors a user can see, return `msg("server_error_…", { … })` from `@shared/i18n.ts` (`packages/shared/src/i18n.ts`) instead of text. The frontend renders the key in the UI language with `localizeServer()`. Notification texts are not in the message files; they are in `apps/server/src/notifications/notification-events.ts` and `apps/server/src/routes/notifications.ts`, one block per language.
 
 To add, change or remove a key in all three files at once, use the helper script from `apps/web/`:
 

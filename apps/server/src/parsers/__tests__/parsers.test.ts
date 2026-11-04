@@ -8,7 +8,7 @@ import { parseSmartArrayFailure, parseSmartOutput } from "../smart-parser.ts";
 import { parseDegradedDisks, parseProbeOutput } from "../probe-parser.ts";
 import { parseDfOutput } from "../df-parser.ts";
 import { isLockedOutput, parseLogTags, splitStructuredOutput, unescapeTagValue } from "../structured-log.ts";
-import { parseParityLine } from "../../config-parser.ts";
+import { parseParityLine } from "../../config/config-parser.ts";
 import { readFileSync } from "node:fs";
 
 // Fixtures are the stderr of `snapraid --log ">&2" <command>` (SnapRAID 14.9) on a demo array.
