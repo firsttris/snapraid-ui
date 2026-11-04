@@ -122,7 +122,10 @@ test('a disk that is not mounted pauses the scheduled sync', async ({ page, app 
   // Back in place, nothing changed since the last sync: parity still has the files of d1
   await array.remount('d1')
   expect(await array.snapraid('diff')).toMatch(/No differences/)
+  // The dashboard shows the status it kept (persisted, fresh for 10 s) without reading it again:
+  // the disk came back behind the app's back, so read it again as a user would
   await page.goto('/')
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click()
   await expectHealth(page, 'All good')
 })
 
