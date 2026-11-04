@@ -88,14 +88,24 @@ apps/server/           the backend
   src/
     main.ts            app setup, middleware, startup
     bin.ts             entry point of the standalone binary; bin-cli.ts: --version, --help
-    app-files.ts       where the frontend, its package.json and docs/ are (repository, image, binary)
-    fs.ts, command.ts  file and process helpers (node:fs, Bun.spawn)
-    frontend.ts        loads the built frontend, which the backend serves
-    routes/            HTTP routes per area
+    auth/              login, passkeys, the credentials in auth.json
+    config/            data directory and SnapRAID binary, config.json and snapraid.conf, setup
+                       wizard, backup/restore, maintenance settings
+    disks/             disk check, power, spindown, removal and replacement wizards, disk usage
+    engine/            the SnapRAID engine: CLI and snapraid-daemon
     executors/         job runner (spawn, stream, progress, abort)
-    parsers/           structured log parsers, tests and real SnapRAID fixtures
-    __tests__/         backend unit tests
-    *.ts               auth, scheduler, notifications, log manager, histories, wizards, backup, demo
+    http/              the built frontend the backend serves, the WebSocket
+    integrations/      array snapshot, Prometheus metrics, MCP server, Home Assistant over MQTT
+    notifications/     channels (SMTP, ntfy, webhook) and the notifications for runs and SMART
+    parsers/           structured log parsers
+    routes/            HTTP routes per area
+    schedule/          cron schedules and the sync routine
+    smart/             SMART baseline, history, smartignore, self-tests
+    snapraid/          run reports, logs, status cache, usage history, recovery, duplicates,
+                       reports only the CLI gives
+    system/            file and process helpers, atomic writes, app files, version, Docker and
+                       the container pause, the demo stand-ins
+    */__tests__/       unit tests next to the folder they test; __tests__/ holds assert-error.ts
 apps/web/              the frontend
   messages/            UI texts: en.json, de.json, it.json
   project.inlang/      Paraglide/inlang project settings

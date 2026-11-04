@@ -82,38 +82,39 @@ Middleware, in order:
 1. **CORS**: credentials are only accepted from an origin with the same hostname as the request, e.g. the dev frontend on `localhost:3000` calling `localhost:8080`.
 2. **Auth** (only when `SNAPRAID_UI_USERNAME` and `SNAPRAID_UI_PASSWORD` are both set): guards `/api/*` and `/ws`, except `/api/auth/*`, `/api/metrics` and `/api/mcp`, which check their own token. A missing or invalid session returns `401 {"error":"Unauthorized"}`. Sessions are HS256-signed JWTs in an HTTP-only `snapraid_session` cookie, see [Security](security.md). `auth.ts` has the routes, `credentials.ts` the password changed in the UI and the passkeys in `auth.json`, `passkeys.ts` WebAuthn with `@simplewebauthn/server`.
 
-Module map:
+Module map. `main.ts`, `bin.ts` and `bin-cli.ts` sit in `src/`, every other module in a folder of its domain (`auth/`, `config/`, `disks/`, `engine/`, `executors/`, `http/`, `integrations/`, `notifications/`, `parsers/`, `routes/`, `schedule/`, `smart/`, `snapraid/`, `system/`), with its unit tests in that folder's `__tests__/`:
 
 | Module | Responsibility |
 |---|---|
 | `main.ts` | App setup, middleware, route mounting, dependency injection, startup |
-| `config/config.ts` | `SNAPRAID_BASE_PATH`, `SNAPRAID_BIN`, `SNAPRAID_EXTRA_ARGS`; `resolveFromBase()` (relative paths resolve against the data directory, absolute ones stay as they are); `snapraidCommand()` |
-| `config/config-parser.ts` | Parses `snapraid.conf` (parity levels incl. split parity, content, data, exclude, pool, `autosave`, `blocksize`); loads and saves `config.json` |
 | `auth/auth.ts` | Login, logout, password change, passkey routes, session cookie, lockout, session secret |
 | `auth/credentials.ts` | `auth.json`: the password changed in the UI (PBKDF2) and the passkeys, dropped when the environment credentials change |
 | `auth/passkeys.ts` | WebAuthn registration and login (`@simplewebauthn/server`): relying party from the Origin, one-time challenges |
-| `http/websocket.ts` | WebSocket client set, `broadcast()`, replay of the running job on connect |
+| `config/config.ts` | `SNAPRAID_BASE_PATH`, `SNAPRAID_BIN`, `SNAPRAID_EXTRA_ARGS`; `resolveFromBase()` (relative paths resolve against the data directory, absolute ones stay as they are); `snapraidCommand()` |
+| `config/config-parser.ts` | Parses `snapraid.conf` (parity levels incl. split parity, content, data, exclude, pool, `autosave`, `blocksize`); loads and saves `config.json` |
+| `config/backup.ts` | Export and restore of settings, histories and SnapRAID configs |
+| `config/maintenance-settings.ts` | Docker pause and spindown settings |
+| `disks/parity-usage.ts` | Size and free space of data and parity disks |
+| `disks/disk-replacement.ts`, `disks/disk-removal.ts` | Config rewriting and state for the replace-disk and remove-data-disk wizards |
+| `disks/disk-check.ts` | Disks that are missing, empty or on another filesystem than the content file recorded, from the `status` log |
+| `disks/spindown.ts` | Watches `/proc/diskstats` and spins idle disks down with `snapraid down` |
+| `engine/engine.ts`, `engine/cli-engine.ts` | The [SnapRAID engine](#snapraid-engine) interface and its CLI implementation: jobs, status, diff, SMART, power state |
 | `executors/command-executor.ts` | Spawns long-running SnapRAID jobs, streams output, tracks the current and last job, follows progress, handles abort |
 | `executors/log-tail.ts` | Reads new lines that a running process appends to its log file |
-| `engine/engine.ts`, `engine/cli-engine.ts` | The [SnapRAID engine](#snapraid-engine) interface and its CLI implementation: jobs, status, diff, SMART, power state |
-| `snapraid/snapraid-runner.ts` | Reports only the CLI gives (`devices`, `list`, `dup`) |
-| `parsers/*` | Parsers for SnapRAID's structured log: `status`, `diff`, `check`, `list`, `dup`, `smart`, `probe`, `devices`, progress (`run:pos`) |
-| `snapraid/run-report.ts` | Summarizes a finished run (result, duration, error counts, sync changes) from its log |
-| `snapraid/log-manager.ts` | Log file naming, listing, outcome detection, last run per config, rotation, deletion |
-| `schedule/scheduler.ts` | Cron schedules (via [Croner](https://github.com/hexagon/croner)), multi-step sync routine, sync guard, skip logic |
+| `http/websocket.ts` | WebSocket client set, `broadcast()`, replay of the running job on connect |
 | `notifications/notifications.ts` | Notification settings, secret masking, delivery via SMTP ([Nodemailer](https://nodemailer.com/)), ntfy and webhook |
 | `notifications/notification-events.ts` | Builds notifications for runs, skipped schedules and SMART changes, in the configured language |
+| `parsers/*` | Parsers for SnapRAID's structured log: `status`, `diff`, `check`, `list`, `dup`, `smart`, `probe`, `devices`, progress (`run:pos`) |
+| `schedule/scheduler.ts` | Cron schedules (via [Croner](https://github.com/hexagon/croner)), multi-step sync routine, sync guard, skip logic |
 | `smart/smart-baseline.ts`, `smart/smart-history.ts` | CRC error baseline per disk; daily SMART history |
-| `snapraid/usage-history.ts`, `disks/parity-usage.ts` | Daily array usage history; size and free space of data and parity disks |
-| `disks/disk-replacement.ts`, `disks/disk-removal.ts` | Config rewriting and state for the replace-disk and remove-data-disk wizards |
-| `config/backup.ts` | Export and restore of settings, histories and SnapRAID configs |
 | `smart/smart-selftest.ts` | SMART self-tests through `smartctl -j` (ATA and NVMe): start, stop, status and log per disk; keeps the spindown away from disks with a running test |
+| `snapraid/snapraid-runner.ts` | Reports only the CLI gives (`devices`, `list`, `dup`) |
+| `snapraid/run-report.ts` | Summarizes a finished run (result, duration, error counts, sync changes) from its log |
+| `snapraid/log-manager.ts` | Log file naming, listing, outcome detection, last run per config, rotation, deletion |
+| `snapraid/usage-history.ts` | Daily array usage history |
 | `snapraid/recovery.ts`, `snapraid/restore-ownership.ts` | Restoring files from parity, one `fix` per disk; after every `fix`, files it recreated (from its log) and the folders made for them take the owner and permissions of their folder |
 | `snapraid/duplicates.ts` | Deleting duplicates safely: a copy goes only while it and the copy that stays are as at the last sync (not in the diff, the size `dup` reported); marks copies no longer on their disk |
-| `disks/disk-check.ts` | Disks that are missing, empty or on another filesystem than the content file recorded, from the `status` log |
-| `config/maintenance-settings.ts` | Docker pause and spindown settings |
 | `system/docker.ts`, `system/container-pause.ts` | Docker Engine API over the unix socket; pausing containers for the duration of jobs, resuming leftovers after a restart |
-| `disks/spindown.ts` | Watches `/proc/diskstats` and spins idle disks down with `snapraid down` |
 | `system/demo.ts` | The demo sandbox (`SNAPRAID_DEMO=1`): fake `smart`, `probe` and device output, demo disk sizes in `status` and the disk usage, a Docker API with demo containers |
 | `routes/*` | HTTP routes, see the [API reference](#api-reference) |
 
