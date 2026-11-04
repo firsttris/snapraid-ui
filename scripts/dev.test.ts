@@ -36,7 +36,7 @@ afterEach(() => {
 /**
  * The layout dev.ts expects. Each app's dev script records `bun run`'s pid ($PPID), its own and
  * the one of a grandchild that sleeps, and the environment; `exit` makes the server's script
- * exit with that code once the web app's is running; `stubborn` makes the web app's grandchild
+ * exit with that code once the test writes server.exit; `stubborn` makes the web app's grandchild
  * ignore SIGTERM. `setup` is scripts/dev/setup.sh's body.
  */
 function sandbox({
@@ -64,7 +64,7 @@ function sandbox({
     )
     const body =
       app === 'server' && exit !== undefined
-        ? `while [ ! -s "${root}/web.grandchild" ]; do sleep 0.05; done\nexit ${exit}`
+        ? `while [ ! -e "${root}/server.exit" ]; do sleep 0.05; done\nexit ${exit}`
         : `sh -c '${stubborn && app === 'web' ? 'trap "" TERM; ' : ''}echo $$ > "${root}/${app}.grandchild.tmp"; mv "${root}/${app}.grandchild.tmp" "${root}/${app}.grandchild"; exec sleep 600'`
     writeFileSync(
       join(dir, 'dev.sh'),
@@ -167,6 +167,7 @@ test('when one server exits, the other is stopped and its exit code is passed on
   sandbox({ exit: 7 })
   const dev = start()
   const web = await running(['web'])
+  writeFileSync(join(root, 'server.exit'), '')
 
   expect(await dev.exited).toBe(7)
 
