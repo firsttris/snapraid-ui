@@ -49,7 +49,13 @@ export const test = base.extend<{ app: App }>({
         )
       },
       expectFinished: async (label) => {
-        await expect(page.getByText(`"${label}" finished successfully`)).toBeVisible({ timeout: 90_000 })
+        const toast = page.locator('[data-sonner-toast]').filter({ hasText: `"${label}" finished successfully` })
+        await expect(toast).toBeVisible({ timeout: 90_000 })
+        // Each job gets its own toast, they stack for 5 s (Feedback.tsx): closed, so the toast
+        // of the next job of the same command is the only one the next call finds. Dispatched,
+        // as an open dialog's overlay (a wizard's) lies over the toasts
+        await toast.getByRole('button', { name: 'Close toast' }).dispatchEvent('click')
+        await expect(toast).toHaveCount(0)
         await waitForIdle()
       },
       waitForIdle,
