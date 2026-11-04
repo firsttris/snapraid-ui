@@ -184,6 +184,33 @@ test('after SIGKILL it waits until the group is gone before it exits', async () 
   expect(started.filter(alive)).toEqual([])
 }, 20_000)
 
+/** The process's state letter from /proc (T: stopped), '' when it is gone */
+function state(pid: number) {
+  try {
+    return readFileSync(`/proc/${pid}/stat`, 'utf8').split(') ')[1]?.[0] ?? ''
+  } catch {
+    return ''
+  }
+}
+
+test.if(PROC)('Ctrl+Z (SIGTSTP) stops both servers with dev.ts, fg (SIGCONT) resumes them', async () => {
+  sandbox()
+  const dev = start()
+  const started = await running()
+
+  dev.kill('SIGTSTP')
+  await until(() => state(dev.pid) === 'T', 2_000)
+  await Bun.sleep(300)
+  expect(started.map(state)).toEqual(started.map(() => 'T'))
+
+  dev.kill('SIGCONT')
+  await until(() => [dev.pid, ...started].every((pid) => state(pid) !== 'T'), 2_000)
+
+  dev.kill('SIGTERM')
+  expect(await dev.exited).toBe(143)
+  expect(started.filter(alive)).toEqual([])
+}, 20_000)
+
 test('when one server exits, the other is stopped and its exit code is passed on', async () => {
   sandbox({ exit: 7 })
   const dev = start()
