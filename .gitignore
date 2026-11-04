@@ -15,7 +15,7 @@ scripts/dev/bin/
 scripts/dev/.cache/
 scripts/dev/sandbox/
 
-# Local data of scripts/start.sh (configs, schedules, logs)
+# Local data of bun run dev (configs, schedules, logs)
 /snapraid/
 !apps/server/src/parsers/__tests__/fixtures/*.log
 

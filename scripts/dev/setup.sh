@@ -188,4 +188,4 @@ snapraid_logged status
 (cd "$BACKEND_DIR" && bun scripts/seed-demo.ts "$SANDBOX")
 
 echo
-echo "Sandbox ready. Start the app with: bun run demo (scripts/start.sh --demo)"
+echo "Sandbox ready. Start the app with: bun run demo"

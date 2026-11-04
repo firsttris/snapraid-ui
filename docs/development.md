@@ -7,7 +7,6 @@ This page gets you from a fresh clone to a running development setup, and covers
 | Tool | Version | Needed for |
 |---|---|---|
 | [Bun](https://bun.com/) | the version in `packageManager` of the root `package.json` (1.4.4) | Everything JavaScript: runs the backend and its tests, installs the packages, runs Vite and Vitest and Playwright's test runner (`bun --bun playwright test`), compiles the standalone binary (CI and the image use the same version) |
-| [fish](https://fishshell.com/) | | `scripts/start.sh` is a fish script |
 | `curl`, `tar`, `gcc`, `make` | | Building SnapRAID for the demo sandbox (`scripts/dev/setup.sh`) |
 | SnapRAID | 14.0 or newer | Only for running against a real array without `--demo`; it has to be on your `PATH` or set via `SNAPRAID_BIN` |
 | Docker or Podman | | Only for building the image |
@@ -18,19 +17,23 @@ This page gets you from a fresh clone to a running development setup, and covers
 git clone https://github.com/firsttris/snapraid-ui
 cd snapraid-ui
 bun install           # all packages of the workspace, from the one bun.lock
-bun run demo          # scripts/start.sh --demo: sandbox with fake disks, no real array needed
+bun run demo          # sandbox with fake disks, no real array needed
 ```
 
-Open **http://localhost:3000**. The frontend dev server runs on port 3000, the backend API and WebSocket on port 8080. `Ctrl+C` stops both.
+Open **http://localhost:3000**. The frontend dev server runs on port 3000, the backend API and WebSocket on port 8080.
 
-`scripts/start.sh` (`bun run dev`, `bun run demo`) has two modes:
+There are two ways to start, both scripts in the root `package.json`:
 
 | Command | Data directory | SnapRAID binary | Extra |
 |---|---|---|---|
-| `bun run dev` (`scripts/start.sh`) | `./snapraid/` (created on first start, ignored by git) | `snapraid` from your `PATH` | Works against your real configs |
-| `bun run demo` (`scripts/start.sh --demo`) | `scripts/dev/sandbox/` | `scripts/dev/bin/snapraid` | Sets `SNAPRAID_EXTRA_ARGS=--test-skip-device` and `SNAPRAID_DEMO=1` |
+| `bun run dev` | `./snapraid/` (created on first start, ignored by git) | `snapraid` from your `PATH` | Works against your real configs |
+| `bun run demo` | `scripts/dev/sandbox/` | `scripts/dev/bin/snapraid` | Runs `scripts/dev/setup.sh` first (stops if it fails), sets `SNAPRAID_EXTRA_ARGS=--test-skip-device` and `SNAPRAID_DEMO=1` |
 
-Under the hood it starts `bun run dev` in `apps/server/` (`bun --watch`, so the backend restarts on changes) and `bun run dev` in `apps/web/` (Vite with hot reload). You can run these two commands yourself in separate terminals; set `SNAPRAID_BASE_PATH` and friends first (see [Configuration](configuration.md)), otherwise the backend uses `snapraid/` in the repository's root (`../../snapraid` relative to `apps/server/`).
+Both set the environment and then start the scripts `dev:server` (`bun run dev` in `apps/server/`: `bun --watch`, so the backend restarts on changes) and `dev:web` (`bun run dev` in `apps/web/`: Vite with hot reload) side by side with `bun run --parallel`, which prefixes each line with the script's name and stops the other script when one fails.
+
+There is no start script of its own: the terminal sends `Ctrl+C` to the whole foreground process group, so it stops both servers; `Ctrl+Z` suspends both and gives you the shell back, `fg` resumes them.
+
+You can also run `bun run dev:server` and `bun run dev:web` yourself in separate terminals; set `SNAPRAID_BASE_PATH` and friends first (see [Configuration](configuration.md)), otherwise the backend uses `snapraid/` in the repository's root (`../../snapraid` relative to `apps/server/`).
 
 > [!NOTE]
 > In development the frontend calls the backend directly at `http://localhost:8080` (`apps/web/src/lib/api/constants.ts`), and the backend only accepts credentials from the same hostname. Open the dev frontend as `http://localhost:3000`, not via a LAN IP.
@@ -121,7 +124,6 @@ packages/shared/       @snapraid-ui/shared: types and logic used by backend and 
 docker/                Dockerfile, Compose file, Quadlet units
 scripts/build-binary.sh  the standalone binary (bun build --compile)
 scripts/install.sh     installer of the binary with a systemd service, attached to each release
-scripts/start.sh       local start (bun run dev, bun run demo)
 scripts/dev/setup.sh   demo sandbox
 scripts/social-preview/  the social preview image
 e2e/                   end-to-end tests (Playwright) against real SnapRAID and snapraid-daemon

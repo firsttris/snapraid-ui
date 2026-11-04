@@ -24,7 +24,7 @@ export default async function demoSetup() {
     for (const server of servers.reverse()) await server.stop()
   }
   try {
-    // As scripts/start.sh --demo
+    // As bun run demo
     servers.push(
       await startBackend({
         SNAPRAID_BASE_PATH: SANDBOX,
