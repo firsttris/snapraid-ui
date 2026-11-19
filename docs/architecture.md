@@ -33,7 +33,7 @@ There is no database. All state lives in JSON files and log files in the data di
 
 The Docker image (`docker/Dockerfile`) is a multi-stage build:
 
-1. **snapraid-builder** (Debian bookworm-slim) downloads the pinned SnapRAID release (`ARG SNAPRAID_VERSION=15.1`) and compiles it.
+1. **snapraid-builder** (Debian bookworm-slim) downloads the pinned SnapRAID release (`ARG SNAPRAID_VERSION=15.2`) and compiles it.
 2. **workspace** (`oven/bun:1.4.4-slim`) holds the workspace's `package.json` files, `bun.lock` and `bunfig.toml`, which the next two stages install from.
 3. **backend-builder** installs the backend's packages with `bun install --frozen-lockfile --production --filter ./apps/server`.
 4. **frontend-builder** runs `bun install --frozen-lockfile --filter ./apps/web` and `bun run build` in `apps/web/`, which produces `apps/web/.output/`.

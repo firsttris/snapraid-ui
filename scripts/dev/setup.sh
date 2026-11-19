@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-SNAPRAID_VERSION="${SNAPRAID_VERSION:-15.1}"
+SNAPRAID_VERSION="${SNAPRAID_VERSION:-15.2}"
 
 DEV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN_DIR="$DEV_DIR/bin"
