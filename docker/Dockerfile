@@ -11,7 +11,7 @@ RUN apt-get update \
   && install -m 0755 snapraid /usr/local/bin/snapraid
 
 # The Bun of packageManager in package.json (Renovate moves them together)
-FROM docker.io/oven/bun:1.4.4-slim AS workspace
+FROM docker.io/oven/bun:1.4.5-slim AS workspace
 
 WORKDIR /app
 
@@ -43,7 +43,7 @@ WORKDIR /app/apps/web
 RUN bun run build
 
 # Final image: one Bun process serves the UI, the API and the WebSocket on port 80
-FROM docker.io/oven/bun:1.4.4-slim
+FROM docker.io/oven/bun:1.4.5-slim
 
 # smartmontools: SnapRAID calls smartctl for smart, probe (power state) and down (spin down);
 # tini runs as PID 1 (the Bun image has none of its own)
